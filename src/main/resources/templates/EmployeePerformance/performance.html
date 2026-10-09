@@ -1,0 +1,4990 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Performance Management</title>
+
+    <!-- Bootstrap & Fonts -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        /* ============================================
+           SIDEBAR + DASHBOARD STYLES
+           ============================================ */
+        :root {
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-card-hover: #273548;
+            --dark-border: #334155;
+            --dark-text: #f8fafc;
+            --dark-text-secondary: #94a3b8;
+            --dark-text-muted: #64748b;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --primary-light: rgba(99, 102, 241, 0.15);
+            --success: #10b981;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --danger: #ef4444;
+            --danger-light: rgba(239, 68, 68, 0.15);
+            --warning: #f59e0b;
+            --warning-light: rgba(245, 158, 11, 0.15);
+            --info: #0ea5e9;
+            --info-light: rgba(14, 165, 233, 0.15);
+            --purple: #8b5cf6;
+            --purple-light: rgba(139, 92, 246, 0.15);
+            --border-radius: 12px;
+            --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR STYLES ===== */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0; width: 280px; height: 100vh;
+            background: var(--sidebar-bg);
+            box-shadow: 2px 0 10px rgba(0,0,0,.2);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.25rem;
+            position: sticky;
+            top: 0;
+            background: var(--sidebar-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 64px;
+            height: 64px;
+            background: #fff;
+            color: var(--sidebar-bg);
+            border-radius: 8px;
+            display: grid;
+            place-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .nav-section {
+            padding: 1.2rem 1.5rem 0.5rem;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+
+        .nav-section i {
+            font-size: 0.8rem;
+            color: var(--primary);
+            opacity: 0.8;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.65rem 1.5rem;
+            margin: 0 0.5rem 0.25rem;
+            width: calc(100% - 1rem);
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(2px);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover i,
+        .nav-link.active i {
+            color: #fff;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-content {
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+        }
+
+        .main-content {
+            margin-left: 280px;
+            min-height: 100vh;
+            transition: var(--transition);
+        }
+
+        /* ===== TOP HEADER ===== */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            padding: .75rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: .6rem .75rem .6rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .875rem;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+            outline: none;
+        }
+        .search-box i {
+            position: absolute;
+            left: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-secondary);
+        }
+
+        .top-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-profile-menu {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .dropdown-menu {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+        }
+        .dropdown-item {
+            color: var(--dark-text);
+        }
+        .dropdown-item:hover {
+            background: var(--sidebar-hover);
+        }
+
+        /* ============================================
+           PERFORMANCE MODULE - PERFORMANCE TABS
+           ============================================ */
+
+        .performance-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        /* ===== PERFORMANCE TABS ===== */
+        .performance-tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 0.5rem 1.25rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .performance-tabs .tab-btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--dark-text-secondary);
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .performance-tabs .tab-btn:hover {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .performance-tabs .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        .performance-tabs .tab-btn i {
+            font-size: 0.9rem;
+        }
+
+        .performance-tabs .tab-btn .tab-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .performance-tabs .tab-btn:not(.active) .tab-badge {
+            background: var(--dark-bg);
+            color: var(--dark-text-secondary);
+        }
+
+        .performance-tab-content {
+            display: none;
+        }
+
+        .performance-tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================
+           MAIN PERFORMANCE STYLES
+           ============================================ */
+
+        .performance-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.75rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .performance-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .performance-header-left h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .performance-header-left h1 i {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .performance-header-left .header-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+
+        .performance-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary-gradient {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .btn-primary-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            color: white;
+        }
+
+        .btn-outline-secondary {
+            background: transparent;
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--dark-card-hover);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        .btn-outline-secondary i {
+            color: var(--primary);
+        }
+
+        .month-display {
+            background: var(--dark-bg);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .month-display i {
+            color: var(--primary);
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .stat-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.25rem 1.5rem;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .stat-card.total-evaluated::before { background: var(--primary); }
+        .stat-card.avg-score::before { background: var(--info); }
+        .stat-card.outstanding::before { background: var(--success); }
+        .stat-card.pip::before { background: var(--danger); }
+
+        .stat-card .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stat-card.total-evaluated .stat-icon { background: var(--primary-light); color: var(--primary); }
+        .stat-card.avg-score .stat-icon { background: var(--info-light); color: var(--info); }
+        .stat-card.outstanding .stat-icon { background: var(--success-light); color: var(--success); }
+        .stat-card.pip .stat-icon { background: var(--danger-light); color: var(--danger); }
+
+        .stat-card .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            line-height: 1.2;
+        }
+
+        .stat-card .stat-title {
+            font-size: 0.8rem;
+            color: var(--dark-text-secondary);
+            font-weight: 500;
+            margin-top: 0.25rem;
+        }
+
+        .stat-card .stat-trend {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            margin-top: 0.5rem;
+        }
+
+        .stat-trend.up { color: var(--success); background: var(--success-light); }
+        .stat-trend.down { color: var(--danger); background: var(--danger-light); }
+
+        /* Filter Bar */
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            min-width: 150px;
+            transition: var(--transition);
+            font-family: 'Inter', sans-serif;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.75rem center;
+            padding-right: 2rem;
+        }
+
+        .filter-bar select:focus,
+        .filter-bar input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .filter-bar select option {
+            background: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        .filter-bar .filter-label {
+            color: var(--dark-text-secondary);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-bar .filter-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+
+        .btn-filter {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-filter:hover {
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        .btn-filter.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* Table Card */
+        .table-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            margin-bottom: 1.75rem;
+        }
+
+        .table-card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .table-card-header h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--dark-text);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-card-header h3 i {
+            color: var(--primary);
+        }
+
+        .table-card-header .table-info {
+            color: var(--dark-text-muted);
+            font-size: 0.8rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            padding: 0;
+        }
+
+        .table-performance {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin: 0;
+            min-width: 900px; /* Reduced because we removed Learning column */
+        }
+
+        .table-performance thead {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .table-performance th {
+            padding: 0.875rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            border-bottom: 1px solid var(--dark-border);
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            background: var(--dark-card);
+            z-index: 5;
+        }
+
+        .table-performance td {
+            padding: 0.875rem 1rem;
+            border-bottom: 1px solid var(--dark-border);
+            vertical-align: middle;
+            color: var(--dark-text);
+        }
+
+        .table-performance tbody tr {
+            transition: var(--transition);
+        }
+
+        .table-performance tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .table-performance tbody tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .table-performance .employee-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .table-performance .employee-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.75rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .table-performance .employee-name {
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .table-performance .employee-id {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+        }
+
+        .table-performance .score-cell {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .table-performance .score-cell.high { color: var(--success); }
+        .table-performance .score-cell.medium { color: var(--warning); }
+        .table-performance .score-cell.low { color: var(--danger); }
+
+        /* Rating Badges */
+        .rating-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            white-space: nowrap;
+            border: 1px solid transparent;
+        }
+
+        .rating-badge i {
+            font-size: 0.6rem;
+        }
+
+        .rating-outstanding {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+        .rating-outstanding i { color: #10b981; }
+
+        .rating-exceeds {
+            background: rgba(14, 165, 233, 0.15);
+            color: #0ea5e9;
+            border-color: rgba(14, 165, 233, 0.2);
+        }
+        .rating-exceeds i { color: #0ea5e9; }
+
+        .rating-meets {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+        .rating-meets i { color: #f59e0b; }
+
+        .rating-pip {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+        .rating-pip i { color: #ef4444; }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .btn-action {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 0.8rem;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-action.view {
+            background: rgba(14, 165, 233, 0.12);
+            color: #0ea5e9;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+        .btn-action.view:hover { background: #0ea5e9; color: white; }
+
+        .btn-action.edit {
+            background: rgba(99, 102, 241, 0.12);
+            color: var(--primary);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+        }
+        .btn-action.edit:hover { background: var(--primary); color: white; }
+
+        .btn-action.delete {
+            background: rgba(239, 68, 68, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        .btn-action.delete:hover { background: var(--danger); color: white; }
+
+        /* Progress Bar */
+        .progress-bar-custom {
+            width: 80px;
+            height: 6px;
+            background: var(--dark-bg);
+            border-radius: 4px;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .progress-bar-custom .fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        .progress-bar-custom .fill.green { background: var(--success); }
+        .progress-bar-custom .fill.blue { background: var(--info); }
+        .progress-bar-custom .fill.yellow { background: var(--warning); }
+        .progress-bar-custom .fill.red { background: var(--danger); }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 3.5rem;
+            opacity: 0.3;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        .empty-state h4 {
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .empty-state p {
+            max-width: 400px;
+            margin: 0 auto 1.5rem;
+            color: var(--dark-text-muted);
+        }
+
+        /* Pagination */
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--dark-border);
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .pagination-container .info {
+            color: var(--dark-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .pagination-container .pagination-buttons {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        .pagination-container .page-btn {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text-secondary);
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .pagination-container .page-btn:hover {
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        .pagination-container .page-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        /* ===== MODAL STYLES ===== */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalSlideDown 0.3s ease;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        @keyframes modalSlideDown {
+            from { opacity: 0; transform: translateY(-30px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.75rem;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            background: var(--dark-card);
+            z-index: 10;
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark-text);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .modal-header h3 i {
+            color: var(--primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: var(--dark-text-secondary);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            background: var(--dark-bg);
+            color: var(--danger);
+        }
+
+        .modal-body {
+            padding: 1.75rem;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.75rem;
+            border-top: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            background: var(--dark-bg);
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+        }
+
+        /* Calculate Modal Specific */
+        .form-group-custom {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group-custom label {
+            display: block;
+            margin-bottom: 0.4rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .form-group-custom label .required {
+            color: var(--danger);
+        }
+
+        .form-control-custom {
+            width: 100%;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-control-custom:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .form-control-custom::placeholder {
+            color: var(--dark-text-muted);
+        }
+
+        textarea.form-control-custom {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        /* Star Rating */
+        .star-rating {
+            display: flex;
+            gap: 0.5rem;
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0.25rem 0;
+        }
+
+        .star-rating .star {
+            color: var(--dark-border);
+            transition: var(--transition);
+        }
+
+        .star-rating .star.active {
+            color: #f59e0b;
+            text-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+        }
+
+        .star-rating .star:hover {
+            transform: scale(1.2);
+        }
+
+        .star-rating-label {
+            font-size: 0.8rem;
+            color: var(--dark-text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Score Slider */
+        .score-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .score-slider-container input[type="range"] {
+            flex: 1;
+            height: 6px;
+            -webkit-appearance: none;
+            background: var(--dark-border);
+            border-radius: 4px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .score-slider-container input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: 2px solid var(--dark-card);
+            box-shadow: 0 0 0 2px var(--primary);
+        }
+
+        .score-slider-container .score-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 45px;
+            text-align: center;
+        }
+
+        .score-level-indicator {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: inline-block;
+        }
+
+        /* Summary Card */
+        .summary-card {
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            border: 1px solid var(--dark-border);
+            margin-top: 1.25rem;
+        }
+
+        .summary-card .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .summary-card .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-card .summary-label {
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .summary-card .summary-value {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .summary-card .summary-total {
+            background: var(--primary-light);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-top: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .summary-card .summary-total .total-label {
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .summary-card .summary-total .total-score {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* Details Modal Specific */
+        .details-profile {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.25rem;
+        }
+
+        .details-profile .avatar-large {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .details-profile .profile-info h4 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .details-profile .profile-info .sub-info {
+            color: var(--dark-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .details-pillars {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Changed from 4 to 3 */
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .details-pillar {
+            background: var(--dark-bg);
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-border);
+        }
+
+        .details-pillar .pillar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .details-pillar .pillar-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+        }
+
+        .details-pillar .pillar-score {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .details-pillar .pillar-detail {
+            font-size: 0.8rem;
+            color: var(--dark-text-muted);
+        }
+
+        .details-pillar .pillar-weight {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+            background: var(--dark-card);
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+        }
+
+        .history-timeline {
+            margin-top: 1.25rem;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item .month {
+            font-weight: 600;
+            min-width: 80px;
+            font-size: 0.85rem;
+        }
+
+        .history-item .score {
+            font-weight: 700;
+            font-size: 0.95rem;
+            min-width: 60px;
+        }
+
+        .history-item .trend {
+            font-size: 0.8rem;
+            min-width: 60px;
+        }
+
+        .history-item .trend.up { color: var(--success); }
+        .history-item .trend.down { color: var(--danger); }
+        .history-item .trend.flat { color: var(--dark-text-muted); }
+
+        /* Toast */
+        .toast-custom {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 0.75rem 1.25rem;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            z-index: 99999;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            animation: slideInRight 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            max-width: 450px;
+            border-left: 4px solid;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-custom.success {
+            background: var(--dark-card);
+            border-left-color: var(--success);
+            color: var(--dark-text);
+        }
+        .toast-custom.success i { color: var(--success); }
+
+        .toast-custom.error {
+            background: var(--dark-card);
+            border-left-color: var(--danger);
+            color: var(--dark-text);
+        }
+        .toast-custom.error i { color: var(--danger); }
+
+        .toast-custom.warning {
+            background: var(--dark-card);
+            border-left-color: var(--warning);
+            color: var(--dark-text);
+        }
+        .toast-custom.warning i { color: var(--warning); }
+
+        .toast-custom.info {
+            background: var(--dark-card);
+            border-left-color: var(--info);
+            color: var(--dark-text);
+        }
+        .toast-custom.info i { color: var(--info); }
+
+        /* ============================================
+           BULK STYLES
+           ============================================ */
+        .bulk-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.25rem 1.75rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .bulk-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .bulk-header h1 i { color: var(--primary); }
+
+        .config-bar {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1.75rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .config-bar label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .config-bar select,
+        .config-bar input {
+            width: 100%;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .config-bar select:focus,
+        .config-bar input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .progress-container {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            margin-bottom: 1.75rem;
+            display: none;
+        }
+
+        .progress-container.active { display: block; }
+
+        .progress-container .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-container .progress-info .progress-text {
+            font-size: 0.85rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .progress-container .progress-info .progress-percent {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .progress-container .progress-track {
+            height: 8px;
+            background: var(--dark-bg);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-container .progress-track .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-container .progress-stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 0.75rem;
+            font-size: 0.8rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .progress-container .progress-stats .stat-success { color: var(--success); }
+        .progress-container .progress-stats .stat-failed { color: var(--danger); }
+
+        .table-bulk {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 750px; /* Reduced because we removed Learning column */
+        }
+
+        .table-bulk thead {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .table-bulk th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .table-bulk td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--dark-border);
+            vertical-align: middle;
+            color: var(--dark-text);
+        }
+
+        .table-bulk tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .table-bulk .employee-cell {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .table-bulk .employee-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.7rem;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .table-bulk .employee-name {
+            font-weight: 600;
+        }
+
+        .table-bulk .employee-id {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+        }
+
+        .table-bulk input[type="number"] {
+            width: 60px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.25rem 0.4rem;
+            font-size: 0.8rem;
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .table-bulk input[type="number"]:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .table-bulk .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .status-pending { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+        .status-success { background: var(--success-light); color: var(--success); }
+        .status-failed { background: var(--danger-light); color: var(--danger); }
+
+        .star-default {
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .star-default:hover {
+            transform: scale(1.2);
+        }
+
+        /* ============================================
+           HISTORY STYLES
+           ============================================ */
+        .history-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .profile-header {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-header .avatar-large {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .profile-header .profile-info h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--dark-text);
+        }
+
+        .profile-header .profile-info .sub-info {
+            color: var(--dark-text-muted);
+            font-size: 0.9rem;
+        }
+
+        .profile-header .profile-info .sub-info span {
+            margin: 0 0.5rem;
+        }
+
+        .profile-header .profile-stats {
+            display: flex;
+            gap: 2rem;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+
+        .profile-header .profile-stats .stat-item {
+            text-align: center;
+        }
+
+        .profile-header .profile-stats .stat-item .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .profile-header .profile-stats .stat-item .stat-label {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .chart-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.75rem;
+        }
+
+        .chart-card .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .chart-card .chart-header h4 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--dark-text);
+        }
+
+        .chart-card .chart-header h4 i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .chart-card .chart-container {
+            height: 280px;
+            position: relative;
+        }
+
+        .table-history {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            min-width: 600px; /* Reduced because we removed Learning column */
+        }
+
+        .table-history thead {
+            background: rgba(0, 0, 0, 0.25);
+        }
+
+        .table-history th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .table-history td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--dark-border);
+            vertical-align: middle;
+            color: var(--dark-text);
+        }
+
+        .table-history tbody tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .table-history .score-cell.high { color: var(--success); font-weight: 700; }
+        .table-history .score-cell.medium { color: var(--warning); font-weight: 700; }
+        .table-history .score-cell.low { color: var(--danger); font-weight: 700; }
+
+        .pillar-breakdown {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Changed from 4 to 3 */
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .pillar-item {
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            border: 1px solid var(--dark-border);
+        }
+
+        .pillar-item .pillar-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .pillar-item .pillar-score {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin: 0.25rem 0;
+        }
+
+        .pillar-item .pillar-score.high { color: var(--success); }
+        .pillar-item .pillar-score.medium { color: var(--warning); }
+        .pillar-item .pillar-score.low { color: var(--danger); }
+
+        .pillar-item .pillar-progress {
+            height: 4px;
+            background: var(--dark-border);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .pillar-item .pillar-progress .fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.8s ease;
+        }
+
+        .pillar-item .pillar-progress .fill.green { background: var(--success); }
+        .pillar-item .pillar-progress .fill.blue { background: var(--info); }
+        .pillar-item .pillar-progress .fill.yellow { background: var(--warning); }
+        .pillar-item .pillar-progress .fill.red { background: var(--danger); }
+        .pillar-item .pillar-progress .fill.purple { background: var(--purple); }
+
+        .trend-up { color: var(--success); }
+        .trend-down { color: var(--danger); }
+        .trend-flat { color: var(--dark-text-muted); }
+
+        /* ============================================
+           SETTINGS STYLES
+           ============================================ */
+        .settings-section {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .settings-section .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark-text);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-section .section-title i {
+            color: var(--primary);
+        }
+
+        .settings-section .section-desc {
+            font-size: 0.8rem;
+            color: var(--dark-text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .settings-section .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .settings-section .form-group {
+            margin-bottom: 0.75rem;
+        }
+
+        .settings-section .form-group label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.25rem;
+        }
+
+        .settings-section .form-group input,
+        .settings-section .form-group select {
+            width: 100%;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .settings-section .form-group input:focus,
+        .settings-section .form-group select:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .settings-section .form-group input[type="number"] {
+            width: 80px;
+        }
+
+        .settings-section .form-group .input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-section .form-group .input-group span {
+            color: var(--dark-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .weight-slider-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* Changed from 2 to 3 columns */
+            gap: 1rem;
+        }
+
+        .weight-item {
+            background: var(--dark-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+        }
+
+        .weight-item .weight-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .weight-item .weight-label .weight-value {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .weight-item input[type="range"] {
+            width: 100%;
+            height: 4px;
+            -webkit-appearance: none;
+            background: var(--dark-border);
+            border-radius: 4px;
+            outline: none;
+            margin-top: 0.5rem;
+        }
+
+        .weight-item input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+
+        .star-mapping {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.5rem;
+        }
+
+        .star-mapping .star-item {
+            background: var(--dark-bg);
+            padding: 0.5rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--dark-border);
+        }
+
+        .star-mapping .star-item .stars {
+            color: #f59e0b;
+            font-size: 1.2rem;
+        }
+
+        .star-mapping .star-item input {
+            width: 100%;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 4px;
+            padding: 0.25rem;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 0.25rem;
+        }
+
+        .threshold-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+
+        .threshold-item {
+            background: var(--dark-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid var(--dark-border);
+        }
+
+        .threshold-item .threshold-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        .threshold-item .threshold-label {
+            font-size: 0.75rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .threshold-item input {
+            width: 80px;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 4px;
+            padding: 0.25rem;
+            font-size: 0.8rem;
+            text-align: center;
+            margin-top: 0.25rem;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            color: white;
+            border: none;
+            padding: 0.6rem 2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-reset {
+            background: transparent;
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            padding: 0.6rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: var(--transition);
+        }
+
+        .btn-reset:hover {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: flex-end;
+            margin-top: 1rem;
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .pillar-breakdown {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .weight-slider-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            .details-pillars {
+                grid-template-columns: 1fr;
+            }
+            .star-mapping { grid-template-columns: repeat(3, 1fr); }
+            .threshold-grid { grid-template-columns: repeat(2, 1fr); }
+            .config-bar {
+                grid-template-columns: 1fr 1fr;
+            }
+            .pillar-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-toggle {
+                display: block;
+            }
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .top-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            .search-box {
+                width: 100%;
+            }
+            .performance-container {
+                padding: 0.75rem;
+            }
+            .performance-tabs {
+                flex-direction: column;
+            }
+            .performance-tabs .tab-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            .performance-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .performance-header-right {
+                flex-wrap: wrap;
+            }
+            .performance-header-right .month-display {
+                width: 100%;
+                justify-content: center;
+            }
+            .filter-bar {
+                flex-direction: column;
+            }
+            .filter-bar .filter-actions {
+                margin-left: 0;
+                width: 100%;
+                justify-content: flex-end;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .stat-card {
+                padding: 1rem;
+            }
+            .table-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .modal-content {
+                max-width: 100%;
+                margin: 1rem;
+            }
+            .modal-body {
+                padding: 1.25rem;
+            }
+            .profile-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .profile-header .profile-stats {
+                margin-left: 0;
+                width: 100%;
+                justify-content: space-around;
+            }
+            .config-bar {
+                grid-template-columns: 1fr;
+            }
+            .settings-container { padding: 0.75rem; }
+            .star-mapping { grid-template-columns: repeat(2, 1fr); }
+            .threshold-grid { grid-template-columns: 1fr; }
+            .settings-section .form-row { grid-template-columns: 1fr; }
+            .weight-slider-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .performance-container {
+                padding: 0.75rem;
+            }
+            .performance-header-left h1 {
+                font-size: 1.2rem;
+            }
+            .btn-primary-gradient {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .btn-outline-secondary {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .table-performance {
+                font-size: 0.75rem;
+                min-width: 600px;
+            }
+            .table-performance th,
+            .table-performance td {
+                padding: 0.5rem 0.6rem;
+            }
+            .profile-header .profile-stats {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .profile-header .profile-stats .stat-item {
+                text-align: left;
+            }
+            .pillar-breakdown {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Scrollbar */
+        .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        .modal-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .modal-content::-webkit-scrollbar-thumb {
+            background: var(--dark-border);
+            border-radius: 4px;
+        }
+        .modal-content::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== MOBILE MENU TOGGLE ===== -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ===== SIDEBAR ===== -->
+<div th:replace="~{fragments/sidebar :: sidebar}"></div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main-content">
+
+    <!-- ===== TOP HEADER ===== -->
+    <div th:replace="~{fragments/header :: header}"></div>
+
+    <!-- ===== PERFORMANCE CONTENT ===== -->
+    <div class="performance-container" id="performanceApp">
+
+        <!-- ===== PERFORMANCE TABS ===== -->
+        <div class="performance-tabs" id="performanceTabs">
+            <button class="tab-btn active" data-tab="main" onclick="switchPerformanceTab('main')">
+                <i class="fas fa-chart-line"></i> Calculate Performance
+                <span class="tab-badge" id="mainTabBadge">Active</span>
+            </button>
+            <button class="tab-btn" data-tab="history" onclick="switchPerformanceTab('history')">
+                <i class="fas fa-history"></i> History
+                <span class="tab-badge">View</span>
+            </button>
+            <button class="tab-btn" data-tab="bulk" onclick="switchPerformanceTab('bulk')">
+                <i class="fas fa-layer-group"></i> Bulk
+                <span class="tab-badge">Mass</span>
+            </button>
+            <button class="tab-btn" data-tab="settings" onclick="switchPerformanceTab('settings')">
+                <i class="fas fa-cog"></i> Settings
+                <span class="tab-badge">Admin</span>
+            </button>
+        </div>
+
+        <!-- ==========================================
+             TAB 1: MAIN PERFORMANCE (Calculate)
+             ========================================== -->
+        <div class="performance-tab-content active" id="tab-main">
+
+            <!-- ===== HEADER ===== -->
+            <div class="performance-header">
+                <div class="performance-header-left">
+                    <h1>
+                        <i class="fas fa-chart-line"></i>
+                        Employee Performance
+                        <span class="header-badge">Monthly Review</span>
+                    </h1>
+                </div>
+                <div class="performance-header-right">
+                    <span class="month-display">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="currentMonthDisplay">August 2026</span>
+                    </span>
+                    <button class="btn-primary-gradient" onclick="openCalculateModal()">
+                        <i class="fas fa-calculator"></i> Calculate Performance
+                    </button>
+                    <button class="btn-outline-secondary" onclick="loadPerformances()" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ===== STATS CARDS ===== -->
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card total-evaluated">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-value" id="statTotalEmployees">0</div>
+                    <div class="stat-title">Employees Evaluated</div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> This Month</div>
+                </div>
+                <div class="stat-card avg-score">
+                    <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
+                    <div class="stat-value" id="statAverageScore">0%</div>
+                    <div class="stat-title">Average Performance</div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> +2.5%</div>
+                </div>
+                <div class="stat-card outstanding">
+                    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                    <div class="stat-value" id="statOutstanding">0</div>
+                    <div class="stat-title">Outstanding Performers</div>
+                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> Top Talent</div>
+                </div>
+                <div class="stat-card pip">
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                    <div class="stat-value" id="statPIP">0</div>
+                    <div class="stat-title">Needs Improvement (PIP)</div>
+                    <div class="stat-trend down"><i class="fas fa-arrow-down"></i> Needs Attention</div>
+                </div>
+
+            </div>
+
+            <!-- ===== FILTER BAR ===== -->
+            <div class="filter-bar">
+                <span class="filter-label"><i class="fas fa-filter"></i> Filters</span>
+                <select id="monthFilter" onchange="loadPerformances()">
+                    <option value="">Select Month</option>
+                </select>
+                <select id="departmentFilter" onchange="loadPerformances()">
+                    <option value="All">All Departments</option>
+                </select>
+                <select id="ratingFilter" onchange="filterByRating()">
+                    <option value="All">All Ratings</option>
+                    <option value="Outstanding">Outstanding</option>
+                    <option value="Exceeds Expectations">Exceeds Expectations</option>
+                    <option value="Meets Expectations">Meets Expectations</option>
+                    <option value="Needs Improvement">Needs Improvement</option>
+                </select>
+
+            </div>
+
+            <!-- ===== PERFORMANCE TABLE ===== -->
+            <div class="table-card">
+                <div class="table-card-header">
+                    <h3><i class="fas fa-list"></i> Performance Records</h3>
+                    <span class="table-info" id="tableInfo">Showing 0 employees</span>
+                    <button id="syncClickUpBtn" class="btn-primary-gradient" onclick="syncFromClickUp()" style="margin-left: auto;">
+                        <i class="fas fa-sync"></i> Sync from ClickUp
+                    </button>
+                </div>
+                <div class="table-container">
+                    <table class="table-performance" id="performanceTable">
+                        <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th style="min-width: 180px;">Employee</th>
+                            <th style="min-width: 120px;">Department</th>
+                            <th style="min-width: 90px;">Attendance</th>
+                            <th style="min-width: 90px;">Behavior</th>
+                            <th style="min-width: 90px;">Initiative</th>
+                            <th style="min-width: 90px;">Work (ClickUp)</th>
+                            <th style="min-width: 90px;">Total Score</th>
+                            <th style="min-width: 140px;">Rating</th>
+                            <th style="min-width: 120px;">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody id="performanceTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; padding: 3rem;">
+                                <div class="empty-state">
+                                    <i class="fas fa-clipboard-list"></i>
+                                    <h4>No Performance Records Found</h4>
+                                    <p>Click "Calculate Performance" to evaluate employees for the selected month.</p>
+                                    <button class="btn-primary-gradient" onclick="openCalculateModal()">
+                                        <i class="fas fa-calculator"></i> Calculate Now
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination-container">
+                    <span class="info" id="paginationInfo">Showing 0 of 0 entries</span>
+                    <div class="pagination-buttons" id="paginationButtons">
+                        <button class="page-btn" onclick="changePage('prev')">‹</button>
+                        <button class="page-btn active">1</button>
+                        <button class="page-btn" onclick="changePage('next')">›</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==========================================
+             TAB 2: HISTORY
+             ========================================== -->
+        <div class="performance-tab-content" id="tab-history">
+            <div class="history-container" id="historyApp">
+                <!-- Back to Main Button -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <button class="btn-outline-secondary" onclick="switchPerformanceTab('main')">
+                            <i class="fas fa-arrow-left"></i> Back to Performance
+                        </button>
+                        <span style="color: var(--dark-text-secondary); font-size: 0.85rem;">
+                    <i class="fas fa-history"></i> Employee Performance History
+                </span>
+                    </div>
+                    <button class="btn-outline-secondary" onclick="refreshHistory()" title="Refresh">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- History Content -->
+                <div id="historyContent">
+                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                        <p style="margin-top: 1rem;">Loading history...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+
+        <!-- ==========================================
+             TAB 3: BULK
+             ========================================== -->
+        <div class="performance-tab-content" id="tab-bulk">
+            <div class="bulk-container" id="bulkApp">
+                <!-- Bulk content will be loaded dynamically -->
+                <div id="bulkContent">
+                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                        <p style="margin-top: 1rem;">Loading bulk calculation...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==========================================
+             TAB 4: SETTINGS
+             ========================================== -->
+        <div class="performance-tab-content" id="tab-settings">
+            <div class="settings-container" id="settingsApp">
+                <!-- Settings content will be loaded dynamically -->
+                <div id="settingsContent">
+                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                        <p style="margin-top: 1rem;">Loading settings...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===== TOAST CONTAINER ===== -->
+<div id="toastContainer"></div>
+
+<!-- ============================================
+     CALCULATE PERFORMANCE MODAL (Learning Removed)
+     ============================================ -->
+<div class="modal-overlay" id="calculateModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-calculator"></i> Calculate Performance</h3>
+            <button class="modal-close" onclick="closeCalculateModal()">&times;</button>
+        </div>
+        <form id="calculateForm" onsubmit="submitCalculateForm(event)">
+            <div class="modal-body">
+                <!-- Employee & Month Selection -->
+                <div class="form-row">
+                    <div class="form-group-custom">
+                        <label>Employee <span class="required">*</span></label>
+                        <select id="calcEmployee" class="form-control-custom" required>
+                            <option value="">-- Select Employee --</option>
+                        </select>
+                    </div>
+                    <div class="form-group-custom">
+                        <label>Review Month <span class="required">*</span></label>
+                        <input type="month" id="calcMonth" class="form-control-custom" required>
+                    </div>
+                </div>
+
+                <!-- Attendance Score (Auto-generated) -->
+                <div class="form-group-custom" style="background: var(--dark-bg); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--dark-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <label style="margin-bottom: 0; font-weight: 600; color: var(--dark-text);">
+                                <i class="fas fa-user-clock" style="color: var(--info);"></i>
+                                Attendance Score (35% - Auto)
+                            </label>
+                            <div style="font-size: 0.75rem; color: var(--dark-text-muted); margin-top: 0.2rem;">
+                                Calculated automatically from attendance records
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span id="calcAttendanceScore" style="font-size: 1.5rem; font-weight: 700; color: var(--info);">--</span>
+                            <span style="font-size: 0.85rem; color: var(--dark-text-muted);">%</span>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-muted);">
+                                <span id="calcAttendanceDetails">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Work Performance Score (Auto-generated from ClickUp) -->
+                <div class="form-group-custom" style="background: var(--dark-bg); padding: 1rem; border-radius: var(--border-radius); border: 1px solid var(--dark-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <label style="margin-bottom: 0; font-weight: 600; color: var(--dark-text);">
+                                <i class="fas fa-tasks" style="color: var(--purple);"></i>
+                                Work Performance (30% - Auto, ClickUp)
+                            </label>
+                            <div style="font-size: 0.75rem; color: var(--dark-text-muted); margin-top: 0.2rem;">
+                                Live-pulled from ClickUp when you select an employee
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <span id="calcWorkScore" style="font-size: 1.5rem; font-weight: 700; color: var(--purple);">--</span>
+                            <span style="font-size: 0.85rem; color: var(--dark-text-muted);">%</span>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-muted);">
+                                <span id="calcWorkDetails">Select an employee</span>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="calcWorkScoreValue" value="0">
+                    <input type="hidden" id="calcWorkApplicable" value="false">
+                </div>
+
+                <!-- Behavior Rating -->
+                <div class="form-group-custom">
+                    <label>Behavior & Culture (25%) <span class="required">*</span></label>
+                    <div class="star-rating" id="starRating">
+                        <span class="star" data-value="1" onclick="setStars(1)">★</span>
+                        <span class="star" data-value="2" onclick="setStars(2)">★</span>
+                        <span class="star" data-value="3" onclick="setStars(3)">★</span>
+                        <span class="star" data-value="4" onclick="setStars(4)">★</span>
+                        <span class="star" data-value="5" onclick="setStars(5)">★</span>
+                    </div>
+                    <div class="star-rating-label" id="starRatingLabel">Click to rate (3 stars = Good)</div>
+                    <input type="hidden" id="calcBehaviorStars" value="3">
+                    <input type="hidden" id="calcBehaviorScore" value="60">
+
+                    <div class="form-group-custom" style="margin-top: 0.75rem;">
+                        <label>Remarks</label>
+                        <textarea id="calcBehaviorRemarks" class="form-control-custom" placeholder="Add remarks about employee's behavior, teamwork, attitude..." rows="2"></textarea>
+                    </div>
+                </div>
+
+                <!-- Initiative & Innovation (Learning Removed) -->
+                <div class="form-group-custom">
+                    <label>Initiative & Innovation (25%) <span class="required">*</span></label>
+                    <div class="score-slider-container">
+                        <input type="range" id="calcInitiative" min="0" max="100" value="50" oninput="updateInitiativeScore(this.value)">
+                        <span class="score-value" id="calcInitiativeDisplay">50</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--dark-text-muted);">
+                        <span>Reactive</span>
+                        <span id="calcInitiativeLevel" class="score-level-indicator">Proactive</span>
+                        <span>Trailblazer</span>
+                    </div>
+                </div>
+
+                <!-- Performance Summary -->
+                <div class="summary-card" id="calcSummary">
+                    <div class="summary-row">
+                        <span class="summary-label">Attendance (35%)</span>
+                        <span class="summary-value" id="summaryAttendance">--%</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Behavior (17.5%)</span>
+                        <span class="summary-value" id="summaryBehavior">--%</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="summary-label">Initiative (17.5%)</span>
+                        <span class="summary-value" id="summaryInitiative">--%</span>
+                    </div>
+                    <div class="summary-row" id="summaryWorkRow" style="display: none;">
+                        <span class="summary-label">Work Performance (30%)</span>
+                        <span class="summary-value" id="summaryWork">--%</span>
+                    </div>
+
+                    <div class="summary-total">
+                        <span class="total-label">Total Performance Score</span>
+                        <span>
+                            <span class="total-score" id="summaryTotal">--%</span>
+                            <span id="summaryRating" style="font-size: 0.8rem; font-weight: 600; margin-left: 0.5rem; display: inline-block;"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-outline-secondary" onclick="closeCalculateModal()">Cancel</button>
+                <button type="submit" class="btn-primary-gradient" id="calcSubmitBtn">
+                    <i class="fas fa-save"></i> Save Performance
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ============================================
+     DETAILS MODAL (Learning Removed)
+     ============================================ -->
+<div class="modal-overlay" id="detailsModal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3><i class="fas fa-user-circle"></i> Performance Details</h3>
+            <button class="modal-close" onclick="closeDetailsModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="detailsContent">
+            <div style="text-align: center; padding: 2rem; color: var(--dark-text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p style="margin-top: 1rem;">Loading details...</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-outline-secondary" onclick="closeDetailsModal()">Close</button>
+            <button class="btn-primary-gradient" onclick="exportPDF()"><i class="fas fa-file-export"></i> Export PDF</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================
+     SCRIPTS
+     ============================================ -->
+<script>
+    // ============================================
+    // TAB SWITCHING
+    // ============================================
+  function switchPerformanceTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.performance-tabs .tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`.performance-tabs .tab-btn[data-tab="${tabName}"]`).classList.add('active');
+
+    // Update tab content
+    document.querySelectorAll('.performance-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+
+    if (tabName === 'history') {
+        loadHistoryContent();
+    } else if (tabName === 'bulk') {
+        loadBulkContent();
+    } else if (tabName === 'settings') {
+        loadSettingsContent();
+    }
+
+    if (tabName !== 'main') {
+        window.location.hash = tabName;
+    } else {
+        window.location.hash = '';
+    }
+}
+
+    // ============================================
+    // LOAD HISTORY CONTENT
+    // ============================================
+function loadHistoryContent(forceReload = false) {
+    const container = document.getElementById('historyContent');
+
+    if (forceReload) {
+        container.innerHTML = '';
+        const url = new URL(window.location);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url);
+    }
+
+    if (!forceReload && container.querySelector('.history-container-inner')) {
+        return;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const employeeId = urlParams.get('id');
+
+    if (!employeeId) {
+        fetch('/dashboard/hr/performance/api/employees/all')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    let optionsHtml = '<option value="">-- Select Employee --</option>';
+                    data.employees.forEach(emp => {
+                        optionsHtml += `<option value="${emp.employeeId}">${emp.firstName} ${emp.lastName} (${emp.employeeId})</option>`;
+                    });
+
+                    container.innerHTML = `
+                        <div class="history-container-inner">
+                            <div style="text-align: center; padding: 3rem; background: var(--dark-card); border-radius: var(--border-radius); border: 1px solid var(--dark-border);">
+                                <i class="fas fa-user-search" style="font-size: 3rem; color: var(--primary); opacity: 0.6; margin-bottom: 1rem;"></i>
+                                <h3 style="color: var(--dark-text); margin-bottom: 0.5rem;">Select an Employee</h3>
+                                <p style="color: var(--dark-text-muted); margin-bottom: 1.5rem;">Choose an employee to view their performance history</p>
+                                <div style="max-width: 400px; margin: 0 auto;">
+                                    <select id="historyEmployeeSelect" class="form-control-custom" style="margin-bottom: 1rem;" onchange="loadHistory(this.value)">
+                                        ${optionsHtml}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    const select = document.getElementById('historyEmployeeSelect');
+                    if (select) select.focus();
+                }
+            })
+            .catch(err => {
+                console.error('Error loading employees:', err);
+                container.innerHTML = `
+                    <div class="history-container-inner">
+                        <div style="text-align: center; padding: 3rem; color: var(--danger);">
+                            <i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i>
+                            <p style="margin-top: 1rem;">Failed to load employees. Please try again.</p>
+                            <button class="btn-primary-gradient" onclick="loadHistoryContent(true)">
+                                <i class="fas fa-redo"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        return;
+    }
+
+    loadHistory(employeeId);
+}
+
+    // ============================================
+    // LOAD BULK CONTENT (Learning Removed)
+    // ============================================
+  function loadBulkContent() {
+    const container = document.getElementById('bulkContent');
+    if (container.querySelector('.bulk-container-inner')) return;
+
+    container.innerHTML = `
+        <div class="bulk-container-inner">
+            <div class="bulk-header">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <h1><i class="fas fa-layer-group"></i> Bulk Performance Calculation</h1>
+                    <span style="font-size: 0.7rem; background: var(--primary-light); color: var(--primary); padding: 0.2rem 0.6rem; border-radius: 12px;">Mass Evaluation</span>
+                </div>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button class="btn-primary" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text);" onclick="applyDefaults()">
+                        <i class="fas fa-copy"></i> Apply Defaults
+                    </button>
+                    <button id="calculateAllBtn" class="btn-primary" onclick="calculateAll()">
+                        <i class="fas fa-play"></i> Calculate All
+                    </button>
+                </div>
+            </div>
+
+            <!-- Config Bar -->
+            <div class="config-bar">
+                <div>
+                    <label><i class="fas fa-users"></i> Department</label>
+                    <select id="bulkDepartment">
+                        <option value="All">All Departments</option>
+                        <option value="Development">Development</option>
+                        <option value="HR">HR</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Operations">Operations</option>
+                    </select>
+                </div>
+                <div>
+                    <label><i class="fas fa-calendar-alt"></i> Month</label>
+                    <input type="month" id="bulkMonth">
+                </div>
+                <div>
+                    <label><i class="fas fa-star"></i> Default Behavior</label>
+                    <div style="display: flex; gap: 0.25rem; align-items: center; flex-wrap: wrap;">
+                        <span class="star-default" onclick="setDefaultStars(1)" style="cursor: pointer; color: var(--dark-border); font-size: 1.5rem;">★</span>
+                        <span class="star-default" onclick="setDefaultStars(2)" style="cursor: pointer; color: var(--dark-border); font-size: 1.5rem;">★</span>
+                        <span class="star-default" onclick="setDefaultStars(3)" style="cursor: pointer; color: #f59e0b; font-size: 1.5rem;">★</span>
+                        <span class="star-default" onclick="setDefaultStars(4)" style="cursor: pointer; color: var(--dark-border); font-size: 1.5rem;">★</span>
+                        <span class="star-default" onclick="setDefaultStars(5)" style="cursor: pointer; color: var(--dark-border); font-size: 1.5rem;">★</span>
+                        <input type="hidden" id="defaultBehaviorStars" value="3">
+                        <span style="margin-left: 0.5rem; font-size: 0.8rem; color: var(--dark-text-muted);" id="defaultStarsLabel">3 Stars - Good</span>
+                    </div>
+                </div>
+                <div>
+                    <label><i class="fas fa-lightbulb"></i> Default Initiative</label>
+                    <input type="number" id="defaultInitiative" value="50" min="0" max="100">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button class="btn-primary" onclick="loadBulkEmployees()">
+                        <i class="fas fa-search"></i> Load Employees
+                    </button>
+                </div>
+                <!-- Help Text -->
+                <div style="grid-column: 1 / -1; font-size: 0.75rem; color: var(--dark-text-muted); padding: 0.5rem 0; border-top: 1px solid var(--dark-border); display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <i class="fas fa-info-circle" style="color: var(--info); font-size: 0.9rem;"></i>
+                    <strong>How it works:</strong>
+                    <span>Set default values, load employees, then click "Apply Defaults" to update all rows. You can still change individual values in the table.</span>
+                </div>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-info">
+                    <span class="progress-text"><i class="fas fa-spinner fa-spin"></i> Calculating...</span>
+                    <span class="progress-percent" id="progressPercent">0%</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-stats">
+                    <span>Total: <strong id="progressTotal">0</strong></span>
+                    <span class="stat-success">✅ Success: <strong id="progressSuccess">0</strong></span>
+                    <span class="stat-failed">❌ Failed: <strong id="progressFailed">0</strong></span>
+                </div>
+            </div>
+
+            <!-- Employee Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h4><i class="fas fa-list"></i> Employees</h4>
+                    <span style="font-size: 0.8rem; color: var(--dark-text-muted);" id="employeeCount">0 employees loaded</span>
+                </div>
+                <div class="table-container">
+                    <table class="table-bulk" id="bulkTable">
+                        <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Employee</th>
+                            <th>Department</th>
+                                                      <th>Attendance</th>
+                            <th>Behavior</th>
+                            <th>Initiative</th>
+                            <th>Work (ClickUp)</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody id="bulkTableBody">
+                        <tr>
+                            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                                <i class="fas fa-users" style="font-size: 2rem;"></i>
+                                <p style="margin-top: 1rem;">Select a department and month, then click "Load Employees"</p>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    initBulkFunctionality();
+}
+
+    // ============================================
+    // LOAD SETTINGS CONTENT (Learning Removed)
+    // ============================================
+    function loadSettingsContent() {
+        const container = document.getElementById('settingsContent');
+        if (container.querySelector('.settings-container-inner')) return;
+
+        container.innerHTML = `
+            <div class="settings-container-inner">
+                <!-- Weight Configuration (3 pillars) -->
+                <div class="settings-section">
+                    <div class="section-title">
+                        <i class="fas fa-weight-hanging"></i> Pillar Weights
+                    </div>
+                    <div class="section-desc">
+                        Define the percentage weight for each performance pillar. Total must equal 100%.
+                    </div>
+                    <div class="weight-slider-group" id="weightGroup">
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                <span>Attendance</span>
+                                <span class="weight-value" id="weightAttendanceDisplay">50%</span>
+                            </div>
+                            <input type="range" id="weightAttendance" min="0" max="100" value="50" oninput="updateWeight('attendance', this.value)">
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                <span>Behavior</span>
+                                <span class="weight-value" id="weightBehaviorDisplay">25%</span>
+                            </div>
+                            <input type="range" id="weightBehavior" min="0" max="100" value="25" oninput="updateWeight('behavior', this.value)">
+                        </div>
+                                              <div class="weight-item">
+                            <div class="weight-label">
+                                <span>Initiative</span>
+                                <span class="weight-value" id="weightInitiativeDisplay">17.5%</span>
+                            </div>
+                            <input type="range" id="weightInitiative" min="0" max="100" value="17.5" oninput="updateWeight('initiative', this.value)">
+                        </div>
+                        <div class="weight-item">
+                            <div class="weight-label">
+                                <span>Work Performance (ClickUp)</span>
+                                <span class="weight-value" id="weightWorkDisplay">30%</span>
+                            </div>
+                            <input type="range" id="weightWork" min="0" max="100" value="30" oninput="updateWeight('work', this.value)">
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 0.5rem; font-size: 0.85rem; color: var(--dark-text-muted);">
+                        Total: <strong id="weightTotal" style="color: var(--success);">100%</strong>
+                    </div>
+                </div>
+
+                <!-- Attendance Settings -->
+                <div class="settings-section">
+                    <div class="section-title">
+                        <i class="fas fa-user-clock"></i> Attendance Deduction Rules
+                    </div>
+                    <div class="section-desc">
+                        Points deducted from attendance score (starts at 100).
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Absent Day Deduction</label>
+                            <div class="input-group">
+                                <input type="number" id="deductAbsent" value="5" min="0" max="20">
+                                <span>points</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Late Arrival Deduction</label>
+                            <div class="input-group">
+                                <input type="number" id="deductLate" value="2" min="0" max="10">
+                                <span>points</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Early Departure Deduction</label>
+                            <div class="input-group">
+                                <input type="number" id="deductEarly" value="2" min="0" max="10">
+                                <span>points</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rating Thresholds -->
+                <div class="settings-section">
+                    <div class="section-title">
+                        <i class="fas fa-trophy"></i> Rating Thresholds
+                    </div>
+                    <div class="section-desc">
+                        Minimum percentage required for each performance rating.
+                    </div>
+                    <div class="threshold-grid">
+                        <div class="threshold-item">
+                            <span class="threshold-color" style="background: var(--success);"></span>
+                            <span class="threshold-label">Outstanding</span>
+                            <div>
+                                <input type="number" id="thresholdOutstanding" value="90" min="0" max="100">
+                                <span style="color: var(--dark-text-muted); font-size: 0.7rem;">%+</span>
+                            </div>
+                        </div>
+                        <div class="threshold-item">
+                            <span class="threshold-color" style="background: var(--info);"></span>
+                            <span class="threshold-label">Exceeds Expectations</span>
+                            <div>
+                                <input type="number" id="thresholdExceeds" value="75" min="0" max="100">
+                                <span style="color: var(--dark-text-muted); font-size: 0.7rem;">%+</span>
+                            </div>
+                        </div>
+                        <div class="threshold-item">
+                            <span class="threshold-color" style="background: var(--warning);"></span>
+                            <span class="threshold-label">Meets Expectations</span>
+                            <div>
+                                <input type="number" id="thresholdMeets" value="50" min="0" max="100">
+                                <span style="color: var(--dark-text-muted); font-size: 0.7rem;">%+</span>
+                            </div>
+                        </div>
+                        <div class="threshold-item">
+                            <span class="threshold-color" style="background: var(--danger);"></span>
+                            <span class="threshold-label">Needs Improvement</span>
+                            <div>
+                                <span style="color: var(--dark-text-muted); font-size: 0.7rem;">Below </span>
+                                <span style="color: var(--dark-text); font-weight: 600;" id="thresholdPIPDisplay">50</span>
+                                <span style="color: var(--dark-text-muted); font-size: 0.7rem;">%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Behavior Star Mapping -->
+                <div class="settings-section">
+                    <div class="section-title">
+                        <i class="fas fa-star"></i> Behavior Star Mapping
+                    </div>
+                    <div class="section-desc">
+                        Map 1-5 star ratings to percentage scores.
+                    </div>
+                    <div class="star-mapping">
+                        <div class="star-item">
+                            <div class="stars">★</div>
+                            <span style="font-size: 0.7rem; color: var(--dark-text-muted);">Poor</span>
+                            <input type="number" id="star1" value="20" min="0" max="100">
+                        </div>
+                        <div class="star-item">
+                            <div class="stars">★★</div>
+                            <span style="font-size: 0.7rem; color: var(--dark-text-muted);">Needs Imp.</span>
+                            <input type="number" id="star2" value="40" min="0" max="100">
+                        </div>
+                        <div class="star-item">
+                            <div class="stars">★★★</div>
+                            <span style="font-size: 0.7rem; color: var(--dark-text-muted);">Good</span>
+                            <input type="number" id="star3" value="60" min="0" max="100">
+                        </div>
+                        <div class="star-item">
+                            <div class="stars">★★★★</div>
+                            <span style="font-size: 0.7rem; color: var(--dark-text-muted);">Excellent</span>
+                            <input type="number" id="star4" value="80" min="0" max="100">
+                        </div>
+                        <div class="star-item">
+                            <div class="stars">★★★★★</div>
+                            <span style="font-size: 0.7rem; color: var(--dark-text-muted);">Outstanding</span>
+                            <input type="number" id="star5" value="100" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn-reset" onclick="resetSettings()">
+                        <i class="fas fa-undo"></i> Reset Defaults
+                    </button>
+                    <button class="btn-save" onclick="saveSettings()">
+                        <i class="fas fa-save"></i> Save Settings
+                    </button>
+                </div>
+            </div>
+        `;
+
+        initSettingsFunctionality();
+    }
+
+    // ============================================
+    // SIDEBAR TOGGLE FOR MOBILE
+    // ============================================
+   document.addEventListener('DOMContentLoaded', function() {
+    // ============================================
+    // 1. SIDEBAR TOGGLE FOR MOBILE
+    // ============================================
+    const menuToggle = document.getElementById('mobileMenuToggle');
+    const sidebar = document.getElementById('sidebar');
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+
+        document.addEventListener('click', function(e) {
+            if (sidebar.classList.contains('active') &&
+                !sidebar.contains(e.target) &&
+                e.target !== menuToggle) {
+                sidebar.classList.remove('active');
+            }
+        });
+    }
+
+    // ============================================
+    // 2. SET DEFAULT MONTH TO PREVIOUS MONTH
+    // ============================================
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const previousMonthStr = previousMonth.getFullYear() + '-' +
+                             String(previousMonth.getMonth() + 1).padStart(2, '0');
+
+    // Display previous month in header
+    document.getElementById('currentMonthDisplay').textContent =
+        previousMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+    // Set default month in filter to previous month
+    document.getElementById('monthFilter').value = previousMonthStr;
+
+    // Set default month in calculate modal to previous month
+    document.getElementById('calcMonth').value = previousMonthStr;
+
+    // ============================================
+    // 3. POPULATE DROPDOWNS
+    // ============================================
+    populateEmployeeDropdown();
+    populateMonthFilter();
+    populateDepartmentFilter();
+
+    // ============================================
+    // 4. LOAD PERFORMANCES (with previous month)
+    // ============================================
+    loadPerformances();
+
+    // ============================================
+    // 5. EVENT LISTENERS
+    // ============================================
+
+    // Auto-load attendance preview when employee is selected
+       // Auto-load attendance AND work performance preview when employee is selected
+    document.getElementById('calcEmployee').addEventListener('change', function() {
+        if (this.value) {
+            // Check if month is current and not completed
+            const month = document.getElementById('calcMonth').value;
+            if (month && !isMonthCompleted(month)) {
+                showToast('⚠️ Current month is not completed. Attendance data may be incomplete.', 'warning');
+            }
+            loadAttendancePreview(this.value);
+            loadWorkPreview(this.value);
+        }
+    });
+
+    // Auto-update summary when behavior stars change
+    document.getElementById('calcBehaviorStars').addEventListener('change', updateSummary);
+
+    // Auto-update summary when initiative slider changes
+    document.getElementById('calcInitiative').addEventListener('input', updateSummary);
+
+    // ============================================
+    // 6. HASH-BASED NAVIGATION (for tabs)
+    // ============================================
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['history', 'bulk', 'settings'].includes(hash)) {
+        switchPerformanceTab(hash);
+    }
+
+    console.log('✅ Performance page initialized with previous month: ' + previousMonthStr);
+});
+
+    // ============================================
+    // GLOBAL VARIABLES
+    // ============================================
+    let allPerformances = [];
+    let currentPage = 1;
+    const pageSize = 10;
+
+    // ============================================
+    // POPULATE DROPDOWNS
+    // ============================================
+  function populateEmployeeDropdown() {
+    const select = document.getElementById('calcEmployee');
+    if (!select) return;
+
+    // CORRECT URL
+    fetch('/dashboard/hr/performance/api/employees/all')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                select.innerHTML = '<option value="">-- Select Employee --</option>';
+                data.employees.forEach(emp => {
+                    const option = document.createElement('option');
+                    option.value = emp.employeeId;
+                    option.textContent = emp.firstName + ' ' + emp.lastName + ' (' + emp.employeeId + ')';
+                    select.appendChild(option);
+                });
+            } else {
+                console.error('Failed to load employees:', data.error);
+                showToast('Failed to load employees: ' + data.error, 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error loading employees:', err);
+            showToast('Error loading employees. Please check console.', 'error');
+        });
+}
+function populateMonthFilter() {
+    const select = document.getElementById('monthFilter');
+    if (!select) return;
+
+    const now = new Date();
+    // Start from previous month (i = 1 instead of 0)
+    for (let i = 1; i < 13; i++) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const value = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        select.appendChild(option);
+    }
+
+    // Set default to previous month
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthStr = prevMonth.getFullYear() + '-' + String(prevMonth.getMonth() + 1).padStart(2, '0');
+    select.value = prevMonthStr;
+}
+
+    function populateDepartmentFilter() {
+        const select = document.getElementById('departmentFilter');
+        if (!select) return;
+
+        fetch('/api/departments/all')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.departments) {
+                    select.innerHTML = '<option value="All">All Departments</option>';
+                    data.departments.forEach(dept => {
+                        const option = document.createElement('option');
+                        option.value = dept.name;
+                        option.textContent = dept.name;
+                        select.appendChild(option);
+                    });
+                }
+            })
+            .catch(err => console.error('Error loading departments:', err));
+    }
+
+    // ============================================
+    // LOAD PERFORMANCES
+    // ============================================
+   function loadPerformances() {
+    const month = document.getElementById('monthFilter').value;
+    const department = document.getElementById('departmentFilter').value;
+    const ratingFilter = document.getElementById('ratingFilter').value;
+
+    // If no month selected, default to previous month
+    if (!month) {
+        const now = new Date();
+        const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevMonthStr = prevMonth.getFullYear() + '-' + String(prevMonth.getMonth() + 1).padStart(2, '0');
+        document.getElementById('monthFilter').value = prevMonthStr;
+        // Re-call with the set value
+        loadPerformances();
+        return;
+    }
+
+    const tbody = document.getElementById('performanceTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="9" style="text-align: center; padding: 3rem;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                <p style="margin-top: 1rem; color: var(--dark-text-muted);">Loading performances...</p>
+            </td>
+        </tr>
+    `;
+
+    let url = `/dashboard/hr/performance/api/list?month=${month}`;
+    if (department && department !== 'All') {
+        url += `&department=${encodeURIComponent(department)}`;
+    }
+
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                allPerformances = data.performances || [];
+                // Merge in Work Performance (ClickUp) + the true 4-pillar combined score.
+                // New, additive endpoint — doesn't touch the old /list endpoint above.
+                return fetch(`/dashboard/hr/performance/work/api/combined?month=${month}`)
+                    .then(res2 => res2.json())
+                    .then(combinedData => {
+                        if (combinedData.success) {
+                            const combinedById = {};
+                            (combinedData.results || []).forEach(c => { combinedById[c.employeeId] = c; });
+                            allPerformances = allPerformances.map(p => ({
+                                ...p,
+                                ...combinedById[p.employeeId]
+                            }));
+                        }
+                        if (ratingFilter && ratingFilter !== 'All') {
+                            allPerformances = allPerformances.filter(p => p.performanceRating === ratingFilter);
+                        }
+                        renderPerformances(allPerformances);
+                        updateStats(data.summary);
+                    });
+            } else {
+                showToast(data.error || 'Error loading performances', 'error');
+                renderPerformances([]);
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showToast('Failed to load performances', 'error');
+            renderPerformances([]);
+        });
+}
+// ===== LIVE AUTO-REFRESH =====
+// Re-reads the database every 60s so Behavior/Initiative edits or a completed
+// ClickUp sync show up without a manual page reload. Does NOT call ClickUp
+// directly — only re-reads what's already stored, so it's fast and free.
+let autoRefreshInterval = null;
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => {
+        loadPerformances();
+    }, 60000); // 60 seconds
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+}
+
+// Start auto-refresh once the page loads. Pause it when the tab isn't visible
+// (saves requests when HR isn't actually looking at the screen).
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopAutoRefresh();
+    else startAutoRefresh();
+});
+startAutoRefresh();
+
+// ===== MANUAL "SYNC FROM CLICKUP" BUTTON =====
+// This is the only thing that actually calls ClickUp's API.
+function syncFromClickUp() {
+    const month = document.getElementById('monthFilter').value;
+    if (!month) { showToast('Select a month first', 'error'); return; }
+
+    const btn = document.getElementById('syncClickUpBtn');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...'; }
+
+    fetch(`/dashboard/hr/performance/work/api/sync-all?month=${month}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showToast(`Synced ${data.count} employees from ClickUp`, 'success');
+                loadPerformances(); // immediate refresh after a real sync
+            } else {
+                showToast(data.error || 'Sync failed', 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showToast('Failed to sync from ClickUp', 'error');
+        })
+        .finally(() => {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-sync"></i> Sync from ClickUp'; }
+        });
+}
+    // ============================================
+    // RENDER PERFORMANCES (Learning Removed from Table)
+    // ============================================
+    function renderPerformances(performances) {
+        const tbody = document.getElementById('performanceTableBody');
+        const ratingFilter = document.getElementById('ratingFilter').value;
+
+        let filtered = performances;
+        if (ratingFilter !== 'All') {
+            filtered = performances.filter(p => p.performanceRating === ratingFilter);
+        }
+
+        const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pageData = filtered.slice(start, end);
+
+        document.getElementById('tableInfo').textContent =
+            `Showing ${start + 1}-${Math.min(end, filtered.length)} of ${filtered.length} employees`;
+        document.getElementById('paginationInfo').textContent =
+            `Showing ${start + 1}-${Math.min(end, filtered.length)} of ${filtered.length} entries`;
+
+        renderPaginationButtons(totalPages);
+
+        if (pageData.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 3rem;">
+                        <div class="empty-state">
+                            <i class="fas fa-clipboard-list"></i>
+                            <h4>No Records Found</h4>
+                            <p>No performance records match your filters.</p>
+                            <button class="btn-primary-gradient" onclick="openCalculateModal()">
+                                <i class="fas fa-calculator"></i> Calculate Now
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = '';
+                pageData.forEach((p, index) => {
+            const displayScore = p.finalScore != null ? p.finalScore : (p.totalScore || 0);
+            const displayRating = p.finalRating || p.performanceRating;
+            const ratingClass = getRatingClass(displayRating);
+
+            // Each pillar is colored by ITS OWN percentage, not the row's total —
+            // e.g. a 0% Attendance shows red even if the Total is a mid-range yellow.
+            const attendanceClass = getScoreClass(p.attendanceScore || 0);
+            const behaviorClass = getScoreClass(p.behaviorScore || 0);
+            const initiativeClass = getScoreClass(p.initiativeScore || 0);
+            const workClass = getScoreClass(p.workScore || 0);
+            const totalClass = getScoreClass(displayScore);
+
+            html += `
+                <tr>
+                    <td>${start + index + 1}</td>
+                    <td>
+                        <div class="employee-cell">
+                            <div class="employee-avatar" style="background: ${getAvatarColor(p.employeeId)};">
+                                ${getInitials(p.employeeName)}
+                            </div>
+                            <div>
+                                <div class="employee-name">${p.employeeName || 'N/A'}</div>
+                                <div class="employee-id">${p.employeeId}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${p.department || 'N/A'}</td>
+                    <td>
+                        <span class="score-cell ${attendanceClass}">${p.attendanceScore || 0}%</span>
+                        <div style="font-size: 0.65rem; color: var(--dark-text-muted);">
+                            ${p.presentDays || 0}/${p.totalWorkingDays || 0} days
+                        </div>
+                    </td>
+                    <td>
+                        <span class="score-cell ${behaviorClass}">${p.behaviorScore || 0}%</span>
+                        <div style="font-size: 0.65rem; color: var(--dark-text-muted);">
+                            ${p.behaviorRatingStars || 0} ★
+                        </div>
+                    </td>
+                    <td>
+                        <span class="score-cell ${initiativeClass}">${p.initiativeScore || 0}%</span>
+                        <div style="font-size: 0.65rem; color: var(--dark-text-muted);">
+                            ${getInitiativeLevel(p.initiativeScore)}
+                        </div>
+                    </td>
+                    <td>
+                        ${p.hasClickUpMapping ?
+                            `<span class="score-cell ${workClass}">${p.workScore != null ? p.workScore : '--'}%</span>
+                             <div style="font-size: 0.65rem; color: var(--dark-text-muted);">
+                                ${p.needsSync ? '<span style="color: var(--warning);">Sync needed</span>' : `${p.completedTasks || 0}/${p.totalTasksAssigned || 0} tasks`}
+                             </div>`
+                            :
+                            `<span style="font-size: 0.7rem; color: var(--dark-text-muted);">N/A</span>
+                             <div style="font-size: 0.65rem; color: var(--dark-text-muted);">&nbsp;</div>`
+                        }
+                    </td>
+                                       <td>
+                        <span class="score-cell ${totalClass}" style="font-size: 1.1rem;">
+                            ${displayScore}%
+                        </span>
+                        <div class="progress-bar-custom">
+                            <div class="fill ${totalClass}" style="width: ${displayScore}%;"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="rating-badge ${ratingClass}">${displayRating || '--'}</span>
+                    </td>
+                    <td>
+                        <div class="action-buttons">
+                            <button class="btn-action view" onclick="viewDetails('${p.employeeId}', '${p.reviewMonth}')" title="View Details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn-action edit" onclick="editPerformance('${p.id}')" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn-action delete" onclick="deletePerformance('${p.id}')" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // ============================================
+    // PAGINATION
+    // ============================================
+    function renderPaginationButtons(totalPages) {
+        const container = document.getElementById('paginationButtons');
+        let html = '';
+
+        html += `<button class="page-btn" onclick="changePage('prev')" ${currentPage <= 1 ? 'disabled' : ''}>‹</button>`;
+
+        for (let i = 1; i <= Math.min(totalPages, 5); i++) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+        }
+
+        if (totalPages > 5) {
+            html += `<span style="color: var(--dark-text-muted); padding: 0 0.3rem;">...</span>`;
+            html += `<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+        }
+
+        html += `<button class="page-btn" onclick="changePage('next')" ${currentPage >= totalPages ? 'disabled' : ''}>›</button>`;
+
+        container.innerHTML = html;
+    }
+
+    function changePage(direction) {
+        const ratingFilter = document.getElementById('ratingFilter').value;
+        let filtered = allPerformances;
+        if (ratingFilter !== 'All') {
+            filtered = allPerformances.filter(p => p.performanceRating === ratingFilter);
+        }
+        const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+
+        if (direction === 'prev' && currentPage > 1) {
+            currentPage--;
+        } else if (direction === 'next' && currentPage < totalPages) {
+            currentPage++;
+        }
+        renderPerformances(allPerformances);
+    }
+
+    function goToPage(page) {
+        currentPage = page;
+        renderPerformances(allPerformances);
+    }
+
+    // ============================================
+    // UPDATE STATS
+    // ============================================
+       function updateStats(summary) {
+        if (!summary) return;
+
+        document.getElementById('statTotalEmployees').textContent = summary.totalEmployees || 0;
+
+        const ratings = summary.ratingsDistribution || {};
+        document.getElementById('statOutstanding').textContent = ratings['Outstanding'] || 0;
+        document.getElementById('statPIP').textContent = ratings['Needs Improvement'] || 0;
+
+        // Recompute average + ClickUp sync count from the merged (4-pillar) data,
+        // since allPerformances now carries finalScore/hasClickUpMapping after the merge.
+        if (allPerformances && allPerformances.length > 0) {
+            const scores = allPerformances.map(p => p.finalScore != null ? p.finalScore : (p.totalScore || 0));
+            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+            document.getElementById('statAverageScore').textContent = (Math.round(avg * 10) / 10) + '%';
+
+            const syncedCount = allPerformances.filter(p => p.hasClickUpMapping).length;
+
+        } else {
+            document.getElementById('statAverageScore').textContent = (summary.averageScore || 0) + '%';
+        }
+    }
+
+    // ============================================
+    // FILTER BY RATING
+    // ============================================
+    function filterByRating() {
+
+          loadPerformances();
+    }
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+    function getRatingClass(rating) {
+        switch (rating) {
+            case 'Outstanding': return 'rating-outstanding';
+            case 'Exceeds Expectations': return 'rating-exceeds';
+            case 'Meets Expectations': return 'rating-meets';
+            case 'Needs Improvement': return 'rating-pip';
+            default: return '';
+        }
+    }
+
+    function getScoreClass(score) {
+        if (score >= 75) return 'high';
+        if (score >= 50) return 'medium';
+        return 'low';
+    }
+
+    function getAvatarColor(id) {
+        const colors = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+        const hash = id ? id.split('').reduce((a, b) => a + b.charCodeAt(0), 0) : 0;
+        return colors[hash % colors.length];
+    }
+
+    function getInitials(name) {
+        if (!name) return 'U';
+        const parts = name.split(' ');
+        if (parts.length >= 2) {
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return name.substring(0, 2).toUpperCase();
+    }
+
+    function getInitiativeLevel(score) {
+        if (score >= 81) return 'Trailblazer';
+        if (score >= 61) return 'Innovative';
+        if (score >= 41) return 'Proactive';
+        if (score >= 21) return 'Suggestive';
+        return 'Reactive';
+    }
+function isMonthCompleted(monthStr) {
+    if (!monthStr) return false;
+
+    const now = new Date();
+    const parts = monthStr.split('-');
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1; // JavaScript months are 0-indexed
+
+    // If it's not the current month, it's completed
+    if (year !== now.getFullYear() || month !== now.getMonth()) {
+        return true;
+    }
+
+    // It IS the current month - check if we're past the last day
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    return now.getDate() >= lastDayOfMonth;
+}
+    // ============================================
+    // MODAL: CALCULATE PERFORMANCE
+    // ============================================
+    function openCalculateModal() {
+        document.getElementById('calculateModal').classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        document.getElementById('calcEmployee').value = '';
+        document.getElementById('calcBehaviorRemarks').value = '';
+        setStars(3);
+        document.getElementById('calcInitiative').value = 50;
+        document.getElementById('calcInitiativeDisplay').textContent = '50';
+               document.getElementById('calcAttendanceScore').textContent = '--';
+        document.getElementById('calcAttendanceDetails').textContent = 'Select an employee';
+        document.getElementById('calcWorkScore').textContent = '--';
+        document.getElementById('calcWorkDetails').textContent = 'Select an employee';
+        document.getElementById('calcWorkApplicable').value = 'false';
+        document.getElementById('calcWorkScoreValue').value = '0';
+        updateSummary();
+    }
+
+    function closeCalculateModal() {
+        document.getElementById('calculateModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // ============================================
+    // STAR RATING
+    // ============================================
+    function setStars(value) {
+        document.getElementById('calcBehaviorStars').value = value;
+        document.getElementById('calcBehaviorScore').value = value * 20;
+
+        const labels = ['', 'Poor', 'Needs Improvement', 'Good', 'Excellent', 'Outstanding'];
+        document.getElementById('starRatingLabel').textContent = `⭐ ${value} Stars - ${labels[value] || ''}`;
+
+        document.querySelectorAll('.star-rating .star').forEach(star => {
+            const starValue = parseInt(star.dataset.value);
+            star.classList.toggle('active', starValue <= value);
+        });
+
+        updateSummary();
+    }
+
+function setDefaultStars(value) {
+    defaultStars = value;
+    document.getElementById('defaultBehaviorStars').value = value;
+
+    const labels = ['', 'Poor', 'Needs Improvement', 'Good', 'Excellent', 'Outstanding'];
+    const labelEl = document.getElementById('defaultStarsLabel');
+    if (labelEl) {
+        labelEl.textContent = `${value} Stars - ${labels[value] || ''}`;
+    }
+
+    document.querySelectorAll('.star-default').forEach((star, index) => {
+        star.style.color = (index < value) ? '#f59e0b' : 'var(--dark-border)';
+        star.style.transform = (index < value) ? 'scale(1.1)' : 'scale(1)';
+    });
+
+    showToast(`Default Behavior set to ${value} stars - ${labels[value]}`, 'info');
+}
+    // ============================================
+    // SCORE SLIDERS
+    // ============================================
+    function updateInitiativeScore(value) {
+        document.getElementById('calcInitiativeDisplay').textContent = value;
+        document.getElementById('calcInitiativeLevel').textContent = getInitiativeLevel(parseInt(value));
+        updateSummary();
+    }
+
+    // ============================================
+    // LOAD ATTENDANCE PREVIEW
+    // ============================================
+function loadAttendancePreview(employeeId) {
+    const month = document.getElementById('calcMonth').value;
+    if (!month) {
+        showToast('Please select a month first', 'warning');
+        return;
+    }
+
+    const display = document.getElementById('calcAttendanceScore');
+    const details = document.getElementById('calcAttendanceDetails');
+    display.textContent = '...';
+    details.textContent = 'Loading attendance data...';
+
+    // CORRECT URL
+    fetch(`/dashboard/hr/performance/api/attendance-preview/${employeeId}/${month}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                display.textContent = data.attendanceScore || 0;
+                details.textContent =
+                    `Working Days: ${data.totalWorkingDays || 0} | Present: ${data.presentDays || 0} | Absent: ${data.absentDays || 0}`;
+            } else {
+                display.textContent = '0';
+                details.textContent = 'No attendance data found for this month';
+            }
+            updateSummary();
+        })
+        .catch(() => {
+            display.textContent = '0';
+            details.textContent = 'Error loading attendance';
+        });
+}
+
+// ============================================
+// LOAD WORK PERFORMANCE PREVIEW (ClickUp, live)
+// Triggers a real sync for this one employee — user-initiated by
+// selecting them in the modal, not a silent background call.
+// ============================================
+function loadWorkPreview(employeeId) {
+    const month = document.getElementById('calcMonth').value;
+    if (!month) return;
+
+    const display = document.getElementById('calcWorkScore');
+    const details = document.getElementById('calcWorkDetails');
+    display.textContent = '...';
+    details.textContent = 'Pulling live ClickUp data...';
+
+    fetch(`/dashboard/hr/performance/work/api/sync?employeeId=${employeeId}&month=${month}`, { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.result) {
+                const r = data.result;
+                document.getElementById('calcWorkApplicable').value = 'true';
+                document.getElementById('calcWorkScoreValue').value = r.workScore || 0;
+                display.textContent = r.workScore != null ? r.workScore : 0;
+                details.textContent = `${r.completedTasks || 0}/${r.totalTasksAssigned || 0} tasks completed`;
+            } else {
+                // No ClickUp mapping — Work pillar doesn't apply to this employee
+                document.getElementById('calcWorkApplicable').value = 'false';
+                document.getElementById('calcWorkScoreValue').value = 0;
+                display.textContent = 'N/A';
+                details.textContent = 'No ClickUp mapping — excluded from score';
+            }
+            updateSummary();
+        })
+        .catch(() => {
+            document.getElementById('calcWorkApplicable').value = 'false';
+            display.textContent = 'N/A';
+            details.textContent = 'Error loading ClickUp data';
+            updateSummary();
+        });
+}
+    // ============================================
+    // UPDATE SUMMARY (3 Pillars - Learning Removed)
+    // ============================================
+      function updateSummary() {
+        const attendance = parseFloat(document.getElementById('calcAttendanceScore').textContent) || 0;
+        const behavior = parseInt(document.getElementById('calcBehaviorScore').value) || 0;
+        const initiative = parseInt(document.getElementById('calcInitiative').value) || 0;
+        const workApplicable = document.getElementById('calcWorkApplicable').value === 'true';
+        const work = parseFloat(document.getElementById('calcWorkScoreValue').value) || 0;
+
+        let total;
+        if (workApplicable) {
+            // Full 4-pillar weights: Attendance 35%, Behavior 17.5%, Initiative 17.5%, Work 30%
+            total = (attendance * 0.35) + (behavior * 0.175) + (initiative * 0.175) + (work * 0.30);
+        } else {
+            // No ClickUp mapping — reweight the 3 pillars to fill 100%
+            // (35 : 17.5 : 17.5 scaled up to sum to 100)
+            total = (attendance * 0.50) + (behavior * 0.25) + (initiative * 0.25);
+        }
+
+        document.getElementById('summaryAttendance').textContent = attendance + '%';
+        document.getElementById('summaryBehavior').textContent = behavior + '%';
+        document.getElementById('summaryInitiative').textContent = initiative + '%';
+        document.getElementById('summaryTotal').textContent = Math.round(total * 10) / 10 + '%';
+
+        const workRow = document.getElementById('summaryWorkRow');
+        if (workRow) {
+            workRow.style.display = workApplicable ? 'flex' : 'none';
+            const workValEl = document.getElementById('summaryWork');
+            if (workValEl) workValEl.textContent = work + '%';
+        }
+
+        const rating = getRating(total);
+        const ratingClass = getRatingClass(rating);
+        const ratingElement = document.getElementById('summaryRating');
+        ratingElement.textContent = rating;
+        ratingElement.className = `rating-badge ${ratingClass}`;
+    }
+
+    function getRating(score) {
+        if (score >= 90) return 'Outstanding';
+        if (score >= 75) return 'Exceeds Expectations';
+        if (score >= 50) return 'Meets Expectations';
+        return 'Needs Improvement';
+    }
+
+    // ============================================
+    // SUBMIT CALCULATE FORM (Learning Removed)
+    // ============================================
+ function submitCalculateForm(event) {
+    event.preventDefault();
+
+    const employeeId = document.getElementById('calcEmployee').value;
+    const month = document.getElementById('calcMonth').value;
+    const behaviorStars = parseInt(document.getElementById('calcBehaviorStars').value);
+    const behaviorScore = parseInt(document.getElementById('calcBehaviorScore').value);
+    const behaviorRemarks = document.getElementById('calcBehaviorRemarks').value.trim();
+    const initiativeScore = parseInt(document.getElementById('calcInitiative').value);
+
+    // ===== VALIDATION: Check if employee is selected =====
+    if (!employeeId) {
+        showToast('Please select an employee', 'error');
+        return;
+    }
+
+    // ===== VALIDATION: Check if month is selected =====
+    if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+    }
+
+    // ===== VALIDATION: Check if current month is completed =====
+    if (!isMonthCompleted(month)) {
+        showToast('⚠️ Cannot calculate performance for the current month until the month is completed. Please select a previous month.', 'warning');
+        return;
+    }
+
+    // ===== Continue with saving =====
+    const submitBtn = document.getElementById('calcSubmitBtn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+    const formData = new FormData();
+    formData.append('employeeId', employeeId);
+    formData.append('month', month);
+    formData.append('behaviorScore', behaviorScore);
+    formData.append('behaviorStars', behaviorStars);
+    formData.append('initiativeScore', initiativeScore);
+    if (behaviorRemarks) formData.append('behaviorRemarks', behaviorRemarks);
+
+    fetch('/dashboard/hr/performance/api/calculate', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Performance';
+
+        if (data.success) {
+            showToast('Performance calculated and saved successfully!', 'success');
+            closeCalculateModal();
+            loadPerformances();
+        } else {
+            showToast(data.error || 'Error calculating performance', 'error');
+        }
+    })
+    .catch(err => {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-save"></i> Save Performance';
+        showToast('Failed to save: ' + err.message, 'error');
+    });
+}
+
+    // ============================================
+    // VIEW DETAILS (Learning Removed from Pillars)
+    // ============================================
+      function viewDetails(employeeId, reviewMonth) {
+        const modal = document.getElementById('detailsModal');
+        const content = document.getElementById('detailsContent');
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+
+        content.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--dark-text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p style="margin-top: 1rem;">Loading details...</p>
+            </div>
+        `;
+
+        const monthShort = reviewMonth.substring(0, 7); // "yyyy-MM" for the combined endpoint
+
+        Promise.all([
+            fetch(`/dashboard/hr/performance/api/history/${employeeId}`).then(res => res.json()),
+            fetch(`/dashboard/hr/performance/work/api/combined?month=${monthShort}`).then(res => res.json())
+        ]).then(([historyData, combinedData]) => {
+            if (historyData.success) {
+                const history = historyData.history || [];
+                const current = history.find(h => h.reviewMonth === reviewMonth);
+                if (current) {
+                    if (combinedData.success) {
+                        const match = (combinedData.results || []).find(r => r.employeeId === employeeId);
+                        if (match) Object.assign(current, match); // merges workScore, finalScore, finalRating, hasClickUpMapping
+                    }
+                    renderDetailsModal(current, history);
+                } else {
+                    content.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--danger);"><i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i><p>Performance record not found</p></div>`;
+                }
+            } else {
+                content.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--danger);"><i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i><p>${historyData.error || 'Error loading details'}</p></div>`;
+            }
+        }).catch(err => {
+            content.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--danger);"><i class="fas fa-exclamation-circle" style="font-size: 2rem;"></i><p>Failed to load details</p></div>`;
+        });
+    }
+    function renderDetailsModal(performance, history) {
+        const content = document.getElementById('detailsContent');
+        const ratingClass = getRatingClass(performance.performanceRating);
+        const scoreClass = getScoreClass(performance.totalScore);
+
+        let historyHtml = '';
+        if (history && history.length > 1) {
+            historyHtml = `
+                <div class="history-timeline">
+                    <h5 style="font-size: 0.9rem; color: var(--dark-text-secondary); margin-bottom: 0.75rem;">
+                        <i class="fas fa-history"></i> Performance History
+                    </h5>
+                    ${history.filter(h => h.id !== performance.id).map(h => `
+                        <div class="history-item">
+                            <span class="month">${new Date(h.reviewMonth).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span>
+                            <span class="score ${getScoreClass(h.totalScore)}">${h.totalScore || 0}%</span>
+                            <span class="rating-badge ${getRatingClass(h.performanceRating)}" style="font-size: 0.7rem; padding: 0.15rem 0.6rem;">${h.performanceRating}</span>
+                            <span class="trend ${h.totalScore > (performance.totalScore || 0) ? 'down' : h.totalScore < (performance.totalScore || 0) ? 'up' : 'flat'}">
+                                ${h.totalScore > (performance.totalScore || 0) ? '📉' : h.totalScore < (performance.totalScore || 0) ? '📈' : '➖'}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        content.innerHTML = `
+            <div class="details-profile">
+                <div class="avatar-large" style="background: ${getAvatarColor(performance.employeeId)};">
+                    ${getInitials(performance.employeeName)}
+                </div>
+                <div class="profile-info">
+                    <h4>${performance.employeeName || 'N/A'}</h4>
+                    <div class="sub-info">
+                        ${performance.employeeId} • ${performance.department || 'N/A'}
+                        <span style="margin: 0 0.5rem;">•</span>
+                        ${new Date(performance.reviewMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    </div>
+                    <div class="sub-info">
+                        <i class="fas fa-user-check"></i> Reviewed by: ${performance.reviewedBy || 'N/A'}
+                        <span style="margin: 0 0.5rem;">•</span>
+                        <i class="fas fa-calendar-alt"></i> ${performance.reviewedDate ? new Date(performance.reviewedDate).toLocaleString() : 'N/A'}
+                    </div>
+                </div>
+                                <div style="margin-left: auto; text-align: right;">
+                    <div style="font-size: 2rem; font-weight: 700; ${(performance.finalScore != null ? performance.finalScore : performance.totalScore) >= 75 ? 'color: var(--success);' : (performance.finalScore != null ? performance.finalScore : performance.totalScore) >= 50 ? 'color: var(--warning);' : 'color: var(--danger);'}">
+                        ${performance.finalScore != null ? performance.finalScore : (performance.totalScore || 0)}%
+                    </div>
+                    <span class="rating-badge ${getRatingClass(performance.finalRating || performance.performanceRating)}" style="font-size: 0.85rem; padding: 0.35rem 1rem;">
+                        <i class="fas fa-circle"></i> ${performance.finalRating || performance.performanceRating}
+                    </span>
+                </div>
+            </div>
+
+            <!-- 3 Pillars (Learning Removed) -->
+            <div class="details-pillars">
+                <div class="details-pillar">
+                    <div class="pillar-header">
+                        <span class="pillar-name"><i class="fas fa-user-clock" style="color: var(--info);"></i> Attendance</span>
+                        <span class="pillar-score ${getScoreClass(performance.attendanceScore)}">${performance.attendanceScore || 0}%</span>
+                    </div>
+                    <div class="pillar-detail">
+                        ${performance.presentDays || 0}/${performance.totalWorkingDays || 0} days
+                        ${performance.lateDays > 0 ? `• ${performance.lateDays} late` : ''}
+                        <span class="pillar-weight">50%</span>
+                    </div>
+                    <div class="progress-bar-custom" style="width: 100%; margin-top: 0.4rem;">
+                        <div class="fill ${getScoreClass(performance.attendanceScore)}" style="width: ${performance.attendanceScore || 0}%;"></div>
+                    </div>
+                </div>
+
+                <div class="details-pillar">
+                    <div class="pillar-header">
+                        <span class="pillar-name"><i class="fas fa-handshake" style="color: var(--success);"></i> Behavior</span>
+                        <span class="pillar-score ${getScoreClass(performance.behaviorScore)}">${performance.behaviorScore || 0}%</span>
+                    </div>
+                    <div class="pillar-detail">
+                        ${performance.behaviorRatingStars || 0} ★
+                        ${performance.behaviorRemarks ? `• "${performance.behaviorRemarks}"` : ''}
+                        <span class="pillar-weight">25%</span>
+                    </div>
+                    <div class="progress-bar-custom" style="width: 100%; margin-top: 0.4rem;">
+                        <div class="fill ${getScoreClass(performance.behaviorScore)}" style="width: ${performance.behaviorScore || 0}%;"></div>
+                    </div>
+                </div>
+
+                               <div class="details-pillar">
+                    <div class="pillar-header">
+                        <span class="pillar-name"><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Initiative</span>
+                        <span class="pillar-score ${getScoreClass(performance.initiativeScore)}">${performance.initiativeScore || 0}%</span>
+                    </div>
+                    <div class="pillar-detail">
+                        ${getInitiativeLevel(performance.initiativeScore)}
+                        <span class="pillar-weight">17.5%</span>
+                    </div>
+                    <div class="progress-bar-custom" style="width: 100%; margin-top: 0.4rem;">
+                        <div class="fill ${getScoreClass(performance.initiativeScore)}" style="width: ${performance.initiativeScore || 0}%;"></div>
+                    </div>
+                </div>
+
+                <div class="details-pillar">
+                    <div class="pillar-header">
+                        <span class="pillar-name"><i class="fas fa-tasks" style="color: var(--purple);"></i> Work Performance</span>
+                        <span class="pillar-score ${performance.hasClickUpMapping ? getScoreClass(performance.workScore) : ''}">${performance.hasClickUpMapping ? (performance.workScore != null ? performance.workScore : 0) + '%' : 'N/A'}</span>
+                    </div>
+                    <div class="pillar-detail">
+                        ${performance.hasClickUpMapping ? `${performance.completedTasks || 0}/${performance.totalTasksAssigned || 0} tasks (ClickUp)` : 'No ClickUp mapping'}
+                        <span class="pillar-weight">${performance.hasClickUpMapping ? '30%' : 'N/A'}</span>
+                    </div>
+                    <div class="progress-bar-custom" style="width: 100%; margin-top: 0.4rem;">
+                        <div class="fill ${performance.hasClickUpMapping ? getScoreClass(performance.workScore) : ''}" style="width: ${performance.hasClickUpMapping ? (performance.workScore || 0) : 0}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            ${historyHtml}
+        `;
+    }
+
+    function closeDetailsModal() {
+        document.getElementById('detailsModal').classList.remove('active');
+        document.body.style.overflow = 'auto';
+    }
+
+    // ============================================
+    // EDIT PERFORMANCE
+    // ============================================
+    function editPerformance(id) {
+        const perf = allPerformances.find(p => p.id === id);
+        if (!perf) {
+            showToast('Performance record not found', 'error');
+            return;
+        }
+
+        openCalculateModal();
+        document.getElementById('calcEmployee').value = perf.employeeId;
+        document.getElementById('calcMonth').value = perf.reviewMonth.substring(0, 7);
+        setStars(perf.behaviorRatingStars || 3);
+        document.getElementById('calcBehaviorRemarks').value = perf.behaviorRemarks || '';
+        document.getElementById('calcInitiative').value = perf.initiativeScore || 50;
+        document.getElementById('calcInitiativeDisplay').textContent = perf.initiativeScore || 50;
+
+        if (perf.employeeId) {
+            loadAttendancePreview(perf.employeeId);
+        }
+
+        showToast('Edit behavior or initiative scores and re-save', 'info');
+    }
+
+    // ============================================
+    // DELETE PERFORMANCE
+    // ============================================
+    function deletePerformance(id) {
+        if (!confirm('Are you sure you want to delete this performance record?')) return;
+
+        fetch(`/dashboard/hr/performance/api/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('Performance record deleted', 'success');
+                    loadPerformances();
+                } else {
+                    showToast(data.error || 'Error deleting record', 'error');
+                }
+            })
+            .catch(err => showToast('Failed to delete record', 'error'));
+    }
+
+    // ============================================
+    // EXPORT PDF
+    // ============================================
+    function exportPDF() {
+        showToast('PDF export coming soon!', 'info');
+    }
+
+    // ============================================
+    // TOAST NOTIFICATION
+    // ============================================
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast-custom ${type}`;
+        const icons = {
+            success: 'fa-check-circle',
+            error: 'fa-exclamation-circle',
+            warning: 'fa-exclamation-triangle',
+            info: 'fa-info-circle'
+        };
+        toast.innerHTML = `
+            <i class="fas ${icons[type] || icons.info}"></i>
+            <span>${message}</span>
+            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: var(--dark-text-secondary); cursor: pointer; font-size: 1.2rem; margin-left: auto;">×</button>
+        `;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'slideOutRight 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // ============================================
+    // CLOSE MODALS ON OVERLAY CLICK
+    // ============================================
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.remove('active');
+                document.body.style.overflow = 'auto';
+            }
+        });
+    });
+
+    // ============================================
+    // BULK FUNCTIONALITY (Learning Removed)
+    // ============================================
+    let bulkEmployees = [];
+    let defaultStars = 3;
+    let isCalculating = false;
+
+   function initBulkFunctionality() {
+    const now = new Date();
+    const monthStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    const bulkMonth = document.getElementById('bulkMonth');
+    if (bulkMonth) bulkMonth.value = monthStr;
+
+    // Initialize default stars
+    setDefaultStars(3);
+
+    loadBulkEmployees();
+}
+function loadBulkEmployees() {
+    const department = document.getElementById('bulkDepartment').value;
+    const month = document.getElementById('bulkMonth').value;
+
+    if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+    }
+
+    // Check if current month is completed
+    if (!isMonthCompleted(month)) {
+        showToast('⚠️ Current month is not completed. You can still load employees but calculations will be restricted.', 'warning');
+    }
+
+    const tbody = document.getElementById('bulkTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem;"></i>
+                <p style="margin-top: 1rem;">Loading employees...</p>
+            </td>
+        </tr>
+    `;
+
+    fetch('/dashboard/hr/performance/api/employees/all')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                let employees = data.employees || [];
+                if (department !== 'All') {
+                    employees = employees.filter(e => e.department === department);
+                }
+                bulkEmployees = employees;
+                renderBulkTable(employees);
+                document.getElementById('employeeCount').textContent =
+                    employees.length + ' employees loaded';
+            } else {
+                showToast(data.error || 'Failed to load employees', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showToast('Failed to load employees', 'error');
+        });
+}
+
+  function renderBulkTable(employees) {
+    const tbody = document.getElementById('bulkTableBody');
+
+    if (!employees || employees.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                    <i class="fas fa-users-slash" style="font-size: 2rem;"></i>
+                    <p style="margin-top: 1rem;">No employees found in this department</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    employees.forEach((emp, index) => {
+        const initials = (emp.firstName || 'U')[0] + (emp.lastName || '')[0];
+        html += `
+            <tr>
+                <td>
+                    <input type="checkbox" class="bulk-select-employee" data-emp="${emp.employeeId}" checked>
+                </td>
+                <td>${index + 1}</td>
+                <td>
+                    <div class="employee-cell">
+                        <div class="employee-avatar" style="background: ${getAvatarColor(emp.employeeId)};">
+                            ${initials.toUpperCase()}
+                        </div>
+                        <div>
+                            <div class="employee-name">${emp.firstName || ''} ${emp.lastName || ''}</div>
+                            <div class="employee-id">${emp.employeeId || 'N/A'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${emp.department || 'N/A'}</td>
+                <td style="font-size: 0.8rem; color: var(--dark-text-muted);">Auto</td>
+                <td>
+                    <select class="bulk-behavior" data-emp="${emp.employeeId}" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                        <option value="1">⭐ Poor</option>
+                        <option value="2">⭐⭐ Needs Imp.</option>
+                        <option value="3" selected>⭐⭐⭐ Good</option>
+                        <option value="4">⭐⭐⭐⭐ Excellent</option>
+                        <option value="5">⭐⭐⭐⭐⭐ Outstanding</option>
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="bulk-initiative" data-emp="${emp.employeeId}" value="${document.getElementById('defaultInitiative').value}" min="0" max="100" style="width: 60px; background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 6px; padding: 0.25rem 0.4rem; font-size: 0.8rem; text-align: center;">
+                </td>
+                                <td style="font-size: 0.75rem; color: var(--dark-text-muted);">
+                    <i class="fas fa-sync-alt"></i> Auto (ClickUp)
+                </td>
+                <td>
+                    <span class="status-badge status-pending" id="status-${emp.employeeId}">⏳ Pending</span>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+}
+function toggleAllBulkEmployees(checked) {
+    document.querySelectorAll('.bulk-select-employee').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+  function applyDefaults() {
+    const initiative = document.getElementById('defaultInitiative').value;
+    const behavior = document.getElementById('defaultBehaviorStars').value;
+
+    // Only apply to visible rows (not filtered out)
+    document.querySelectorAll('.bulk-behavior').forEach(sel => {
+        const row = sel.closest('tr');
+        if (row && row.style.display !== 'none') {
+            sel.value = behavior;
+        }
+    });
+
+    document.querySelectorAll('.bulk-initiative').forEach(inp => {
+        const row = inp.closest('tr');
+        if (row && row.style.display !== 'none') {
+            inp.value = initiative;
+        }
+    });
+
+    showToast('Default values applied to selected employees', 'success');
+}
+
+ async function calculateAll() {
+    if (isCalculating) return;
+    if (bulkEmployees.length === 0) {
+        showToast('Please load employees first', 'error');
+        return;
+    }
+
+    const month = document.getElementById('bulkMonth').value;
+    if (!month) {
+        showToast('Please select a month', 'error');
+        return;
+    }
+
+    // Check if current month is completed
+    if (!isMonthCompleted(month)) {
+        showToast('⚠️ Cannot calculate performance for the current month until the month is completed. Please select a previous month.', 'warning');
+        return;
+    }
+
+    isCalculating = true;
+    const btn = document.getElementById('calculateAllBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+
+    const progressContainer = document.getElementById('progressContainer');
+    progressContainer.classList.add('active');
+
+    let total = bulkEmployees.length;
+    let success = 0;
+    let failed = 0;
+
+    for (let i = 0; i < bulkEmployees.length; i++) {
+        const emp = bulkEmployees[i];
+        const empId = emp.employeeId;
+
+        const behaviorSelect = document.querySelector(`.bulk-behavior[data-emp="${empId}"]`);
+        const initiativeInput = document.querySelector(`.bulk-initiative[data-emp="${empId}"]`);
+
+        const behaviorStars = behaviorSelect ? parseInt(behaviorSelect.value) : 3;
+        const behaviorScore = behaviorStars * 20;
+        const initiative = initiativeInput ? parseInt(initiativeInput.value) : 50;
+
+        const progress = Math.round(((i + 1) / total) * 100);
+        document.getElementById('progressPercent').textContent = progress + '%';
+        document.getElementById('progressFill').style.width = progress + '%';
+        document.getElementById('progressTotal').textContent = total;
+
+        const statusEl = document.getElementById(`status-${empId}`);
+        if (statusEl) {
+            statusEl.textContent = '⏳ Processing...';
+            statusEl.className = 'status-badge status-pending';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('employeeId', empId);
+            formData.append('month', month);
+            formData.append('behaviorScore', behaviorScore);
+            formData.append('behaviorStars', behaviorStars);
+            formData.append('initiativeScore', initiative);
+
+            const response = await fetch('/dashboard/hr/performance/api/calculate', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                success++;
+                if (statusEl) {
+                    statusEl.textContent = '✅ Done';
+                    statusEl.className = 'status-badge status-success';
+                }
+            } else {
+                failed++;
+                if (statusEl) {
+                    statusEl.textContent = '❌ Failed';
+                    statusEl.className = 'status-badge status-failed';
+                }
+            }
+        } catch (err) {
+            failed++;
+            if (statusEl) {
+                statusEl.textContent = '❌ Error';
+                statusEl.className = 'status-badge status-failed';
+            }
+        }
+
+        document.getElementById('progressSuccess').textContent = success;
+        document.getElementById('progressFailed').textContent = failed;
+
+        await new Promise(r => setTimeout(r, 100));
+    }
+
+    isCalculating = false;
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-play"></i> Calculate All';
+
+    // ===== FIX: Show completion status =====
+    const progressText = document.querySelector('.progress-container .progress-text');
+    if (progressText) {
+        progressText.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success);"></i> Completed!';
+    }
+
+    // ===== FIX: Auto-hide progress after 3 seconds =====
+    setTimeout(() => {
+        progressContainer.classList.remove('active');
+        // Reset the progress text for next time
+        if (progressText) {
+            progressText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
+        }
+    }, 3000);
+
+    showToast(`Completed: ${success} succeeded, ${failed} failed`, success === total ? 'success' : 'warning');
+}
+
+    // ============================================
+    // SETTINGS FUNCTIONALITY (3 Pillars)
+    // ============================================
+    function initSettingsFunctionality() {
+        const saved = localStorage.getItem('performance_settings');
+        if (saved) {
+            try {
+                const settings = JSON.parse(saved);
+                document.getElementById('weightAttendance').value = settings.weights?.attendance || 50;
+                document.getElementById('weightBehavior').value = settings.weights?.behavior || 25;
+                document.getElementById('weightInitiative').value = settings.weights?.initiative || 25;
+                updateWeight('attendance', settings.weights?.attendance || 50);
+                updateWeight('behavior', settings.weights?.behavior || 25);
+                updateWeight('initiative', settings.weights?.initiative || 25);
+
+                if (settings.deductions) {
+                    document.getElementById('deductAbsent').value = settings.deductions.absent || 5;
+                    document.getElementById('deductLate').value = settings.deductions.late || 2;
+                    document.getElementById('deductEarly').value = settings.deductions.early || 2;
+                }
+                if (settings.thresholds) {
+                    document.getElementById('thresholdOutstanding').value = settings.thresholds.outstanding || 90;
+                    document.getElementById('thresholdExceeds').value = settings.thresholds.exceeds || 75;
+                    document.getElementById('thresholdMeets').value = settings.thresholds.meets || 50;
+                    document.getElementById('thresholdPIPDisplay').textContent = settings.thresholds.meets || 50;
+                }
+                if (settings.stars) {
+                    document.getElementById('star1').value = settings.stars[1] || 20;
+                    document.getElementById('star2').value = settings.stars[2] || 40;
+                    document.getElementById('star3').value = settings.stars[3] || 60;
+                    document.getElementById('star4').value = settings.stars[4] || 80;
+                    document.getElementById('star5').value = settings.stars[5] || 100;
+                }
+            } catch (e) {
+                console.error('Error loading settings:', e);
+            }
+        }
+    }
+
+      function updateWeight(type, value) {
+        const displayMap = {
+            attendance: 'weightAttendanceDisplay',
+            behavior: 'weightBehaviorDisplay',
+            initiative: 'weightInitiativeDisplay',
+            work: 'weightWorkDisplay'
+        };
+
+        const el = document.getElementById(displayMap[type]);
+        if (el) el.textContent = value + '%';
+
+        const total = [
+            parseInt(document.getElementById('weightAttendance')?.value || 0),
+            parseInt(document.getElementById('weightBehavior')?.value || 0),
+            parseInt(document.getElementById('weightInitiative')?.value || 0),
+            parseInt(document.getElementById('weightWork')?.value || 0)
+        ].reduce((a, b) => a + b, 0);
+
+        const totalEl = document.getElementById('weightTotal');
+        if (totalEl) {
+            totalEl.textContent = total + '%';
+            totalEl.style.color = total === 100 ? 'var(--success)' : 'var(--danger)';
+        }
+    }
+
+    function saveSettings() {
+        const settings = {
+                        weights: {
+                attendance: parseInt(document.getElementById('weightAttendance').value),
+                behavior: parseInt(document.getElementById('weightBehavior').value),
+                initiative: parseInt(document.getElementById('weightInitiative').value),
+                work: parseInt(document.getElementById('weightWork').value)
+            },
+            deductions: {
+                absent: parseInt(document.getElementById('deductAbsent').value),
+                late: parseInt(document.getElementById('deductLate').value),
+                early: parseInt(document.getElementById('deductEarly').value)
+            },
+            thresholds: {
+                outstanding: parseInt(document.getElementById('thresholdOutstanding').value),
+                exceeds: parseInt(document.getElementById('thresholdExceeds').value),
+                meets: parseInt(document.getElementById('thresholdMeets').value)
+            },
+            stars: {
+                1: parseInt(document.getElementById('star1').value),
+                2: parseInt(document.getElementById('star2').value),
+                3: parseInt(document.getElementById('star3').value),
+                4: parseInt(document.getElementById('star4').value),
+                5: parseInt(document.getElementById('star5').value)
+            }
+        };
+
+        const total = Object.values(settings.weights).reduce((a, b) => a + b, 0);
+        if (total !== 100) {
+            showToast('Weights must total 100%. Current total: ' + total + '%', 'error');
+            return;
+        }
+
+        localStorage.setItem('performance_settings', JSON.stringify(settings));
+        showToast('Settings saved successfully!', 'success');
+        document.getElementById('thresholdPIPDisplay').textContent = document.getElementById('thresholdMeets').value;
+    }
+
+    function resetSettings() {
+        if (!confirm('Reset all settings to default values?')) return;
+
+                document.getElementById('weightAttendance').value = 35;
+        document.getElementById('weightBehavior').value = 17.5;
+        document.getElementById('weightInitiative').value = 17.5;
+        document.getElementById('weightWork').value = 30;
+        updateWeight('attendance', 35);
+        updateWeight('behavior', 17.5);
+        updateWeight('initiative', 17.5);
+        updateWeight('work', 30);
+        document.getElementById('deductAbsent').value = 5;
+        document.getElementById('deductLate').value = 2;
+        document.getElementById('deductEarly').value = 2;
+
+        document.getElementById('thresholdOutstanding').value = 90;
+        document.getElementById('thresholdExceeds').value = 75;
+        document.getElementById('thresholdMeets').value = 50;
+        document.getElementById('thresholdPIPDisplay').textContent = 50;
+
+        document.getElementById('star1').value = 20;
+        document.getElementById('star2').value = 40;
+        document.getElementById('star3').value = 60;
+        document.getElementById('star4').value = 80;
+        document.getElementById('star5').value = 100;
+
+        showToast('Settings reset to defaults', 'success');
+    }
+
+    // ============================================
+    // HISTORY FUNCTIONALITY (Learning Removed)
+    // ============================================
+function loadHistory(empId) {
+    const container = document.getElementById('historyContent');
+
+    if (!empId) {
+        // Show the employee selector again
+        loadHistoryContent(true);
+        return;
+    }
+
+    // Update URL with employee ID for bookmarking
+    const url = new URL(window.location);
+    url.searchParams.set('id', empId);
+    window.history.replaceState({}, '', url);
+
+    // Show loading state
+    container.innerHTML = `
+        <div class="history-container-inner">
+            <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                <p style="margin-top: 1rem;">Loading history for employee...</p>
+            </div>
+        </div>
+    `;
+
+    fetch(`/dashboard/hr/performance/api/history/${empId}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const historyData = data.history || [];
+                renderHistoryContent(historyData);
+            } else {
+                showError(data.error || 'Failed to load history');
+            }
+        })
+        .catch(err => {
+            console.error('Error:', err);
+            showError('Failed to load history');
+        });
+}
+
+  function renderHistoryContent(data) {
+    const container = document.getElementById('historyContent');
+
+  if (!data || data.length === 0) {
+    container.innerHTML = `
+        <div class="history-container-inner">
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+                <button class="btn-outline-secondary" onclick="loadHistoryContent(true)">
+                    <i class="fas fa-exchange-alt"></i> Change Employee
+                </button>
+            </div>
+            <div style="text-align: center; padding: 3rem; background: var(--dark-card); border-radius: var(--border-radius); border: 1px solid var(--dark-border);">
+                <i class="fas fa-clipboard-list" style="font-size: 3rem; color: var(--dark-text-muted); opacity: 0.4; margin-bottom: 1rem;"></i>
+                <h4 style="color: var(--dark-text); margin-bottom: 0.5rem;">No Performance Records Found</h4>
+                <p style="color: var(--dark-text-muted); margin-bottom: 1rem;">This employee has no performance records yet.</p>
+                <button class="btn-primary-gradient" onclick="switchPerformanceTab('main')">
+                    <i class="fas fa-calculator"></i> Calculate Performance
+                </button>
+            </div>
+        </div>
+    `;
+    return;
+}
+
+    // Sort by date (newest first)
+    data.sort((a, b) => new Date(b.reviewMonth) - new Date(a.reviewMonth));
+
+    const latest = data[0];
+    const scores = data.map(d => d.totalScore || 0);
+    const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const trend = scores.length > 1 ? scores[0] - scores[scores.length - 1] : 0;
+
+    // Get employee ID from the first record
+    const currentEmployeeId = latest.employeeId;
+
+    // Build table rows
+    let tableHtml = '';
+    data.forEach(record => {
+        const month = new Date(record.reviewMonth).toLocaleDateString('en-US', {
+            month: 'short',
+            year: 'numeric'
+        });
+        const ratingClass = getRatingClass(record.performanceRating);
+        const scoreClass = getScoreClass(record.totalScore);
+
+        tableHtml += `
+            <tr>
+                <td><strong>${month}</strong></td>
+                <td class="score-cell ${scoreClass}">${record.totalScore || 0}%</td>
+                <td><span class="rating-badge ${ratingClass}">${record.performanceRating || '--'}</span></td>
+                <td class="score-cell ${getScoreClass(record.attendanceScore)}">${record.attendanceScore || 0}%</td>
+                <td class="score-cell ${getScoreClass(record.behaviorScore)}">${record.behaviorScore || 0}%</td>
+                <td class="score-cell ${getScoreClass(record.initiativeScore)}">${record.initiativeScore || 0}%</td>
+                <td style="font-size: 0.8rem; color: var(--dark-text-muted);">${record.reviewedBy || '--'}</td>
+            </tr>
+        `;
+    });
+
+    // Calculate pillar averages
+    const avg = (key) => {
+        const vals = data.map(d => d[key] || 0);
+        return vals.reduce((a, b) => a + b, 0) / vals.length;
+    };
+
+    const attendance = Math.round(avg('attendanceScore') * 10) / 10;
+    const behavior = Math.round(avg('behaviorScore') * 10) / 10;
+    const initiative = Math.round(avg('initiativeScore') * 10) / 10;
+
+    // Build the complete history HTML
+    container.innerHTML = `
+        <div class="history-container-inner">
+            <!-- CHANGE EMPLOYEE BUTTON -->
+           <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <button class="btn-outline-secondary" onclick="loadHistoryContent(true)">
+        <i class="fas fa-exchange-alt"></i> Change Employee
+    </button>
+</div>
+
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="avatar-large" style="background: ${getAvatarColor(latest.employeeId)};">
+                    ${getInitials(latest.employeeName)}
+                </div>
+                <div class="profile-info">
+                    <h3>${latest.employeeName || 'Employee'}</h3>
+                    <div class="sub-info">
+                        ${latest.employeeId} • ${latest.department || 'N/A'}
+                        <span>•</span>
+                        ${latest.designation || ''}
+                    </div>
+                    <div class="sub-info" style="margin-top: 0.25rem;">
+                        <i class="fas fa-calendar-alt" style="color: var(--primary);"></i>
+                        Total Records: <strong>${data.length}</strong>
+                    </div>
+                </div>
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${Math.round(avgScore * 10) / 10}%</div>
+                        <div class="stat-label">Average Score</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${trend > 2 ? 'trend-up' : trend < -2 ? 'trend-down' : 'trend-flat'}">
+                            ${trend > 2 ? '📈' : trend < -2 ? '📉' : '➖'} ${Math.abs(Math.round(trend))}%
+                        </div>
+                        <div class="stat-label">Trend</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.length}</div>
+                        <div class="stat-label">Total Reviews</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${latest.performanceRating || '--'}</div>
+                        <div class="stat-label">Current Rating</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon up"><i class="fas fa-arrow-up"></i></div>
+                    <div class="stat-number">${Math.max(...scores)}%</div>
+                    <div class="stat-label">Best Performance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon down"><i class="fas fa-arrow-down"></i></div>
+                    <div class="stat-number">${Math.min(...scores)}%</div>
+                    <div class="stat-label">Lowest Performance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon flat"><i class="fas fa-calendar"></i></div>
+                    <div class="stat-number">${data.length}</div>
+                    <div class="stat-label">Months Evaluated</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon flat"><i class="fas fa-arrow-trend-up"></i></div>
+                    <div class="stat-number">
+                        ${trend > 5 ? '📈 ' : trend < -5 ? '📉 ' : '➖ '} ${trend > 0 ? '+' : ''}${Math.round(trend)}%
+                    </div>
+                    <div class="stat-label">Overall Improvement</div>
+                </div>
+            </div>
+
+            <!-- Trend Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h4><i class="fas fa-chart-line"></i> Performance Trend</h4>
+                    <div style="display: flex; gap: 0.5rem; font-size: 0.75rem; color: var(--dark-text-muted);">
+                        <span><span style="color: var(--primary);">●</span> Score</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="historyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Pillar Breakdown -->
+            <div class="table-card" style="margin-bottom: 1.75rem;">
+                <div class="table-header">
+                    <h4><i class="fas fa-chart-pie"></i> Pillar Breakdown</h4>
+                    <span style="font-size: 0.8rem; color: var(--dark-text-muted);">Average across all months</span>
+                </div>
+                <div style="padding: 1.5rem;">
+                    <div class="pillar-breakdown">
+                        <div class="pillar-item">
+                            <div class="pillar-name">
+                                <span><i class="fas fa-user-clock" style="color: var(--info);"></i> Attendance</span>
+                                <span>50%</span>
+                            </div>
+                            <div class="pillar-score ${getScoreClass(attendance)}">${attendance}%</div>
+                            <div class="pillar-progress">
+                                <div class="fill blue" style="width: ${attendance}%;"></div>
+                            </div>
+                        </div>
+                        <div class="pillar-item">
+                            <div class="pillar-name">
+                                <span><i class="fas fa-handshake" style="color: var(--success);"></i> Behavior</span>
+                                <span>25%</span>
+                            </div>
+                            <div class="pillar-score ${getScoreClass(behavior)}">${behavior}%</div>
+                            <div class="pillar-progress">
+                                <div class="fill green" style="width: ${behavior}%;"></div>
+                            </div>
+                        </div>
+                        <div class="pillar-item">
+                            <div class="pillar-name">
+                                <span><i class="fas fa-lightbulb" style="color: var(--warning);"></i> Initiative</span>
+                                <span>25%</span>
+                            </div>
+                            <div class="pillar-score ${getScoreClass(initiative)}">${initiative}%</div>
+                            <div class="pillar-progress">
+                                <div class="fill yellow" style="width: ${initiative}%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- History Table -->
+            <div class="table-card">
+                <div class="table-header">
+                    <h4><i class="fas fa-list"></i> Monthly Records</h4>
+                    <span style="font-size: 0.8rem; color: var(--dark-text-muted);">${data.length} records</span>
+                </div>
+                <div class="table-container">
+                    <table class="table-history">
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th>Total Score</th>
+                                <th>Rating</th>
+                                <th>Attendance</th>
+                                <th>Behavior</th>
+                                <th>Initiative</th>
+                                <th>Reviewed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableHtml}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Render chart after DOM update
+    setTimeout(() => {
+        const labels = data.map(d =>
+            new Date(d.reviewMonth).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+        ).reverse();
+
+        const chartScores = data.map(d => d.totalScore || 0).reverse();
+
+        const ctx = document.getElementById('historyTrendChart');
+        if (ctx) {
+            if (window.historyTrendChartInstance) {
+                window.historyTrendChartInstance.destroy();
+            }
+            window.historyTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Performance Score',
+                        data: chartScores,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#6366f1',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 5,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 12 }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0,
+                            max: 100,
+                            grid: { color: '#334155' },
+                            ticks: {
+                                color: '#94a3b8',
+                                callback: function(value) { return value + '%'; }
+                            }
+                        },
+                        x: {
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+    }, 100);
+}
+
+
+// ============================================
+// REFRESH HISTORY
+// ============================================
+function refreshHistory() {
+    const container = document.getElementById('historyContent');
+    const profileHeader = container.querySelector('.profile-header');
+
+    if (profileHeader) {
+        const empIdEl = container.querySelector('.profile-info .sub-info');
+        if (empIdEl) {
+            const text = empIdEl.textContent;
+            const match = text.match(/\bEMP\d{3,}\b/);
+            if (match) {
+                loadHistory(match[0]);
+                showToast('History refreshed!', 'success');
+                return;
+            }
+        }
+    }
+
+    // If no employee found, show selector
+    loadHistoryContent(true);
+    showToast('Select an employee to view history', 'info');
+}
+   function showError(message) {
+    const container = document.getElementById('historyContent');
+    container.innerHTML = `
+        <div class="history-container-inner">
+            <div style="text-align: center; padding: 3rem; background: var(--dark-card); border-radius: var(--border-radius); border: 1px solid var(--dark-border);">
+                <i class="fas fa-exclamation-circle" style="font-size: 3rem; color: var(--danger); opacity: 0.6; margin-bottom: 1rem;"></i>
+                <h4 style="color: var(--danger); margin-bottom: 0.5rem;">Error Loading History</h4>
+                <p style="color: var(--dark-text-muted); margin-bottom: 1.5rem;">${message}</p>
+                <button class="btn-primary-gradient" onclick="loadHistoryContent()">
+                    <i class="fas fa-redo"></i> Retry
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+
+
+
+
+function exportBulkResults() {
+    const rows = document.querySelectorAll('#bulkTableBody tr');
+    if (rows.length === 0 || rows[0].querySelector('td[colspan]')) {
+        showToast('No data to export', 'warning');
+        return;
+    }
+
+    let data = [];
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 8) {
+            const nameCell = cells[2];
+            const deptCell = cells[3];
+            const statusCell = cells[7];
+            data.push({
+                employee: nameCell ? nameCell.textContent.trim() : '',
+                department: deptCell ? deptCell.textContent.trim() : '',
+                status: statusCell ? statusCell.textContent.trim() : ''
+            });
+        }
+    });
+
+    // Create CSV
+    let csv = 'Employee,Department,Status\n';
+    data.forEach(d => {
+        csv += `"${d.employee}","${d.department}","${d.status}"\n`;
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bulk_performance_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    showToast('Bulk results exported successfully!', 'success');
+}
+
+    // ============================================
+    // GLOBAL EXPOSURE
+    // ============================================
+    window.openCalculateModal = openCalculateModal;
+    window.closeCalculateModal = closeCalculateModal;
+    window.loadPerformances = loadPerformances;
+    window.filterByRating = filterByRating;
+    window.setStars = setStars;
+    window.updateInitiativeScore = updateInitiativeScore;
+    window.submitCalculateForm = submitCalculateForm;
+    window.viewDetails = viewDetails;
+    window.closeDetailsModal = closeDetailsModal;
+    window.editPerformance = editPerformance;
+    window.deletePerformance = deletePerformance;
+    window.exportPDF = exportPDF;
+    window.showToast = showToast;
+    window.changePage = changePage;
+    window.goToPage = goToPage;
+    window.switchPerformanceTab = switchPerformanceTab;
+    window.loadHistory = loadHistory;
+    window.loadBulkEmployees = loadBulkEmployees;
+    window.applyDefaults = applyDefaults;
+    window.calculateAll = calculateAll;
+    window.setDefaultStars = setDefaultStars;
+    window.updateWeight = updateWeight;
+    window.saveSettings = saveSettings;
+    window.resetSettings = resetSettings;
+</script>
+
+</body>
+</html>

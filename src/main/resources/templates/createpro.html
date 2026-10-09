@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Project - Enterprise PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── Complete Enterprise Dark Theme ── */
+        :root {
+            --primary: #4F8CFF;
+            --primary-hover: #3B7AF5;
+            --primary-light: rgba(79, 140, 255, 0.12);
+            --dark-bg: #0B1120;
+            --dark-card: #141B2D;
+            --dark-card-hover: #1A2340;
+            --dark-border: #233049;
+            --dark-text: #F8FAFC;
+            --dark-text-secondary: #94A3B8;
+            --dark-text-muted: #64748B;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #06B6D4;
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --border-radius: 12px;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--dark-border);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            background: var(--dark-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--info));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .brand-icon i { color: white; font-size: 1.2rem; }
+
+        .brand-text { font-weight: 700; font-size: 1.1rem; color: white; }
+        .brand-text span { color: var(--primary); }
+
+        .sidebar-content { padding: 0.5rem 0.75rem; }
+
+        .nav-section {
+            padding: 1.2rem 1rem 0.5rem;
+            color: var(--dark-text-muted);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.6rem 1rem;
+            margin: 2px 0;
+            border-radius: 8px;
+            color: var(--dark-text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .nav-link:hover { background: var(--dark-card); color: white; }
+        .nav-link.active { background: var(--primary-light); color: var(--primary); }
+        .nav-link.active i { color: var(--primary); }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--dark-text-muted);
+            transition: var(--transition);
+        }
+        .nav-link:hover i { color: white; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: 260px; min-height: 100vh; }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 1001;
+        }
+
+        /* ── TOP HEADER ── */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 2rem;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 1.5rem; }
+
+        .breadcrumb-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+        }
+        .breadcrumb-custom a { color: var(--primary); text-decoration: none; }
+
+        .search-box {
+            position: relative;
+            width: 280px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            outline: none;
+        }
+        .search-box i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .header-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+        .user-profile:hover { background: var(--dark-bg); }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--info));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        /* ── CONTENT AREA ── */
+        .content-area { padding: 1.5rem 2rem; }
+
+        /* ── SIDE PANEL (Like ClickUp) ── */
+        .side-panel {
+            position: fixed;
+            top: 0;
+            right: -720px;
+            width: 720px;
+            max-width: 92vw;
+            height: 100vh;
+            background: var(--dark-card);
+            border-left: 1px solid var(--dark-border);
+            z-index: 2000;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
+        }
+        .side-panel.open { right: 0; }
+
+        .panel-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+            backdrop-filter: blur(4px);
+        }
+        .panel-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .panel-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .panel-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .panel-header-left h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            color: var(--dark-text);
+        }
+
+        .panel-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1.2rem;
+        }
+        .panel-close:hover {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+
+        .panel-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .panel-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+            background: var(--dark-card);
+        }
+
+        /* ── FORM STYLES ── */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.3rem;
+        }
+        .form-group label .required {
+            color: var(--danger);
+            margin-left: 2px;
+        }
+
+        .form-control, .form-select {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            outline: none;
+        }
+        .form-control::placeholder { color: var(--dark-text-muted); }
+        .form-control option, .form-select option { background: var(--dark-card); }
+
+        .form-hint {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+            margin-top: 0.25rem;
+        }
+        .form-hint i { margin-right: 0.25rem; }
+
+        /* ── DYNAMIC FIELDS ── */
+        .dynamic-fields {
+            display: none;
+            animation: fadeSlide 0.3s ease;
+        }
+        .dynamic-fields.active { display: block; }
+
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── TAG INPUT ── */
+        .tag-input-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.4rem 0.6rem;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            min-height: 42px;
+            align-items: center;
+        }
+        .tag-input-container .tag {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .tag-input-container .tag .remove {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 0.6rem;
+        }
+        .tag-input-container .tag .remove:hover { opacity: 1; }
+        .tag-input-container input {
+            flex: 1;
+            min-width: 80px;
+            background: transparent;
+            border: none;
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            padding: 0.2rem 0;
+            outline: none;
+        }
+
+        /* ── BUTTONS ── */
+        .btn-primary-custom {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .btn-primary-custom:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(79, 140, 255, 0.35);
+        }
+
+        .btn-secondary-custom {
+            background: transparent;
+            color: var(--dark-text-secondary);
+            border: 1px solid var(--dark-border);
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .btn-secondary-custom:hover {
+            background: var(--dark-bg);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .mobile-menu-toggle { display: block; }
+            .top-header { padding: 0.75rem 1rem; }
+            .content-area { padding: 1rem; }
+            .search-box { display: none; }
+            .side-panel { width: 100%; max-width: 100%; right: -100%; }
+        }
+
+        @media (max-width: 768px) {
+            .panel-body { padding: 1rem; }
+            .panel-header { padding: 1rem; }
+            .panel-footer { padding: 0.75rem 1rem; flex-direction: column; }
+            .panel-footer .btn { width: 100%; justify-content: center; }
+        }
+
+        @media (max-width: 576px) {
+            .content-area { padding: 0.75rem; }
+            .top-header { padding: 0.5rem 0.75rem; }
+            .header-actions .user-profile .user-name { display: none; }
+            .breadcrumb-custom { font-size: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── MOBILE MENU ── -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-rocket"></i></div>
+        <div class="brand-text">HRMS<span>PM</span></div>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">Main</div>
+        <a class="nav-link" href="/pm/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+
+        <div class="nav-section">Projects</div>
+        <a class="nav-link" href="/pm/projects"><i class="fas fa-folder-open"></i> All Projects <span class="nav-badge">12</span></a>
+        <a class="nav-link active" href="/pm/projects/create"><i class="fas fa-plus-circle"></i> Create Project</a>
+
+        <div class="nav-section">Tasks</div>
+        <a class="nav-link" href="/pm/tasks"><i class="fas fa-tasks"></i> All Tasks <span class="nav-badge" style="background: var(--warning); color:#000;">5</span></a>
+        <a class="nav-link" href="/pm/board"><i class="fas fa-columns"></i> Kanban Board</a>
+        <a class="nav-link" href="/pm/my-tasks"><i class="fas fa-user-check"></i> My Tasks <span class="nav-badge">12</span></a>
+
+        <div class="nav-section">Team</div>
+        <a class="nav-link" href="/pm/teams"><i class="fas fa-users"></i> Teams</a>
+        <a class="nav-link" href="/pm/workload"><i class="fas fa-chart-pie"></i> Workload</a>
+
+        <div class="nav-section">Analytics</div>
+        <a class="nav-link" href="/pm/reports"><i class="fas fa-chart-line"></i> Reports</a>
+        <a class="nav-link" href="/pm/performance"><i class="fas fa-rocket"></i> Performance</a>
+
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="/pm/settings"><i class="fas fa-cog"></i> Preferences</a>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="main-content">
+
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="breadcrumb-custom">
+                <a href="/pm/dashboard">Dashboard</a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <a href="/pm/projects">Projects</a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <span style="color: var(--dark-text);">Create Project</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" onclick="openPanel()"><i class="fas fa-plus"></i></button>
+            <button class="header-btn"><i class="fas fa-bell"></i></button>
+            <div class="user-profile">
+                <div class="user-avatar">JD</div>
+                <span style="font-weight: 500; font-size: 0.85rem;">John</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="content-area">
+        <!-- Page Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--dark-text);">
+                    <i class="fas fa-plus-circle" style="color: var(--primary);"></i>
+                    Create New Project
+                </h1>
+                <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;">
+                    Fill in the details to create a new project
+                </p>
+            </div>
+            <div>
+                <a href="/pm/projects" class="btn-secondary-custom">
+                    <i class="fas fa-arrow-left"></i> Back to Projects
+                </a>
+            </div>
+        </div>
+
+        <!-- Quick Create Card -->
+        <div class="card" style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); margin-bottom: 1.5rem;">
+            <div class="card-body" style="padding: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Project Name <span class="required" style="color: var(--danger);">*</span>
+                        </label>
+                        <input type="text" class="form-control" placeholder="e.g., Customer Portal Redesign" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Project Code <span class="required" style="color: var(--danger);">*</span>
+                        </label>
+                        <input type="text" class="form-control" placeholder="PRJ-2026-001" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Project Type
+                        </label>
+                        <select class="form-select" id="projectType" onchange="toggleDynamicFields()">
+                            <option value="IT">IT Project</option>
+                            <option value="NON_IT">Non-IT Project</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Priority
+                        </label>
+                        <select class="form-select">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Department
+                        </label>
+                        <select class="form-select">
+                            <option>Engineering</option>
+                            <option>Marketing</option>
+                            <option>Sales</option>
+                            <option>HR</option>
+                            <option>Finance</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            Start Date
+                        </label>
+                        <input type="date" class="form-control" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                            End Date
+                        </label>
+                        <input type="date" class="form-control" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                    </div>
+                </div>
+
+                <!-- Dynamic Fields (IT vs Non-IT) -->
+                <div id="itFields" class="dynamic-fields active">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--dark-border);">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Tech Stack
+                            </label>
+                            <input type="text" class="form-control" placeholder="Java, React, MySQL" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Repository URL
+                            </label>
+                            <input type="text" class="form-control" placeholder="https://github.com/org/repo" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Sprint Length (days)
+                            </label>
+                            <input type="number" class="form-control" value="14" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="nonItFields" class="dynamic-fields">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--dark-border);">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Department
+                            </label>
+                            <input type="text" class="form-control" placeholder="Marketing" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Location
+                            </label>
+                            <input type="text" class="form-control" placeholder="New York" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; font-weight: 600; color: var(--dark-text-secondary); margin-bottom: 0.3rem;">
+                                Compliance Tags
+                            </label>
+                            <input type="text" class="form-control" placeholder="GDPR, HIPAA" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.6rem 0.75rem; width: 100%;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display: flex; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--dark-border);">
+                    <button class="btn-primary-custom">
+                        <i class="fas fa-save"></i> Create Project
+                    </button>
+                    <button class="btn-secondary-custom">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="btn-secondary-custom" style="margin-left: auto;">
+                        <i class="fas fa-file-export"></i> Save as Template
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Selection (Like ClickUp) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1.25rem; text-align: center; cursor: pointer; transition: var(--transition);">
+                <div style="font-size: 2rem; color: var(--primary); margin-bottom: 0.5rem;">
+                    <i class="fas fa-code"></i>
+                </div>
+                <h4 style="font-size: 0.9rem; font-weight: 600; color: var(--dark-text);">Software Development</h4>
+                <p style="font-size: 0.75rem; color: var(--dark-text-secondary);">Sprints, Epics, Stories, Bugs</p>
+            </div>
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1.25rem; text-align: center; cursor: pointer; transition: var(--transition);">
+                <div style="font-size: 2rem; color: var(--success); margin-bottom: 0.5rem;">
+                    <i class="fas fa-bullhorn"></i>
+                </div>
+                <h4 style="font-size: 0.9rem; font-weight: 600; color: var(--dark-text);">Marketing Campaign</h4>
+                <p style="font-size: 0.75rem; color: var(--dark-text-secondary);">Tasks, Milestones, Assets</p>
+            </div>
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1.25rem; text-align: center; cursor: pointer; transition: var(--transition);">
+                <div style="font-size: 2rem; color: var(--warning); margin-bottom: 0.5rem;">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h4 style="font-size: 0.9rem; font-weight: 600; color: var(--dark-text);">HR Initiative</h4>
+                <p style="font-size: 0.75rem; color: var(--dark-text-secondary);">Processes, Policies, Onboarding</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── SIDE PANEL (Like ClickUp Modal) ── -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+    <div class="panel-header">
+        <div class="panel-header-left">
+            <i class="fas fa-plus-circle" style="color: var(--primary); font-size: 1.2rem;"></i>
+            <h3>Create New Project</h3>
+        </div>
+        <button class="panel-close" onclick="closePanel()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+    <div class="panel-body">
+        <!-- Panel Content - Same Form as Above -->
+        <div class="form-group">
+            <label>Project Name <span class="required">*</span></label>
+            <input type="text" class="form-control" placeholder="e.g., Customer Portal Redesign">
+        </div>
+        <div class="form-group">
+            <label>Project Code <span class="required">*</span></label>
+            <input type="text" class="form-control" placeholder="PRJ-2026-001">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-control" rows="3" placeholder="Describe the project..."></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Type</label>
+                <select class="form-select" id="panelProjectType" onchange="togglePanelDynamicFields()">
+                    <option value="IT">IT Project</option>
+                    <option value="NON_IT">Non-IT Project</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select class="form-select">
+                    <option>Low</option>
+                    <option selected>Medium</option>
+                    <option>High</option>
+                    <option>Critical</option>
+                </select>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>End Date</label>
+                <input type="date" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Budget</label>
+                <input type="text" class="form-control" placeholder="$0.00">
+            </div>
+        </div>
+
+        <div id="panelItFields" class="dynamic-fields active">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding-top: 0.5rem;">
+                <div class="form-group">
+                    <label>Tech Stack</label>
+                    <div class="tag-input-container">
+                        <span class="tag">Java <span class="remove">&times;</span></span>
+                        <span class="tag">React <span class="remove">&times;</span></span>
+                        <span class="tag">MySQL <span class="remove">&times;</span></span>
+                        <input type="text" placeholder="Add tag...">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Repository URL</label>
+                    <input type="text" class="form-control" placeholder="https://github.com/org/repo">
+                </div>
+            </div>
+        </div>
+
+        <div id="panelNonItFields" class="dynamic-fields">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; padding-top: 0.5rem;">
+                <div class="form-group">
+                    <label>Department</label>
+                    <input type="text" class="form-control" placeholder="Marketing">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" class="form-control" placeholder="New York">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Assign Team Members</label>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--dark-bg); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--dark-border);">
+                    <div class="user-avatar" style="width: 24px; height: 24px; font-size: 0.6rem;">JD</div>
+                    <span style="font-size: 0.8rem;">John Doe</span>
+                    <i class="fas fa-times" style="font-size: 0.6rem; color: var(--dark-text-muted); cursor: pointer;"></i>
+                </div>
+                <button class="btn-secondary-custom" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                    <i class="fas fa-user-plus"></i> Add
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="panel-footer">
+        <button class="btn-secondary-custom" onclick="closePanel()">Cancel</button>
+        <button class="btn-primary-custom"><i class="fas fa-save"></i> Create Project</button>
+    </div>
+</div>
+
+<script>
+    // ── Mobile Menu ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    // ── Panel ──
+    function openPanel() {
+        document.getElementById('sidePanel').classList.add('open');
+        document.getElementById('panelOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closePanel() {
+        document.getElementById('sidePanel').classList.remove('open');
+        document.getElementById('panelOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // ── Toggle Dynamic Fields ──
+    function toggleDynamicFields() {
+        const type = document.getElementById('projectType').value;
+        document.getElementById('itFields').classList.toggle('active', type === 'IT');
+        document.getElementById('nonItFields').classList.toggle('active', type === 'NON_IT');
+    }
+
+    function togglePanelDynamicFields() {
+        const type = document.getElementById('panelProjectType').value;
+        document.getElementById('panelItFields').classList.toggle('active', type === 'IT');
+        document.getElementById('panelNonItFields').classList.toggle('active', type === 'NON_IT');
+    }
+
+    // ── Tag Input ──
+    document.querySelectorAll('.tag-input-container input').forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && this.value.trim()) {
+                e.preventDefault();
+                const tag = document.createElement('span');
+                tag.className = 'tag';
+                tag.innerHTML = this.value.trim() + ' <span class="remove">&times;</span>';
+                tag.querySelector('.remove').addEventListener('click', function() {
+                    this.parentElement.remove();
+                });
+                this.parentElement.insertBefore(tag, this);
+                this.value = '';
+            }
+        });
+    });
+
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove')) {
+            e.target.parentElement.remove();
+        }
+    });
+
+    // ── Keyboard Shortcuts ──
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('sidePanel').classList.contains('open')) {
+            closePanel();
+        }
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            document.querySelector('.search-box input')?.focus();
+        }
+    });
+</script>
+
+</body>
+</html>

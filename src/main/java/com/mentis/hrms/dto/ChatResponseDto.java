@@ -14,7 +14,13 @@ public class ChatResponseDto {
     // For history loading
     private List<MessageInfo> messages;
     private List<SessionInfo> sessions;
+    private String downloadUrl;
+    private String downloadLabel;
 
+    public String getDownloadUrl() { return downloadUrl; }
+    public void setDownloadUrl(String downloadUrl) { this.downloadUrl = downloadUrl; }
+    public String getDownloadLabel() { return downloadLabel; }
+    public void setDownloadLabel(String downloadLabel) { this.downloadLabel = downloadLabel; }
     @Data
     public static class MessageInfo {
         private Long id;

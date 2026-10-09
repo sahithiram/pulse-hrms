@@ -6,6 +6,8 @@ import com.mentis.hrms.model.LeaveRequest;
 import com.mentis.hrms.repository.AttendanceRepository;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.repository.LeaveRequestRepository;
+import com.mentis.hrms.model.Holiday;
+import com.mentis.hrms.service.HolidayService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,8 @@ public class AttendanceService {
 
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
+    @Autowired
+    private HolidayService holidayService;
 
     // ========== WEBSOCKET BROADCAST METHODS ==========
 
@@ -298,6 +302,90 @@ public class AttendanceService {
         }).collect(Collectors.toList());
     }
 
+
+    /**
+     * Get attendance for a specific employee on a specific date
+     * Returns a Map with attendance data or null if no record exists
+     */
+    public Map<String, Object> getAttendanceByDateAndEmployee(LocalDate date, String employeeId) {
+        try {
+            // Use existing repository method
+            List<Attendance> attendances = attendanceRepository.findByEmployeeIdAndAttendanceDate(employeeId, date);
+
+            if (attendances == null || attendances.isEmpty()) {
+                // No attendance record - employee was absent
+                Map<String, Object> absentMap = new HashMap<>();
+                absentMap.put("employeeId", employeeId);
+                absentMap.put("status", "ABSENT");
+                absentMap.put("checkInTime", null);
+                absentMap.put("checkOutTime", null);
+                absentMap.put("isCheckedOut", false);
+                absentMap.put("hasCheckedOut", false);
+                absentMap.put("checkInFormatted", "--:--");
+                absentMap.put("checkOutFormatted", "--:--");
+                absentMap.put("displayStatus", "Absent");
+                absentMap.put("statusText", "Absent");
+                return absentMap;
+            }
+
+            // Get the most recent attendance for that day (last check-in)
+            Attendance att = attendances.get(attendances.size() - 1);
+
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
+            Map<String, Object> result = new HashMap<>();
+
+            result.put("employeeId", att.getEmployeeId());
+            result.put("status", att.getStatus());
+            result.put("checkInTime", att.getCheckInTime());
+            result.put("checkOutTime", att.getCheckOutTime());
+
+            boolean isCheckedOut = att.getCheckOutTime() != null;
+            result.put("isCheckedOut", isCheckedOut);
+            result.put("hasCheckedOut", isCheckedOut);
+
+            if (att.getCheckInTime() != null) {
+                result.put("checkInFormatted", att.getCheckInTime().format(timeFormatter));
+            } else {
+                result.put("checkInFormatted", "--:--");
+            }
+
+            if (att.getCheckOutTime() != null) {
+                result.put("checkOutFormatted", att.getCheckOutTime().format(timeFormatter));
+                result.put("displayStatus", "Checked Out");
+                result.put("statusText", "Checked Out");
+            } else {
+                result.put("checkOutFormatted", "--:--");
+                String displayStatus = getStatusDisplay(att.getStatus());
+                result.put("displayStatus", displayStatus);
+                result.put("statusText", displayStatus);
+            }
+
+            // Calculate working hours
+            calculateCurrentSessionTime(att);
+            result.put("currentWorkingTime", att.getCurrentSessionTime());
+            result.put("workingHours", att.getTotalWorkingHours() != null ?
+                    att.getTotalWorkingHours() : calculateWorkingHoursDisplay(att));
+
+            // Get employee details
+            Optional<Employee> empOpt = employeeRepository.findByEmployeeId(att.getEmployeeId());
+            if (empOpt.isPresent()) {
+                Employee emp = empOpt.get();
+                result.put("employeeName", emp.getFirstName() + " " + emp.getLastName());
+                result.put("department", emp.getDepartment() != null ? emp.getDepartment() : "N/A");
+                result.put("designation", emp.getDesignation() != null ? emp.getDesignation() : "N/A");
+            } else {
+                result.put("employeeName", "Unknown Employee");
+                result.put("department", "N/A");
+                result.put("designation", "N/A");
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            logger.error("Error getting attendance for {} on {}: {}", employeeId, date, e.getMessage());
+            return null;
+        }
+    }
     // ========== FIXED METHOD FOR DAILY ATTENDANCE ==========
 
     // ========== 1. FIX getAttendanceByDate() - Used by HR Daily Attendance ==========
@@ -388,8 +476,6 @@ public class AttendanceService {
                 .collect(Collectors.toList());
     }
 
-// ========== 2. FIX getRecentAttendanceForEmployee() - Used by Employee Recent Attendance ==========
-
     public List<Map<String, Object>> getRecentAttendanceForEmployee(String employeeId, int days) {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusDays(days);
@@ -408,52 +494,157 @@ public class AttendanceService {
             }
         }
 
-        return latestPerDay.values().stream().map(att -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("attendanceDate", att.getAttendanceDate());
-            map.put("dateFormatted", att.getAttendanceDate().format(dateFormatter));
-            map.put("day", att.getAttendanceDate().getDayOfWeek().toString());
+        // ── Get approved leaves for this employee for the period ──
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeavesForEmployeeInRange(
+                employeeId, startDate, endDate);
 
-            // Format check-in
-            if (att.getCheckInTime() != null) {
-                map.put("checkInFormatted", att.getCheckInTime().format(timeFormatter));
-            } else {
-                map.put("checkInFormatted", "--:--");
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        for (Map.Entry<LocalDate, Attendance> entry : latestPerDay.entrySet()) {
+            Attendance att = entry.getValue();
+            LocalDate date = entry.getKey();
+
+            // Skip Sundays
+            if (date.getDayOfWeek().getValue() == 7) {
+                continue;
             }
 
-            // CRITICAL: Handle checkout display
-            if (att.getCheckOutTime() != null) {
-                map.put("checkOutFormatted", att.getCheckOutTime().format(timeFormatter));
+            Map<String, Object> map = new HashMap<>();
+            map.put("attendanceDate", date);
+            map.put("dateFormatted", date.format(dateFormatter));
+            map.put("day", date.getDayOfWeek().toString());
+
+            // ── Check if this date is an approved leave ──
+            boolean isLeaveDay = isDateOnLeave(date, approvedLeaves);
+
+            LocalDateTime checkIn = att.getCheckInTime();
+            LocalDateTime actualCheckOut = att.getCheckOutTime(); // REAL checkout from DB
+
+            if (isLeaveDay) {
+                map.put("checkInFormatted", "--:--");
+                map.put("checkOutFormatted", "--:--");
+                map.put("status", "LEAVE");
+                map.put("statusText", "On Leave");
+                map.put("badgeClass", "leave");
+                map.put("displayStatus", "On Leave");
+                map.put("currentWorkingTime", "0h 00m");
+                map.put("remarks", "Approved Leave");
+                result.add(map);
+                continue;
+            }
+
+            // ── Handle days with no check-in ──
+            if (checkIn == null) {
+                map.put("checkInFormatted", "--:--");
+                map.put("checkOutFormatted", "--:--");
+                map.put("status", "ABSENT");
+                map.put("statusText", "Absent");
+                map.put("badgeClass", "absent");
+                map.put("displayStatus", "Absent");
+                map.put("currentWorkingTime", "0h 00m");
+                map.put("remarks", "Not Checked In");
+                result.add(map);
+                continue;
+            }
+
+            // ── Check-in exists, now determine status ──
+            map.put("checkInFormatted", checkIn.format(timeFormatter));
+
+            boolean isToday = date.equals(LocalDate.now());
+            LocalDateTime now = LocalDateTime.now();
+            boolean isPastSevenPM = now.getHour() >= 19;
+
+            // ── CASE 1: Actually checked out (has checkout time in DB) ──
+            if (actualCheckOut != null) {
+                map.put("checkOutFormatted", actualCheckOut.format(timeFormatter));
                 map.put("status", "CHECKED_OUT");
                 map.put("statusText", "Checked Out");
                 map.put("badgeClass", "checked-out");
                 map.put("displayStatus", "Checked Out");
-            } else {
+                map.put("remarks", getRemarks(att));
+
+                long totalMinutes = java.time.Duration.between(checkIn, actualCheckOut).toMinutes();
+                int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                map.put("currentWorkingTime", String.format("%dh %02dm", workingMinutes / 60, workingMinutes % 60));
+            }
+            // ── CASE 2: TODAY, still working (before 7:00 PM) ──
+            else if (isToday && !isPastSevenPM) {
                 map.put("checkOutFormatted", "--:--");
-                String displayStatus = getStatusDisplay(att.getStatus());
-                map.put("status", att.getStatus());
-                map.put("statusText", displayStatus);
-                map.put("badgeClass", getBadgeClass(att.getStatus()));
-                map.put("displayStatus", displayStatus);
+                map.put("status", "ACTIVE");
+                map.put("statusText", "Present");
+                map.put("badgeClass", "present");
+                map.put("displayStatus", "Present");
+                map.put("remarks", "Currently Working");
+
+                // Calculate hours so far
+                long totalMinutes = java.time.Duration.between(checkIn, now).toMinutes();
+                int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                map.put("currentWorkingTime", String.format("%dh %02dm", workingMinutes / 60, workingMinutes % 60));
+            }
+            // ── CASE 3: TODAY, after 7:00 PM, forgot to checkout ──
+            else if (isToday && isPastSevenPM) {
+                map.put("checkOutFormatted", "07:00 pm");
+                map.put("status", "CHECKED_OUT");
+                map.put("statusText", "Auto Checked Out");
+                map.put("badgeClass", "checked-out");
+                map.put("displayStatus", "Auto Checked Out");
+                map.put("remarks", "Auto Checkout (7:00 PM)");
+
+                LocalDateTime autoCheckOut = date.atTime(19, 0, 0);
+                long totalMinutes = java.time.Duration.between(checkIn, autoCheckOut).toMinutes();
+                int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                map.put("currentWorkingTime", String.format("%dh %02dm", workingMinutes / 60, workingMinutes % 60));
+            }
+            // ── CASE 4: PAST DAY, forgot to checkout ──
+            else if (!isToday) {
+                map.put("checkOutFormatted", "07:00 pm");
+                map.put("status", "CHECKED_OUT");
+                map.put("statusText", "Checked Out");
+                map.put("badgeClass", "checked-out");
+                map.put("displayStatus", "Checked Out");
+                map.put("remarks", "Auto Checkout (7:00 PM)");
+
+                LocalDateTime autoCheckOut = date.atTime(19, 0, 0);
+                long totalMinutes = java.time.Duration.between(checkIn, autoCheckOut).toMinutes();
+                int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                map.put("currentWorkingTime", String.format("%dh %02dm", workingMinutes / 60, workingMinutes % 60));
+            }
+            // ── CASE 5: Fallback ──
+            else {
+                map.put("checkOutFormatted", "--:--");
+                map.put("status", "ACTIVE");
+                map.put("statusText", "Present");
+                map.put("badgeClass", "present");
+                map.put("displayStatus", "Present");
+                map.put("remarks", "Normal Day");
+                map.put("currentWorkingTime", "0h 00m");
             }
 
-            // Calculate working time
-            String workingTime;
-            if (att.getCheckOutTime() != null) {
-                workingTime = att.getTotalWorkingHours() != null ?
-                        att.getTotalWorkingHours() : calculateWorkingHoursDisplay(att);
-            } else if (att.getCheckInTime() != null) {
-                workingTime = calculateWorkingHoursDisplay(att);
-            } else {
-                workingTime = "0h 00m";
+            result.add(map);
+        }
+
+        // Sort by date descending (newest first)
+        result.sort((a, b) -> {
+            LocalDate d1 = (LocalDate) a.get("attendanceDate");
+            LocalDate d2 = (LocalDate) b.get("attendanceDate");
+            return d2.compareTo(d1);
+        });
+
+        return result;
+    }
+
+    /**
+     * Check if a date falls within approved leave period
+     */
+    private boolean isDateOnLeave(LocalDate date, List<LeaveRequest> approvedLeaves) {
+        if (approvedLeaves == null || date == null) return false;
+        for (LeaveRequest leave : approvedLeaves) {
+            if (leave == null || leave.getStartDate() == null || leave.getEndDate() == null) continue;
+            if (!date.isBefore(leave.getStartDate()) && !date.isAfter(leave.getEndDate())) {
+                return true;
             }
-            map.put("currentWorkingTime", workingTime);
-
-            // Add remarks
-            map.put("remarks", getRemarks(att));
-
-            return map;
-        }).collect(Collectors.toList());
+        }
+        return false;
     }
 
 // ========== 3. FIX getTimesheetForEmployee() - Already working but ensure consistency ==========
@@ -647,16 +838,20 @@ public class AttendanceService {
     }
 
     // ========== OTHER EXISTING METHODS ==========
-
     public Attendance getTodayAttendance(String employeeId) {
-        LocalDate today = LocalDate.now();
-        List<Attendance> attendances = attendanceRepository.findByEmployeeIdAndAttendanceDate(employeeId, today);
-
-        if (!attendances.isEmpty()) {
-            // Return the most recent attendance
-            return attendances.get(attendances.size() - 1);
+        try {
+            LocalDate today = LocalDate.now();
+            // Get ALL attendances for today
+            List<Attendance> attendances = attendanceRepository.findByEmployeeIdAndAttendanceDate(employeeId, today);
+            if (attendances != null && !attendances.isEmpty()) {
+                // Return the most recent one (latest check-in)
+                return attendances.get(attendances.size() - 1);
+            }
+            return null;
+        } catch (Exception e) {
+            logger.warn("Error getting today's attendance for {}: {}", employeeId, e.getMessage());
+            return null;
         }
-        return null;
     }
 
     public Attendance startBreak(String employeeId) {
@@ -805,15 +1000,30 @@ public class AttendanceService {
         return result;
     }
 
-
-
     public Map<String, Object> getMonthlySummaryForEmployee(String employeeId, int year, int month) {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
 
         List<Attendance> attendances = attendanceRepository
                 .findByEmployeeIdAndAttendanceDateBetweenOrderByAttendanceDateDesc(employeeId, startDate, endDate);
 
+        // If no attendances, return empty summary immediately
+        if (attendances == null || attendances.isEmpty()) {
+            Map<String, Object> emptySummary = new HashMap<>();
+            emptySummary.put("presentDays", 0);
+            emptySummary.put("absentDays", 0);
+            emptySummary.put("leaveDays", 0);
+            emptySummary.put("lateDays", 0);
+            emptySummary.put("earlyDepartures", 0);
+            emptySummary.put("totalWorkingHours", "0h 00m");
+            emptySummary.put("attendancePercentage", 0);
+            emptySummary.put("totalDays", 0);
+            emptySummary.put("overtime", "0h 00m");
+            logger.info("📊 No attendance records for {} in {}/{}", employeeId, month, year);
+            return emptySummary;
+        }
         // Remove duplicates per day
         Map<LocalDate, Attendance> latestPerDay = new HashMap<>();
         for (Attendance att : attendances) {
@@ -822,50 +1032,131 @@ public class AttendanceService {
             }
         }
 
+        // ── Get approved leaves for this employee for the period ──
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeavesForEmployeeInRange(
+                employeeId, startDate, endDate);
+
         int presentDays = 0;
         int absentDays = 0;
         int leaveDays = 0;
         int lateDays = 0;
         int earlyDepartures = 0;
         int totalWorkingMinutes = 0;
+        int workingDaysCount = 0;
 
-        for (Attendance att : latestPerDay.values()) {
-            if (att.getCheckInTime() != null) {
+        // ── Loop through each day of the month ──
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            // Skip Sundays (weekend) - Saturday is working day
+            if (currentDate.getDayOfWeek().getValue() == 7) {
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+
+            workingDaysCount++;
+
+            // ── Check if this date is an approved leave ──
+            boolean isLeaveDay = isDateOnLeave(currentDate, approvedLeaves);
+
+            Attendance att = latestPerDay.get(currentDate);
+
+            if (isLeaveDay) {
+                leaveDays++;
+                currentDate = currentDate.plusDays(1);
+                continue;
+            }
+
+            if (att != null && att.getCheckInTime() != null) {
                 presentDays++;
 
-                if (att.getCheckInTime().getHour() > 9 ||
-                        (att.getCheckInTime().getHour() == 9 && att.getCheckInTime().getMinute() > 15)) {
+                LocalDateTime checkIn = att.getCheckInTime();
+                LocalDateTime checkOut = att.getCheckOutTime();
+
+                // ── Handle auto-checkout correctly ──
+
+                // CASE 1: Today - DO NOT auto-checkout if before 7:00 PM
+                if (currentDate.equals(today)) {
+                    if (checkOut == null) {
+                        // Still logged in - use current time for calculation only
+                        checkOut = now;
+                        // DO NOT save to database
+                    }
+                }
+                // CASE 2: Past days with no checkout - use 7:00 PM
+                else if (checkOut == null && currentDate.isBefore(today)) {
+                    checkOut = currentDate.atTime(19, 0, 0);
+
+                    // Update the attendance record for past days
+                    att.setCheckOutTime(checkOut);
+                    att.setIsActiveSession(false);
+                    att.setStatus("OFFLINE");
+                    att.setUpdatedAt(LocalDateTime.now());
+
+                    // Calculate working minutes
+                    long totalMinutes = java.time.Duration.between(checkIn, checkOut).toMinutes();
+                    int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                    att.setTotalWorkingMinutes(Math.max(0, workingMinutes));
+
+                    long hours = workingMinutes / 60;
+                    long mins = workingMinutes % 60;
+                    att.setTotalWorkingHours(String.format("%dh %02dm", hours, mins));
+
+                    attendanceRepository.save(att);
+
+                    logger.info("🔄 Auto-checkout for {} on {} at 7:00 PM (forgot to logout)",
+                            employeeId, currentDate);
+                }
+
+                // ── Calculate working minutes for summary ──
+                if (checkIn != null && checkOut != null) {
+                    long totalMinutes = java.time.Duration.between(checkIn, checkOut).toMinutes();
+                    int workingMinutes = (int) (totalMinutes - (att.getTotalBreakMinutes() != null ? att.getTotalBreakMinutes() : 0));
+                    totalWorkingMinutes += Math.max(0, workingMinutes);
+                }
+
+                // Check for late arrival (after 9:15 AM)
+                if (checkIn.getHour() > 9 || (checkIn.getHour() == 9 && checkIn.getMinute() > 15)) {
                     lateDays++;
                 }
 
-                if (att.getCheckOutTime() != null &&
-                        (att.getCheckOutTime().getHour() < 17 ||
-                                (att.getCheckOutTime().getHour() == 17 && att.getCheckOutTime().getMinute() < 30))) {
-                    earlyDepartures++;
+                // Check for early departure (before 6:00 PM)
+                if (checkOut != null) {
+                    if (checkOut.getHour() < 18 || (checkOut.getHour() == 18 && checkOut.getMinute() < 0)) {
+                        earlyDepartures++;
+                    }
                 }
 
-                totalWorkingMinutes += att.getTotalWorkingMinutes() != null ? att.getTotalWorkingMinutes() : 0;
-            } else if ("LEAVE".equals(att.getStatus())) {
+            } else if (att != null && "LEAVE".equals(att.getStatus())) {
                 leaveDays++;
+            } else {
+                // Check if it's a future date
+                if (!currentDate.isAfter(today)) {
+                    // Count as absent if no attendance record and not future
+                    absentDays++;
+                }
             }
+
+            currentDate = currentDate.plusDays(1);
         }
 
-        absentDays = endDate.getDayOfMonth() - presentDays - leaveDays;
-        if (absentDays < 0) absentDays = 0;
-
-        double attendancePercentage = endDate.getDayOfMonth() > 0 ?
-                (presentDays * 100.0) / endDate.getDayOfMonth() : 0;
+        // Calculate attendance percentage based on working days (excluding Sundays)
+        double attendancePercentage = workingDaysCount > 0 ?
+                (presentDays * 100.0) / workingDaysCount : 0;
 
         Map<String, Object> summary = new HashMap<>();
         summary.put("presentDays", presentDays);
-        summary.put("absentDays", absentDays);
+        summary.put("absentDays", Math.max(0, absentDays));
         summary.put("leaveDays", leaveDays);
         summary.put("lateDays", lateDays);
         summary.put("earlyDepartures", earlyDepartures);
         summary.put("totalWorkingHours", String.format("%dh %02dm",
                 totalWorkingMinutes / 60, totalWorkingMinutes % 60));
         summary.put("attendancePercentage", Math.round(attendancePercentage));
-        summary.put("totalDays", endDate.getDayOfMonth());
+        summary.put("totalDays", workingDaysCount);
+
+        // Calculate overtime (simple estimate: total working minutes - 8 hours per present day)
+        int overtimeMinutes = Math.max(0, totalWorkingMinutes - (presentDays * 480));
+        summary.put("overtime", String.format("%dh %02dm", overtimeMinutes / 60, overtimeMinutes % 60));
 
         return summary;
     }

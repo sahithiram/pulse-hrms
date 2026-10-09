@@ -1143,6 +1143,15 @@
                                                 ${employee.presenceStatus == 'ACTIVE'} ? 'Active' :
                                                 (${employee.presenceStatus == 'BREAK'} ? 'On Break' :
                                                  (${employee.presenceStatus == 'CHECKED_OUT'} ? 'Checked Out' : 'Offline'))"></span>
+
+                                <img class="employee-avatar"
+                                     th:src="${employee.profilePicture != null and !employee.profilePicture.isEmpty()}
+                  ? @{'/uploads/' + ${employee.profilePicture}}
+                  : @{'https://ui-avatars.com/api/?name=' + ${employee.firstName} + '&background=random'}"
+                                     onerror="this.onerror=null; this.src=this.dataset.fallback;"
+                                     th:data-fallback="@{'/images/avatars/default.png'}"
+                                     alt="avatar" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+
                                 <div>
                                     <div class="employee-name" th:text="${employee.firstName}+' '+${employee.lastName}">Name</div>
                                     <div class="employee-id" th:text="${employee.employeeId}">ID</div>

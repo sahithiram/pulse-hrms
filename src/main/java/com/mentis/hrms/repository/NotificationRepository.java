@@ -39,7 +39,24 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.persistent = false AND n.createdAt < :cutoffDate")
     int deleteTemporaryNotificationsOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
+    // ─── PHASE 4 queries ─────────────────────────────────────────
 
+    /** Filter inbox by action type (e.g. "TASK_MENTIONED"). */
+    java.util.List<Notification> findByRecipientIdAndRecipientTypeAndActionOrderByCreatedAtDesc(
+            String recipientId, String recipientType, String action);
+
+    /** Recent N notifications for a user. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT n FROM Notification n " +
+                    "WHERE n.recipientId = :rid AND n.recipientType = :rtype " +
+                    "ORDER BY n.createdAt DESC")
+    java.util.List<Notification> findRecent(
+            @org.springframework.data.repository.query.Param("rid") String recipientId,
+            @org.springframework.data.repository.query.Param("rtype") String recipientType,
+            org.springframework.data.domain.Pageable pageable);
+
+    /** All by task — for dedupe on due-soon and overdue. */
+    java.util.List<Notification> findByTaskIdAndActionOrderByCreatedAtDesc(Long taskId, String action);
     @Modifying
     @Query("UPDATE Notification n SET n.readAt = CURRENT_TIMESTAMP WHERE n.persistent = false AND n.readAt IS NULL AND n.createdAt < :cutoffDate")
     void markOldTemporaryAsRead(@Param("cutoffDate") LocalDateTime cutoffDate);

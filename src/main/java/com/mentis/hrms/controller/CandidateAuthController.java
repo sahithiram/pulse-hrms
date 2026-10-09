@@ -42,211 +42,117 @@ public class CandidateAuthController {
             jakarta.servlet.http.HttpServletRequest request,
             RedirectAttributes ra) {
 
-        // ========== STEP 1: INITIAL DEBUG ==========
-        System.out.println("\n🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
-        System.out.println("🔴 LOGIN ATTEMPT - " + new java.util.Date());
-        System.out.println("🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴🔴");
-        System.out.println("Employee ID entered: '" + employeeId + "'");
-        System.out.println("Password entered: '" + (password != null ? password : "NULL") + "'");
-        System.out.println("Password length: " + (password != null ? password.length() : 0));
-        System.out.println("Request URL: " + request.getRequestURL());
-        System.out.println("Request Method: " + request.getMethod());
-
         logger.info("=== LOGIN ATTEMPT: {} ===", employeeId);
 
         try {
-            // ========== STEP 2: FETCH EMPLOYEE ==========
-            System.out.println("\n📋 STEP 2: Fetching employee from database...");
+            // ========== STEP 1: FETCH EMPLOYEE ==========
             Optional<Employee> employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId);
 
             if (employeeOpt.isEmpty()) {
-                System.out.println("❌ EMPLOYEE NOT FOUND in database!");
-
-                // Debug: List all employees to see what's available
-                System.out.println("\n📋 DEBUG: All employees in database:");
-                var allEmployees = employeeService.getAllEmployees();
-                for (Employee emp : allEmployees) {
-                    System.out.println("   - ID: '" + emp.getEmployeeId() + "', Role: " + emp.getRole() +
-                            ", Active: " + emp.isActive() +
-                            ", Has Password: " + (emp.getPassword() != null));
-                }
-
                 ra.addFlashAttribute("error", "No account found with this Employee ID");
                 return "redirect:/candidate/login";
             }
 
             Employee employee = employeeOpt.get();
 
-            // ========== STEP 3: EMPLOYEE FOUND - PRINT DETAILS ==========
-            System.out.println("\n✅ EMPLOYEE FOUND IN DATABASE:");
-            System.out.println("   - Employee ID from DB: '" + employee.getEmployeeId() + "'");
-            System.out.println("   - First Name: " + employee.getFirstName());
-            System.out.println("   - Last Name: " + employee.getLastName());
-            System.out.println("   - Role: " + employee.getRole());
-            System.out.println("   - Role name(): " + employee.getRole().name());
-            System.out.println("   - Is Active: " + employee.isActive());
-            System.out.println("   - Password from DB: '" + employee.getPassword() + "'");
-            System.out.println("   - Password length: " + (employee.getPassword() != null ? employee.getPassword().length() : 0));
-            System.out.println("   - Password is null? " + (employee.getPassword() == null));
-            System.out.println("   - Password is empty? " + (employee.getPassword() != null && employee.getPassword().isEmpty()));
-
-            // ========== STEP 4: CHECK ACCOUNT STATUS ==========
-            System.out.println("\n📋 STEP 4: Checking account status...");
+            // ========== STEP 2: CHECK ACCOUNT STATUS ==========
             if (!employee.isActive() && employee.getPassword() != null) {
-                System.out.println("❌ Account is DEACTIVATED!");
                 ra.addFlashAttribute("error", "Your account is deactivated. Please contact HR.");
                 return "redirect:/candidate/login";
             }
-            System.out.println("✅ Account is active");
 
-            // ========== STEP 5: CHECK FOR FIRST TIME LOGIN ==========
-            System.out.println("\n📋 STEP 5: Checking if first time login...");
+            // ========== STEP 3: FIRST TIME LOGIN (NO PASSWORD YET) ==========
             if (employee.getPassword() == null || employee.getPassword().isEmpty()) {
-                System.out.println("✅ First time login detected (no password set)");
                 jakarta.servlet.http.HttpSession tempSession = request.getSession(true);
                 tempSession.setAttribute("tempEmployeeId", employee.getEmployeeId());
                 return "redirect:/candidate/create-password";
             }
-            System.out.println("✅ Password exists in database");
 
-            // ========== STEP 6: VALIDATE PASSWORD INPUT ==========
-            System.out.println("\n📋 STEP 6: Validating password input...");
+            // ========== STEP 4: VALIDATE PASSWORD INPUT ==========
             if (password == null || password.trim().isEmpty()) {
-                System.out.println("❌ Password is empty or null");
                 ra.addFlashAttribute("error", "Please enter your password");
                 return "redirect:/candidate/login";
             }
-            System.out.println("✅ Password input is valid: '" + password + "'");
 
-            // ========== STEP 7: CHECK PASSWORD MATCH ==========
-            System.out.println("\n📋 STEP 7: Checking password match...");
-            System.out.println("   - Calling passwordUtil.matchesPassword()");
-            System.out.println("   - Raw password: '" + password + "'");
-            System.out.println("   - Stored hash: '" + employee.getPassword() + "'");
-
-            // Debug: Show what hash WOULD be generated for this password
-            String generatedHashForInput = passwordUtil.encodePassword(password);
-            System.out.println("   - Hash that WOULD be generated for '" + password + "': '" + generatedHashForInput + "'");
-            System.out.println("   - Does generated hash match stored? " + generatedHashForInput.equals(employee.getPassword()));
-
+            // ========== STEP 5: CHECK PASSWORD MATCH ==========
             boolean passwordMatches = passwordUtil.matchesPassword(password, employee.getPassword());
-            System.out.println("   - passwordUtil.matchesPassword() returned: " + passwordMatches);
 
             if (!passwordMatches) {
-                System.out.println("❌ PASSWORD MISMATCH!");
-
-                // Extra debug: Try with empty password (sometimes first login uses empty)
-                boolean emptyMatches = passwordUtil.matchesPassword("", employee.getPassword());
-                System.out.println("   - Empty password matches? " + emptyMatches);
-
                 ra.addFlashAttribute("error", "Invalid Employee ID or password");
                 return "redirect:/candidate/login";
             }
-            System.out.println("✅ PASSWORD MATCHES!");
 
-            // ========== STEP 8: SESSION HANDLING ==========
-            System.out.println("\n📋 STEP 8: Handling session...");
+            // ========== STEP 6: NEW SESSION ==========
             jakarta.servlet.http.HttpSession existingSession = request.getSession(false);
             if (existingSession != null) {
-                System.out.println("   - Invalidating existing session: " + existingSession.getId());
                 existingSession.invalidate();
             }
 
             jakarta.servlet.http.HttpSession newSession = request.getSession(true);
-            System.out.println("   - Created new session with ID: " + newSession.getId());
 
-            // ========== STEP 9: SET SESSION ATTRIBUTES ==========
-            System.out.println("\n📋 STEP 9: Setting session attributes...");
             newSession.setAttribute("userId", employee.getEmployeeId());
             newSession.setAttribute("userRole", employee.getRole().name());
             newSession.setAttribute("userName", employee.getFirstName() + " " + employee.getLastName());
             newSession.setAttribute("candidateEmployeeId", employee.getEmployeeId());
             newSession.setMaxInactiveInterval(1800); // 30 minutes
 
-            System.out.println("   - userId set to: " + newSession.getAttribute("userId"));
-            System.out.println("   - userRole set to: " + newSession.getAttribute("userRole"));
-            System.out.println("   - userName set to: " + newSession.getAttribute("userName"));
+            logger.info("Login successful. User: {}, Role: {}", employeeId, employee.getRole());
 
-            logger.info("✅ Login Successful. User: {}, Role: {}", employeeId, employee.getRole());
-
-            // ========== STEP 10: ATTENDANCE AUTO CHECK-IN ==========
-            System.out.println("\n📋 STEP 10: Attendance auto check-in...");
+            // ========== STEP 7: ATTENDANCE AUTO CHECK-IN ==========
             try {
                 String roleName = employee.getRole().name();
-                logger.info(">>> STEP 3: Checking if role '{}' is eligible", roleName);
 
-                // ✅ FIXED: Include SUPER_ADMIN in auto check-in
                 boolean isEmployee = "EMPLOYEE".equals(roleName);
-                boolean isHR = "HR".equals(roleName);
+                boolean isHR = "HR".equals(roleName) || "HR_MANAGER".equals(roleName);
                 boolean isSuperAdmin = "SUPER_ADMIN".equals(roleName);
+                boolean isPM = "PM".equals(roleName);   // <-- NEW
 
-                logger.info(">>> STEP 4: isEmployee={}, isHR={}, isSuperAdmin={}",
-                        isEmployee, isHR, isSuperAdmin);
+                if (isEmployee || isHR || isSuperAdmin || isPM) {   // <-- isPM added
 
-                // ✅ ALLOW SUPER_ADMIN to check in too
-                if (isEmployee || isHR || isSuperAdmin) {
-                    logger.info(">>> STEP 5: Role is ELIGIBLE, calling checkIn()");
-
-                    // Check if already checked in today
                     Attendance todayAttendance = attendanceService.getTodayAttendance(employeeId);
 
                     if (todayAttendance == null) {
-                        // No attendance record - create new check-in
-                        logger.info(">>> No attendance found, creating new check-in for {}", employeeId);
+                        // No attendance record today - create new check-in
                         Attendance attendance = attendanceService.checkIn(employeeId);
-
-                        logger.info(">>> STEP 6: checkIn() returned successfully");
-                        logger.info(">>> STEP 7: Attendance ID: {}", attendance.getId());
-                        logger.info(">>> STEP 8: Check-in time: {}", attendance.getCheckInTime());
-                        logger.info(">>> STEP 9: Status: {}", attendance.getStatus());
-
                         newSession.setAttribute("todayAttendance", attendance);
                         newSession.setAttribute("attendanceStatus", attendance.getStatus());
 
-                        logger.info(">>> STEP 10: Session attributes set successfully");
                     } else if (todayAttendance.getCheckOutTime() != null) {
-                        // Already checked out - create new session
-                        logger.info(">>> Found checked out record, creating new check-in");
+                        // Already checked out earlier - create new check-in
                         Attendance attendance = attendanceService.checkIn(employeeId);
                         newSession.setAttribute("todayAttendance", attendance);
                         newSession.setAttribute("attendanceStatus", attendance.getStatus());
+
                     } else {
-                        // Already checked in and active
-                        logger.info(">>> Already checked in today at {}", todayAttendance.getCheckInTime());
+                        // Already checked in and still active
                         newSession.setAttribute("todayAttendance", todayAttendance);
                         newSession.setAttribute("attendanceStatus", todayAttendance.getStatus());
                     }
                 } else {
-                    logger.warn(">>> STEP 5: Role '{}' NOT eligible for auto check-in", roleName);
+                    logger.warn("Role '{}' not eligible for auto check-in", roleName);
                 }
             } catch (Exception e) {
-                logger.error(">>> ERROR in auto check-in: {}", e.getMessage());
-                logger.error(">>> EXCEPTION: ", e);
+                logger.error("Error in auto check-in: {}", e.getMessage(), e);
             }
 
-            // ========== STEP 11: REDIRECT BASED ON ROLE ==========
-            System.out.println("\n📋 STEP 11: Redirecting based on role...");
-            System.out.println("   - Employee role: " + employee.getRole());
-
+            // ========== STEP 8: REDIRECT BASED ON ROLE ==========
             switch (employee.getRole()) {
                 case SUPER_ADMIN:
-                    System.out.println("   → Redirecting to SUPER_ADMIN dashboard: /dashboard/admin?showAttendance=true");
                     return "redirect:/dashboard/admin?showAttendance=true";
                 case HR:
-                    System.out.println("   → Redirecting to HR dashboard: /dashboard/hr?showAttendance=true");
                     return "redirect:/dashboard/hr?showAttendance=true";
+                case HR_MANAGER:
+                    return "redirect:/dashboard/hr?showAttendance=true";
+                case PM:                                      // <-- NEW
+                    return "redirect:/pm/01-home";
                 case EMPLOYEE:
-                    System.out.println("   → Redirecting to EMPLOYEE dashboard: /candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true");
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
                 default:
-                    System.out.println("   → Unknown role, defaulting to employee dashboard");
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
             }
 
         } catch (Exception e) {
-            System.out.println("\n❌ EXCEPTION in login process:");
-            e.printStackTrace();
-            logger.error("❌ Login System Error: {}", e.getMessage(), e);
+            logger.error("Login system error: {}", e.getMessage(), e);
             ra.addFlashAttribute("error", "An internal error occurred. Please try again.");
             return "redirect:/candidate/login";
         }

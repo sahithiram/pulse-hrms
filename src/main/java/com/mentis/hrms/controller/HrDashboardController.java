@@ -453,7 +453,7 @@ public class HrDashboardController {
 
         // Check authorization
         String role = (String) session.getAttribute("userRole");
-        if (!"HR".equals(role) && !"SUPER_ADMIN".equals(role)) {
+        if (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
             logger.warn("Unauthorized delete attempt by role: {}", role);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("success", false, "message", "Unauthorized access"));
@@ -829,7 +829,7 @@ public class HrDashboardController {
 
         try {
             String role = (String) session.getAttribute("userRole");
-            if (!"HR".equals(role) && !"SUPER_ADMIN".equals(role)) {
+            if (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
                 ra.addFlashAttribute("error", "Unauthorized access");
                 return "redirect:/candidate/login";
             }
@@ -1423,7 +1423,49 @@ public class HrDashboardController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    /* ========== ALL JOB POSTINGS (VIEW ALL) ========== */
+    @GetMapping("/jobs")
+    public String hrAllJobs(Model model, HttpSession session, RedirectAttributes ra) {
+        logger.info("=== HR ALL JOBS PAGE REQUESTED ===");
 
+        if (!isAuthorized(session, ra)) {
+            return "redirect:/candidate/login";
+        }
+
+        try {
+            List<Job> allJobs = jobService.getAllJobs();
+
+            // Newest posted first
+            allJobs.sort((a, b) -> {
+                if (a.getPostedDate() == null && b.getPostedDate() == null) return 0;
+                if (a.getPostedDate() == null) return 1;
+                if (b.getPostedDate() == null) return -1;
+                return b.getPostedDate().compareTo(a.getPostedDate());
+            });
+
+            long activeCount = allJobs.stream()
+                    .filter(j -> Boolean.TRUE.equals(j.getActive()))
+                    .count();
+            long inactiveCount = allJobs.size() - activeCount;
+
+            model.addAttribute("allJobs", allJobs);
+            model.addAttribute("totalJobs", allJobs.size());
+            model.addAttribute("activeJobsCount", activeCount);
+            model.addAttribute("inactiveJobsCount", inactiveCount);
+            model.addAttribute("offerCount", offerService.getOfferCount());
+
+            addHRAttributes(model, session);
+
+            logger.info("✅ Loaded {} job postings ({} active, {} inactive)",
+                    allJobs.size(), activeCount, inactiveCount);
+            return "all-jobs";
+
+        } catch (Exception e) {
+            logger.error("Error loading all jobs: {}", e.getMessage(), e);
+            ra.addFlashAttribute("error", "Failed to load job postings: " + e.getMessage());
+            return "redirect:/dashboard/hr";
+        }
+    }
     @GetMapping("/interview-schedule")
     public String hrInterviewSchedulePage(Model model, HttpSession session, RedirectAttributes ra) {
         logger.info("=== HR INTERVIEW SCHEDULE PAGE REQUESTED ===");
@@ -1609,6 +1651,35 @@ public class HrDashboardController {
             return "redirect:/dashboard/hr";
         }
     }
+
+    // ===== ANNOUNCEMENTS HISTORY PAGE =====
+    @GetMapping("/announcementshistory")
+    public String announcementsHistoryPage(Model model, HttpSession session, RedirectAttributes ra) {
+        logger.info("=== ANNOUNCEMENTS HISTORY PAGE REQUESTED ===");
+
+        if (session.getAttribute("userId") == null) {
+            ra.addFlashAttribute("error", "Session expired. Please login again.");
+            return "redirect:/candidate/login";
+        }
+
+        String role = (String) session.getAttribute("userRole");
+        if (!"SUPER_ADMIN".equals(role)) {
+            logger.warn("❌ Access denied to announcements history page for role: {}", role);
+            ra.addFlashAttribute("error", "Access denied: Super Admin only");
+            return "redirect:/dashboard/hr";
+        }
+
+        // ✅ CORRECT: session FIRST, model SECOND
+        addHRAttributes(model, session);
+
+        model.addAttribute("isSuperAdmin", true);
+        model.addAttribute("userRole", role);
+        model.addAttribute("userName", session.getAttribute("userName"));
+        model.addAttribute("offerCount", offerService.getOfferCount());
+
+        logger.info("✅ Announcements history page loaded for SUPER_ADMIN");
+        return "announcementshistory";
+    }
     /* ========== SAVE EMPLOYEE ========== */
     @PostMapping("/save-employee")
     public String saveEmployee(@ModelAttribute EmployeeFormDTO employeeDTO,
@@ -1621,7 +1692,7 @@ public class HrDashboardController {
 
         try {
             String role = (String) session.getAttribute("userRole");
-            if (!"HR".equals(role) && !"SUPER_ADMIN".equals(role)) {
+            if (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
                 ra.addFlashAttribute("error", "Unauthorized access");
                 return "redirect:/candidate/login";
             }
@@ -1822,8 +1893,7 @@ public class HrDashboardController {
             ra.addFlashAttribute("error", "Please login to access HR Dashboard");
             return false;
         }
-
-        if (!"HR".equals(role) && !"SUPER_ADMIN".equals(role)) {
+        if (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
             logger.warn("❌ Auth check failed: User {} has invalid role: {}", userId, role);
             ra.addFlashAttribute("error", "Access denied: HR or Super Admin only");
             return false;

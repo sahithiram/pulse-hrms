@@ -419,7 +419,16 @@ public class CandidateOnboardingController {
             return ResponseEntity.badRequest().body(response);
         }
     }
-
+    @GetMapping("/profile-picture/{employeeId}")
+    public ResponseEntity<byte[]> getProfilePicture(@PathVariable String employeeId) {
+        try {
+            byte[] image = profilePictureService.getProfilePicture(employeeId);
+            if (image == null) return ResponseEntity.notFound().build();
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(image);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
     @PostMapping("/profile-picture/delete/{employeeId}")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> deleteProfilePicture(

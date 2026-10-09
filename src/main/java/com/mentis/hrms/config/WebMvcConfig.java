@@ -16,31 +16,17 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(roleInterceptor)
-                .addPathPatterns("/dashboard/**", "/candidate/dashboard/**")
+                .addPathPatterns("/dashboard/**", "/candidate/dashboard/**", "/pm/**", "/api/pm/**")
                 .excludePathPatterns(
-                        "/candidate/auth/**",
-                        "/candidate/login",
-                        "/candidate/create-password",
-                        "/candidate/forgot-password",
-                        "/candidate/reset-password/**",
-
-                        // Static resources
-                        "/static/**",
-                        "/webjars/**",
-                        "/uploads/**",
-
-                        // Resume endpoints
-                        "/dashboard/hr/download-resume/**",
-                        "/dashboard/hr/preview-resume/**",
-                        "/dashboard/hr/preview-image/**",
-                        "/dashboard/download-resume/**",
-                        "/dashboard/preview-resume/**",
-                        "/dashboard/preview-image/**",
-
-                        // ✅ ADD THIS - Allow admin attendance APIs
-                        "/dashboard/admin/attendance/api/**"
-                );
+                        "/candidate/auth/**", "/candidate/login", "/candidate/create-password",
+                        "/candidate/forgot-password", "/candidate/reset-password/**",
+                        "/static/**", "/webjars/**", "/uploads/**",
+                        "/dashboard/hr/download-resume/**", "/dashboard/hr/preview-resume/**",
+                        "/dashboard/hr/preview-image/**", "/dashboard/download-resume/**",
+                        "/dashboard/preview-resume/**", "/dashboard/preview-image/**",
+                        "/dashboard/admin/attendance/api/**");
     }
+
 
 
 

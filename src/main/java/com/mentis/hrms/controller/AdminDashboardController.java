@@ -23,6 +23,9 @@ public class AdminDashboardController {
     private DashboardController dashboardController;
 
     @Autowired
+    private DashboardService dashboardService;
+
+    @Autowired
     private EmployeeService employeeService;
 
     @Autowired
@@ -48,14 +51,30 @@ public class AdminDashboardController {
             return "redirect:/candidate/login?error=Unauthorized";
         }
 
-        // Load comprehensive system statistics
+        // FIX: the shared "dashboard" template (also used by HrDashboardController) reads
+        // jobs / departments / recentApplications / interviewsScheduled / inOnboarding /
+        // offerCount via th:each and th:text. AdminDashboardController never populated these,
+        // so Thymeleaf hit a null collection mid-render and the response (already streaming
+        // as chunked HTTP) died with a "chunked encoding" error in the browser console instead
+        // of showing a clean error page. Loading the same base dashboard data HrDashboardController
+        // already uses fixes that, without touching any other feature.
+        dashboardService.loadDashboardData(model);
+
+        // Load comprehensive system statistics (super-admin-only widgets)
         loadSuperAdminStats(model);
 
         // Add user info for header
+        // Add user info for header
         model.addAttribute("isSuperAdmin", true);
+        model.addAttribute("isHR", false); // FIX: dashboard.html line 4414 evaluates
+        // "isHR and !isSuperAdmin" — if isHR is
+        // never set, SpEL throws
+        // "cannot convert from null to boolean"
+        // mid-render, which aborts the chunked
+        // response and causes
+        // ERR_INCOMPLETE_CHUNKED_ENCODING in the browser.
         model.addAttribute("userRole", role);
         model.addAttribute("userName", session.getAttribute("userName"));
-
         // Return the dashboard view (not redirect)
         return "dashboard"; // This should be your dashboard.html template
     }
@@ -81,11 +100,12 @@ public class AdminDashboardController {
         long activeUsers = allUsers.stream().filter(Employee::isActive).count();
         long inactiveUsers = allUsers.size() - activeUsers;
 
-        // Calculate monthly hires
+        // Calculate monthly hires (defensive: skip applications with a null date instead of
+        // throwing NPE on .isAfter())
         java.time.LocalDateTime monthStart = java.time.LocalDateTime.now().withDayOfMonth(1);
         long hiredThisMonth = allApplications.stream()
                 .filter(app -> "Hired".equals(app.getStatus()))
-                .filter(app -> app.getApplicationDate().isAfter(monthStart))
+                .filter(app -> app.getApplicationDate() != null && app.getApplicationDate().isAfter(monthStart))
                 .count();
 
         // Add to model

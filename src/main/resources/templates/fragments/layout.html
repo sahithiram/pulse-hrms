@@ -117,7 +117,7 @@
                         </a>
                     </li>
                 </ul>
-
+                <div th:if="${isHR and !isSuperAdmin}" th:replace="~{fragments/HrAIPanel :: hrAIPanel}"></div>
                 <!-- Company Settings (SUPER ADMIN) -->
                 <div class="nav-section" th:if="${isSuperAdmin}">
                     <i class="fas fa-cog"></i> COMPANY INFO

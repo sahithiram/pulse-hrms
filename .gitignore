@@ -33,3 +33,46 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.bak
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Sensitive uploaded files and credentials
+uploads/
+tokens/
+
+# Project folders to exclude
+**/PM/
+**/pm/
+**/Workspace/
+**/workspace/
+
+# Local database and secret files
+*.sqlite
+*.db
+application.properties
+
+# Sensitive files
+uploads/
+tokens/
+
+# Excluded project folders
+**/PM/
+**/pm/
+**/Workspace/
+**/workspace/
+
+# Local database files
+*.sqlite
+*.db
+application.properties
+src/main/resources/templates/pm/
+Employee Skills.md.txt
+HR Skills.md.txt
+SA Skills.md.txt
+.mvn/wrapper/maven-wrapper (3).properties

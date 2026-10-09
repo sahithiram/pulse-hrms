@@ -745,6 +745,34 @@ public class DashboardController implements WebMvcConfigurer {
             return "redirect:/candidate/dashboard/" + empId;
         }
     }
+
+    // ===== ANNOUNCEMENTS HISTORY PAGE =====
+    @GetMapping("/announcementshistory")
+    public String announcementsHistoryPage(Model model, HttpSession session, RedirectAttributes ra) {
+        logger.info("=== ANNOUNCEMENTS HISTORY PAGE REQUESTED ===");
+
+        if (session.getAttribute("userId") == null) {
+            ra.addFlashAttribute("error", "Session expired. Please login again.");
+            return "redirect:/candidate/login";
+        }
+
+        String role = (String) session.getAttribute("userRole");
+        if (!"SUPER_ADMIN".equals(role)) {
+            logger.warn("❌ Access denied to announcements history page for role: {}", role);
+            ra.addFlashAttribute("error", "Access denied: Super Admin only");
+            return "redirect:/dashboard/hr";
+        }
+
+        addHRAttributes(session, model);
+
+        model.addAttribute("isSuperAdmin", true);
+        model.addAttribute("userRole", role);
+        model.addAttribute("userName", session.getAttribute("userName"));
+
+        logger.info("✅ Announcements history page loaded for SUPER_ADMIN");
+        return "announcementshistory";
+    }
+
     @GetMapping("/api/departments/{departmentName}/designations")
     @ResponseBody
     public ResponseEntity<?> getDesignationsByDepartmentApi(@PathVariable String departmentName) {
@@ -779,6 +807,9 @@ public class DashboardController implements WebMvcConfigurer {
             ));
         }
     }
+
+
+
     /* ========== HELPER METHODS ========== */
     private String extractResumeFileName(String resumePath) {
         if (resumePath == null || resumePath.trim().isEmpty()) return "document.pdf";

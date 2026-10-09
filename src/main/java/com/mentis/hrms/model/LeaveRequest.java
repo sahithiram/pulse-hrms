@@ -10,7 +10,7 @@ public class LeaveRequest {
 
     @Id
     @Column(name = "id", nullable = false, unique = true, length = 50)
-    private String id;  // MUST BE String, not Long
+    private String id;
 
     @Column(name = "employee_id", nullable = false)
     private String employeeId;
@@ -38,23 +38,32 @@ public class LeaveRequest {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
     @Column(name = "leave_duration", length = 20)
-    private String leaveDuration;  // full_day, half_day, multiple_days
+    private String leaveDuration;
 
     @Column(name = "half_day_type", length = 20)
-    private String halfDayType;    // first_half, second_half
+    private String halfDayType;
 
     @Column(name = "total_days")
-    private Double totalDays;      // Calculated total days (0.5, 1, 2, etc.)
-
+    private Double totalDays;
 
     @Column(name = "approval_remarks", length = 500)
     private String approvalRemarks;
-    // IMPORTANT: You need to generate the ID before saving
-    // Add this method or use @PrePersist
+
+    // NEW FIELDS FOR CHAT ACTIONS
+    @Column(name = "withdrawn")
+    private Boolean withdrawn = false;
+
+    @Column(name = "withdrawn_date")
+    private LocalDateTime withdrawnDate;
+
+    @Column(name = "cancel_reason", length = 500)
+    private String cancelReason;
+
     @PrePersist
     public void prePersist() {
         if (this.id == null || this.id.isEmpty()) {
@@ -66,16 +75,14 @@ public class LeaveRequest {
     }
 
     private String generateLeaveId() {
-        // Format: LV-YYYY-XXXX where XXXX is random
         int random = (int) (Math.random() * 10000);
-        return String.format("LV-%d-%04d",
-                LocalDate.now().getYear(), random);
+        return String.format("LV-%d-%04d", LocalDate.now().getYear(), random);
     }
 
     // Constructors
     public LeaveRequest() {}
 
-    // Getters and Setters
+    // Getters and Setters (existing + new)
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -109,10 +116,6 @@ public class LeaveRequest {
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 
-    public String getApprovalRemarks() { return approvalRemarks; }
-    public void setApprovalRemarks(String approvalRemarks) { this.approvalRemarks = approvalRemarks; }
-
-    // Add getters and setters
     public String getLeaveDuration() { return leaveDuration; }
     public void setLeaveDuration(String leaveDuration) { this.leaveDuration = leaveDuration; }
 
@@ -121,4 +124,17 @@ public class LeaveRequest {
 
     public Double getTotalDays() { return totalDays; }
     public void setTotalDays(Double totalDays) { this.totalDays = totalDays; }
+
+    public String getApprovalRemarks() { return approvalRemarks; }
+    public void setApprovalRemarks(String approvalRemarks) { this.approvalRemarks = approvalRemarks; }
+
+    // NEW GETTERS/SETTERS
+    public Boolean getWithdrawn() { return withdrawn; }
+    public void setWithdrawn(Boolean withdrawn) { this.withdrawn = withdrawn; }
+
+    public LocalDateTime getWithdrawnDate() { return withdrawnDate; }
+    public void setWithdrawnDate(LocalDateTime withdrawnDate) { this.withdrawnDate = withdrawnDate; }
+
+    public String getCancelReason() { return cancelReason; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
 }

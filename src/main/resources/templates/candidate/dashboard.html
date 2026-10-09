@@ -43,19 +43,19 @@
         }
 
         /* ---------- TOP NAV ---------- */
-        .top-nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            background: var(--dark-card);
-            border-bottom: 1px solid var(--dark-border);
-            display: flex;
-            align-items: center;
-            padding: 0 32px;
-            z-index: 1000;
-        }
+       .top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: var(--dark-card);  /* This should remain as is */
+    border-bottom: 1px solid var(--dark-border);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    z-index: 1000;
+}
         .nav-brand { font-size: 22px; font-weight: 700; color: white; text-decoration: none; }
         .ms-auto {
             margin-left: auto;
@@ -252,30 +252,36 @@
             user-select: none;
         }
         .working-hours-topnav:hover { background: var(--sidebar-hover); }
-        .wh-topnav-content {
+      .wh-topnav-content {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
         }
-        .wh-icon { font-size: 18px; color: var(--primary); }
-        .wh-details {
+        .wh-icon { font-size: 18px; color: var(--primary); flex-shrink: 0; }
+       .wh-details {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            gap: 2px;
+            justify-content: center;
+            gap: 3px;
+            min-width: 92px; /* keeps width stable as seconds tick over */
         }
         .wh-time {
             font-size: 13px;
             font-weight: 600;
             color: white;
             line-height: 1;
+            font-variant-numeric: tabular-nums; /* prevents digit-width jitter */
+            white-space: nowrap;
         }
         .wh-label-mini {
             font-size: 10px;
             color: var(--dark-text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            line-height: 1;
         }
+
         .wh-tooltip {
             position: absolute;
             top: 100%;
@@ -4412,66 +4418,63 @@ tr[data-checked-out="true"] .status-indicator {
 }
 
 
-/* ── Chat mode toggle buttons ── */
-.miti-mode-btn {
-flex: 1;
-padding: 6px 10px;
-background: var(--dark-bg);
-border: 1px solid var(--dark-border);
-border-radius: 6px;
-color: var(--dark-text-secondary);
-font-size: 11px;
-font-weight: 600;
-cursor: pointer;
-transition: all 0.2s;
-font-family: 'Inter', sans-serif;
-display: flex;
-align-items: center;
-justify-content: center;
-gap: 4px;
+
+
+/* ===== MENTI AI CHAT PANEL ===== */
+.miti-nav-icon-wrapper {
+    position: relative;
+    display: inline-flex;
 }
-.miti-mode-btn:hover { border-color: var(--primary); color: var(--primary); }
-.miti-mode-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
-
-/* ── Session list items ── */
-.miti-session-item {
-padding: 10px 12px;
-border-bottom: 1px solid rgba(255,255,255,0.04);
-cursor: pointer;
-position: relative;
-transition: background 0.2s;
-}
-.miti-session-item:hover { background: var(--sidebar-hover); }
-.miti-session-item.active { background: rgba(99,102,241,0.1); border-left: 3px solid var(--primary); }
-.miti-session-name { font-size: 12px; color: var(--dark-text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 20px; }
-.miti-session-meta { font-size: 10px; color: var(--dark-text-secondary); margin-top: 2px; }
-.miti-session-delete {
-position: absolute; top: 8px; right: 8px;
-background: none; border: none; color: var(--dark-text-secondary);
-font-size: 16px; cursor: pointer; line-height: 1;
-opacity: 0; transition: opacity 0.2s;
-}
-.miti-session-item:hover .miti-session-delete { opacity: 1; }
-.miti-session-delete:hover { color: var(--danger); }
-
-
-
-        /* ============================================
-   MITI AI ASSISTANT STYLES
-   ============================================ */
-
-/* Nav button */
 .miti-nav-btn {
     position: relative;
-    display: flex; align-items: center; gap: 7px;
+    display: flex; align-items: center; justify-content: center;
     background: var(--primary);
     color: white; border: none;
-    padding: 7px 14px; border-radius: 8px;
-    font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: background 0.2s;
+    width: 38px; height: 38px;
+    padding: 0; border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer; transition: background 0.2s, transform 0.15s;
     font-family: 'Inter', sans-serif;
 }
-.miti-nav-btn:hover { background: var(--primary-hover); }
+.miti-nav-btn:hover { background: var(--primary-hover); transform: scale(1.06); }
+.miti-nav-btn i { font-size: 16px; }
+
+/* Custom tooltip showing assistant name */
+.miti-nav-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    margin-top: 6px;
+    background: var(--dark-card);
+    color: var(--dark-text);
+    border: 1px solid var(--dark-border);
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1002;
+}
+.miti-nav-tooltip::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-bottom-color: var(--dark-border);
+}
+.miti-nav-icon-wrapper:hover .miti-nav-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
 .miti-nav-pulse {
     position: absolute; top: -2px; right: -2px;
     width: 8px; height: 8px; background: var(--success);
@@ -4482,10 +4485,8 @@ opacity: 0; transition: opacity 0.2s;
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.5; transform: scale(0.85); }
 }
-
-/* FAB */
 .miti-fab {
-   position: fixed; top: 80px; right: 24px;
+    position: fixed; top: 80px; right: 24px;
     width: 52px; height: 52px; border-radius: 50%;
     background: var(--primary); color: white;
     border: none; font-size: 22px;
@@ -4494,21 +4495,16 @@ opacity: 0; transition: opacity 0.2s;
     display: flex; align-items: center; justify-content: center;
     transition: transform 0.2s, box-shadow 0.2s;
 }
-.miti-fab:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 24px rgba(99,102,241,0.6);
-}
+.miti-fab:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(99,102,241,0.6); }
 .miti-fab-dot {
     position: absolute; top: 8px; right: 8px;
     width: 10px; height: 10px;
     background: var(--success); border-radius: 50%;
     border: 2px solid var(--primary);
 }
-
-/* Overlay */
 .miti-overlay {
     position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.35);
     z-index: 9991;
     opacity: 0; pointer-events: none;
     transition: opacity 0.3s ease;
@@ -4516,122 +4512,259 @@ opacity: 0; transition: opacity 0.2s;
 }
 .miti-overlay.open { opacity: 1; pointer-events: all; }
 
-/* Panel */
+/* === PANEL SHELL === */
 .miti-panel {
-position: fixed;
-top: 64px;
-right: -420px;
-width: 380px;
-height: calc(100vh - 64px);
-background: var(--dark-card);
-border-left: 1px solid var(--dark-border);
-z-index: 9992;
-display: flex;
-flex-direction: column;
-transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-box-shadow: -8px 0 32px rgba(0,0,0,0.4);
+    position: fixed;
+    top: 64px; right: -620px;
+    width: 600px;
+    height: calc(100vh - 64px);
+    display: flex;
+    flex-direction: column;
+    z-index: 9992;
+    transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: -8px 0 40px rgba(0,0,0,0.5);
+    border-left: 1px solid var(--dark-border);
+    background: var(--dark-card);
 }
 .miti-panel.open { right: 0; }
 
-/* Panel header */
-.miti-panel-header {
-    display: flex; align-items: center; gap: 10px;
-    padding: 14px 16px;
-    background: var(--sidebar-bg);
+/* === SESSIONS SIDEBAR (left strip) === */
+
+.miti-sessions-header {
+    padding: 14px 10px 8px;
     border-bottom: 1px solid var(--dark-border);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--dark-text-secondary);
+}
+
+.miti-new-btn {
+    display: flex; align-items: center; gap: 6px;
+    margin: 8px 8px 4px;
+    padding: 4px 6px;
+    background: none;
+    border: none;
+    color: var(--dark-text-secondary);
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    width: calc(100% - 16px);
+    transition: color 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.miti-new-btn:hover { color: var(--primary); background: none; }
+.miti-new-btn i { font-size: 14px; }
+.miti-sessions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+.miti-sessions-list::-webkit-scrollbar { width: 3px; }
+.miti-sessions-list::-webkit-scrollbar-track { background: transparent; }
+.miti-sessions-list::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+.miti-session-item {
+    padding: 9px 10px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+    position: relative;
+}
+.miti-session-item:hover { background: rgba(255,255,255,0.04); }
+.miti-session-item.active {
+    background: rgba(99,102,241,0.1);
+    border-left-color: var(--primary);
+}
+.miti-session-item-name {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    padding-right: 16px;
+}
+.miti-session-item.active .miti-session-item-name { color: #c7d2fe; }
+.miti-session-item-meta {
+    font-size: 10px;
+    color: #334155;
+    margin-top: 2px;
+}
+.miti-session-del {
+    position: absolute; top: 7px; right: 6px;
+    background: none; border: none;
+    color: #334155; font-size: 14px;
+    cursor: pointer; line-height: 1;
+    opacity: 0; transition: opacity 0.15s;
+    padding: 0;
+}
+.miti-session-item:hover .miti-session-del { opacity: 1; }
+.miti-session-del:hover { color: var(--danger); }
+.miti-mode-strip {
+    display: flex; gap: 4px;
+    padding: 8px;
+    border-top: 1px solid var(--dark-border);
+}
+.miti-mode-btn {
+    flex: 1;
+    padding: 5px 4px;
+    background: none;
+    border: none;
+    color: var(--dark-text-secondary);
+    font-size: 10px; font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: color 0.2s;
+    font-family: 'Inter', sans-serif;
+}
+.miti-mode-btn:hover { color: var(--primary); }
+.miti-mode-btn.active { color: var(--primary); background: none; border: none; text-decoration: underline; }
+
+/* === CHAT AREA (right main) === */
+/* === BODY WRAPPER (sidebar overlay + chat) === */
+.miti-body {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+}
+.miti-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    z-index: 4;
+    pointer-events: none;
+    transition: background 0.28s ease;
+}
+.miti-backdrop.open {
+    background: rgba(0,0,0,0.45);
+    pointer-events: auto;
+}
+.miti-sessions-col {
+    position: absolute;
+    top: 0; left: 0;
+    width: 240px;
+    height: 100%;
+    background: var(--sidebar-bg);
+    border-right: 1px solid var(--dark-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 5;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+}
+.miti-sessions-col.open {
+    transform: translateX(0);
+}
+.miti-chat-col {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--dark-card);
+}
+
+/* Header */
+/* Header */
+.miti-chat-header {
+    display: flex; align-items: center; gap: 9px;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--dark-border);
+    background: var(--sidebar-bg);
     flex-shrink: 0;
 }
-.miti-avatar {
-    width: 36px; height: 36px; border-radius: 50%;
+.miti-hdr-clickable {
+    display: flex; align-items: center; gap: 9px;
+    flex: 1; min-width: 0;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 6px;
+    padding: 2px 4px;
+    margin: -2px -4px;
+    transition: background 0.15s;
+}
+.miti-hdr-clickable:hover { background: rgba(255,255,255,0.04); }
+.miti-hdr-chevron {
+    font-size: 11px;
+    color: var(--dark-text-secondary);
+    transition: transform 0.25s ease;
+    margin-left: 2px;
+    flex-shrink: 0;
+}
+.miti-hdr-chevron.open { transform: rotate(90deg); }
+.miti-hdr-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
     background: linear-gradient(135deg, var(--primary), #8b5cf6);
-    color: white; font-size: 15px; font-weight: 600;
+    color: white; font-size: 13px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
 }
-.miti-header-info { flex: 1; min-width: 0; }
-.miti-header-name {
-    font-size: 14px; font-weight: 600;
-    color: white; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis;
+.miti-hdr-info { flex: 1; min-width: 0; }
+.miti-hdr-name {
+    font-size: 13px; font-weight: 600;
+    color: white;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 4px;
 }
-.miti-header-status {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 11px; color: var(--success); margin-top: 2px;
+.miti-hdr-status {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--success); margin-top: 1px;
 }
 .miti-status-dot {
     width: 6px; height: 6px;
     background: var(--success); border-radius: 50%;
     animation: miti-pulse 2s infinite;
 }
-.miti-minimize-btn {
+.miti-close-btn {
     background: transparent; border: none;
     color: var(--dark-text-secondary);
-    font-size: 16px; cursor: pointer;
-    padding: 4px 6px; border-radius: 6px;
+    font-size: 18px; cursor: pointer;
+    padding: 3px 6px; border-radius: 6px;
     transition: background 0.2s, color 0.2s;
+    line-height: 1;
 }
-.miti-minimize-btn:hover { background: var(--sidebar-hover); color: white; }
+.miti-close-btn:hover { background: var(--sidebar-hover); color: white; }
 
-/* Messages area */
+/* Messages */
 .miti-messages {
-    flex: 1; overflow-y: auto;
-    padding: 14px 14px 4px;
-    display: flex; flex-direction: column; gap: 12px;
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 12px 6px;
+    display: flex; flex-direction: column;
+    gap: 12px;
     scroll-behavior: smooth;
 }
-.miti-messages::-webkit-scrollbar { width: 4px; }
+.miti-messages::-webkit-scrollbar { width: 3px; }
 .miti-messages::-webkit-scrollbar-track { background: transparent; }
-.miti-messages::-webkit-scrollbar-thumb {
-    background: var(--dark-border); border-radius: 4px;
-}
-
-/* Welcome message */
-.miti-welcome {
-    display: flex; gap: 10px; align-items: flex-start;
-}
-.miti-welcome-avatar {
-    width: 28px; height: 28px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), #8b5cf6);
-    color: white; font-size: 12px; font-weight: 600;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; margin-top: 2px;
-}
-.miti-welcome-text {
-    background: var(--sidebar-hover);
-    border: 1px solid var(--dark-border);
-    border-radius: 12px; border-top-left-radius: 4px;
-    padding: 10px 14px;
-    font-size: 13px; color: var(--dark-text);
-    line-height: 1.55;
-}
-
-/* Message rows */
-.miti-msg { display: flex; gap: 8px; align-items: flex-end; }
+.miti-messages::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+.miti-msg { display: flex; gap: 7px; align-items: flex-end; }
 .miti-msg.user { flex-direction: row-reverse; }
-.miti-msg-avatar {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: var(--primary);
-    color: white; font-size: 10px; font-weight: 600;
+.miti-msg-av {
+    width: 24px; height: 24px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: white;
     flex-shrink: 0;
 }
-.miti-msg.user .miti-msg-avatar { background: var(--info); }
+.miti-msg-av.bot { background: linear-gradient(135deg, var(--primary), #8b5cf6); }
+.miti-msg-av.user { background: var(--info); }
+.miti-msg-body { display: flex; flex-direction: column; max-width: 80%; }
+.miti-msg.user .miti-msg-body { align-items: flex-end; }
 .miti-bubble {
-    max-width: 78%;
-    padding: 9px 13px;
+    padding: 9px 12px;
     border-radius: 14px;
-    font-size: 13px; line-height: 1.5;
+    font-size: 12px; line-height: 1.55;
 }
 .miti-bubble.bot {
-    background: var(--sidebar-hover);
+    background: #1a2235;
     border: 1px solid var(--dark-border);
     color: var(--dark-text);
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: 3px;
 }
 .miti-bubble.user {
     background: var(--primary);
     color: white;
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: 3px;
 }
 .miti-bubble.error {
     background: rgba(239,68,68,0.1);
@@ -4639,161 +4772,111 @@ box-shadow: -8px 0 32px rgba(0,0,0,0.4);
     color: var(--danger);
 }
 .miti-msg-time {
-    font-size: 10px; color: var(--dark-text-secondary);
-    margin-top: 3px; padding: 0 4px;
+    font-size: 9px; color: #334155;
+    margin-top: 3px; padding: 0 3px;
 }
 
 /* Typing indicator */
-.miti-typing-indicator {
-    display: flex; gap: 4px;
-    align-items: center; padding: 4px 2px;
-}
-.miti-typing-indicator span {
+.miti-typing { display: flex; gap: 4px; align-items: center; padding: 4px 2px; }
+.miti-typing span {
     width: 7px; height: 7px;
     background: var(--dark-text-secondary);
     border-radius: 50%;
     animation: miti-bounce 1.2s infinite;
 }
-.miti-typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.miti-typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+.miti-typing span:nth-child(2) { animation-delay: 0.2s; }
+.miti-typing span:nth-child(3) { animation-delay: 0.4s; }
 @keyframes miti-bounce {
     0%, 60%, 100% { transform: translateY(0); }
     30% { transform: translateY(-5px); }
 }
 
-/* Suggestions chips */
-.miti-suggestions {
-    padding: 4px 14px 10px;
-    display: flex; flex-wrap: wrap; gap: 6px;
-    flex-shrink: 0;
+/* Welcome */
+.miti-welcome-msg {
+    display: flex; gap: 8px; align-items: flex-start;
 }
-/* Suggestions chips */
-.miti-suggestions {
-padding: 4px 14px 10px;
-display: flex;
-flex-wrap: wrap;
-gap: 6px;
-flex-shrink: 0;
+.miti-welcome-av {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #8b5cf6);
+    color: white; font-size: 10px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 2px;
+}
+.miti-welcome-bubble {
+    background: #1a2235;
+    border: 1px solid var(--dark-border);
+    border-radius: 14px; border-top-left-radius: 4px;
+    padding: 10px 13px;
+    font-size: 12px; color: var(--dark-text); line-height: 1.55;
+}
+
+/* Suggestion chips */
+.miti-chips {
+    padding: 5px 10px 8px;
+    display: flex; flex-wrap: wrap; gap: 5px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--dark-border);
 }
 .miti-chip {
-background: rgba(99,102,241,0.1);
-border: 0.5px solid rgba(99,102,241,0.3);
-color: #818cf8;
-padding: 5px 11px;
-border-radius: 20px;
-font-size: 11px;
-cursor: pointer;
-transition: background 0.2s;
-display: flex;
-align-items: center;
-gap: 5px;
-font-family: 'Inter', sans-serif;
+    background: rgba(99,102,241,0.09);
+    border: 1px solid rgba(99,102,241,0.25);
+    color: #818cf8;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+    transition: background 0.2s;
+    font-family: 'Inter', sans-serif;
 }
-.miti-chip:hover {
-background: rgba(99,102,241,0.25);
-border-color: rgba(99,102,241,0.5);
-}
+.miti-chip:hover { background: rgba(99,102,241,0.2); }
+.miti-chip i { font-size: 12px; }
 
-/* Icon-only chip variant */
-.miti-chip.icon-only {
-position: relative;
-padding: 8px;
-border-radius: 50%;
-width: 34px;
-height: 34px;
-display: flex;
-align-items: center;
-justify-content: center;
-}
-.miti-chip.icon-only i {
-font-size: 15px;
-line-height: 1;
-}
-
-/* Tooltip */
-.miti-chip-tooltip {
-position: absolute;
-bottom: calc(100% + 8px);
-left: 50%;
-transform: translateX(-50%);
-background: var(--dark-card);
-color: var(--dark-text);
-border: 1px solid var(--dark-border);
-font-size: 11px;
-font-weight: 500;
-padding: 4px 10px;
-border-radius: 6px;
-white-space: nowrap;
-pointer-events: none;
-opacity: 0;
-transition: opacity 0.15s ease;
-box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-z-index: 9999;
-}
-.miti-chip-tooltip::after {
-content: '';
-position: absolute;
-top: 100%;
-left: 50%;
-transform: translateX(-50%);
-border: 5px solid transparent;
-border-top-color: var(--dark-border);
-}
-.miti-chip.icon-only:hover .miti-chip-tooltip {
-opacity: 1;
-}
-
-/* Input area */
+/* Input */
 .miti-input-area {
-    padding: 10px 12px;
+    padding: 8px 10px;
     border-top: 1px solid var(--dark-border);
-    display: flex; align-items: flex-end; gap: 8px;
+    display: flex; align-items: flex-end; gap: 7px;
     flex-shrink: 0; background: var(--dark-card);
 }
 .miti-input {
     flex: 1;
-    background: var(--sidebar-bg);
+    background: #1a2235;
     border: 1px solid var(--dark-border);
-    border-radius: 18px;
-    padding: 9px 14px;
+    border-radius: 16px;
+    padding: 8px 13px;
     color: var(--dark-text);
-    font-size: 13px;
+    font-size: 12px;
     resize: none;
-    min-height: 38px; max-height: 120px;
+    min-height: 36px; max-height: 100px;
     font-family: 'Inter', sans-serif;
     line-height: 1.4; outline: none;
     transition: border-color 0.2s;
     overflow-y: auto;
 }
 .miti-input:focus { border-color: var(--primary); }
-.miti-input::placeholder { color: var(--dark-text-secondary); }
+.miti-input::placeholder { color: #334155; }
 .miti-send-btn {
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 34px; height: 34px; border-radius: 50%;
     background: var(--primary); border: none;
-    color: white; font-size: 14px; cursor: pointer;
+    color: white; font-size: 13px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
     transition: background 0.2s, transform 0.15s;
     flex-shrink: 0;
 }
 .miti-send-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
 .miti-send-btn:disabled { background: var(--dark-border); cursor: not-allowed; transform: none; }
-
-/* Footer note */
-.miti-footer {
+.miti-footer-note {
     text-align: center;
-    font-size: 10px;
-    color: var(--dark-text-secondary);
-    padding: 5px 12px 10px;
-    opacity: 0.6;
+    font-size: 10px; color: #334155;
+    padding: 3px 12px 8px;
     flex-shrink: 0;
 }
-
-/* Responsive */
 @media (max-width: 480px) {
     .miti-panel { width: 100%; right: -100%; }
-    .miti-nav-btn span:last-child { display: none; }
+    .miti-sessions-col { width: 120px; }
+    .miti-nav-btn span { display: none; }
 }
-
 
     </style>
 </head>
@@ -4845,32 +4928,46 @@ opacity: 1;
 
 <!-- ================= TOP NAV ================= -->
 <nav class="top-nav">
-    <a href="#" class="nav-brand">Menti's IT Solutions</a>
+    <a href="#" class="nav-brand" style="display:flex;align-items:center;gap:10px;">
+        <img id="employeeNavLogo"
+             src=""
+             alt="Logo"
+             style="display:none;height:44px;width:44px;
+                object-fit:contain;border-radius:6px;
+                background:#fff;padding:3px;">
+        <span id="employeeNavBrandName">Menti's IT Solutions</span>
+    </a>
     <div class="ms-auto">
 
         <!-- MITI AI ASSISTANT TRIGGER -->
-        <button class="miti-nav-btn" id="mitiNavBtn" onclick="toggleMitiPanel()" title="Ask Miti — AI Assistant">
-            <span class="miti-nav-pulse"></span>
-            <i class="fas fa-robot"></i>
-            <span>Ask Menti</span>
-        </button>
+        <!-- MITI AI ASSISTANT TRIGGER (icon-only, custom tooltip) -->
+        <div class="miti-nav-icon-wrapper">
+            <button class="miti-nav-btn" id="mitiNavBtn" onclick="toggleMitiPanel()" aria-label="Open Menti AI Assistant">
+                <span class="miti-nav-pulse"></span>
+                <i class="fas fa-wand-magic-sparkles"></i>
+            </button>
+            <span class="miti-nav-tooltip">Menti — AI Assistant</span>
+        </div>
 
+        <!-- Top Nav Working Hours Widget -->
         <!-- Top Nav Working Hours Widget -->
         <div class="working-hours-topnav" id="clockToggleTop" title="Click to toggle Clock In/Out">
             <div class="wh-topnav-content">
                 <i class="fas fa-clock wh-icon"></i>
                 <div class="wh-details">
-                    <!-- Time display -->
-                    <div class="wh-time" id="hoursDisplayTop">0h 0m</div>
-                    <!-- REPLACE 'Today' WITH ACTUAL DATE -->
-                    <div class="wh-label-mini" id="currentDateDisplay">Loading...</div>
+                    <!-- Duration display (now includes seconds) -->
+                    <div class="wh-time" id="hoursDisplayTop">0h 0m 0s</div>
+                    <!-- Check-in clock time, e.g. "In: 9:40 AM" -->
+                    <div class="wh-label-mini" id="checkInTimeDisplay">Not checked in</div>
                 </div>
             </div>
             <div class="wh-tooltip">
                 <div class="wh-tooltip-title">Working Hours Today</div>
-                <div class="wh-tooltip-stats">
+                <div class="wh-tooltip-stats" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <span>Check-in: <strong id="wh-tooltip-checkin">--:--</strong></span>
                     <span>Target: 8h 0m</span>
                     <span id="percentageTextTooltip">0%</span>
+                    <span id="currentDateDisplay" style="opacity: 0.7;">Loading...</span>
                 </div>
             </div>
         </div>
@@ -4979,6 +5076,16 @@ opacity: 1;
             <a class="menu-item" data-tab="attendance">
                 <i class="fas fa-calendar-check"></i>
                 <span>Attendance/Leave Management</span>
+            </a>
+            <a class="menu-item" data-tab="my-tasks">
+                <i class="fas fa-list-check"></i>
+                <span>My Tasks</span>
+                <span id="myTasksSidebarBadge" style="margin-left:auto;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;display:none;">0</span>
+            </a>
+            <a class="menu-item" data-tab="my-notifications">
+                <i class="fas fa-bell"></i>
+                <span>Notifications</span>
+                <span id="myNotifSidebarBadge" style="margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;display:none;">0</span>
             </a>
         </nav>
     </aside>
@@ -6131,7 +6238,107 @@ opacity: 1;
             </div>
         </div>
 </div>
+<div class="tab-pane" id="my-notifications">
+    <div class="content-card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h5 style="margin:0;color:#fff;font-size:1.1rem;">
+                    <i class="fas fa-bell" style="color:var(--primary);"></i> Notifications
+                </h5>
+                <div style="font-size:12px;color:var(--dark-text-secondary);margin-top:4px;">
+                    Assignments, mentions, task moves, reminders — everything in one place.
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="window.Notifications && window.Notifications.refresh()">
+                    <i class="fas fa-rotate"></i> Refresh
+                </button>
+                <button class="btn" onclick="markAllNotificationsRead()"
+                        style="background:transparent;border:1px solid var(--dark-border);color:var(--dark-text);padding:8px 14px;border-radius:6px;">
+                    <i class="fas fa-check-double"></i> Mark all read
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="content-card" id="myNotificationsList" style="padding:0;overflow:hidden;">
+        <div style="text-align:center;padding:40px;color:var(--dark-text-secondary);">
+            <i class="fas fa-spinner fa-spin"></i> Loading…
+        </div>
+    </div>
+</div>
 </main>
+<!-- ============================================ -->
+<!-- PHASE 3 — MY TASKS TAB (scoped to the user)  -->
+<!-- ============================================ -->
+<div class="tab-pane" id="my-tasks">
+    <div class="content-card" style="margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+            <div>
+                <h5 style="margin:0;color:#fff;font-size:1.1rem;">
+                    <i class="fas fa-list-check" style="color:var(--primary);"></i>
+                    My Tasks
+                </h5>
+                <div style="font-size:12px;color:var(--dark-text-secondary);margin-top:4px;">
+                    Everything assigned to you across all projects.
+                </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" onclick="loadMyTasksWidget()">
+                    <i class="fas fa-rotate"></i> Refresh
+                </button>
+                <a class="btn" href="/pm/03-my-work" target="_blank"
+                   style="background:transparent;border:1px solid var(--dark-border);color:var(--dark-text);text-decoration:none;padding:8px 14px;border-radius:6px;">
+                    <i class="fas fa-external-link-alt"></i> Open PM Workspace
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;">
+        <div class="content-card" style="padding:16px;">
+            <div style="font-size:11px;color:var(--dark-text-secondary);text-transform:uppercase;letter-spacing:.5px;">Assigned to You</div>
+            <div id="mtKpiOpen" style="font-size:22px;font-weight:700;color:#fff;margin-top:6px;">—</div>
+        </div>
+        <div class="content-card" style="padding:16px;">
+            <div style="font-size:11px;color:var(--dark-text-secondary);text-transform:uppercase;letter-spacing:.5px;">Due Today</div>
+            <div id="mtKpiToday" style="font-size:22px;font-weight:700;color:var(--warning);margin-top:6px;">—</div>
+        </div>
+        <div class="content-card" style="padding:16px;">
+            <div style="font-size:11px;color:var(--dark-text-secondary);text-transform:uppercase;letter-spacing:.5px;">Overdue</div>
+            <div id="mtKpiOverdue" style="font-size:22px;font-weight:700;color:var(--danger);margin-top:6px;">—</div>
+        </div>
+        <div class="content-card" style="padding:16px;">
+            <div style="font-size:11px;color:var(--dark-text-secondary);text-transform:uppercase;letter-spacing:.5px;">Done This Week</div>
+            <div id="mtKpiDone" style="font-size:22px;font-weight:700;color:var(--success);margin-top:6px;">—</div>
+        </div>
+        <div class="content-card" style="padding:16px;">
+            <div style="font-size:11px;color:var(--dark-text-secondary);text-transform:uppercase;letter-spacing:.5px;">Hours Logged</div>
+            <div id="mtKpiHours" style="font-size:22px;font-weight:700;color:var(--primary);margin-top:6px;">—</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="content-card" style="padding:12px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+        <select id="mtFilter" class="pm-select" style="max-width:180px;background:var(--dark-bg);border:1px solid var(--dark-border);color:var(--dark-text);padding:8px 10px;border-radius:6px;font-size:13px;" onchange="renderMyTasksWidget()">
+            <option value="all">All Tasks</option>
+            <option value="overdue">Overdue</option>
+            <option value="today">Due Today</option>
+            <option value="week">This Week</option>
+            <option value="done">Completed</option>
+        </select>
+        <input id="mtSearch" class="pm-input" placeholder="Filter tasks..." oninput="renderMyTasksWidget()"
+               style="max-width:260px;background:var(--dark-bg);border:1px solid var(--dark-border);color:var(--dark-text);padding:8px 10px;border-radius:6px;font-size:13px;">
+        <span id="mtCount" style="margin-left:auto;font-size:12px;color:var(--dark-text-secondary);"></span>
+    </div>
+
+    <!-- Task list -->
+    <div class="content-card" id="myTasksWidgetList" style="padding:0;overflow:hidden;">
+        <div style="text-align:center;padding:40px;color:var(--dark-text-secondary);">
+            <i class="fas fa-spinner fa-spin"></i> Loading…
+        </div>
+    </div>
+</div>
 <!-- ================= RIGHT SIDEBAR ================= -->
 <aside class="right-sidebar">
     <div id="recentActivityCard" class="content-card" style="padding: 20px;">
@@ -6187,114 +6394,323 @@ opacity: 1;
 
 
 <!-- ================= MITI AI ASSISTANT ================= -->
-
 <!-- FAB Button -->
-<button class="miti-fab" id="mitiFab" onclick="toggleMitiPanel()" title="Ask Miti" aria-label="Open Miti AI Assistant">
+<button class="miti-fab" id="mitiFab" onclick="toggleMitiPanel()" title="Ask Miti" aria-label="Open Menti AI Assistant">
     <span class="miti-fab-dot"></span>
     <i class="fas fa-robot"></i>
 </button>
 
-<!-- Chat Panel -->
+<!-- Overlay -->
 <div class="miti-overlay" id="mitiOverlay" onclick="closeMitiPanel()"></div>
+
+<!-- Chat Panel -->
 <div class="miti-panel" id="mitiPanel" role="complementary" aria-label="Menti AI Assistant">
 
-    <!-- Header -->
-    <div class="miti-panel-header">
-        <div class="miti-avatar">M</div>
-        <div class="miti-header-info">
-            <div class="miti-header-name">Menti — HRMS Assistant</div>
-            <div class="miti-header-status">
-                <span class="miti-status-dot"></span>
-                <span id="mitiSessionNameDisplay" style="font-size:11px;">⚡ Temporary</span>
+    <!-- Header (click avatar/name to toggle history) -->
+    <div class="miti-chat-header">
+        <div class="miti-hdr-clickable" id="mitiHdrToggle" onclick="toggleMitiSessionsSidebar()" title="View saved chats">
+            <div class="miti-hdr-avatar">M</div>
+            <div class="miti-hdr-info">
+                <div class="miti-hdr-name">
+                    Menti
+                    <i class="fas fa-chevron-right miti-hdr-chevron" id="mitiHdrChevron"></i>
+                </div>
+                <div class="miti-hdr-status">
+                    <span class="miti-status-dot"></span>
+                    <span id="mitiModeLabel">💾 Saved chat</span>
+                </div>
             </div>
         </div>
-        <button class="miti-minimize-btn" onclick="closeMitiPanel()" title="Close">
+        <button class="miti-close-btn" onclick="closeMitiPanel()" title="Close" aria-label="Close chat">
             <i class="fas fa-times"></i>
         </button>
     </div>
 
-    <!-- Mode Toggle + New Chat -->
-    <div style="display:flex; gap:6px; padding:8px 12px; border-bottom:1px solid var(--dark-border); background:var(--sidebar-bg);">
-        <button id="mitiTempBtn" class="miti-mode-btn active" onclick="startNewTemporaryChat()" title="Temporary chat (not saved)">
-            <i class="fas fa-bolt"></i> Temp
-        </button>
-        <button id="mitiPermBtn" class="miti-mode-btn" onclick="startNewPermanentChat()" title="Saved chat">
-            <i class="fas fa-save"></i> Save
-        </button>
-        <button class="miti-mode-btn" onclick="toggleSessionsSidebar()" title="Chat history">
-            <i class="fas fa-history"></i> History
-        </button>
-    </div>
+    <!-- BODY: overlay sidebar + chat -->
+    <div class="miti-body">
+        <div class="miti-backdrop" id="mitiBackdrop" onclick="toggleMitiSessionsSidebar()"></div>
 
-    <!-- Sessions Sidebar (collapsible) -->
-    <div id="mitiSessionsSidebar" style="display:none; border-bottom:1px solid var(--dark-border); max-height:200px; overflow-y:auto; background:var(--sidebar-bg);">
-        <div style="padding:8px 12px; font-size:11px; color:var(--dark-text-secondary); display:flex; justify-content:space-between; align-items:center;">
-            <span>SAVED CHATS</span>
-            <button onclick="loadSessionsList()" style="background:none;border:none;color:var(--primary);font-size:11px;cursor:pointer;"><i class="fas fa-sync-alt"></i></button>
-        </div>
-        <div id="mitiSessionsList"></div>
-    </div>
-
-    <!-- Messages -->
-    <div class="miti-messages" id="mitiMessages">
-        <div class="miti-welcome">
-            <div class="miti-welcome-avatar">M</div>
-            <div class="miti-welcome-text">
-                Hi! I'm <strong>Menti</strong>, your HRMS assistant.<br><br>
-                I can help with attendance, leaves, documents, policies and more.
-                <br><small style="color:var(--warning);">⚡ Temporary chat — messages won't be saved</small>
+        <!-- Sessions sidebar (overlay, hidden by default) -->
+        <div class="miti-sessions-col" id="mitiSessionsCol">
+            <div class="miti-sessions-header">Saved chats</div>
+            <button class="miti-new-btn" id="mitiNewTempBtn" onclick="startNewTemporaryChat()">
+                <i class="fas fa-bolt"></i> New temp
+            </button>
+            <button class="miti-new-btn" style="margin-top:0;" id="mitiNewSaveBtn" onclick="startNewPermanentChat()">
+                <i class="fas fa-plus"></i> New saved
+            </button>
+            <div class="miti-sessions-list" id="mitiSessionsList">
+                <div style="padding:20px 10px; text-align:center; font-size:10px; color:#334155;">No saved chats yet</div>
+            </div>
+            <div class="miti-mode-strip">
+                <button id="mitiTempBtn" class="miti-mode-btn" onclick="startNewTemporaryChat()" title="Temporary — not saved">⚡ Temp</button>
+                <button id="mitiPermBtn" class="miti-mode-btn active" onclick="startNewPermanentChat()" title="Saved chat">💾 Save</button>
             </div>
         </div>
-    </div>
 
-    <!-- Suggestion Chips -->
-    <div class="miti-suggestions" id="mitiSuggestions">
-        <button class="miti-chip icon-only" onclick="sendMitiSuggestion('How many leaves do I have left?')" title="Leave balance">
-            <i class="fas fa-umbrella-beach"></i>
-            <span class="miti-chip-tooltip">Leave balance</span>
-        </button>
-        <button class="miti-chip icon-only" onclick="sendMitiSuggestion('Show my attendance this month')" title="Attendance">
-            <i class="fas fa-calendar-check"></i>
-            <span class="miti-chip-tooltip">Attendance</span>
-        </button>
-        <button class="miti-chip icon-only" onclick="sendMitiSuggestion('How do I apply for leave?')" title="Apply leave">
-            <i class="fas fa-plus-circle"></i>
-            <span class="miti-chip-tooltip">Apply leave</span>
-        </button>
-        <button class="miti-chip icon-only" onclick="sendMitiSuggestion('What documents do I need to submit?')" title="Documents">
-            <i class="fas fa-file-alt"></i>
-            <span class="miti-chip-tooltip">Documents</span>
-        </button>
-        <button class="miti-chip icon-only" onclick="sendMitiSuggestion('What are the HR policies?')" title="HR Policies">
-            <i class="fas fa-book-open"></i>
-            <span class="miti-chip-tooltip">HR Policies</span>
-        </button>
-    </div>
+        <!-- Chat column -->
+        <div class="miti-chat-col">
 
-    <!-- Input Area -->
-    <div class="miti-input-area">
-        <textarea class="miti-input" id="mitiInput"
-                  placeholder="Ask me anything about your HRMS..."
-                  rows="1"
-                  onkeydown="handleMitiKeydown(event)"
-                  oninput="autoResizeMitiInput(this)"
-                  aria-label="Message Menti"></textarea>
-        <button class="miti-send-btn" id="mitiSendBtn" onclick="sendMitiMessage()" aria-label="Send">
-            <i class="fas fa-paper-plane"></i>
-        </button>
+        <!-- Messages -->
+        <div class="miti-messages" id="mitiMessages">
+            <div class="miti-welcome-msg">
+                <div class="miti-welcome-av">M</div>
+                <div class="miti-welcome-bubble">
+                    Hi! I'm <strong>Menti</strong>, your HRMS assistant.<br><br>
+                    Ask me about attendance, leaves, documents, HR policies and more.
+                    <br><br><span style="color:var(--success);font-size:11px;">💾 Saved — this chat will be stored</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestion chips -->
+        <div class="miti-chips" id="mitiSuggestions">
+            <button class="miti-chip" onclick="sendMitiSuggestion('How many leaves do I have left?')">
+                <i class="fas fa-umbrella-beach"></i> Leave balance
+            </button>
+            <button class="miti-chip" onclick="sendMitiSuggestion('Show my attendance this month')">
+                <i class="fas fa-calendar-check"></i> Attendance
+            </button>
+            <button class="miti-chip" onclick="sendMitiSuggestion('How do I apply for leave?')">
+                <i class="fas fa-plus-circle"></i> Apply leave
+            </button>
+            <button class="miti-chip" onclick="sendMitiSuggestion('What documents do I need to submit?')">
+                <i class="fas fa-file-alt"></i> Documents
+            </button>
+            <button class="miti-chip" onclick="sendMitiSuggestion('What are the HR policies?')">
+                <i class="fas fa-book-open"></i> HR Policies
+            </button>
+        </div>
+
+        <!-- Input -->
+        <div class="miti-input-area">
+            <textarea class="miti-input" id="mitiInput"
+                      placeholder="Ask me anything about HRMS..."
+                      rows="1"
+                      onkeydown="handleMitiKeydown(event)"
+                      oninput="autoResizeMitiInput(this)"
+                      aria-label="Message Menti"></textarea>
+            <button class="miti-send-btn" id="mitiSendBtn" onclick="sendMitiMessage()" aria-label="Send message">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+            <div class="miti-footer-note">Menti may make mistakes · Verify important info</div>
+        </div>
     </div>
-    <div class="miti-footer">Menti may make mistakes. Verify important info.</div>
 </div>
-
 
 <!-- ================= JAVASCRIPT ================= -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.2/dist/sockjs.min.js    "></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js    "></script>
+<script>
+    /* Subscribe to PM realtime events so the dashboard updates live */
+    (function () {
+        if (!window.SockJS || !window.Stomp) return;
+        try {
+            var client = Stomp.over(new SockJS('/ws'));
+            client.debug = function () {};
+            client.connect({}, function () {
+                client.subscribe('/topic/pm/events', function (m) {
+                    try {
+                        var ev = JSON.parse(m.body);
+                        // Only care about POST/PATCH/DELETE on tasks
+                        if (ev.path && ev.path.indexOf('/api/pm/tasks') === 0) {
+                            window.pmRefresh && window.pmRefresh();
+                        }
+                    } catch (e) {}
+                });
+            });
+        } catch (e) {
+            console.warn('PM realtime subscription failed', e);
+        }
+    })();
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js "></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js "></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js "></script>
+<!-- ============ PHASE 3 — MY TASKS WIDGET ============ -->
+<script>
+    (function () {
+        'use strict';
 
+        // ── tiny safe API wrapper for the dashboard (no pm-core here)
+        async function pmFetch(method, url) {
+            const opts = {
+                method: method || 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            };
+            const res = await fetch(url, opts);
+            const text = await res.text();
+            let data = null;
+            if (text) { try { data = JSON.parse(text); } catch (e) { data = { success:false, message: text }; } }
+            if (!res.ok) throw new Error((data && data.message) || ('HTTP ' + res.status));
+            if (data && data.success === false) throw new Error(data.message || 'Request failed');
+            return data ? data.data : null;
+        }
+
+        let _allMyTasks = [];
+        let _today = new Date();
+
+        window.loadMyTasksWidget = async function () {
+            const list = document.getElementById('myTasksWidgetList');
+            if (!list) return;
+
+            list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dark-text-secondary);"><i class="fas fa-spinner fa-spin"></i> Loading…</div>';
+
+            try {
+                const [tasks, kpi] = await Promise.all([
+                    pmFetch('GET', '/api/pm/me/tasks'),
+                    pmFetch('GET', '/api/pm/me/kpi').catch(() => null)
+                ]);
+
+                _allMyTasks = (tasks || []).map(t => ({
+                    id: t.id,
+                    title: t.title,
+                    projectName: t.projectName || ('Project #' + t.projectId),
+                    status: (t.status || 'TODO').toLowerCase().replace(/_/g, '-'),
+                    priority: (t.priority || 'MEDIUM').toLowerCase(),
+                    dueDate: t.dueDate,
+                    progressPct: t.progressPct || 0,
+                    openBlockerCount: t.openBlockerCount || 0,
+                    subtaskCount: t.subtaskCount || 0,
+                    subtaskDone: t.subtaskDone || 0
+                }));
+
+                // KPI
+                if (kpi) {
+                    setText('mtKpiOpen',    kpi.openTasks);
+                    setText('mtKpiToday',   kpi.dueToday);
+                    setText('mtKpiOverdue', kpi.overdue);
+                    setText('mtKpiDone',    kpi.doneThisWeek);
+                    setText('mtKpiHours',   kpi.hoursLogged + 'h');
+
+                    const badge = document.getElementById('myTasksSidebarBadge');
+                    if (badge) {
+                        badge.textContent = kpi.openTasks;
+                        badge.style.display = kpi.openTasks > 0 ? 'inline-block' : 'none';
+                    }
+                } else {
+                    // fallback
+                    const open = _allMyTasks.filter(t => t.status !== 'done').length;
+                    setText('mtKpiOpen', open);
+                    setText('mtKpiToday', '—');
+                    setText('mtKpiOverdue', '—');
+                    setText('mtKpiDone', '—');
+                    setText('mtKpiHours', '—');
+                }
+
+                renderMyTasksWidget();
+            } catch (e) {
+                console.error('MyTasksWidget load failed', e);
+                list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Failed to load tasks</div>';
+            }
+        };
+
+        window.renderMyTasksWidget = function () {
+            const list = document.getElementById('myTasksWidgetList');
+            if (!list) return;
+
+            const filter = (document.getElementById('mtFilter') || {}).value || 'all';
+            const q = ((document.getElementById('mtSearch') || {}).value || '').toLowerCase();
+
+            const filtered = _allMyTasks.filter(t => {
+                if (q && !t.title.toLowerCase().includes(q)) return false;
+                if (filter === 'overdue') return t.status !== 'done' && t.dueDate && new Date(t.dueDate) < _today;
+                if (filter === 'today')   return t.status !== 'done' && t.dueDate && new Date(t.dueDate).toDateString() === _today.toDateString();
+                if (filter === 'week')    return t.status !== 'done' && t.dueDate && (new Date(t.dueDate) - _today) / 86400000 <= 7;
+                if (filter === 'done')    return t.status === 'done';
+                return true;
+            });
+
+            document.getElementById('mtCount').textContent = filtered.length + ' task' + (filtered.length === 1 ? '' : 's');
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--dark-text-secondary);"><i class="fas fa-mug-hot" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i>All caught up!</div>';
+                return;
+            }
+
+            const statusMap = {
+                'todo':        ['primary', 'To Do'],
+                'in-progress': ['warning', 'In Progress'],
+                'review':      ['info',    'In Review'],
+                'in-review':   ['info',    'In Review'],
+                'blocked':     ['danger',  'Blocked'],
+                'done':        ['success', 'Done']
+            };
+            const priorityColor = {
+                'low':      'var(--success)',
+                'medium':   'var(--warning)',
+                'high':     'var(--danger)',
+                'critical': '#dc2626'
+            };
+
+            list.innerHTML = filtered.map(t => {
+                const sm = statusMap[t.status] || ['primary', t.status];
+                const due = t.dueDate ? new Date(t.dueDate) : null;
+                const diff = due ? Math.round((due - _today) / 86400000) : null;
+                const dueColor = diff === null ? 'var(--dark-text-secondary)'
+                    : diff < 0 ? 'var(--danger)' : diff === 0 ? 'var(--warning)' : 'var(--dark-text-secondary)';
+                const dueLabel = diff === null ? '—'
+                    : diff < 0 ? Math.abs(diff) + 'd overdue'
+                    : diff === 0 ? 'Today'
+                    : diff + 'd';
+
+                return `
+                    <div class="mw-task-row" onclick="openMyTask(${t.id})"
+                         style="display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--dark-border);cursor:pointer;transition:background .15s;"
+                         onmouseover="this.style.background='rgba(99,102,241,0.05)'"
+                         onmouseout="this.style.background=''">
+                        <div style="width:8px;height:8px;border-radius:50%;background:${priorityColor[t.priority]||'var(--dark-text-secondary)'};flex-shrink:0;"></div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:13.5px;font-weight:500;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${t.status==='done'?'text-decoration:line-through;color:var(--dark-text-secondary);':''}">${escapeHtmlWidget(t.title)}</div>
+                            <div style="font-size:11.5px;color:var(--dark-text-secondary);margin-top:2px;">${escapeHtmlWidget(t.projectName)}</div>
+                        </div>
+                        <span class="pm-badge ${sm[0]}" style="font-size:10.5px;padding:3px 8px;border-radius:10px;font-weight:600;">${sm[1]}</span>
+                        <span style="min-width:80px;text-align:right;font-size:12px;color:${dueColor};font-weight:600;">${dueLabel}</span>
+                        <i class="fas fa-chevron-right" style="color:var(--dark-text-secondary);font-size:11px;margin-left:6px;"></i>
+                    </div>`;
+            }).join('');
+        };
+
+        window.openMyTask = function (taskId) {
+            // Deep-link into the PM task drawer
+            window.open('/pm/03-my-work?task=' + taskId, '_blank');
+        };
+
+        function setText(id, v) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = v;
+        }
+
+        function escapeHtmlWidget(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // hook: when user clicks the "My Tasks" sidebar entry, load data
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.querySelector('[data-tab="my-tasks"]');
+            if (sidebar) {
+                sidebar.addEventListener('click', () => setTimeout(loadMyTasksWidget, 100));
+            }
+        });
+
+        // realtime: refresh widget when PM side changes anything
+        // (PM pages emit pm:event over WebSocket; we can listen to the same topic if
+        //  SockJS/STOMP are loaded on this page — see step 11d)
+        window.pmRefresh = window.pmRefresh || function () {
+            if (document.getElementById('my-tasks').classList.contains('active')) {
+                loadMyTasksWidget();
+            }
+        };
+    })();
+</script>
 <script>
 
     // Clear any stale navigation state on fresh page load
@@ -6436,12 +6852,34 @@ function getUrlParameter(name) {
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
-    function formatTimeShort(ms) {
+  function formatTimeShort(ms) {
         if (isNaN(ms) || ms < 0) return "0h 00m";
         const totalMinutes = Math.floor(ms / 60000);
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
         return `${hours}h ${String(minutes).padStart(2, '0')}m`;
+    }
+
+    // New: same as formatTimeShort but includes seconds (for live nav-bar timer)
+    function formatTimeShortWithSeconds(ms) {
+        if (isNaN(ms) || ms < 0) return "0h 00m 00s";
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+        return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+    }
+
+    // New: formats a check-in Date/ISO string into "9:40 AM" style
+    function formatCheckInClockTime(isoString) {
+        if (!isoString) return null;
+        try {
+            const d = new Date(isoString);
+            if (isNaN(d.getTime())) return null;
+            return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+        } catch (e) {
+            return null;
+        }
     }
 
         function calculatePercentage(ms) {
@@ -6686,9 +7124,31 @@ function getUrlParameter(name) {
         }
 
         // Update top nav hours
+       // Update top nav hours (now WITH seconds)
         const hoursDisplayTop = document.getElementById('hoursDisplayTop');
         if (hoursDisplayTop) {
-            hoursDisplayTop.textContent = formatTimeShort(workingTime);
+            hoursDisplayTop.textContent = formatTimeShortWithSeconds(workingTime);
+        }
+
+        // Update check-in clock time display (e.g. "In: 9:40 AM")
+        const checkInTimeDisplay = document.getElementById('checkInTimeDisplay');
+        const tooltipCheckin = document.getElementById('wh-tooltip-checkin');
+        if (checkInTimeDisplay) {
+            if (attendanceState.isCheckedIn && attendanceState.checkInTime) {
+                const checkInClock = formatCheckInClockTime(attendanceState.checkInTime);
+                if (checkInClock) {
+                    checkInTimeDisplay.textContent = attendanceState.checkOutTime
+                        ? `Out at ${formatCheckInClockTime(attendanceState.checkOutTime) || '--:--'}`
+                        : `In: ${checkInClock}`;
+                    if (tooltipCheckin) tooltipCheckin.textContent = checkInClock;
+                } else {
+                    checkInTimeDisplay.textContent = 'Not checked in';
+                    if (tooltipCheckin) tooltipCheckin.textContent = '--:--';
+                }
+            } else {
+                checkInTimeDisplay.textContent = 'Not checked in';
+                if (tooltipCheckin) tooltipCheckin.textContent = '--:--';
+            }
         }
 
         // Update small hours display
@@ -7236,21 +7696,17 @@ function getUrlParameter(name) {
 
 
 // ============================================
-// MENTI AI ASSISTANT — OPENROUTER BACKEND
+// MENTI AI ASSISTANT
 // ============================================
-
 let mitiPanelOpen = false;
 let mitiIsTyping = false;
-let currentSessionId = null;       // null = new session
+let currentSessionId = null;
 let currentSessionName = null;
-let currentChatMode = 'temporary'; // 'temporary' or 'permanent'
-let temporaryHistory = [];          // In-memory history for temp mode
-let permanentSessions = [];         // Loaded from backend
+let currentChatMode = 'permanent';
+let temporaryHistory = [];
+let permanentSessions = [];
 
-// ── PANEL TOGGLE ──────────────────────────────────────────────────
-function toggleMitiPanel() {
-    mitiPanelOpen ? closeMitiPanel() : openMitiPanel();
-}
+function toggleMitiPanel() { mitiPanelOpen ? closeMitiPanel() : openMitiPanel(); }
 
 function openMitiPanel() {
     document.getElementById('mitiPanel').classList.add('open');
@@ -7259,8 +7715,6 @@ function openMitiPanel() {
     if (fab) fab.style.display = 'none';
     mitiPanelOpen = true;
     setTimeout(() => document.getElementById('mitiInput')?.focus(), 350);
-    // Load sessions list when panel opens
-    loadSessionsList();
 }
 
 function closeMitiPanel() {
@@ -7270,8 +7724,15 @@ function closeMitiPanel() {
     if (fab) fab.style.display = 'flex';
     mitiPanelOpen = false;
 }
-
-// ── INPUT HANDLING ────────────────────────────────────────────────
+let mitiSidebarOpen = false;
+function toggleMitiSessionsSidebar() {
+    mitiSidebarOpen = !mitiSidebarOpen;
+    document.getElementById('mitiSessionsCol')?.classList.toggle('open', mitiSidebarOpen);
+    document.getElementById('mitiBackdrop')?.classList.toggle('open', mitiSidebarOpen);
+    document.getElementById('mitiHdrChevron')?.classList.toggle('open', mitiSidebarOpen);
+    if (mitiSidebarOpen) loadSessionsList();
+}
+window.toggleMitiSessionsSidebar = toggleMitiSessionsSidebar;
 function handleMitiKeydown(event) {
     if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
@@ -7281,7 +7742,7 @@ function handleMitiKeydown(event) {
 
 function autoResizeMitiInput(el) {
     el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
 }
 
 function sendMitiSuggestion(text) {
@@ -7290,42 +7751,28 @@ function sendMitiSuggestion(text) {
     sendMitiMessage();
 }
 
-// ── GET EMPLOYEE CONTEXT ──────────────────────────────────────────
 function getMitiEmployeeId() {
     return document.getElementById('currentEmployeeId')?.value
-        || document.getElementById('employeeIdData')?.value
-        || '';
+        || document.getElementById('employeeIdData')?.value || '';
 }
 
-function getMitiEmployeeContext() {
-    const name = (document.getElementById('currentEmployeeFirstName')?.value || '') + ' ' +
-                 (document.getElementById('currentEmployeeLastName')?.value || '');
-    const id   = getMitiEmployeeId();
-    const dept = document.getElementById('currentEmployeeDepartment')?.value || '';
-    return `${name.trim()} | ID: ${id} | Dept: ${dept}`;
-}
-
-// ── SEND MESSAGE ──────────────────────────────────────────────────
 async function sendMitiMessage() {
     const input = document.getElementById('mitiInput');
     const sendBtn = document.getElementById('mitiSendBtn');
     const text = input?.value?.trim();
-
     if (!text || mitiIsTyping) return;
 
     input.value = '';
     input.style.height = 'auto';
 
-    // Hide suggestion chips after first message
-    const suggestions = document.getElementById('mitiSuggestions');
-    if (suggestions) suggestions.style.display = 'none';
+    const chips = document.getElementById('mitiSuggestions');
+    if (chips) chips.style.display = 'none';
 
     appendMitiMessage(text, 'user');
     mitiIsTyping = true;
     if (sendBtn) sendBtn.disabled = true;
     showMitiTyping();
 
-    // Build payload
     const isTemp = currentChatMode === 'temporary';
     const payload = {
         employeeId: getMitiEmployeeId(),
@@ -7334,10 +7781,8 @@ async function sendMitiMessage() {
         sessionId: isTemp ? null : currentSessionId
     };
 
-    // For temporary mode, pass full in-memory history to backend
     if (isTemp) {
         payload.history = temporaryHistory.map(m => ({ role: m.role, content: m.content }));
-        // Add current user message to temp history BEFORE the call
         temporaryHistory.push({ role: 'user', content: text });
     }
 
@@ -7347,33 +7792,28 @@ async function sendMitiMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
         const data = await response.json();
         removeMitiTyping();
 
         if (data.success) {
             appendMitiMessage(data.reply, 'assistant');
-
             if (isTemp) {
-                // Save assistant reply to temp history
                 temporaryHistory.push({ role: 'assistant', content: data.reply });
             } else {
-                // Update session ID (new session was created)
                 if (data.sessionId && data.sessionId > 0) {
                     currentSessionId = data.sessionId;
                     currentSessionName = data.sessionName;
-                    updateSessionHeaderDisplay();
+                    updateMitiSessionHeader();
+                    loadSessionsList();
                 }
             }
         } else {
             appendMitiMessage('Sorry, something went wrong. Please try again.', 'assistant', true);
-            if (isTemp) temporaryHistory.pop(); // Remove the failed user message
+            if (isTemp) temporaryHistory.pop();
         }
-
     } catch (error) {
         removeMitiTyping();
         appendMitiMessage('Connection error. Please check your network.', 'assistant', true);
-        console.error('Chat error:', error);
         if (isTemp) temporaryHistory.pop();
     } finally {
         mitiIsTyping = false;
@@ -7382,7 +7822,6 @@ async function sendMitiMessage() {
     }
 }
 
-// ── RENDER MESSAGES ───────────────────────────────────────────────
 function appendMitiMessage(text, role, isError = false) {
     const messages = document.getElementById('mitiMessages');
     if (!messages) return;
@@ -7393,38 +7832,31 @@ function appendMitiMessage(text, role, isError = false) {
     const row = document.createElement('div');
     row.className = `miti-msg ${role}`;
 
-    const avatar = document.createElement('div');
-    avatar.className = 'miti-msg-avatar';
-    avatar.textContent = isUser
+    const av = document.createElement('div');
+    av.className = `miti-msg-av ${isUser ? 'user' : 'bot'}`;
+    av.textContent = isUser
         ? (document.getElementById('currentEmployeeFirstName')?.value?.charAt(0) || 'U')
         : 'M';
 
+    const body = document.createElement('div');
+    body.className = 'miti-msg-body';
+
     const bubble = document.createElement('div');
-    bubble.className = `miti-bubble ${role}${isError ? ' error' : ''}`;
-    // Render markdown-like bold and line breaks
+    bubble.className = `miti-bubble ${isUser ? 'user' : 'bot'}${isError ? ' error' : ''}`;
     bubble.innerHTML = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br>');
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+        .replace(/\n/g,'<br>');
 
-    const timeEl = document.createElement('div');
-    timeEl.className = 'miti-msg-time';
-    timeEl.textContent = now;
+    const time = document.createElement('div');
+    time.className = 'miti-msg-time';
+    time.textContent = now;
 
-    const colDiv = document.createElement('div');
-    colDiv.style.cssText = 'display:flex;flex-direction:column;max-width:78%;';
-    colDiv.appendChild(bubble);
-    colDiv.appendChild(timeEl);
+    body.appendChild(bubble);
+    body.appendChild(time);
 
-    if (isUser) {
-        row.appendChild(colDiv);
-        row.appendChild(avatar);
-    } else {
-        row.appendChild(avatar);
-        row.appendChild(colDiv);
-    }
+    if (isUser) { row.appendChild(body); row.appendChild(av); }
+    else { row.appendChild(av); row.appendChild(body); }
 
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
@@ -7434,16 +7866,16 @@ function showMitiTyping() {
     const messages = document.getElementById('mitiMessages');
     if (!messages) return;
     const row = document.createElement('div');
-    row.className = 'miti-msg bot';
-    row.id = 'mitiTypingRow';
-    const avatar = document.createElement('div');
-    avatar.className = 'miti-msg-avatar';
-    avatar.textContent = 'M';
-    const indicator = document.createElement('div');
-    indicator.className = 'miti-bubble bot';
-    indicator.innerHTML = '<div class="miti-typing-indicator"><span></span><span></span><span></span></div>';
-    row.appendChild(avatar);
-    row.appendChild(indicator);
+    row.className = 'miti-msg bot'; row.id = 'mitiTypingRow';
+    const av = document.createElement('div');
+    av.className = 'miti-msg-av bot'; av.textContent = 'M';
+    const body = document.createElement('div');
+    body.className = 'miti-msg-body';
+    const bubble = document.createElement('div');
+    bubble.className = 'miti-bubble bot';
+    bubble.innerHTML = '<div class="miti-typing"><span></span><span></span><span></span></div>';
+    body.appendChild(bubble);
+    row.appendChild(av); row.appendChild(body);
     messages.appendChild(row);
     messages.scrollTop = messages.scrollHeight;
 }
@@ -7452,168 +7884,145 @@ function removeMitiTyping() {
     document.getElementById('mitiTypingRow')?.remove();
 }
 
-// ── SESSION MANAGEMENT ────────────────────────────────────────────
-
 function startNewTemporaryChat() {
     currentChatMode = 'temporary';
-    currentSessionId = null;
-    currentSessionName = null;
+    currentSessionId = null; currentSessionName = null;
     temporaryHistory = [];
-    clearChatMessages();
-    showWelcomeMessage();
-    updateSessionHeaderDisplay();
-    updateChatModeToggleUI();
-    document.getElementById('mitiSuggestions')?.style.removeProperty('display');
+    clearMitiMessages();
+    showMitiWelcome();
+    updateMitiSessionHeader();
+    updateMitiModeUI();
+    if (mitiSidebarOpen) toggleMitiSessionsSidebar();
+    const chips = document.getElementById('mitiSuggestions');
+    if (chips) chips.style.removeProperty('display');
+    document.querySelectorAll('.miti-session-item').forEach(el => el.classList.remove('active'));
 }
 
 function startNewPermanentChat() {
     currentChatMode = 'permanent';
-    currentSessionId = null;
-    currentSessionName = null;
-    clearChatMessages();
-    showWelcomeMessage();
-    updateSessionHeaderDisplay();
-    updateChatModeToggleUI();
-    document.getElementById('mitiSuggestions')?.style.removeProperty('display');
+    currentSessionId = null; currentSessionName = null;
+    clearMitiMessages();
+    showMitiWelcome();
+    updateMitiSessionHeader();
+    updateMitiModeUI();
+    if (mitiSidebarOpen) toggleMitiSessionsSidebar();
+    const chips = document.getElementById('mitiSuggestions');
+    if (chips) chips.style.removeProperty('display');
+    document.querySelectorAll('.miti-session-item').forEach(el => el.classList.remove('active'));
 }
 
-function clearChatMessages() {
+
+
+function clearMitiMessages() {
     const messages = document.getElementById('mitiMessages');
     if (messages) messages.innerHTML = '';
 }
 
-function showWelcomeMessage() {
+function showMitiWelcome() {
     const messages = document.getElementById('mitiMessages');
     if (!messages) return;
+    const isTemp = currentChatMode === 'temporary';
     messages.innerHTML = `
-        <div class="miti-welcome">
-            <div class="miti-welcome-avatar">M</div>
-            <div class="miti-welcome-text">
+        <div class="miti-welcome-msg">
+            <div class="miti-welcome-av">M</div>
+            <div class="miti-welcome-bubble">
                 Hi! I'm <strong>Menti</strong>, your HRMS assistant.<br><br>
-                I can help with attendance, leaves, documents, policies and more.
-                ${currentChatMode === 'temporary'
-                    ? '<br><small style="color:var(--warning);">⚡ Temporary chat — messages won\'t be saved</small>'
-                    : '<br><small style="color:var(--success);">💾 Permanent chat — messages are saved</small>'}
+                Ask me about attendance, leaves, documents, HR policies and more.
+                <br><br><span style="color:${isTemp ? 'var(--warning)' : 'var(--success)'};font-size:11px;">
+                    ${isTemp ? '⚡ Temporary — messages won\'t be saved' : '💾 Saved — this chat will be stored'}
+                </span>
             </div>
         </div>`;
+}
+
+function updateMitiSessionHeader() {
+    const nameEl = document.getElementById('mitiSessionNameDisplay');
+    const modeEl = document.getElementById('mitiModeLabel');
+    if (currentChatMode === 'temporary') {
+        if (nameEl) nameEl.textContent = 'Menti Assistant';
+        if (modeEl) { modeEl.textContent = '⚡ Temporary chat'; modeEl.style.color = 'var(--warning)'; }
+    } else if (currentSessionId) {
+        if (nameEl) nameEl.textContent = currentSessionName || 'Saved Chat';
+        if (modeEl) { modeEl.textContent = '💾 Saved chat'; modeEl.style.color = 'var(--success)'; }
+    } else {
+        if (nameEl) nameEl.textContent = 'Menti Assistant';
+        if (modeEl) { modeEl.textContent = '💾 New saved chat'; modeEl.style.color = 'var(--info)'; }
+    }
+}
+
+function updateMitiModeUI() {
+    document.getElementById('mitiTempBtn')?.classList.toggle('active', currentChatMode === 'temporary');
+    document.getElementById('mitiPermBtn')?.classList.toggle('active', currentChatMode === 'permanent');
 }
 
 async function loadSessionsList() {
     const employeeId = getMitiEmployeeId();
     if (!employeeId) return;
-
     try {
         const response = await fetch(`/api/chat/sessions?employeeId=${encodeURIComponent(employeeId)}`);
         const data = await response.json();
         if (data.success) {
             permanentSessions = data.sessions || [];
-            renderSessionsList();
+            renderMitiSessionsList();
         }
-    } catch (e) {
-        console.error('Error loading chat sessions:', e);
-    }
+    } catch(e) { console.error('Error loading sessions:', e); }
 }
 
-function renderSessionsList() {
+function renderMitiSessionsList() {
     const container = document.getElementById('mitiSessionsList');
     if (!container) return;
 
     if (permanentSessions.length === 0) {
-        container.innerHTML = '<div style="padding:10px;font-size:11px;color:var(--dark-text-secondary);text-align:center;">No saved chats yet</div>';
+        container.innerHTML = '<div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>';
         return;
     }
 
     container.innerHTML = permanentSessions.map(s => `
         <div class="miti-session-item ${currentSessionId === s.id ? 'active' : ''}"
-             onclick="loadSession(${s.id})"
-             data-session-id="${s.id}">
-            <div class="miti-session-name">${escapeHtmlSafe(s.sessionName)}</div>
-            <div class="miti-session-meta">${s.updatedAt} · ${s.messageCount} msgs</div>
-            <button class="miti-session-delete" onclick="event.stopPropagation(); deleteChatSession(${s.id})"
-                    title="Delete chat">×</button>
+             onclick="loadMitiSession(${s.id})" data-session-id="${s.id}">
+            <div class="miti-session-item-name">${escapeHtmlSafe(s.sessionName)}</div>
+            <div class="miti-session-item-meta">${s.updatedAt} · ${s.messageCount} msgs</div>
+            <button class="miti-session-del" onclick="event.stopPropagation();deleteMitiSession(${s.id})" title="Delete">×</button>
         </div>
     `).join('');
 }
-
-async function loadSession(sessionId) {
+async function loadMitiSession(sessionId) {
     const employeeId = getMitiEmployeeId();
     try {
-        const response = await fetch(
-            `/api/chat/session/${sessionId}/history?employeeId=${encodeURIComponent(employeeId)}`
-        );
+        const response = await fetch(`/api/chat/session/${sessionId}/history?employeeId=${encodeURIComponent(employeeId)}`);
         const data = await response.json();
-
         if (data.success) {
             currentChatMode = 'permanent';
             currentSessionId = sessionId;
             currentSessionName = data.sessionName;
-
-            clearChatMessages();
-            updateSessionHeaderDisplay();
-            updateChatModeToggleUI();
-
-            // Render all messages
-            if (data.messages && data.messages.length > 0) {
-                data.messages.forEach(msg => appendMitiMessage(msg.content, msg.role));
+            clearMitiMessages();
+            updateMitiSessionHeader();
+            updateMitiModeUI();
+            if (mitiSidebarOpen) toggleMitiSessionsSidebar();
+            if (data.messages?.length > 0) {
+                data.messages.forEach(m => appendMitiMessage(m.content, m.role));
             } else {
-                showWelcomeMessage();
+                showMitiWelcome();
             }
-
-            // Highlight active session
             document.querySelectorAll('.miti-session-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`[data-session-id="${sessionId}"]`)?.classList.add('active');
-
-            // Hide suggestions
-            document.getElementById('mitiSuggestions').style.display = 'none';
+            const chips = document.getElementById('mitiSuggestions');
+            if (chips) chips.style.display = 'none';
         }
-    } catch (e) {
-        console.error('Error loading session:', e);
-    }
+    } catch(e) { console.error('Error loading session:', e); }
 }
 
-async function deleteChatSession(sessionId) {
+async function deleteMitiSession(sessionId) {
     if (!confirm('Delete this chat history?')) return;
     const employeeId = getMitiEmployeeId();
-
     try {
-        const response = await fetch(
-            `/api/chat/session/${sessionId}?employeeId=${encodeURIComponent(employeeId)}`,
-            { method: 'DELETE' }
-        );
+        const response = await fetch(`/api/chat/session/${sessionId}?employeeId=${encodeURIComponent(employeeId)}`, { method: 'DELETE' });
         const data = await response.json();
-
         if (data.success) {
-            if (currentSessionId === sessionId) {
-                startNewTemporaryChat();
-            }
+            if (currentSessionId === sessionId) startNewTemporaryChat();
             loadSessionsList();
         }
-    } catch (e) {
-        console.error('Error deleting session:', e);
-    }
-}
-
-function updateSessionHeaderDisplay() {
-    const nameEl = document.getElementById('mitiSessionNameDisplay');
-    if (nameEl) {
-        if (currentChatMode === 'temporary') {
-            nameEl.textContent = '⚡ Temporary';
-            nameEl.style.color = 'var(--warning)';
-        } else if (currentSessionId) {
-            nameEl.textContent = currentSessionName || 'Chat';
-            nameEl.style.color = 'var(--success)';
-        } else {
-            nameEl.textContent = '💾 New saved chat';
-            nameEl.style.color = 'var(--info)';
-        }
-    }
-}
-
-function updateChatModeToggleUI() {
-    const tempBtn = document.getElementById('mitiTempBtn');
-    const permBtn = document.getElementById('mitiPermBtn');
-    if (tempBtn) tempBtn.classList.toggle('active', currentChatMode === 'temporary');
-    if (permBtn) permBtn.classList.toggle('active', currentChatMode === 'permanent');
+    } catch(e) { console.error('Error deleting session:', e); }
 }
 
 function escapeHtmlSafe(str) {
@@ -7622,7 +8031,7 @@ function escapeHtmlSafe(str) {
     return d.innerHTML;
 }
 
-// ── GLOBAL EXPOSURE ───────────────────────────────────────────────
+// Global expose
 window.toggleMitiPanel = toggleMitiPanel;
 window.openMitiPanel = openMitiPanel;
 window.closeMitiPanel = closeMitiPanel;
@@ -7632,14 +8041,14 @@ window.handleMitiKeydown = handleMitiKeydown;
 window.autoResizeMitiInput = autoResizeMitiInput;
 window.startNewTemporaryChat = startNewTemporaryChat;
 window.startNewPermanentChat = startNewPermanentChat;
-window.loadSession = loadSession;
-window.deleteChatSession = deleteChatSession;
+window.loadMitiSession = loadMitiSession;
+window.deleteMitiSession = deleteMitiSession;
+window.loadSessionsList = loadSessionsList;
 
-// Keyboard shortcut: Ctrl+Shift+M
+// Keyboard shortcuts
 document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
-        e.preventDefault();
-        toggleMitiPanel();
+        e.preventDefault(); toggleMitiPanel();
     }
     if (e.key === 'Escape' && mitiPanelOpen) closeMitiPanel();
 });
@@ -7654,7 +8063,13 @@ document.addEventListener('keydown', e => {
             initializeDashboardSubTabs();
         }, 500);
     });
-
+window.addEventListener('storage', function(e) {
+    if (e.key === 'company_logo' ||
+        e.key === 'company_name' ||
+        e.key === 'company_primary_color') {
+        loadCompanyBrandingForEmployee();
+    }
+});
       // Ensure this function is properly defined (it should be around line 880-910)
     function openApplyLeavePopupWithDate(dateStr) {
         const popup = document.getElementById('applyLeavePopup');
@@ -10271,15 +10686,31 @@ document.addEventListener('keydown', e => {
         // ============================================
         // NOTIFICATION MANAGER
         // ============================================
+              // Phase 4 — delegate to the shared notification client
         class NotificationManager {
             constructor() {
-                this.notifications = [];
-                this.unreadCount = 0;
-                this.employeeId = document.getElementById('currentEmployeeId')?.value ||
-                                  document.getElementById('employeeIdData')?.value || 'unknown';
-                this.initializeWebSocket();
-                this.loadExistingNotifications();
+                this.employeeId = document.getElementById('currentEmployeeId')?.value || 'unknown';
+                // Wait for the shared script then boot it
+                const boot = () => { window.Notifications && window.Notifications.boot(); };
+                if (window.Notifications) boot();
+                else {
+                    const s = document.createElement('script');
+                    s.src = '/notifications.js';
+                    s.onload = boot;
+                    document.head.appendChild(s);
+                }
             }
+            // The old methods the rest of the dashboard calls are now no-ops;
+            // the shared client handles everything.
+            addNotification() {}
+            renderNotification() {}
+            updateNotificationBadge() {}
+            loadExistingNotifications() {}
+            saveNotifications() {}
+            markAsRead(n) { if (n && n.id) window.Notifications && window.Notifications.markRead(n.id); }
+            showNotificationToast(n) { /* handled by shared client */ }
+            showFullNotification() {}
+        }
 
             initializeWebSocket() {
                 if (typeof SockJS === 'undefined' || typeof Stomp === 'undefined') {
@@ -10549,27 +10980,15 @@ document.addEventListener('keydown', e => {
             }
         }
     // REPLACE the original markAllNotificationsRead to also handle server-side
-    function markAllNotificationsRead() {
-        const list = document.getElementById('notificationList');
-        const badge = document.getElementById('notificationBadge');
-        const emptyEl = document.getElementById('emptyNotification');
-
-        // Call server mark-all-read
-        fetch('/notifications/api/mark-all-read', { method: 'POST' }).catch(e => console.error(e));
-
-        // Mark announcements as read locally
-        markAllAnnouncementsAsRead();
-
-        // Clear bell dropdown items
-        if (list) list.querySelectorAll('.announcement-notify-item, .notification-item').forEach(el => el.remove());
-
-        if (badge) badge.style.display = 'none';
-        if (emptyEl) emptyEl.style.display = 'block';
-
-        // Update local cache
-        allLoadedNotifications.forEach(n => { if (!n.readAt) n.readAt = new Date().toISOString(); });
-        updateNotifSubTabBadge();
-
+      function markAllNotificationsRead() {
+        if (window.Notifications) {
+            window.Notifications.markAllRead().then(() => {
+                const badge = document.getElementById('notificationBadge');
+                if (badge) badge.style.display = 'none';
+                const emptyEl = document.getElementById('emptyNotification');
+                if (emptyEl) emptyEl.style.display = 'block';
+            });
+        }
         return false;
     }
 
@@ -11058,26 +11477,31 @@ document.addEventListener('keydown', e => {
         console.log('✅ Dashboard sub-tabs initialized:', dashTabButtons.length);
     }
 
-    function handleDashTabClick(e) {
-        e.preventDefault();
-        const button = e.currentTarget;
-        const targetId = button.getAttribute('data-dash-tab');
+   function handleDashTabClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
 
-        document.querySelectorAll('[data-dash-tab]').forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
+    const targetId = this.getAttribute('data-dash-tab');
+    if (!targetId) return;
 
-        document.querySelectorAll('.dash-sub-content').forEach(content => content.classList.remove('active'));
+    document.querySelectorAll('[data-dash-tab]').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
 
-        const targetContent = document.getElementById(targetId);
-        if (targetContent) {
-            targetContent.classList.add('active');
-            // Check if this is the calendar tab
-            if (targetId === 'dash-calendar') {
-                // Delay slightly to ensure DOM is ready
-                setTimeout(() => { generateDashMiniCalendar(); }, 50);
-            }
+    document.querySelectorAll('.dash-sub-content').forEach(content => content.classList.remove('active'));
+
+    const targetContent = document.getElementById(targetId);
+    if (targetContent) {
+        targetContent.classList.add('active');
+
+        if (targetId === 'dash-calendar') {
+            setTimeout(() => generateDashMiniCalendar(), 50);
+        }
+        // ADD THIS: reload announcements whenever that tab becomes visible
+        if (targetId === 'dash-announcements') {
+            setTimeout(() => loadAnnouncementsManually(), 50);
         }
     }
+}
 
 
     // Initialize dashboard calendar variables
@@ -11226,7 +11650,7 @@ document.addEventListener('keydown', e => {
         console.log('🚀 Dashboard initializing...');
        // 1. Load holidays FIRST — everything depends on this
         await loadAllHolidays();
-
+loadCompanyBrandingForEmployee();
         // 2. Now render calendars (they will have data)
         generateDashMiniCalendar();
         updateUpcomingHolidays();
@@ -11234,8 +11658,17 @@ document.addEventListener('keydown', e => {
         displayCurrentDateInTopNav();
 
         // 2. Initialize notification manager
-        notificationManager = new NotificationManager();
-        loadAndRenderNotifications();
+              notificationManager = new NotificationManager();
+        // Phase 4: refresh badge from the API immediately
+        if (window.Notifications) {
+            window.Notifications.refresh().then(() => {
+                const badge = document.getElementById('notificationBadge');
+                if (badge && window.Notifications.unread > 0) {
+                    badge.textContent = window.Notifications.unread;
+                    badge.style.display = 'flex';
+                }
+            });
+        }
 
         // 3. Initialize attendance storage
         const employeeId = document.getElementById('currentEmployeeId')?.value ||
@@ -11274,10 +11707,12 @@ document.addEventListener('keydown', e => {
         await updateEmployeeUpcomingHolidays();
 
         // 6. LOAD ANNOUNCEMENTS (Fixed for Table & Notification Bell)
-        if (document.getElementById('announcementTableBody')) {
-            await loadAnnouncementsManually();
-            await loadNotificationsSubTab(); // ADD THIS LINE
-        }
+        // Load announcements with a short delay to ensure DOM is fully ready
+if (document.getElementById('announcementTableBody')) {
+    setTimeout(async () => {
+        await loadAnnouncementsManually();
+    }, 200);
+}
 
         // 7. Dynamic Reload Handlers
         const dashboardMenu = document.querySelector('.menu-item[data-tab="dashboard"]');
@@ -11640,54 +12075,7 @@ document.addEventListener('keydown', e => {
     document.querySelectorAll('[data-dash-tab]').forEach(button => {
         button.addEventListener('click', () => {
             const target = button.getAttribute('data-dash-tab');
-    // === DASHBOARD SUB-TAB LOGIC ===
-        const dashTabButtons = document.querySelectorAll('[data-dash-tab]');
-        dashTabButtons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                const targetId = button.getAttribute('data-dash-tab');
 
-                // 1. Update Active Button UI
-                dashTabButtons.forEach(btn => btn.classList.remove('active'));
-                button.classList.add('active');
-
-                // 2. Update Active Content UI
-                document.querySelectorAll('.dash-sub-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                const targetContent = document.getElementById(targetId);
-                if (targetContent) {
-                    targetContent.classList.add('active');
-                }
-
-                // 3. If Calendar is clicked, generate it
-                if(targetId === 'dash-calendar') {
-                    generateDashMiniCalendar();
-                }
-            });
-        });
-
-        // Initialize Calendar Variables
-        window.dMonth = new Date().getMonth();
-        window.dYear = new Date().getFullYear();
-
-        // Make functions global for inline onclick events
-        window.showDashPopup = function(title, body) {
-            document.getElementById('dashPopupTitle').textContent = title;
-            document.getElementById('dashPopupBody').innerHTML = body;
-            document.getElementById('dashDetailPopup').classList.add('active');
-        };
-
-        window.closeDashPopup = function() {
-            document.getElementById('dashDetailPopup').classList.remove('active');
-        };
-
-        window.changeDashMonth = function(dir) {
-            window.dMonth += dir;
-            if(window.dMonth < 0) { window.dMonth = 11; window.dYear--; }
-            if(window.dMonth > 11) { window.dMonth = 0; window.dYear++; }
-            generateDashMiniCalendar();
-        };
 
         window.generateDashMiniCalendar = function() {
             const grid = document.getElementById('dash-mini-calendar');
@@ -12828,60 +13216,142 @@ document.addEventListener('keydown', e => {
     // ============================================
     // ANNOUNCEMENT LOADING LOGIC (FIXED)
     // ============================================
-    async function loadAnnouncementsManually() {
-        console.log('📢 [Announcements] Starting to load...');
-        const tbody = document.getElementById('announcementTableBody');
-        if (!tbody) return;
+   async function loadAnnouncementsManually() {
+    console.log('📢 [Announcements] Starting to load...');
+    const tbody = document.getElementById('announcementTableBody');
+    if (!tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading announcements...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading announcements...</td></tr>';
 
-        try {
-            const response = await fetch('/api/announcements/employee');
-            const result = await response.json();
+    try {
+        const response = await fetch('/api/announcements/employee');
+        const result = await response.json();
+        const announcements = Array.isArray(result) ? result : (result.data || []);
 
-            // FIX: The array is inside result.data
-            const announcements = result.data || [];
+        if (announcements.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 40px; color: var(--dark-text-secondary);">
+                        <i class="fas fa-bullhorn" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                        No announcements available
+                    </td>
+                </tr>`;
+            return;
+        }
 
-            if (announcements.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" style="text-align: center; padding: 40px; color: var(--dark-text-secondary);">
-                            <i class="fas fa-bullhorn" style="font-size: 32px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
-                            No announcements available
-                        </td>
-                    </tr>`;
-                return;
+        tbody.innerHTML = '';
+        const readIds = getReadAnnouncementIds();
+
+        announcements.forEach(item => {
+            const announcementId = String(item.id);
+            const isUnread = !readIds.includes(announcementId);
+            const date = item.createdAt
+                ? new Date(item.createdAt).toLocaleDateString('en-IN')
+                : 'Recently';
+            const catClass = (item.category || 'corporate').toLowerCase();
+            const icon = item.priority === 'URGENT' ? 'fa-exclamation-triangle' : 'fa-bullhorn';
+
+            const row = document.createElement('tr');
+            row.setAttribute('data-announcement-id', announcementId);
+            row.style.cursor = 'pointer';
+
+            // Highlight unread rows
+            if (isUnread) {
+                row.style.cssText = `
+                    cursor: pointer;
+                    background: rgba(99, 102, 241, 0.06);
+                    border-left: 3px solid var(--primary);
+                `;
             }
 
-            tbody.innerHTML = '';
-            announcements.forEach(item => {
-                const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : 'Recently';
-                const catClass = (item.category || 'corporate').toLowerCase();
-                const icon = item.priority === 'URGENT' ? 'fa-exclamation-triangle' : 'fa-bullhorn';
+            row.innerHTML = `
+                <td>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${isUnread ? `<span style="width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0;" title="Unread"></span>` : `<span style="width:8px;height:8px;flex-shrink:0;"></span>`}
+                        <span class="mini-card ${catClass}">
+                            <i class="fas ${icon}"></i> ${item.category || 'Corporate'}
+                        </span>
+                    </div>
+                </td>
+                <td class="announcement-title-cell" style="font-weight:${isUnread ? '700' : '500'};">
+                    ${item.title}
+                </td>
+                <td class="announcement-desc-cell">${(item.description || '').substring(0, 80)}...</td>
+                <td class="announcement-date-cell"><i class="far fa-clock"></i> ${date}</td>
+                <td>
+                    <button class="view-btn" onclick="event.stopPropagation();">
+                        View <i class="fas fa-arrow-right"></i>
+                    </button>
+                </td>
+            `;
 
-                const row = document.createElement('tr');
-                row.style.cursor = 'pointer';
-                row.innerHTML = `
-                    <td><span class="mini-card ${catClass}"><i class="fas ${icon}"></i> ${item.category}</span></td>
-                    <td class="announcement-title-cell"><strong>${item.title}</strong></td>
-                    <td class="announcement-desc-cell">${item.description.substring(0, 80)}...</td>
-                    <td class="announcement-date-cell"><i class="far fa-clock"></i> ${date}</td>
-                    <td><button class="view-btn">View <i class="fas fa-arrow-right"></i></button></td>
-                `;
-
-                // Set up click event correctly
-                row.onclick = () => showAnnouncementPopup(item.title, item.description, item.category, date);
-                tbody.appendChild(row);
+            // Click anywhere on row OR View button → mark read + show popup
+            row.addEventListener('click', () => {
+                markAnnouncementAsReadEverywhere(announcementId);
+                applyReadStyleToTableRow(row);
+                showAnnouncementPopup(
+                    item.title,
+                    item.description,
+                    item.category || 'Corporate',
+                    date
+                );
             });
 
-            // Push announcements to the notification bell UI
-            updateNotificationBellWithAnnouncements(announcements);
+            tbody.appendChild(row);
+        });
 
-        } catch (error) {
-            console.error('❌ Error loading announcements:', error);
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load announcements</td></tr>';
-        }
+        // Sync bell dropdown with same data
+        updateNotificationBellWithAnnouncements(announcements);
+
+    } catch (error) {
+        console.error('❌ Error loading announcements:', error);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--danger);">Failed to load announcements</td></tr>';
     }
+}
+
+// Mark as read in localStorage AND sync both UI locations
+function markAnnouncementAsReadEverywhere(announcementId) {
+    const id = String(announcementId);
+    const employeeId = document.getElementById('currentEmployeeId')?.value || 'unknown';
+    const key = `read_announcements_${employeeId}`;
+
+    // 1. Save to localStorage
+    let readIds = getReadAnnouncementIds();
+    if (!readIds.includes(id)) {
+        readIds.push(id);
+        localStorage.setItem(key, JSON.stringify(readIds));
+    }
+
+    // 2. Remove from bell dropdown immediately
+    const bellItem = document.querySelector(`.announcement-notify-item[data-announcement-id="${id}"]`);
+    if (bellItem) {
+        bellItem.remove();
+        updateAnnouncementBadgeCount();
+    }
+
+    // 3. Update table row style immediately
+    const tableRow = document.querySelector(`#announcementTableBody tr[data-announcement-id="${id}"]`);
+    if (tableRow) {
+        applyReadStyleToTableRow(tableRow);
+    }
+
+    // 4. Update bell badge count
+    updateAnnouncementBadgeCount();
+}
+
+// Apply "read" visual style to a table row
+function applyReadStyleToTableRow(row) {
+    row.style.background = '';
+    row.style.borderLeft = '';
+
+    // Remove unread dot
+    const dot = row.querySelector('span[style*="background:var(--primary)"]');
+    if (dot) dot.style.background = 'transparent';
+
+    // Normalize title weight
+    const titleCell = row.querySelector('.announcement-title-cell');
+    if (titleCell) titleCell.style.fontWeight = '500';
+}
 
     // ============================================
     // NOTIFICATION BELL SYNC
@@ -12936,26 +13406,25 @@ document.addEventListener('keydown', e => {
                 <div class="unread-dot" style="width:8px;height:8px;background:var(--primary);border-radius:50%;flex-shrink:0;align-self:center;"></div>
             `;
 
-            notifyItem.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // Mark as read
-                markAnnouncementAsRead(announcementId);
-                // REMOVE from dropdown immediately
-                notifyItem.remove();
-                // Update badge count
-                updateAnnouncementBadgeCount();
-                // Show empty state if no more items
-                const remaining = list.querySelectorAll('.announcement-notify-item').length;
-                if (remaining === 0 && emptyEl) emptyEl.style.display = 'block';
-                // Show popup
-                showAnnouncementPopup(
-                    item.title,
-                    item.description,
-                    item.category || 'Corporate',
-                    item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : 'Recently'
-                );
-            });
+           notifyItem.addEventListener('click', (e) => {
+    e.stopPropagation();
 
+    // Mark read everywhere (table + bell + localStorage)
+    markAnnouncementAsReadEverywhere(announcementId);
+
+    // Close bell dropdown
+    document.getElementById('notificationDropdownMenu')?.classList.remove('show');
+
+    // Show popup
+    showAnnouncementPopup(
+        item.title,
+        item.description,
+        item.category || 'Corporate',
+        item.createdAt
+            ? new Date(item.createdAt).toLocaleDateString('en-IN')
+            : 'Recently'
+    );
+});
             list.insertBefore(notifyItem, list.firstChild);
         });
     }
@@ -13111,6 +13580,26 @@ document.addEventListener('keydown', e => {
     if (!isVisible) loadSessionsList(); // Refresh when opening
 }
 window.toggleSessionsSidebar = toggleSessionsSidebar;
+
+function loadCompanyBrandingForEmployee() {
+    const savedLogo  = localStorage.getItem('company_logo');
+    const savedName  = localStorage.getItem('company_name');
+
+    // Navbar logo
+    const navLogo = document.getElementById('employeeNavLogo');
+    const navName = document.getElementById('employeeNavBrandName');
+
+    if (navLogo && savedLogo && savedLogo.startsWith('data:image')) {
+        navLogo.src = savedLogo;
+        navLogo.style.display = 'inline-block';
+    }
+
+    if (navName && savedName) {
+        navName.textContent = savedName;
+    }
+
+    // NO color change - keep original dark theme
+}
 
 
 </script>

@@ -1,4 +1,5 @@
 package com.mentis.hrms.controller;
+
 // Add this import at the top
 import com.mentis.hrms.service.LeaveBalanceService;
 import com.mentis.hrms.model.Attendance;
@@ -39,6 +40,9 @@ public class LeaveManagementController {
     @Autowired
     private LeaveBalanceService leaveBalanceService;
 
+    @Autowired
+    private com.mentis.hrms.service.LeaveActionService leaveActionService;
+
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingLeaves() {
         List<LeaveRequest> pending = leaveRequestRepository.findByStatus("PENDING");
@@ -48,80 +52,23 @@ public class LeaveManagementController {
                 "count", pending.size()
         ));
     }
+
     @PostMapping("/{leaveId}/approve")
     public ResponseEntity<?> approveLeave(@PathVariable String leaveId,
                                           @RequestBody(required = false) Map<String, String> requestBody,
                                           Principal principal) {
         logger.info("Approving leave: {}", leaveId);
 
-        try {
-            // Fetch fresh from database
-            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
-                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
+        String remarks = (requestBody != null) ? requestBody.get("remarks") : null;
+        String approverId = (principal != null) ? principal.getName() : "SYSTEM";
 
-            String hrManagerId = (principal != null) ? principal.getName() : "SYSTEM";
-
-            logger.info("Current status before approve: {}", leave.getStatus());
-
-            // ===== CRITICAL: Calculate total days if not set =====
-            if (leave.getTotalDays() == null || leave.getTotalDays() == 0) {
-                long days = java.time.temporal.ChronoUnit.DAYS.between(leave.getStartDate(), leave.getEndDate()) + 1;
-                leave.setTotalDays((double) days);
-                leave.setLeaveDuration("full_day");
-                logger.info("Calculated total days for leave {}: {}", leaveId, days);
-            }
-            // ====================================================
-
-            // EXPLICITLY set all fields
-            leave.setStatus("APPROVED");
-            leave.setApprovedBy(hrManagerId);
-            leave.setApprovedDate(LocalDateTime.now());
-
-            // Get remarks from request body if provided
-            if (requestBody != null) {
-                String remarks = requestBody.get("remarks");
-                if (remarks != null && !remarks.trim().isEmpty()) {
-                    leave.setApprovalRemarks(remarks);
-                }
-            }
-
-            // ===== CRITICAL: Deduct from leave balance BEFORE saving =====
-            boolean balanceDeducted = leaveBalanceService.deductLeaveBalance(leave);
-            if (!balanceDeducted) {
-                logger.warn("Failed to deduct leave balance for {} - check if balance exists", leaveId);
-                // Still proceed with approval but log warning
-            } else {
-                logger.info("Successfully deducted leave balance for {}", leaveId);
-            }
-            // ============================================================
-
-            // Save and flush immediately
-            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
-
-            logger.info("Status after save: {}", saved.getStatus());
-
-            // Verify it was saved correctly
-            if (!"APPROVED".equals(saved.getStatus())) {
-                throw new RuntimeException("Failed to update status to APPROVED");
-            }
-
-            // Create attendance records for approved leave
-            createAttendanceForApprovedLeave(leave);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Leave approved successfully",
-                    "leaveId", leaveId,
-                    "status", saved.getStatus()
-            ));
-
-        } catch (Exception e) {
-            logger.error("Error approving leave: {}", e.getMessage(), e);
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", e.getMessage()
-            ));
-        }
+        // Delegates to LeaveActionService, which is the single place that now owns
+        // approve/reject/withdraw/cancel/apply logic (also used by the HR and
+        // employee chat assistants). This endpoint's URL, params and response
+        // shape are unchanged, so the existing UI keeps working as-is.
+        Map<String, Object> result = leaveActionService.approveLeave(leaveId, approverId, remarks);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
 
     // ========== SINGLE getAllLeaves METHOD - handles all cases ==========
@@ -194,61 +141,25 @@ public class LeaveManagementController {
             ));
         }
     }
+
     @PostMapping("/{leaveId}/reject")
     public ResponseEntity<?> rejectLeave(@PathVariable String leaveId,
                                          @RequestBody(required = false) Map<String, String> requestBody,
                                          Principal principal) {
         logger.info("Rejecting leave: {}", leaveId);
 
-        try {
-            // Extract reason from request body
-            String reason = "No reason provided";
-            if (requestBody != null && requestBody.containsKey("reason")) {
-                reason = requestBody.get("reason");
-            }
-
-            if (reason == null || reason.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "Rejection reason is required"
-                ));
-            }
-
-            // Fetch leave request from database
-            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
-                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
-
-            String hrManagerId = (principal != null) ? principal.getName() : "SYSTEM";
-
-            logger.info("Current status before reject: {}", leave.getStatus());
-
-            // Update leave request
-            leave.setStatus("REJECTED");
-            leave.setApprovedBy(hrManagerId);
-            leave.setApprovedDate(LocalDateTime.now());
-            leave.setRejectionReason(reason); // Save the rejection reason
-
-            // Save changes
-            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
-
-            logger.info("Leave {} rejected successfully by {}", leaveId, hrManagerId);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Leave rejected successfully",
-                    "leaveId", leaveId,
-                    "status", saved.getStatus(),
-                    "rejectedBy", hrManagerId,
-                    "rejectionReason", reason
-            ));
-
-        } catch (Exception e) {
-            logger.error("Error rejecting leave {}: {}", leaveId, e.getMessage(), e);
-            return ResponseEntity.status(500).body(Map.of(
+        String reason = (requestBody != null) ? requestBody.get("reason") : null;
+        if (reason == null || reason.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
-                    "error", "Failed to reject leave: " + e.getMessage()
+                    "error", "Rejection reason is required"
             ));
         }
+        String approverId = (principal != null) ? principal.getName() : "SYSTEM";
+
+        Map<String, Object> result = leaveActionService.rejectLeave(leaveId, approverId, reason);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
 
     @GetMapping("/debug/{leaveId}")
@@ -277,69 +188,10 @@ public class LeaveManagementController {
     public ResponseEntity<?> applyForLeave(@RequestBody LeaveRequest leaveRequest, Principal principal) {
         logger.info("Applying for leave: {}", leaveRequest);
 
-        try {
-            // Validate required fields
-            if (leaveRequest.getEmployeeId() == null || leaveRequest.getEmployeeId().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "Employee ID is required"
-                ));
-            }
-
-            if (leaveRequest.getStartDate() == null || leaveRequest.getEndDate() == null) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "Start date and end date are required"
-                ));
-            }
-
-            // ===== NEW: Check leave balance before applying =====
-            boolean hasSufficientBalance = leaveBalanceService.hasSufficientBalance(
-                    leaveRequest.getEmployeeId(),
-                    leaveRequest.getLeaveType(),
-                    leaveRequest.getStartDate(),
-                    leaveRequest.getEndDate(),
-                    leaveRequest.getLeaveDuration(),
-                    leaveRequest.getHalfDayType()
-            );
-
-            if (!hasSufficientBalance) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "Insufficient leave balance"
-                ));
-            }
-            // ====================================================
-
-            // Ensure ID is generated if not provided
-            if (leaveRequest.getId() == null || leaveRequest.getId().isEmpty()) {
-                leaveRequest.prePersist();
-            }
-
-            // Set default status and timestamps
-            leaveRequest.setStatus("PENDING");
-            leaveRequest.setCreatedAt(LocalDateTime.now());
-
-            // Save to database
-            LeaveRequest saved = leaveRequestRepository.save(leaveRequest);
-
-            logger.info("Leave request saved successfully with ID: {}", saved.getId());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Leave request submitted successfully",
-                    "leaveId", saved.getId()
-            ));
-
-        } catch (Exception e) {
-            logger.error("Error applying for leave: {}", e.getMessage(), e);
-            return ResponseEntity.status(500).body(Map.of(
-                    "success", false,
-                    "error", "Failed to save to database: " + e.getMessage()
-            ));
-        }
+        Map<String, Object> result = leaveActionService.applyLeave(leaveRequest);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
-
 
     @PostMapping("/check-balance")
     public ResponseEntity<?> checkBalance(@RequestBody Map<String, Object> request) {
@@ -396,7 +248,6 @@ public class LeaveManagementController {
                     .findByEmployeeIdOrderByCreatedAtDesc(employeeId)
                     .stream()
                     .filter(leave -> {
-                        // Check if date falls within leave range
                         return !checkDate.isBefore(leave.getStartDate()) &&
                                 !checkDate.isAfter(leave.getEndDate()) &&
                                 (leave.getStatus().equals("PENDING") ||
@@ -423,30 +274,73 @@ public class LeaveManagementController {
             ));
         }
     }
-    // ========== NEW METHOD: Create attendance entries for approved leave ==========
-    private void createAttendanceForApprovedLeave(LeaveRequest leave) {
+
+
+    // ==================== NEW METHODS FOR AI CHAT ASSISTANT ====================
+
+    // NEW: Calendar data for mini calendar (holidays + existing leaves)
+    @GetMapping("/calendar")
+    public ResponseEntity<?> getLeaveCalendar(@RequestParam String employeeId,
+                                              @RequestParam int year,
+                                              @RequestParam int month) {
         try {
-            LocalDate startDate = leave.getStartDate();
-            LocalDate endDate = leave.getEndDate();
-            String employeeId = leave.getEmployeeId();
+            Map<String, Object> data = new HashMap<>();
+            List<LeaveRequest> leaves = leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
 
-            logger.info("Creating attendance records for employee {} from {} to {}",
-                    employeeId, startDate, endDate);
-
-            // Iterate through each day of the leave period
-            LocalDate currentDate = startDate;
-            while (!currentDate.isAfter(endDate)) {
-                // Check if attendance record already exists for this date
-                attendanceService.createOrUpdateLeaveAttendance(employeeId, currentDate, "LEAVE");
-                currentDate = currentDate.plusDays(1);
-            }
-
-            logger.info("Successfully created attendance records for leave period");
-
+            data.put("success", true);
+            data.put("holidays", new ArrayList<>()); // Add Holiday service data here if available
+            data.put("leaves", leaves.stream().map(leave -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", leave.getId());
+                m.put("startDate", leave.getStartDate());
+                m.put("endDate", leave.getEndDate());
+                m.put("status", leave.getStatus());
+                m.put("type", leave.getLeaveType());
+                return m;
+            }).collect(Collectors.toList()));
+            return ResponseEntity.ok(data);
         } catch (Exception e) {
-            logger.error("Error creating attendance for approved leave: {}", e.getMessage(), e);
-            // Don't throw - we don't want to rollback the leave approval if attendance creation fails
-            // But you might want to handle this differently based on your requirements
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
+    }
+
+    // NEW: Apply via Chat (used by AI Assistant)
+    @PostMapping("/apply-chat")
+    public ResponseEntity<?> applyLeaveViaChat(@RequestBody LeaveRequest leaveRequest, Principal principal) {
+        try {
+            if (leaveRequest.getEmployeeId() == null && principal != null) {
+                leaveRequest.setEmployeeId(principal.getName());
+            }
+            // Reuse existing apply logic
+            return applyForLeave(leaveRequest, principal);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
+    // Cancel Leave: employee cancels a PENDING or already-APPROVED leave.
+    // If it was APPROVED, the deducted leave balance is automatically restored.
+    // (Previously this only allowed PENDING and never restored balance - fixed
+    // now that it delegates to LeaveActionService.)
+    @PostMapping("/{leaveId}/cancel")
+    public ResponseEntity<?> cancelLeave(@PathVariable String leaveId,
+                                         @RequestBody(required = false) Map<String, String> body,
+                                         Principal principal) {
+        String reason = (body != null) ? body.get("reason") : null;
+        Map<String, Object> result = leaveActionService.cancelLeave(leaveId, reason);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
+    }
+
+    // Withdraw Leave: employee retracts a request that is still PENDING
+    // (HR hasn't acted on it yet). Now correctly sets status=WITHDRAWN
+    // (previously this only set the withdrawn flag and left status untouched).
+    @PostMapping("/{leaveId}/withdraw")
+    public ResponseEntity<?> withdrawLeave(@PathVariable String leaveId,
+                                           @RequestBody(required = false) Map<String, String> body) {
+        String reason = (body != null) ? body.get("reason") : null;
+        Map<String, Object> result = leaveActionService.withdrawLeave(leaveId, reason);
+        boolean ok = Boolean.TRUE.equals(result.get("success"));
+        return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
 }
