@@ -1,7 +1,9 @@
+
 package com.mentis.hrms.workperformance.service;
 
 import com.mentis.hrms.EmployeePerformance.model.AdminEmpPerformance;
 import com.mentis.hrms.EmployeePerformance.repository.AdminEmpPerformanceRepository;
+import com.mentis.hrms.EmployeePerformance.service.AdminEmpPerformanceService;
 import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.workperformance.dto.CombinedPerformanceDTO;
@@ -20,42 +22,58 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
-import com.mentis.hrms.EmployeePerformance.service.AdminEmpPerformanceService;
 
 /**
- * NEW service — the ONLY place that reads AdminEmpPerformanceRepository /
- * EmployeeRepository (both existing, untouched, read-only here) alongside
- * the new ClickUp-derived data. Writes results only to the new
- * WorkPerformanceSnapshot table.
+ * Combines HR performance data with ClickUp work-performance data.
  *
- * PHASE 6 update: the work pillar now has a fallback. When an employee is
- * NOT mapped to ClickUp, or is mapped but not synced this month, we try the
- * PM task pipeline (PmWorkScoreService) before giving up and reweighting to
- * just the 3 pillars. Nothing here ever writes to admin_emp_performance.
+ * Reads existing HR performance records and writes ClickUp synchronization
+ * results only to WorkPerformanceSnapshot.
+ *
+ * PM module dependencies are intentionally excluded so this service can
+ * compile when the PM package is not included in the deployment source.
  */
 @Service
 public class PerformanceSyncService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PerformanceSyncService.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(PerformanceSyncService.class);
 
-    @Autowired private AdminEmpPerformanceRepository adminEmpPerformanceRepository; // existing, read-only
-    @Autowired private EmployeeRepository employeeRepository;                       // existing, read-only
-    @Autowired private EmployeeClickUpMappingRepository mappingRepository;
-    @Autowired private WorkPerformanceSnapshotRepository snapshotRepository;
-    @Autowired private WorkPerformanceService workPerformanceService;
-    @Autowired private AdminEmpPerformanceService adminEmpPerformanceService;
+    @Autowired
+    private AdminEmpPerformanceRepository adminEmpPerformanceRepository;
 
-    // ─── PHASE 6 addition ─────────────────────────────────────
-    @Autowired private com.mentis.hrms.pm.service.PmWorkScoreService pmWorkScoreService;
+    @Autowired
+    private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private EmployeeClickUpMappingRepository mappingRepository;
+
+    @Autowired
+    private WorkPerformanceSnapshotRepository snapshotRepository;
+
+    @Autowired
+    private WorkPerformanceService workPerformanceService;
+
+    @Autowired
+    private AdminEmpPerformanceService adminEmpPerformanceService;
 
     @Value("${performance.weight.attendance:0.35}")
     private double attendanceWeight;
+
     @Value("${performance.weight.behavior:0.175}")
     private double behaviorWeight;
+
     @Value("${performance.weight.initiative:0.175}")
     private double initiativeWeight;
+
     @Value("${performance.weight.work:0.30}")
     private double workWeight;
 
@@ -64,62 +82,89 @@ public class PerformanceSyncService {
     private static final double RATING_MEETS = 50.0;
 
     /**
-     * Builds the merged 4-pillar (or reweighted 3-pillar) view for EVERY
-     * employee for a given month — this is what the performance.html table
-     * should call.
+     * Builds the combined performance view for every employee.
      *
-     * PHASE 6: work pillar is filled from ClickUp (preferred) or PM tasks
-     * (fallback) or dropped in favour of reweighting the 3 pillars.
+     * Priority:
+     * 1. Use a saved ClickUp snapshot when available.
+     * 2. Otherwise, calculate the score from Attendance, Behavior,
+     *    and Initiative using normalized weights.
+     *
+     * PM task scoring is deliberately omitted because the PM module is
+     * excluded from the deployment source.
      */
     @Transactional(readOnly = true)
     public List<CombinedPerformanceDTO> getCombinedResults(int year, int month) {
         LocalDate reviewMonth = LocalDate.of(year, month, 1);
 
         List<Employee> employees = employeeRepository.findAll();
-        Map<String, AdminEmpPerformance> perfByEmployee = adminEmpPerformanceRepository
-                .findAll().stream()
-                .filter(p -> reviewMonth.equals(p.getReviewMonth()))
-                .collect(Collectors.toMap(AdminEmpPerformance::getEmployeeId, p -> p, (a, b) -> a));
 
-        Set<String> mappedEmployeeIds = mappingRepository.findByActiveTrue().stream()
-                .map(EmployeeClickUpMapping::getEmployeeId)
-                .collect(Collectors.toSet());
+        Map<String, AdminEmpPerformance> perfByEmployee =
+                adminEmpPerformanceRepository.findAll().stream()
+                        .filter(p -> reviewMonth.equals(p.getReviewMonth()))
+                        .collect(Collectors.toMap(
+                                AdminEmpPerformance::getEmployeeId,
+                                p -> p,
+                                (first, second) -> first
+                        ));
 
-        Map<String, WorkPerformanceSnapshot> snapshotByEmployee = new HashMap<>();
-        for (String empId : mappedEmployeeIds) {
-            snapshotRepository.findByEmployeeIdAndReviewMonth(empId, reviewMonth)
-                    .ifPresent(s -> snapshotByEmployee.put(empId, s));
+        Set<String> mappedEmployeeIds =
+                mappingRepository.findByActiveTrue().stream()
+                        .map(EmployeeClickUpMapping::getEmployeeId)
+                        .collect(Collectors.toSet());
+
+        Map<String, WorkPerformanceSnapshot> snapshotByEmployee =
+                new HashMap<>();
+
+        for (String employeeId : mappedEmployeeIds) {
+            snapshotRepository
+                    .findByEmployeeIdAndReviewMonth(employeeId, reviewMonth)
+                    .ifPresent(snapshot ->
+                            snapshotByEmployee.put(employeeId, snapshot));
         }
 
-        // Weight ratio among Attendance/Behavior/Initiative when Work doesn't apply
-        double threePillarSum = attendanceWeight + behaviorWeight + initiativeWeight;
-
-        LocalDate monthStart = reviewMonth;
-        LocalDate monthEnd   = YearMonth.from(reviewMonth).atEndOfMonth();
+        double threePillarSum =
+                attendanceWeight + behaviorWeight + initiativeWeight;
 
         List<CombinedPerformanceDTO> results = new ArrayList<>();
-        for (Employee emp : employees) {
-            String empId = emp.getEmployeeId();
-            AdminEmpPerformance perf = perfByEmployee.get(empId);
+
+        for (Employee employee : employees) {
+            String employeeId = employee.getEmployeeId();
+
+            AdminEmpPerformance performance =
+                    perfByEmployee.get(employeeId);
 
             CombinedPerformanceDTO dto = new CombinedPerformanceDTO();
-            dto.setEmployeeId(empId);
-            dto.setEmployeeName((nullSafe(emp.getFirstName()) + " " + nullSafe(emp.getLastName())).trim());
-            dto.setDepartment(emp.getDepartment());
 
-            Double attendanceScore = adminEmpPerformanceService.calculateAttendanceScore(empId, year, month);
-            Double behaviorScore = perf != null ? perf.getBehaviorScore() : null;
-            Double initiativeScore = perf != null ? perf.getInitiativeScore() : null;
+            dto.setEmployeeId(employeeId);
+            dto.setEmployeeName(
+                    (nullSafe(employee.getFirstName()) + " "
+                            + nullSafe(employee.getLastName())).trim()
+            );
+            dto.setDepartment(employee.getDepartment());
+
+            Double attendanceScore =
+                    adminEmpPerformanceService.calculateAttendanceScore(
+                            employeeId, year, month);
+
+            Double behaviorScore = performance != null
+                    ? performance.getBehaviorScore()
+                    : null;
+
+            Double initiativeScore = performance != null
+                    ? performance.getInitiativeScore()
+                    : null;
+
             dto.setAttendanceScore(attendanceScore);
             dto.setBehaviorScore(behaviorScore);
             dto.setInitiativeScore(initiativeScore);
 
-            boolean isMapped = mappedEmployeeIds.contains(empId);
+            boolean isMapped = mappedEmployeeIds.contains(employeeId);
             dto.setHasClickUpMapping(isMapped);
 
-            WorkPerformanceSnapshot snapshot = snapshotByEmployee.get(empId);
+            WorkPerformanceSnapshot snapshot =
+                    snapshotByEmployee.get(employeeId);
 
-            // ── Priority 1: ClickUp snapshot exists ──
+            // Priority 1: Use the saved ClickUp snapshot.
             if (isMapped && snapshot != null) {
                 dto.setWorkScore(snapshot.getWorkScore());
                 dto.setFinalScore(snapshot.getFinalCombinedScore());
@@ -129,203 +174,307 @@ public class PerformanceSyncService {
                 dto.setWorkScoreSource("CLICKUP");
                 dto.setNeedsSync(false);
             } else {
-                // ── Priority 2: PM task work pillar ──
-                Long empPk = emp.getId();
-                double pmWorkScore = 0.0;
-                Integer pmAssigned = null, pmDone = null, pmOnTime = null;
-                boolean hasPmWork = false;
+                // Priority 2: No usable ClickUp snapshot.
+                // Reweight the three available HR performance pillars.
+                double reweighted = 0.0;
 
-                if (empPk != null) {
-                    try {
-                        com.mentis.hrms.pm.service.PmWorkScoreService.PmWorkResult pmResult =
-                                pmWorkScoreService.computeForEmployee(empPk, monthStart, monthEnd);
-                        if (pmResult != null && pmResult.assigned > 0) {
-                            pmWorkScore = pmResult.finalScore;
-                            pmAssigned = pmResult.assigned;
-                            pmDone = pmResult.completed;
-                            pmOnTime = pmResult.onTimeCompleted;
-                            hasPmWork = true;
-                        }
-                    } catch (Exception e) {
-                        logger.warn("PM work score failed for {}: {}", empId, e.getMessage());
-                    }
+                if (threePillarSum > 0.0) {
+                    reweighted =
+                            (nz(attendanceScore)
+                                    * (attendanceWeight / threePillarSum))
+                                    + (nz(behaviorScore)
+                                    * (behaviorWeight / threePillarSum))
+                                    + (nz(initiativeScore)
+                                    * (initiativeWeight / threePillarSum));
                 }
 
-                if (hasPmWork) {
-                    double combined = (nz(attendanceScore) * attendanceWeight)
-                            + (nz(behaviorScore) * behaviorWeight)
-                            + (nz(initiativeScore) * initiativeWeight)
-                            + (pmWorkScore * workWeight);
-                    combined = Math.round(combined * 10.0) / 10.0;
+                reweighted = Math.round(reweighted * 10.0) / 10.0;
 
-                    dto.setWorkScore(pmWorkScore);
-                    dto.setFinalScore(combined);
-                    dto.setFinalRating(rate(combined));
-                    dto.setWorkScoreSource("PM");
-                    dto.setPmTasksAssigned(pmAssigned);
-                    dto.setPmTasksCompleted(pmDone);
-                    dto.setPmTasksOnTime(pmOnTime);
-                    dto.setTotalTasksAssigned(pmAssigned);
-                    dto.setCompletedTasks(pmDone);
-                    dto.setNeedsSync(false);
-                } else {
-                    // ── Priority 3: no work data at all — reweight 3 pillars ──
-                    double reweighted = (nz(attendanceScore) * (attendanceWeight / threePillarSum))
-                            + (nz(behaviorScore) * (behaviorWeight / threePillarSum))
-                            + (nz(initiativeScore) * (initiativeWeight / threePillarSum));
-                    reweighted = Math.round(reweighted * 10.0) / 10.0;
-
-                    dto.setWorkScore(null);
-                    dto.setFinalScore(reweighted);
-                    dto.setFinalRating(rate(reweighted));
-                    dto.setWorkScoreSource("NONE");
-                    dto.setNeedsSync(isMapped); // mapped but never synced this month
-                }
+                dto.setWorkScore(null);
+                dto.setFinalScore(reweighted);
+                dto.setFinalRating(rate(reweighted));
+                dto.setWorkScoreSource("NONE");
+                dto.setNeedsSync(isMapped);
             }
 
             results.add(dto);
         }
+
         return results;
     }
 
     /**
-     * Sync + combine scores for every mapped, active employee for a given month.
+     * Synchronizes all active ClickUp-mapped employees for a given month.
      *
-     * TWO-PHASE PROCESS — this is what makes it fair:
-     *  Phase 1: fetch EVERY mapped employee's raw ClickUp tasks first.
-     *  Phase 2: only then compute each employee's score, so each one is
-     *           normalized against the FULL, final peer group for their
-     *           department — never a partially-built list from mid-loop.
+     * Phase 1: Fetch task lists and collect department task counts.
+     * Phase 2: Calculate scores using the complete department peer group.
      */
     @Transactional
     public List<WorkPerformanceSnapshot> syncAll(int year, int month) {
-        List<EmployeeClickUpMapping> mappings = mappingRepository.findByActiveTrue();
-        Map<String, Employee> employeesById = employeeRepository.findAll().stream()
-                .collect(Collectors.toMap(Employee::getEmployeeId, e -> e, (a, b) -> a));
+        List<EmployeeClickUpMapping> mappings =
+                mappingRepository.findByActiveTrue();
+
+        Map<String, Employee> employeesById =
+                employeeRepository.findAll().stream()
+                        .collect(Collectors.toMap(
+                                Employee::getEmployeeId,
+                                employee -> employee,
+                                (first, second) -> first
+                        ));
 
         LocalDate reviewMonth = LocalDate.of(year, month, 1);
         long[] window = monthWindow(year, month);
 
-        // ---- Phase 1: fetch all raw tasks up front ----
-        Map<String, List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO>> tasksByEmployee = new HashMap<>();
-        Map<String, Map<String, Integer>> deptCountsByEmployee = new HashMap<>();
+        Map<String, List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO>>
+                tasksByEmployee = new HashMap<>();
 
+        Map<String, Map<String, Integer>> deptCountsByEmployee =
+                new HashMap<>();
+
+        // Phase 1: Fetch tasks for every mapped employee.
         for (EmployeeClickUpMapping mapping : mappings) {
+            String employeeId = mapping.getEmployeeId();
+
             try {
                 List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks =
-                        workPerformanceService.fetchTasks(mapping.getClickupUserId(), window[0], window[1]);
-                tasksByEmployee.put(mapping.getEmployeeId(), tasks);
+                        workPerformanceService.fetchTasks(
+                                mapping.getClickupUserId(),
+                                window[0],
+                                window[1]
+                        );
 
-                Employee emp = employeesById.get(mapping.getEmployeeId());
-                String dept = emp != null ? emp.getDepartment() : "Unassigned";
+                tasksByEmployee.put(employeeId, tasks);
+
+                Employee employee = employeesById.get(employeeId);
+
+                String department = employee != null
+                        ? employee.getDepartment()
+                        : "Unassigned";
+
                 deptCountsByEmployee
-                        .computeIfAbsent(dept, d -> new HashMap<>())
-                        .put(mapping.getEmployeeId(), tasks.size());
+                        .computeIfAbsent(
+                                department,
+                                ignored -> new HashMap<>()
+                        )
+                        .put(employeeId, tasks.size());
+
             } catch (Exception e) {
-                logger.error("Fetch failed for employee {}: {}", mapping.getEmployeeId(), e.getMessage());
+                logger.error(
+                        "Fetch failed for employee {}: {}",
+                        employeeId,
+                        e.getMessage()
+                );
             }
         }
 
-        // ---- Phase 2: score everyone against the complete peer group ----
+        // Phase 2: Score employees against the complete peer group.
         List<WorkPerformanceSnapshot> results = new ArrayList<>();
-        for (EmployeeClickUpMapping mapping : mappings) {
-            String empId = mapping.getEmployeeId();
-            List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks = tasksByEmployee.get(empId);
-            if (tasks == null) continue;
 
-            Employee emp = employeesById.get(empId);
-            String dept = emp != null ? emp.getDepartment() : "Unassigned";
-            List<Integer> peerCounts = deptCountsByEmployee.getOrDefault(dept, Collections.emptyMap())
-                    .entrySet().stream()
-                    .filter(e -> !e.getKey().equals(empId))
-                    .map(Map.Entry::getValue)
-                    .collect(Collectors.toList());
+        for (EmployeeClickUpMapping mapping : mappings) {
+            String employeeId = mapping.getEmployeeId();
+
+            List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks =
+                    tasksByEmployee.get(employeeId);
+
+            if (tasks == null) {
+                continue;
+            }
+
+            Employee employee = employeesById.get(employeeId);
+
+            String department = employee != null
+                    ? employee.getDepartment()
+                    : "Unassigned";
+
+            List<Integer> peerCounts =
+                    deptCountsByEmployee
+                            .getOrDefault(
+                                    department,
+                                    Collections.emptyMap()
+                            )
+                            .entrySet()
+                            .stream()
+                            .filter(entry ->
+                                    !entry.getKey().equals(employeeId))
+                            .map(Map.Entry::getValue)
+                            .collect(Collectors.toList());
 
             try {
-                WorkPerformanceSnapshot snap = buildSnapshot(empId, reviewMonth, emp, tasks, peerCounts);
-                results.add(snapshotRepository.save(snap));
+                WorkPerformanceSnapshot snapshot =
+                        buildSnapshot(
+                                employeeId,
+                                reviewMonth,
+                                employee,
+                                tasks,
+                                peerCounts
+                        );
+
+                results.add(snapshotRepository.save(snapshot));
+
             } catch (Exception e) {
-                logger.error("Scoring failed for employee {}: {}", empId, e.getMessage());
+                logger.error(
+                        "Scoring failed for employee {}: {}",
+                        employeeId,
+                        e.getMessage()
+                );
             }
         }
+
         return results;
     }
 
-    /** Sync a single employee on demand. */
+    /**
+     * Synchronizes one employee on demand.
+     */
     @Transactional
-    public WorkPerformanceSnapshot syncOne(String employeeId, int year, int month) {
-        Optional<EmployeeClickUpMapping> mappingOpt = mappingRepository.findByEmployeeId(employeeId);
-        if (mappingOpt.isEmpty()) {
-            logger.warn("No ClickUp mapping for employee {} — skipping", employeeId);
+    public WorkPerformanceSnapshot syncOne(
+            String employeeId,
+            int year,
+            int month
+    ) {
+        Optional<EmployeeClickUpMapping> mappingOptional =
+                mappingRepository.findByEmployeeId(employeeId);
+
+        if (mappingOptional.isEmpty()) {
+            logger.warn(
+                    "No ClickUp mapping for employee {} — skipping",
+                    employeeId
+            );
             return null;
         }
 
-        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElse(null);
+        Employee employee =
+                employeeRepository.findByEmployeeId(employeeId)
+                        .orElse(null);
+
         LocalDate reviewMonth = LocalDate.of(year, month, 1);
         long[] window = monthWindow(year, month);
 
         List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks =
-                workPerformanceService.fetchTasks(mappingOpt.get().getClickupUserId(), window[0], window[1]);
+                workPerformanceService.fetchTasks(
+                        mappingOptional.get().getClickupUserId(),
+                        window[0],
+                        window[1]
+                );
 
-        String dept = employee != null ? employee.getDepartment() : "Unassigned";
-        List<Integer> peerCounts = buildDepartmentTaskCounts(dept, reviewMonth, employeeId);
+        String department = employee != null
+                ? employee.getDepartment()
+                : "Unassigned";
 
-        WorkPerformanceSnapshot snap = buildSnapshot(employeeId, reviewMonth, employee, tasks, peerCounts);
-        return snapshotRepository.save(snap);
+        List<Integer> peerCounts =
+                buildDepartmentTaskCounts(
+                        department,
+                        reviewMonth,
+                        employeeId
+                );
+
+        WorkPerformanceSnapshot snapshot =
+                buildSnapshot(
+                        employeeId,
+                        reviewMonth,
+                        employee,
+                        tasks,
+                        peerCounts
+                );
+
+        return snapshotRepository.save(snapshot);
     }
 
-    private WorkPerformanceSnapshot buildSnapshot(String employeeId, LocalDate reviewMonth, Employee employee,
-                                                  List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks,
-                                                  List<Integer> peerCounts) {
+    /**
+     * Builds and persists the ClickUp-derived performance snapshot.
+     */
+    private WorkPerformanceSnapshot buildSnapshot(
+            String employeeId,
+            LocalDate reviewMonth,
+            Employee employee,
+            List<com.mentis.hrms.workperformance.dto.ClickUpTaskDTO> tasks,
+            List<Integer> peerCounts
+    ) {
+        String department = employee != null
+                ? employee.getDepartment()
+                : "Unassigned";
 
-        String department = employee != null ? employee.getDepartment() : "Unassigned";
         String employeeName = employee != null
-                ? (nullSafe(employee.getFirstName()) + " " + nullSafe(employee.getLastName())).trim()
+                ? (nullSafe(employee.getFirstName()) + " "
+                + nullSafe(employee.getLastName())).trim()
                 : employeeId;
 
         WorkPerformanceService.WorkScoreResult workResult =
-                workPerformanceService.calculateFairWorkScore(tasks, peerCounts);
+                workPerformanceService.calculateFairWorkScore(
+                        tasks,
+                        peerCounts
+                );
 
-        // ATTENDANCE is system-derived — always recompute live.
-        Double attendanceScore = adminEmpPerformanceService.calculateAttendanceScore(
-                employeeId, reviewMonth.getYear(), reviewMonth.getMonthValue());
+        // Attendance is system-derived and recalculated for this month.
+        Double attendanceScore =
+                adminEmpPerformanceService.calculateAttendanceScore(
+                        employeeId,
+                        reviewMonth.getYear(),
+                        reviewMonth.getMonthValue()
+                );
 
-        // BEHAVIOR and INITIATIVE come from HR's saved record.
-        AdminEmpPerformance existing = adminEmpPerformanceRepository
-                .findByEmployeeIdAndReviewMonth(employeeId, reviewMonth)
-                .orElse(null);
+        // Behavior and initiative come from HR's saved performance record.
+        AdminEmpPerformance existing =
+                adminEmpPerformanceRepository
+                        .findByEmployeeIdAndReviewMonth(
+                                employeeId,
+                                reviewMonth
+                        )
+                        .orElse(null);
 
-        Double behaviorScore = existing != null ? existing.getBehaviorScore() : null;
-        Double initiativeScore = existing != null ? existing.getInitiativeScore() : null;
-        boolean missingHrReview = (behaviorScore == null || initiativeScore == null);
+        Double behaviorScore = existing != null
+                ? existing.getBehaviorScore()
+                : null;
+
+        Double initiativeScore = existing != null
+                ? existing.getInitiativeScore()
+                : null;
+
+        boolean missingHrReview =
+                behaviorScore == null || initiativeScore == null;
 
         double combined;
         String ratingLabel;
 
         if (missingHrReview) {
             double partialWeightSum = attendanceWeight + workWeight;
-            combined = Math.round(
-                    (((nz(attendanceScore) * attendanceWeight) + (workResult.finalWorkScore * workWeight))
-                            / partialWeightSum) * 10.0
-            ) / 10.0;
+
+            if (partialWeightSum > 0.0) {
+                combined = (
+                        (nz(attendanceScore) * attendanceWeight)
+                                + (workResult.finalWorkScore * workWeight)
+                ) / partialWeightSum;
+            } else {
+                combined = 0.0;
+            }
+
+            combined = Math.round(combined * 10.0) / 10.0;
             ratingLabel = "Pending HR Review";
+
         } else {
-            combined = (nz(attendanceScore) * attendanceWeight)
-                    + (nz(behaviorScore) * behaviorWeight)
-                    + (nz(initiativeScore) * initiativeWeight)
-                    + (workResult.finalWorkScore * workWeight);
+            combined =
+                    (nz(attendanceScore) * attendanceWeight)
+                            + (nz(behaviorScore) * behaviorWeight)
+                            + (nz(initiativeScore) * initiativeWeight)
+                            + (workResult.finalWorkScore * workWeight);
+
             combined = Math.round(combined * 10.0) / 10.0;
             ratingLabel = rate(combined);
         }
 
-        WorkPerformanceSnapshot snapshot = snapshotRepository
-                .findByEmployeeIdAndReviewMonth(employeeId, reviewMonth)
-                .orElse(new WorkPerformanceSnapshot());
+        WorkPerformanceSnapshot snapshot =
+                snapshotRepository
+                        .findByEmployeeIdAndReviewMonth(
+                                employeeId,
+                                reviewMonth
+                        )
+                        .orElse(new WorkPerformanceSnapshot());
 
         snapshot.setEmployeeId(employeeId);
         snapshot.setEmployeeName(employeeName);
         snapshot.setDepartment(department);
         snapshot.setReviewMonth(reviewMonth);
+
         snapshot.setTotalTasksAssigned(workResult.totalTasks);
         snapshot.setCompletedTasks(workResult.completedTasks);
         snapshot.setOnTimeCompleted(workResult.onTimeCompleted);
@@ -333,11 +482,15 @@ public class PerformanceSyncService {
         snapshot.setOnTimeRate(workResult.onTimeRate);
         snapshot.setPriorityScore(workResult.priorityScore);
         snapshot.setEfficiencyScore(workResult.efficiencyScore);
-        snapshot.setWorkloadNormalizedScore(workResult.workloadNormalizedScore);
+        snapshot.setWorkloadNormalizedScore(
+                workResult.workloadNormalizedScore
+        );
         snapshot.setWorkScore(workResult.finalWorkScore);
+
         snapshot.setAttendanceScoreSnapshot(attendanceScore);
         snapshot.setBehaviorScoreSnapshot(behaviorScore);
         snapshot.setInitiativeScoreSnapshot(initiativeScore);
+
         snapshot.setFinalCombinedScore(combined);
         snapshot.setFinalRating(ratingLabel);
         snapshot.setSyncedAt(LocalDateTime.now());
@@ -345,30 +498,65 @@ public class PerformanceSyncService {
         return snapshot;
     }
 
-    private List<Integer> buildDepartmentTaskCounts(String department, LocalDate reviewMonth, String excludeEmployeeId) {
-        return snapshotRepository.findByDepartmentAndReviewMonth(department, reviewMonth).stream()
-                .filter(s -> !s.getEmployeeId().equals(excludeEmployeeId))
+    /**
+     * Gets department task counts from existing snapshots, excluding
+     * the employee currently being synchronized.
+     */
+    private List<Integer> buildDepartmentTaskCounts(
+            String department,
+            LocalDate reviewMonth,
+            String excludeEmployeeId
+    ) {
+        return snapshotRepository
+                .findByDepartmentAndReviewMonth(
+                        department,
+                        reviewMonth
+                )
+                .stream()
+                .filter(snapshot ->
+                        !snapshot.getEmployeeId().equals(excludeEmployeeId))
                 .map(WorkPerformanceSnapshot::getTotalTasksAssigned)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     private String rate(double score) {
-        if (score >= RATING_OUTSTANDING) return "Outstanding";
-        if (score >= RATING_EXCEEDS) return "Exceeds Expectations";
-        if (score >= RATING_MEETS) return "Meets Expectations";
+        if (score >= RATING_OUTSTANDING) {
+            return "Outstanding";
+        }
+        if (score >= RATING_EXCEEDS) {
+            return "Exceeds Expectations";
+        }
+        if (score >= RATING_MEETS) {
+            return "Meets Expectations";
+        }
         return "Needs Improvement (PIP)";
     }
 
-    private double nz(Double v) { return v == null ? 0.0 : v; }
-    private String nullSafe(String s) { return s == null ? "" : s; }
+    private double nz(Double value) {
+        return value == null ? 0.0 : value;
+    }
 
-    /** Returns {startEpochMs, endEpochMs} for the given month. */
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
+    }
+
+    /**
+     * Returns the start and end epoch milliseconds for the specified month.
+     */
     private long[] monthWindow(int year, int month) {
         LocalDate start = LocalDate.of(year, month, 1);
         LocalDate end = YearMonth.of(year, month).atEndOfMonth();
-        long startMs = start.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        long endMs = end.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+        long startMs = start.atStartOfDay(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+
+        long endMs = end.atTime(23, 59, 59)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli();
+
         return new long[]{startMs, endMs};
     }
 }

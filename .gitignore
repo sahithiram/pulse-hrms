@@ -63,7 +63,7 @@ tokens/
 
 # Excluded project folders
 **/PM/
-**/pm/
+# Ignore PM directories only when they are not application source packages
 **/Workspace/
 **/workspace/
 
