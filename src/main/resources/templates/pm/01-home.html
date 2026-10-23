@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>PM · Home</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700}
+    .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:'Inter',sans-serif;font-size:var(--fs);line-height:1.45;background:var(--bg);color:var(--tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
+    a{color:var(--pri);text-decoration:none}
+    button{font-family:inherit}
+    .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
+    .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
+    .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
+    .pm-brand{display:flex;align-items:center;gap:8px;padding:10px 12px;height:var(--hh);border-bottom:1px solid var(--bd);flex-shrink:0}
+    .pm-brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--pri),var(--pur));display:grid;place-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+    .pm-brand-name{font-weight:600;font-size:var(--fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+    .pm-shell.collapsed .pm-brand-name,.pm-shell.collapsed .pm-nav-section,.pm-shell.collapsed .pm-nav-label,.pm-shell.collapsed .pm-nav-badge{display:none}
+    .pm-sidebar-scroll{flex:1;overflow-y:auto;padding:6px 6px 20px}
+    .pm-nav-section{padding:12px 10px 4px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px}
+    .pm-nav-section i{font-size:9px;color:var(--pri)}
+    .pm-nav-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);color:var(--tx2);text-decoration:none;font-size:var(--fs);font-weight:500;transition:background var(--t-fast),color var(--t-fast);cursor:pointer;white-space:nowrap;margin:1px 0}
+    .pm-nav-link:hover{background:var(--card2);color:var(--tx)}
+    .pm-nav-link.active{background:var(--pri-soft);color:var(--pri)}
+    .pm-nav-link i{width:16px;text-align:center;font-size:12.5px;flex-shrink:0}
+    .pm-nav-label{flex:1;overflow:hidden;text-overflow:ellipsis}
+    .pm-nav-badge{background:var(--pri);color:#fff;font-size:var(--fs-xs);font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+    .pm-nav-badge.warn{background:var(--wrn)}
+    .pm-main{min-width:0;display:flex;flex-direction:column}
+    .pm-header{position:sticky;top:0;z-index:var(--z-h);height:var(--hh);background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0}
+    .pm-iconbtn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx2);display:grid;place-content:center;cursor:pointer;font-size:12px;transition:var(--t-fast);position:relative;flex-shrink:0}
+    .pm-iconbtn:hover{color:var(--tx);border-color:var(--pri)}
+    .pm-iconbtn .dot{position:absolute;top:-3px;right:-3px;background:var(--dng);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:15px;text-align:center;line-height:1.2}
+    .pm-search{position:relative;flex:1;max-width:380px}
+    .pm-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--tx3)}
+    .pm-search input{width:100%;height:30px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 10px 0 30px;font-size:var(--fs);font-family:inherit;outline:none}
+    .pm-search input:focus{border-color:var(--pri)}
+    .pm-search kbd{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--card2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:var(--fs-xs);color:var(--tx3)}
+    .pm-header-right{display:flex;align-items:center;gap:6px;margin-left:auto}
+    .pm-live{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--tx3);font-weight:600;padding:0 6px}
+    .pm-live .dot{width:6px;height:6px;border-radius:50%;background:var(--suc);position:relative}
+    .pm-live .dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid var(--suc);animation:pm-pulse 1.8s ease-out infinite}
+    @keyframes pm-pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.8);opacity:0}}
+    .pm-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-weight:700;font-size:11px;display:grid;place-content:center;cursor:pointer;flex-shrink:0}
+    .pm-content{padding:12px 14px;flex:1;min-width:0}
+    .pm-breadcrumb{font-size:var(--fs-sm);color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+    .pm-breadcrumb a{color:var(--tx3)}
+    .pm-breadcrumb a:hover{color:var(--pri)}
+    .pm-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
+    .pm-page-title i{color:var(--pri);font-size:15px}
+    .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
+    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
+    .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
+    .pm-btn i{font-size:11px}
+    .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
+    .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
+    .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
+    .pm-input,.pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
+    .pm-input:focus,.pm-select:focus{border-color:var(--pri)}
+    .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
+    .pm-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+    .pm-card-title{font-size:var(--fs-md);font-weight:600;display:flex;align-items:center;gap:6px}
+    .pm-card-title i{color:var(--pri);font-size:12px}
+    .pm-card-link{font-size:var(--fs-xs);color:var(--pri);cursor:pointer;font-weight:500}
+    .pm-card-link:hover{text-decoration:underline}
+    .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
+    .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
+    .pm-badge.success{background:var(--suc-soft);color:var(--suc)}
+    .pm-badge.danger{background:var(--dng-soft);color:var(--dng)}
+    .pm-badge.warning{background:var(--wrn-soft);color:var(--wrn)}
+    .pm-badge.info{background:var(--inf-soft);color:var(--inf)}
+    .pm-badge.purple{background:var(--pur-soft);color:var(--pur)}
+    .pm-progress{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;width:100%}
+    .pm-progress-bar{height:100%;background:var(--pri);border-radius:10px;transition:width 300ms ease}
+    .pm-progress-bar.success{background:var(--suc)}
+    .pm-progress-bar.warning{background:var(--wrn)}
+    .pm-progress-bar.danger{background:var(--dng)}
+    .pm-table{width:100%;border-collapse:collapse;font-size:var(--fs)}
+    .pm-table thead th{text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+    .pm-table tbody td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
+    .pm-table tbody tr:hover{background:var(--card2)}
+    .pm-table tbody tr:last-child td{border-bottom:none}
+    .pm-toasts{position:fixed;top:12px;right:12px;z-index:var(--z-ts);display:flex;flex-direction:column;gap:6px;max-width:340px;pointer-events:none}
+    .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:var(--rl);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);transform:translateX(120%);transition:transform 280ms cubic-bezier(.4,0,.2,1);pointer-events:auto;cursor:pointer}
+    .pm-toast.show{transform:translateX(0)}
+    .pm-toast.success{border-left-color:var(--suc)}
+    .pm-toast.error{border-left-color:var(--dng)}
+    .pm-toast.warning{border-left-color:var(--wrn)}
+    .pm-toast-icon{width:22px;height:22px;border-radius:50%;display:grid;place-content:center;color:#fff;font-size:10px;flex-shrink:0}
+    .pm-toast.success .pm-toast-icon{background:var(--suc)}
+    .pm-toast.error .pm-toast-icon{background:var(--dng)}
+    .pm-toast.warning .pm-toast-icon{background:var(--wrn)}
+    .pm-toast.info .pm-toast-icon{background:var(--inf)}
+    .pm-toast-msg{flex:1;font-size:var(--fs);font-weight:500}
+    .pm-cmd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:var(--z-cmd);display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
+    .pm-cmd-backdrop.open{display:flex}
+    .pm-cmd{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:560px;box-shadow:var(--sh-lg);overflow:hidden}
+    .pm-cmd-input{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd)}
+    .pm-cmd-input i{color:var(--tx3)}
+    .pm-cmd-input input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:var(--fs-md);font-family:inherit}
+    .pm-cmd-input kbd{background:var(--bg);border:1px solid var(--bd);border-radius:4px;padding:1px 6px;font-size:var(--fs-xs);color:var(--tx3)}
+    .pm-cmd-list{max-height:340px;overflow-y:auto;padding:4px}
+    .pm-cmd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:var(--fs-md)}
+    .pm-cmd-item:hover,.pm-cmd-item.active{background:var(--pri-soft)}
+    .pm-cmd-item i{color:var(--pri);width:16px;text-align:center}
+    .pm-cmd-foot{padding:6px 12px;border-top:1px solid var(--bd);font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:14px;background:var(--bg)}
+    .pm-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:12px;overflow-x:auto;padding:0 2px}
+    .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:var(--fs-md);font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--t-fast);position:relative;margin-bottom:-1px}
+    .pm-tabs button:hover{color:var(--tx)}
+    .pm-tabs button.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
+    .pm-pane{display:none}
+    .pm-pane.active{display:block;animation:pmFade .18s ease}
+    @keyframes pmFade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+    .pm-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+    .pm-kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;transition:var(--t-fast);cursor:pointer;position:relative;overflow:hidden}
+    .pm-kpi:hover{border-color:var(--pri);transform:translateY(-1px);box-shadow:var(--sh)}
+    .pm-kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .pm-kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px}
+    .pm-kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}
+    .pm-kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
+    .pm-kpi-icon.red{background:var(--dng-soft);color:var(--dng)}
+    .pm-kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
+    .pm-kpi-icon.cyan{background:var(--inf-soft);color:var(--inf)}
+    .pm-kpi-icon.purple{background:var(--pur-soft);color:var(--pur)}
+    .pm-kpi-value{font-size:var(--fs-2xl);font-weight:700;line-height:1}
+    .pm-kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
+    .pm-kpi-trend{font-size:var(--fs-xs);font-weight:600;display:inline-flex;align-items:center;gap:2px;padding:1px 5px;border-radius:10px}
+    .pm-kpi-trend.up{color:var(--suc);background:var(--suc-soft)}
+    .pm-kpi-trend.down{color:var(--dng);background:var(--dng-soft)}
+    .pm-widgets{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px}
+    .pm-widget{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;transition:var(--t-fast);display:flex;flex-direction:column;min-height:0}
+    .pm-widget:hover{border-color:var(--pri)}
+    .pm-widget-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-shrink:0}
+    .pm-widget-title{font-size:var(--fs-md);font-weight:600;display:flex;align-items:center;gap:6px}
+    .pm-widget-title i{color:var(--pri);font-size:12px}
+    .pm-widget-body{flex:1;min-height:0;display:flex;flex-direction:column}
+    .pm-chart-box{height:200px;position:relative}
+    .pm-chart-box.tall{height:240px;position:relative}
+    .pm-timeline{position:relative;padding-left:16px;flex:1;overflow-y:auto}
+    .pm-timeline::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:1.5px;background:var(--bd)}
+    .pm-tl-item{position:relative;padding-bottom:10px;cursor:pointer}
+    .pm-tl-item:last-child{padding-bottom:0}
+    .pm-tl-item::before{content:'';position:absolute;left:-16px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--pri);border:2px solid var(--card);transition:var(--t-fast)}
+    .pm-tl-item:hover::before{transform:scale(1.3)}
+    .pm-tl-item.success::before{background:var(--suc)}
+    .pm-tl-item.warning::before{background:var(--wrn)}
+    .pm-tl-item.danger::before{background:var(--dng)}
+    .pm-tl-title{font-size:var(--fs);font-weight:500;line-height:1.4}
+    .pm-tl-meta{font-size:var(--fs-xs);color:var(--tx3);margin-top:2px}
+    .pm-quick-actions{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+    .pm-qa-btn{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:6px 12px;font-size:var(--fs-sm);font-weight:500;color:var(--tx2);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:var(--t-fast);white-space:nowrap}
+    .pm-qa-btn:hover{border-color:var(--pri);color:var(--pri);background:var(--pri-soft)}
+    .pm-qa-btn i{font-size:10px}
+    .pm-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+    .pm-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:14px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:var(--t-fast);user-select:none}
+    .pm-chip:hover{border-color:var(--pri);color:var(--tx)}
+    .pm-chip.active{background:var(--pri);border-color:var(--pri);color:#fff}
+    .rm-timeline{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden}
+    .rm-head{display:flex;align-items:center;border-bottom:1px solid var(--bd);background:var(--bg2);padding:0}
+    .rm-head-label{width:200px;flex-shrink:0;padding:8px 10px;font-size:var(--fs-xs);font-weight:700;color:var(--tx3);text-transform:uppercase;border-right:1px solid var(--bd)}
+    .rm-head-track{flex:1;display:flex;height:32px}
+    .rm-head-cell{flex:1;text-align:center;font-size:var(--fs-xs);font-weight:600;color:var(--tx3);border-right:1px solid var(--bd);line-height:32px}
+    .rm-head-cell:last-child{border-right:none}
+    .rm-row{display:flex;align-items:stretch;border-bottom:1px solid rgba(42,57,80,.5);cursor:pointer;transition:var(--t-fast)}
+    .rm-row:hover{background:var(--card2)}
+    .rm-row:last-child{border-bottom:none}
+    .rm-label{width:200px;flex-shrink:0;padding:8px 10px;border-right:1px solid var(--bd);display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:500;overflow:hidden}
+    .rm-label .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .rm-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .rm-track{flex:1;position:relative;height:40px;background:repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),rgba(42,57,80,.3) 25%,rgba(42,57,80,.3) 25.05%)}
+    .rm-bar{position:absolute;top:9px;height:22px;border-radius:6px;display:flex;align-items:center;padding:0 8px;font-size:var(--fs-xs);font-weight:600;color:#fff;cursor:pointer;transition:var(--t-fast);overflow:hidden;white-space:nowrap;min-width:40px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+    .rm-bar:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:2}
+    .rm-bar.primary{background:linear-gradient(135deg,#6366f1,#4f46e5)}
+    .rm-bar.success{background:linear-gradient(135deg,#10b981,#059669)}
+    .rm-bar.warning{background:linear-gradient(135deg,#f59e0b,#d97706)}
+    .rm-bar.danger{background:linear-gradient(135deg,#ef4444,#dc2626)}
+    .rm-bar.purple{background:linear-gradient(135deg,#a855f7,#7e22ce)}
+    .rm-bar.info{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
+    .rm-today{position:absolute;top:0;bottom:0;width:2px;background:var(--dng);z-index:3;pointer-events:none}
+    .rm-today::before{content:'Today';position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--dng);font-weight:700;white-space:nowrap}
+    .widget-scroll{max-height:280px;overflow-y:auto;padding-right:2px}
+    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
+    @media(max-width:1100px){.pm-widgets{grid-template-columns:1fr}}
+    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.pm-widgets{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<button class="mob-toggle" id="mobToggle"><i class="fas fa-bars"></i></button>
+
+<div class="pm-shell" id="pmShell">
+
+  <aside class="pm-sidebar" id="pmSidebar">
+    <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
+    <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
+  </aside>
+
+  <div class="pm-main">
+    <header class="pm-header">
+      <button class="pm-iconbtn" onclick="PM.toggleSidebar()" title="Toggle sidebar ["><i class="fas fa-bars"></i></button>
+      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search or jump to..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
+      <div class="pm-header-right">
+        <div class="pm-live"><span class="dot"></span> Live · <span id="pmLiveAgo">just now</span></div>
+        <button class="pm-iconbtn" onclick="PM.openCmd()"><i class="fas fa-terminal"></i></button>
+        <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
+        <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notif-bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;padding:0 4px;place-content:center;line-height:1;"></span>
+        </button>
+        <div class="pm-avatar" id="pmUserAvatar" title="Loading...">?</div>
+      </div>
+    </header>
+
+    <div class="pm-content">
+      <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / <span id="pmCrumb">Dashboard</span></div>
+
+      <div class="pm-page-head">
+        <div>
+          <div class="pm-page-title"><i class="fas fa-gauge-high" id="pmPageIcon"></i> <span id="pmPageTitle">Dashboard</span></div>
+          <div class="pm-page-sub" id="pmPageSub">Loading…</div>
+        </div>
+        <div class="pm-page-actions">
+          <button class="pm-btn" onclick="reloadDashboard()"><i class="fas fa-rotate"></i> Refresh</button>
+          <button class="pm-btn pm-btn-primary" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
+        </div>
+      </div>
+
+      <div class="pm-quick-actions">
+        <button class="pm-qa-btn" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
+        <button class="pm-qa-btn" onclick="location.href='/pm/06-tasks?view=board'"><i class="fas fa-list-check"></i> New Task</button>
+        <button class="pm-qa-btn" onclick="location.href='/pm/07-team?tab=members'"><i class="fas fa-user-plus"></i> Add Member</button>
+        <button class="pm-qa-btn" onclick="location.href='/pm/08-clients'"><i class="fas fa-user-tie"></i> New Client</button>
+        <button class="pm-qa-btn" onclick="location.href='/pm/10-insights?tab=builder'"><i class="fas fa-paint-brush"></i> Report Builder</button>
+        <button class="pm-qa-btn" onclick="location.href='/pm/05-planning?tab=whiteboard'"><i class="fas fa-chalkboard"></i> Whiteboard</button>
+      </div>
+
+      <div class="pm-tabs" id="pmTabs">
+        <button class="active" data-tab="dashboard" onclick="switchHome('dashboard',this)">Dashboard</button>
+        <button data-tab="portfolio" onclick="switchHome('portfolio',this)">Portfolio</button>
+        <button data-tab="roadmap" onclick="switchHome('roadmap',this)">Roadmap</button>
+      </div>
+
+      <div class="pm-pane active" id="pane-dashboard">
+        <div class="pm-kpi-grid">
+          <div class="pm-kpi" onclick="location.href='/pm/04-projects'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-diagram-project"></i></div></div>
+            <div class="pm-kpi-value" id="kpiActive">—</div>
+            <div class="pm-kpi-label">Active Projects</div>
+          </div>
+          <div class="pm-kpi" onclick="location.href='/pm/04-projects'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-check-circle"></i></div></div>
+            <div class="pm-kpi-value" id="kpiCompleted">—</div>
+            <div class="pm-kpi-label">Completed Projects</div>
+          </div>
+          <div class="pm-kpi" onclick="location.href='/pm/04-projects?filter=at-risk'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div></div>
+            <div class="pm-kpi-value" id="kpiAtRisk">—</div>
+            <div class="pm-kpi-label">At Risk</div>
+          </div>
+          <div class="pm-kpi" onclick="location.href='/pm/06-tasks'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-list-ul"></i></div></div>
+            <div class="pm-kpi-value" id="kpiOpenTasks">—</div>
+            <div class="pm-kpi-label">Open Tasks</div>
+          </div>
+          <div class="pm-kpi" onclick="location.href='/pm/06-tasks'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon cyan"><i class="fas fa-square-check"></i></div></div>
+            <div class="pm-kpi-value" id="kpiDoneTasks">—</div>
+            <div class="pm-kpi-label">Completed Tasks</div>
+          </div>
+          <div class="pm-kpi" onclick="location.href='/pm/04-projects'">
+            <div class="pm-kpi-top"><div class="pm-kpi-icon purple"><i class="fas fa-folder-open"></i></div></div>
+            <div class="pm-kpi-value" id="kpiTotalProjects">—</div>
+            <div class="pm-kpi-label">Total Projects</div>
+          </div>
+        </div>
+        <div class="pm-widgets">
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-fire"></i> Overdue Tasks</div>
+              <span class="pm-card-link" onclick="location.href='/pm/06-tasks'">View all →</span>
+            </div>
+            <div class="pm-widget-body"><div class="widget-scroll" id="overdueList">Loading…</div></div>
+          </div>
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-stamp"></i> Waiting for my approval</div>
+              <span class="pm-card-link" onclick="location.href='/pm/02-inbox'">Open inbox →</span>
+            </div>
+            <div class="pm-widget-body"><div class="widget-scroll" id="approvalList">Loading…</div></div>
+          </div>
+        </div>
+        <div class="pm-widgets">
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-chart-line"></i> Project Progress</div>
+              <span class="pm-card-link" onclick="location.href='/pm/04-projects'">View all →</span>
+            </div>
+            <div class="pm-widget-body">
+              <div class="pm-chart-box"><canvas id="chartProgress"></canvas></div>
+            </div>
+          </div>
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-chart-pie"></i> Task Distribution</div>
+              <span class="pm-card-link" onclick="location.href='/pm/06-tasks'">View all →</span>
+            </div>
+            <div class="pm-widget-body">
+              <div class="pm-chart-box"><canvas id="chartTasks"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pm-widgets">
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-clock-rotate-left"></i> Recent Activity</div>
+              <span class="pm-card-link" onclick="location.href='/pm/02-inbox?tab=activity'">View all →</span>
+            </div>
+            <div class="pm-widget-body">
+              <div class="pm-timeline widget-scroll" id="recentActivityList">
+                <div style="text-align:center;padding:14px;color:var(--tx3);font-size:var(--fs-sm)">Loading…</div>
+              </div>
+            </div>
+          </div>
+          <div class="pm-widget">
+            <div class="pm-widget-head">
+              <div class="pm-widget-title"><i class="fas fa-folder-open"></i> Recent Projects</div>
+              <span class="pm-card-link" onclick="location.href='/pm/04-projects'">View all →</span>
+            </div>
+            <div class="pm-widget-body">
+              <div class="widget-scroll">
+                <table class="pm-table">
+                  <thead><tr><th>Project</th><th>Progress</th><th>Status</th></tr></thead>
+                  <tbody id="recentProjectsBody">
+                  <tr><td colspan="3" style="text-align:center;padding:14px;color:var(--tx3)">Loading…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pm-pane" id="pane-portfolio">
+        <div class="pm-kpi-grid">
+          <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-folder"></i></div></div><div class="pm-kpi-value" id="kpiActivePortfolio">—</div><div class="pm-kpi-label">Active Projects</div></div>
+          <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div></div><div class="pm-kpi-value" id="kpiAtRiskPortfolio">—</div><div class="pm-kpi-label">At Risk</div></div>
+          <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-check-circle"></i></div></div><div class="pm-kpi-value" id="kpiCompletedPortfolio">—</div><div class="pm-kpi-label">Completed</div></div>
+          <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon purple"><i class="fas fa-folder-open"></i></div></div><div class="pm-kpi-value" id="kpiTotalPortfolio">—</div><div class="pm-kpi-label">Total</div></div>
+        </div>
+        <div class="pm-widgets">
+          <div class="pm-widget">
+            <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-chart-bar"></i> Project Progress</div></div>
+            <div class="pm-widget-body"><div class="pm-chart-box tall"><canvas id="chartPortfolioProgress"></canvas></div></div>
+          </div>
+          <div class="pm-widget">
+            <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-chart-pie"></i> Task Distribution</div></div>
+            <div class="pm-widget-body"><div class="pm-chart-box tall"><canvas id="chartPortfolioStatus"></canvas></div></div>
+          </div>
+        </div>
+        <div class="pm-card">
+          <div class="pm-card-head"><div class="pm-card-title"><i class="fas fa-list"></i> Project Overview</div><span class="pm-card-link" onclick="location.href='/pm/04-projects'">View all →</span></div>
+          <div style="overflow-x:auto">
+            <table class="pm-table">
+              <thead><tr><th>Project</th><th>Progress</th><th>Status</th><th>Client</th><th>Due</th></tr></thead>
+              <tbody id="portfolioTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:14px;color:var(--tx3)">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="pm-pane" id="pane-roadmap">
+        <div class="rm-timeline">
+          <div class="rm-head">
+            <div class="rm-head-label">Initiative</div>
+            <div class="rm-head-track">
+              <div class="rm-head-cell" id="rmQ0"></div>
+              <div class="rm-head-cell" id="rmQ1"></div>
+              <div class="rm-head-cell" id="rmQ2"></div>
+            </div>
+          </div>
+          <div id="roadmapBody">
+            <div style="text-align:center;padding:20px;color:var(--tx3)">Loading…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+<script src="/pm/pm-core.js"></script>
+<script>
+  PM.bootstrap().then(function(me){
+
+    // Personalize page-sub
+    const sub = document.getElementById('pmPageSub');
+    if (sub) sub.textContent = "Welcome back, " + me.name + " — here's what's happening today.";
+
+    /* FIXED: was corrupted on `roadmap` line (syntax error) */
+    const homeMeta={
+      dashboard:{title:'Dashboard',icon:'fa-gauge-high',sub:"Welcome back, " + me.name + " — here's what's happening today."},
+      portfolio:{title:'Portfolio',icon:'fa-chart-simple',sub:'Cross-project rollup · Live health & progress'},
+      roadmap:{title:'Roadmap',icon:'fa-route',sub:'Project timelines · previous, current and next quarter'}
+    };
+
+    function switchHome(tab,el){
+      document.querySelectorAll('#pmTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+      document.querySelectorAll('.pm-pane').forEach(p=>p.classList.remove('active'));
+      var pane=document.getElementById('pane-'+tab); if(pane) pane.classList.add('active');
+      document.querySelectorAll('.pm-nav-link').forEach(n=>n.classList.remove('active'));
+      var nav=document.querySelector('.pm-nav-link[data-tab="'+tab+'"]'); if(nav) nav.classList.add('active');
+      var m=homeMeta[tab]; if(m){
+        document.getElementById('pmPageTitle').textContent=m.title;
+        document.getElementById('pmPageIcon').className='fas '+m.icon;
+        document.getElementById('pmPageSub').textContent=m.sub;
+        document.getElementById('pmCrumb').textContent=m.title;
+      }
+      if(tab==='portfolio') setTimeout(initPortfolioCharts,100);
+    }
+    window.switchHome = switchHome;
+
+    Chart.defaults.color='#94a3b8';Chart.defaults.font.family='Inter';Chart.defaults.font.size=10.5;
+
+    function loadDashboardKPIs(){
+      PM.api('GET','/api/pm/dashboard/kpis').then(function(k){
+        var map={
+          kpiActive:k.activeProjects, kpiCompleted:k.completedProjects, kpiAtRisk:k.atRiskProjects,
+          kpiOpenTasks:k.openTasks, kpiDoneTasks:k.completedTasks, kpiTotalProjects:k.totalProjects,
+          kpiActivePortfolio:k.activeProjects, kpiAtRiskPortfolio:k.atRiskProjects,
+          kpiCompletedPortfolio:k.completedProjects, kpiTotalPortfolio:k.totalProjects
+        };
+        Object.keys(map).forEach(function(id){
+          var el=document.getElementById(id);
+          if(el) el.textContent=map[id];
+        });
+      }).catch(function(e){ console.error('KPI load failed',e); });
+    }
+
+    function loadProjectProgressChart(){
+      PM.api('GET','/api/pm/dashboard/charts/project-progress').then(function(d){
+        var el=document.getElementById('chartProgress'); if(!el) return;
+        new Chart(el,{
+          type:'bar',
+          data:{labels:d.labels.length?d.labels:['No data'],
+            datasets:[{label:'Completion %',data:d.data.length?d.data:[0],
+              backgroundColor:['#6366f1','#ef4444','#10b981','#f59e0b','#a855f7'],borderRadius:4,maxBarThickness:32}]},
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+            scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(42,57,80,.4)'},ticks:{color:'#94a3b8'}},
+                    x:{grid:{display:false},ticks:{color:'#94a3b8'}}}}
+        });
+      }).catch(function(e){ console.error('Project progress chart failed',e); });
+    }
+
+    function loadTaskDistributionChart(){
+      PM.api('GET','/api/pm/dashboard/charts/task-distribution').then(function(d){
+        var el=document.getElementById('chartTasks'); if(!el) return;
+        new Chart(el,{
+          type:'doughnut',
+          data:{labels:d.labels.length?d.labels:['No data'],
+            datasets:[{data:d.data.length?d.data:[1],
+              backgroundColor:['#10b981','#6366f1','#ef4444','#f59e0b','#a855f7'],borderWidth:0}]},
+          options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+            plugins:{legend:{position:'bottom',labels:{boxWidth:8,padding:10,font:{size:10.5},color:'#94a3b8'}}}}
+        });
+      }).catch(function(e){ console.error('Task distribution chart failed',e); });
+    }
+
+    function loadRecentProjects(){
+      var tbody=document.getElementById('recentProjectsBody'); if(!tbody) return;
+      tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:14px;color:var(--tx3)">Loading…</td></tr>';
+      PM.api('GET','/api/pm/dashboard/recent-projects?limit=5').then(function(items){
+        items=items||[];
+        if(!items.length){ tbody.innerHTML='<tr><td colspan="3" style="text-align:center;padding:14px;color:var(--tx3)">No projects yet.</td></tr>'; return; }
+        tbody.innerHTML=items.map(function(p){
+          var statusCls=(p.status==='ACTIVE'||p.status==='ON_TRACK')?'success':p.status==='AT_RISK'?'warning':p.status==='DELAYED'?'danger':p.status==='COMPLETED'?'info':'primary';
+          var statusLabel=(p.status||'PLANNING').replace(/_/g,' ');
+          var prog=p.progressPct||0;
+          return '<tr onclick="location.href=\'/pm/04-projects\'" style="cursor:pointer">'+
+            '<td style="font-weight:600">'+PM.esc(p.name)+'</td>'+
+            '<td><div style="display:flex;align-items:center;gap:6px">'+
+              '<div class="pm-progress" style="width:60px"><div class="pm-progress-bar '+(prog>=80?'success':prog>=50?'':'danger')+'" style="width:'+prog+'%"></div></div>'+
+              '<span style="font-size:var(--fs-xs);font-weight:600">'+prog+'%</span></div></td>'+
+            '<td><span class="pm-badge '+statusCls+'">'+statusLabel+'</span></td>'+
+          '</tr>';
+        }).join('');
+      }).catch(function(e){ console.error('Recent projects failed',e); });
+    }
+
+    function loadRecentActivity(){
+      var timeline=document.getElementById('recentActivityList'); if(!timeline) return;
+      timeline.innerHTML='<div style="text-align:center;padding:14px;color:var(--tx3);font-size:var(--fs-sm)">Loading…</div>';
+      PM.api('GET','/api/pm/dashboard/recent-activity?limit=10').then(function(items){
+        items=items||[];
+        if(!items.length){ timeline.innerHTML='<div style="text-align:center;padding:14px;color:var(--tx3);font-size:var(--fs-sm)">No activity yet.</div>'; return; }
+        timeline.innerHTML=items.map(function(a){
+          var cls=a.action&&a.action.includes('DELETE')?'danger':a.action&&a.action.includes('CREATED')?'success':a.action&&(a.action.includes('STATUS')||a.action.includes('WATCHER'))?'warning':'';
+          return '<div class="pm-tl-item '+cls+'">'+
+            '<div class="pm-tl-title">'+PM.esc(a.message||a.action||'Activity')+'</div>'+
+            '<div class="pm-tl-meta">'+(a.createdAt?PM.fmtDateTime(a.createdAt):'')+' · '+PM.esc(a.actorName||'System')+'</div>'+
+          '</div>';
+        }).join('');
+      }).catch(function(e){ console.error('Recent activity failed',e); });
+    }
+
+    var chartPortfolioProgress=null, chartPortfolioTasks=null;
+    function initPortfolioCharts(){
+      if(!chartPortfolioProgress){
+        PM.api('GET','/api/pm/dashboard/charts/project-progress').then(function(d){
+          var el=document.getElementById('chartPortfolioProgress'); if(!el) return;
+          chartPortfolioProgress=new Chart(el,{type:'bar',
+            data:{labels:d.labels.length?d.labels:['No data'],
+              datasets:[{label:'Progress %',data:d.data.length?d.data:[0],
+                backgroundColor:['#6366f1','#ef4444','#10b981','#f59e0b','#a855f7'],borderRadius:4}]},
+            options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+              scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(42,57,80,.4)'}},x:{grid:{display:false}}}}});
+        }).catch(function(){});
+      }
+      if(!chartPortfolioTasks){
+        PM.api('GET','/api/pm/dashboard/charts/task-distribution').then(function(d){
+          var el=document.getElementById('chartPortfolioStatus'); if(!el) return;
+          chartPortfolioTasks=new Chart(el,{type:'doughnut',
+            data:{labels:d.labels.length?d.labels:['No data'],
+              datasets:[{data:d.data.length?d.data:[1],
+                backgroundColor:['#10b981','#6366f1','#ef4444','#f59e0b','#a855f7'],borderWidth:0}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'68%',
+              plugins:{legend:{position:'bottom',labels:{boxWidth:8,padding:10,font:{size:10.5}}}}}});
+        }).catch(function(){});
+      }
+      loadPortfolioTable();
+    }
+
+    function loadPortfolioTable(){
+      var tbody=document.getElementById('portfolioTableBody'); if(!tbody) return;
+      tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--tx3)">Loading…</td></tr>';
+      PM.api('GET','/api/pm/dashboard/recent-projects?limit=10').then(function(items){
+        items=items||[];
+        if(!items.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--tx3)">No projects yet</td></tr>'; return; }
+        tbody.innerHTML=items.map(function(p){
+          var statusCls=(p.status==='ACTIVE'||p.status==='ON_TRACK')?'success':p.status==='AT_RISK'?'warning':p.status==='DELAYED'?'danger':p.status==='COMPLETED'?'info':'primary';
+          var statusLabel=(p.status||'PLANNING').replace(/_/g,' ');
+          var prog=p.progressPct||0;
+          return '<tr onclick="location.href=\'/pm/04-projects\'" style="cursor:pointer">'+
+            '<td style="font-weight:600">'+PM.esc(p.name)+'</td>'+
+            '<td><div style="display:flex;align-items:center;gap:6px;min-width:100px">'+
+              '<div class="pm-progress" style="flex:1"><div class="pm-progress-bar" style="width:'+prog+'%"></div></div>'+
+              '<span style="font-size:var(--fs-xs);font-weight:600">'+prog+'%</span></div></td>'+
+            '<td><span class="pm-badge '+statusCls+'">'+statusLabel+'</span></td>'+
+           '<td>'+PM.esc(p.clientName||'—')+'</td><td>'+(p.endDate||'—')+'</td>'+
+          '</tr>';
+        }).join('');
+      }).catch(function(e){ console.error('Portfolio table failed',e); });
+    }
+
+    function loadRoadmap(){
+      var body=document.getElementById('roadmapBody'); if(!body) return;
+      var now=new Date(), q=Math.floor(now.getMonth()/3);
+      var winStart=new Date(now.getFullYear(),(q-1)*3,1);
+      var winEnd  =new Date(now.getFullYear(),(q+2)*3,1);
+      var span=winEnd-winStart;
+      for(var i=0;i<3;i++){
+        var d=new Date(now.getFullYear(),(q-1+i)*3,1);
+        var c=document.getElementById('rmQ'+i);
+        if(c) c.textContent='Q'+(Math.floor(d.getMonth()/3)+1)+' '+d.getFullYear();
+      }
+      var todayPct=Math.min(100,Math.max(0,(now-winStart)/span*100));
+      PM.api('GET','/api/pm/dashboard/recent-projects?limit=10').then(function(items){
+        items=items||[];
+        if(!items.length){ body.innerHTML='<div style="text-align:center;padding:20px;color:var(--tx3)">No projects yet</div>'; return; }
+        body.innerHTML=items.map(function(p){
+          var status=(p.status||'PLANNING').toUpperCase();
+          var cls=status==='COMPLETED'?'success':status==='AT_RISK'?'warning':status==='DELAYED'?'danger':status==='PLANNING'?'purple':'primary';
+          var dot=cls==='success'?'var(--suc)':cls==='warning'?'var(--wrn)':cls==='danger'?'var(--dng)':cls==='purple'?'var(--pur)':'var(--pri)';
+          var bar;
+          if(p.startDate && p.endDate){
+            var s=new Date(p.startDate), e=new Date(p.endDate);
+            var l=Math.max(0,(s-winStart)/span*100), r=Math.min(100,(e-winStart)/span*100);
+            bar = (r<=0||l>=100)
+              ? '<div class="rm-bar purple" style="left:2%;width:30%;opacity:.5">Outside window</div>'
+              : '<div class="rm-bar '+cls+'" style="left:'+l+'%;width:'+Math.max(r-l,4)+'%">'+status.replace(/_/g,' ')+' · '+(p.progressPct||0)+'%</div>';
+          } else {
+            bar='<div class="rm-bar purple" style="left:2%;width:30%;opacity:.5">No dates set</div>';
+          }
+          return '<div class="rm-row" onclick="location.href=\'/pm/04-projects\'">'+
+            '<div class="rm-label"><span class="dot" style="background:'+dot+'"></span><span class="rm-name">'+PM.esc(p.name)+'</span></div>'+
+            '<div class="rm-track">'+bar+'<div class="rm-today" style="left:'+todayPct+'%"></div></div></div>';
+        }).join('');
+      }).catch(function(e){ console.error('Roadmap failed',e); });
+    }
+
+    /* FIXED: loadOverdue and loadPendingApprovals now handle missing endpoints gracefully */
+    function loadOverdue(){
+      var box=document.getElementById('overdueList'); if(!box) return;
+      PM.api('GET','/api/pm/dashboard/overdue?limit=8').then(function(items){
+        items=items||[];
+        if(!items.length){ box.innerHTML='<div style="text-align:center;padding:14px;color:var(--tx3)">Nothing overdue 🎉</div>'; return; }
+        box.innerHTML='<table class="pm-table"><tbody>'+items.map(function(t){
+          return '<tr style="cursor:pointer" onclick="location.href=\'/pm/06-tasks\'">'+
+            '<td style="font-weight:600">'+PM.esc(t.title)+'</td>'+
+            '<td><span class="pm-badge danger">Due '+t.dueDate+'</span></td></tr>';
+        }).join('')+'</tbody></table>';
+      }).catch(function(e){
+        /* Endpoint may not exist yet — show friendly message instead of error */
+        box.innerHTML='<div style="text-align:center;padding:14px;color:var(--tx3)">Coming soon</div>';
+      });
+    }
+
+    function loadPendingApprovals(){
+      var box=document.getElementById('approvalList'); if(!box) return;
+      PM.api('GET','/api/pm/approvals/mine').then(function(items){
+        items=(items||[]).filter(function(a){ return a.status==='PENDING'; });
+        if(!items.length){ box.innerHTML='<div style="text-align:center;padding:14px;color:var(--tx3)">No approvals waiting</div>'; return; }
+        box.innerHTML='<table class="pm-table"><tbody>'+items.slice(0,8).map(function(a){
+          return '<tr style="cursor:pointer" onclick="location.href=\'/pm/02-inbox\'">'+
+            '<td style="font-weight:600">'+PM.esc(a.entityTitle||a.entityType)+'</td>'+
+            '<td style="color:var(--tx3)">from '+PM.esc(a.requestedByName||'—')+'</td>'+
+            '<td><span class="pm-badge warning">'+PM.esc(a.entityType)+'</span></td></tr>';
+        }).join('')+'</tbody></table>';
+      }).catch(function(e){ console.error('Approvals failed',e); });
+    }
+
+    function reloadDashboard(){
+      PM.toast('Refreshing dashboard…','info');
+      loadDashboardKPIs();
+      loadRecentProjects();
+      loadRecentActivity();
+      loadOverdue(); loadPendingApprovals();
+    }
+    window.reloadDashboard = reloadDashboard;
+
+    document.getElementById('mobToggle').addEventListener('click', function(){
+      document.getElementById('pmSidebar').classList.toggle('open');
+    });
+
+    /* Initial load */
+    loadDashboardKPIs();
+    loadProjectProgressChart();
+    loadTaskDistributionChart();
+    loadRecentProjects();
+    loadRecentActivity();
+    loadRoadmap();
+    loadOverdue(); loadPendingApprovals();
+
+    var h = (location.hash || '').replace('#','');
+    if(h && homeMeta[h]) switchHome(h, document.querySelector('[data-tab="'+h+'"]'));
+
+    /* FIXED: pmRefresh is now INSIDE the closure, so it can reach the helpers */
+    window.pmRefresh = function () {
+      loadDashboardKPIs();
+      loadRecentProjects();
+      loadRecentActivity();
+      loadProjectProgressChart();
+      loadTaskDistributionChart();
+      loadOverdue();
+      loadPendingApprovals();
+      if (document.getElementById('pane-portfolio')?.classList.contains('active')) {
+        if (chartPortfolioProgress) { chartPortfolioProgress.destroy(); chartPortfolioProgress = null; }
+        if (chartPortfolioTasks)    { chartPortfolioTasks.destroy();    chartPortfolioTasks = null; }
+        initPortfolioCharts();
+      }
+    };
+
+    /* FIXED: pm:user handler moved inside closure (it used homeMeta) */
+    document.addEventListener('pm:user', function (e) {
+      var first = (e.detail.name || '').split(' ')[0];
+      homeMeta.dashboard.sub = "Welcome back, " + first + " — here's what's happening today.";
+      var s = document.getElementById('pmPageSub');
+      if (s && document.getElementById('pane-dashboard').classList.contains('active')) {
+        s.textContent = homeMeta.dashboard.sub;
+      }
+    });
+
+  });
+</script>
+</body>
+</html>

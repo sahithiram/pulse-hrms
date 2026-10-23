@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Manager Dashboard - HRMS</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* ============================================================
+           COMPLETE DARK THEME - MATCHING YOUR ORIGINAL DASHBOARD
+           ============================================================ */
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --dark-bg: #0f172a;
+            --dark-card: #1e293b;
+            --dark-border: #334155;
+            --dark-text: #f8fafc;
+            --dark-text-secondary: #cbd5e1;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #0ea5e9;
+            --sidebar-bg: #0f172a;
+            --sidebar-hover: #1e293b;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html { scrollbar-color: #1a1a1a #000000; scrollbar-width: thin; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #000000; }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #333333; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            box-shadow: 2px 0 10px rgba(0,0,0,.2);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.25rem;
+            position: sticky;
+            top: 0;
+            background: var(--sidebar-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: #fff;
+            color: var(--sidebar-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .brand-icon i { font-size: 1.8rem; }
+
+        .sidebar-content {
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+        .sidebar-content::-webkit-scrollbar { width: 6px; }
+        .sidebar-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        .nav-section {
+            padding: 1.2rem 1.5rem 0.5rem;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+        .nav-section i { font-size: 0.8rem; color: var(--primary); opacity: 0.8; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.65rem 1.5rem;
+            margin: 0 0.5rem 0.25rem;
+            width: calc(100% - 1rem);
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(2px);
+        }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+        .nav-link:hover i, .nav-link.active i { color: #fff; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+        .nav-badge.warning { background: var(--warning); }
+        .nav-badge.danger { background: var(--danger); }
+        .nav-badge.success { background: var(--success); }
+
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: 280px; min-height: 100vh; transition: var(--transition); }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+        }
+
+        /* ── TOP HEADER ── */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            padding: .75rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: .6rem .75rem .6rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .875rem;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+            outline: none;
+        }
+        .search-box i {
+            position: absolute;
+            left: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-secondary);
+        }
+
+        .top-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .icon-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-profile-menu { display: flex; align-items: center; gap: 1rem; }
+
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .dropdown-menu {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+        }
+        .dropdown-item { color: var(--dark-text); }
+        .dropdown-item:hover { background: var(--sidebar-hover); }
+        .dropdown-divider { border-color: var(--dark-border); }
+
+        /* ── CONTENT AREA ── */
+        .content-area { padding: 1.5rem; }
+
+        /* ── BREADCRUMB ── */
+        .breadcrumb {
+            background: transparent;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+        }
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--dark-text-secondary); }
+        .breadcrumb-item + .breadcrumb-item::before { color: var(--dark-text-secondary); }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            color: var(--dark-text);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            padding: 1rem 1.25rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            color: var(--dark-text);
+        }
+        .card-body { padding: 1.25rem; }
+
+        /* ── STATS CARDS ── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: var(--transition);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 115px;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,.1);
+            border-color: var(--primary);
+        }
+
+        .stat-card-body {
+            padding: 1.25rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+            color: var(--dark-text);
+        }
+        .stat-title {
+            font-size: 0.75rem;
+            color: var(--dark-text-secondary);
+            line-height: 1.2;
+            margin-top: 0.35rem;
+        }
+        .stat-icon { font-size: 2rem; opacity: .7; color: var(--primary); }
+
+        .card-footer-bar {
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #fff;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        .stat-card .card-footer-bar { background: var(--primary); }
+        .stat-card.total .card-footer-bar { background: #818cf8; }
+        .stat-card.active .card-footer-bar { background: var(--success); }
+        .stat-card.on-hold .card-footer-bar { background: var(--warning); }
+        .stat-card.completed .card-footer-bar { background: var(--info); }
+        .stat-card.danger .card-footer-bar { background: var(--danger); }
+
+        /* ── TABLES ── */
+        .table {
+            color: var(--dark-text);
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: .875rem;
+            margin: 0;
+        }
+        .table thead {
+            background: rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .table th {
+            text-transform: uppercase;
+            font-size: .75rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary) !important;
+            padding: 1rem .75rem;
+            border-bottom: 1px solid var(--dark-border);
+            background: rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .table td {
+            padding: .875rem .75rem;
+            border-top: 1px solid var(--dark-border);
+            vertical-align: middle;
+            color: var(--dark-text) !important;
+            background: var(--dark-card);
+        }
+        .table tbody tr { transition: var(--transition); }
+        .table tbody tr:hover {
+            background: rgba(255,255,255,.05) !important;
+            transform: translateX(2px);
+        }
+        .table tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+        }
+
+        /* ── BADGES ── */
+        .badge {
+            padding: .35rem .75rem;
+            border-radius: 20px;
+            font-size: .7rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+        .badge-primary { background: var(--primary); color: white; }
+        .badge-success { background: var(--success); color: white; }
+        .badge-danger { background: var(--danger); color: white; }
+        .badge-warning { background: var(--warning); color: #000; }
+        .badge-info { background: var(--info); color: white; }
+        .badge-secondary { background: #64748b; color: white; }
+
+        /* ── PROGRESS BAR ── */
+        .progress {
+            background: var(--dark-bg);
+            border-radius: 3px;
+            height: 6px;
+        }
+        .progress-bar { background: var(--primary); }
+
+        /* ── FORMS ── */
+        .form-control, .form-select {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+        .form-control::placeholder { color: var(--dark-text-secondary); opacity: 0.7; }
+
+        /* ── BUTTONS ── */
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(99,102,241,.3);
+        }
+        .btn-success {
+            background: var(--success);
+            border: none;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #0d9668;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(16,185,129,.3);
+        }
+        .btn-danger {
+            background: var(--danger);
+            border: none;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(239,68,68,.3);
+        }
+        .btn-outline-secondary {
+            border-color: var(--dark-border);
+            color: var(--dark-text);
+        }
+        .btn-outline-secondary:hover {
+            background: var(--dark-bg);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+        .btn-sm {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            border-radius: 4px;
+        }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--dark-text-secondary);
+        }
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: .4;
+        }
+        .empty-state h4 {
+            color: var(--dark-text-secondary);
+            margin-bottom: .5rem;
+            font-weight: 600;
+        }
+        .empty-state p { margin-bottom: 1.5rem; color: var(--dark-text-secondary); }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1200px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .mobile-menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .top-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            .search-box { width: 100%; }
+            .stats-grid { grid-template-columns: 1fr; }
+            .content-area { padding: 1rem; }
+        }
+        @media (max-width: 576px) {
+            .content-area { padding: 0.75rem; }
+            .stat-card-body { padding: 1rem; }
+            .stat-value { font-size: 1.5rem; }
+            .stat-icon { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Mobile Menu Toggle -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ============================================================
+     SIDEBAR - MATCHING YOUR ORIGINAL DASHBOARD
+     ============================================================ -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-project-diagram"></i></div>
+        <span>PM Dashboard</span>
+    </div>
+
+    <div class="sidebar-content">
+        <nav>
+            <div class="nav-section"><i class="fas fa-home"></i> DASHBOARD</div>
+            <a class="nav-link active" href="/pm/dashboard">
+                <i class="fas fa-th-large"></i> Overview
+            </a>
+
+            <div class="nav-section"><i class="fas fa-folder-open"></i> PROJECTS</div>
+            <a class="nav-link" href="/pm/projects">
+                <i class="fas fa-list"></i> All Projects
+                <span class="nav-badge" th:text="${totalProjects}">0</span>
+            </a>
+            <a class="nav-link" href="/pm/projects/create">
+                <i class="fas fa-plus-circle"></i> Create Project
+            </a>
+
+            <div class="nav-section"><i class="fas fa-tasks"></i> TASKS</div>
+            <a class="nav-link" href="/pm/tasks">
+                <i class="fas fa-check-circle"></i> All Tasks
+            </a>
+            <a class="nav-link" href="/pm/board">
+                <i class="fas fa-columns"></i> Kanban Board
+            </a>
+
+            <div class="nav-section"><i class="fas fa-users"></i> TEAMS</div>
+            <a class="nav-link" href="/pm/teams">
+                <i class="fas fa-users-cog"></i> My Teams
+            </a>
+
+            <div class="nav-section"><i class="fas fa-chart-line"></i> ANALYTICS</div>
+            <a class="nav-link" href="/pm/reports">
+                <i class="fas fa-chart-pie"></i> Reports
+            </a>
+            <a class="nav-link" href="/pm/performance">
+                <i class="fas fa-rocket"></i> Performance
+            </a>
+
+            <div class="nav-section"><i class="fas fa-cog"></i> SETTINGS</div>
+            <a class="nav-link" href="/pm/settings">
+                <i class="fas fa-sliders-h"></i> Preferences
+            </a>
+        </nav>
+    </div>
+</div>
+
+<!-- ============================================================
+     MAIN CONTENT - DASHBOARD
+     ============================================================ -->
+<div class="main-content">
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search projects, tasks, team members...">
+        </div>
+
+        <div class="top-header-actions">
+            <div class="icon-btn" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge" th:text="${notificationCount}">5</span>
+            </div>
+            <div class="icon-btn" title="Messages">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="user-profile-menu">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                        <div class="avatar-sm" th:text="${userInitial}">JD</div>
+                        <span th:text="${userName}">John Doe</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/pm/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="/pm/settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="content-area">
+        <!-- Welcome Section -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 style="color: var(--dark-text); font-size: 1.5rem; font-weight: 600;">
+                    <i class="fas fa-rocket" style="color: var(--primary);"></i>
+                    Welcome back, <span th:text="${userName}">John</span>!
+                </h1>
+                <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;">
+                    Here's what's happening with your projects today
+                </p>
+            </div>
+            <div>
+                <a href="/pm/projects/create" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-plus"></i> New Project
+                </a>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-card-body">
+                    <div>
+                        <div class="stat-value" th:text="${totalProjects}">12</div>
+                        <div class="stat-title">Total Projects</div>
+                    </div>
+                    <div class="stat-icon"><i class="fas fa-folder"></i></div>
+                </div>
+                <div class="card-footer-bar">All Projects</div>
+            </div>
+
+            <div class="stat-card active">
+                <div class="stat-card-body">
+                    <div>
+                        <div class="stat-value" th:text="${activeProjects}">8</div>
+                        <div class="stat-title">Active Projects</div>
+                    </div>
+                    <div class="stat-icon"><i class="fas fa-play-circle"></i></div>
+                </div>
+                <div class="card-footer-bar">In Progress</div>
+            </div>
+
+            <div class="stat-card danger">
+                <div class="stat-card-body">
+                    <div>
+                        <div class="stat-value" th:text="${overdueTasks}">5</div>
+                        <div class="stat-title">Overdue Tasks</div>
+                    </div>
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                </div>
+                <div class="card-footer-bar">⚠️ Needs Attention</div>
+            </div>
+
+            <div class="stat-card completed">
+                <div class="stat-card-body">
+                    <div>
+                        <div class="stat-value" th:text="${completedTasksThisMonth}">42</div>
+                        <div class="stat-title">Completed (This Month)</div>
+                    </div>
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                </div>
+                <div class="card-footer-bar">Tasks Done</div>
+            </div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="row g-4">
+            <!-- Left Column: Project Status -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h5 class="card-title">
+                            <i class="fas fa-chart-bar" style="color: var(--primary);"></i>
+                            Project Status
+                        </h5>
+                        <a href="/pm/projects" class="btn btn-sm btn-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-container" style="border: none;">
+                            <table class="table">
+                                <thead>
+                                <tr>
+                                    <th>Project</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="project : ${projects}">
+                                    <td>
+                                        <div style="font-weight: 600;">
+                                            <a th:href="@{/pm/projects/{id}(id=${project.id})}" style="color: var(--primary); text-decoration: none;" th:text="${project.name}">Project Alpha</a>
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: var(--dark-text-secondary);" th:text="${project.code}">PRJ-001</div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <div class="progress" style="width: 80px;">
+                                                <div class="progress-bar" role="progressbar"
+                                                     th:style="'width: ' + ${project.progressPercentage} + '%;'"
+                                                     th:attr="aria-valuenow=${project.progressPercentage}, aria-valuemin=0, aria-valuemax=100"></div>
+                                            </div>
+                                            <span style="font-size: 0.8rem; color: var(--dark-text-secondary);" th:text="${project.progressPercentage} + '%'">75%</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                            <span class="badge" th:classappend="
+                                                ${project.status == 'ACTIVE'} ? 'badge-success' :
+                                                ${project.status == 'PLANNING'} ? 'badge-info' :
+                                                ${project.status == 'ON_HOLD'} ? 'badge-warning' :
+                                                ${project.status == 'COMPLETED'} ? 'badge-primary' :
+                                                'badge-danger'" th:text="${project.status}">Active</span>
+                                    </td>
+                                    <td th:text="${#temporals.format(project.endDate, 'MMM dd, yyyy')}">Dec 31, 2026</td>
+                                    <td>
+                                        <a th:href="@{/pm/projects/{id}(id=${project.id})}" class="btn btn-sm" style="background: var(--info); color: white; border: none;">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr th:if="${projects == null or projects.empty}">
+                                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--dark-text-secondary);">
+                                        <i class="fas fa-folder-open" style="font-size: 2rem; opacity: 0.5; display: block; margin-bottom: 0.5rem;"></i>
+                                        No projects assigned to you yet.
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Quick Actions & Stats -->
+            <div class="col-md-5">
+                <!-- Quick Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-bolt" style="color: var(--warning);"></i>
+                            Quick Actions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <a href="/pm/projects/create" class="btn btn-primary" style="width: 100%;">
+                                <i class="fas fa-plus"></i> New Project
+                            </a>
+                            <a href="/pm/tasks/create" class="btn btn-success" style="width: 100%;">
+                                <i class="fas fa-plus"></i> New Task
+                            </a>
+                            <a href="/pm/teams" class="btn btn-info" style="width: 100%; color: white;">
+                                <i class="fas fa-users"></i> Manage Teams
+                            </a>
+                            <a href="/pm/board" class="btn btn-warning" style="width: 100%; color: #000;">
+                                <i class="fas fa-columns"></i> Kanban Board
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Task Status Chart -->
+                <div class="card" style="margin-top: 1.5rem;">
+                    <div class="card-header">
+                        <h5 class="card-title">
+                            <i class="fas fa-chart-pie" style="color: var(--primary);"></i>
+                            Task Status Distribution
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div style="height: 200px;">
+                            <canvas id="taskStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h5 class="card-title">
+                    <i class="fas fa-clock" style="color: var(--primary);"></i>
+                    Recent Activity
+                </h5>
+                <a href="/pm/activity" class="btn btn-sm btn-primary">View All</a>
+            </div>
+            <div class="card-body">
+                <div th:each="activity : ${recentActivities}" style="display: flex; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--dark-border);">
+                    <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class="fas" th:classappend="
+                            ${activity.type == 'TASK'} ? 'fa-check-circle' :
+                            ${activity.type == 'PROJECT'} ? 'fa-folder' :
+                            ${activity.type == 'MEMBER'} ? 'fa-user-plus' :
+                            'fa-clock'" style="color: white;"></i>
+                    </div>
+                    <div>
+                        <div style="color: var(--dark-text);" th:text="${activity.message}">Task "Implement API" was completed</div>
+                        <div style="font-size: 0.75rem; color: var(--dark-text-secondary);" th:text="${#temporals.format(activity.timestamp, 'MMM dd, yyyy HH:mm')}">Jan 01, 2026 10:00</div>
+                    </div>
+                </div>
+                <div th:if="${recentActivities == null or recentActivities.empty}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary);">
+                    No recent activity
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ── Mobile Menu ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('mobileMenuToggle');
+        if (window.innerWidth <= 768 && sidebar.classList.contains('active') &&
+            !sidebar.contains(e.target) && e.target !== toggle) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // ── Search ──
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const term = this.value.toLowerCase();
+        document.querySelectorAll('.table tbody tr').forEach(row => {
+            row.style.display = row.textContent.toLowerCase().includes(term) ? '' : 'none';
+        });
+    });
+
+    // ── Chart ──
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('taskStatusChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['To Do', 'In Progress', 'In Review', 'Done', 'Blocked'],
+                    datasets: [{
+                        data: [12, 8, 5, 20, 3],
+                        backgroundColor: ['#64748b', '#f59e0b', '#6366f1', '#10b981', '#ef4444'],
+                        borderColor: ['#1e293b', '#1e293b', '#1e293b', '#1e293b', '#1e293b'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: { family: "'Inter', sans-serif", size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${editMode} ? 'Edit Project' : 'Create Project'">Create Project - PM Dashboard</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============================================================
+           COMPLETE DARK THEME - EXACT MATCH TO YOUR DASHBOARD
+           ============================================================ */
+
+        /* ── Global Black Scrollbar ── */
+        html {
+            scrollbar-color: #1a1a1a #000000;
+            scrollbar-width: thin;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #333333;
+        }
+
+        :root {
+            --primary: #4F8CFF;
+            --primary-hover: #3B7AF5;
+            --dark-bg: #0F172A;
+            --dark-card: #1E293B;
+            --dark-card-light: #263548;
+            --dark-border: #334155;
+            --dark-text: #F8FAFC;
+            --dark-text-secondary: #94A3B8;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #06B6D4;
+            --sidebar-bg: #0F172A;
+            --sidebar-hover: #1E293B;
+            --transition: all .3s ease;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 280px;
+            height: 100vh;
+            background: var(--sidebar-bg);
+            box-shadow: 2px 0 10px rgba(0,0,0,.2);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1.25rem;
+            position: sticky;
+            top: 0;
+            background: var(--sidebar-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: #fff;
+            color: var(--sidebar-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .brand-icon i { font-size: 1.8rem; }
+
+        .sidebar-content {
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+        .sidebar-content::-webkit-scrollbar { width: 6px; }
+        .sidebar-content::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .sidebar-content::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .sidebar-content::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        .nav-section {
+            padding: 1.2rem 1.5rem 0.5rem;
+            color: #94a3b8;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1rem;
+        }
+        .nav-section i { font-size: 0.8rem; color: var(--primary); opacity: 0.8; }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.65rem 1.5rem;
+            margin: 0 0.5rem 0.25rem;
+            width: calc(100% - 1rem);
+            color: #94a3b8;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 0.875rem;
+            cursor: pointer;
+        }
+        .nav-link:hover, .nav-link.active {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(2px);
+        }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--primary);
+            transition: all 0.2s;
+        }
+        .nav-link:hover i, .nav-link.active i { color: #fff; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            min-width: 24px;
+            text-align: center;
+        }
+        .nav-badge.warning { background: var(--warning); }
+        .nav-badge.danger { background: var(--danger); }
+        .nav-badge.success { background: var(--success); }
+
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: 280px; min-height: 100vh; transition: var(--transition); }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 1rem;
+            left: 1rem;
+            z-index: 1001;
+        }
+
+        /* ── TOP HEADER ── */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            padding: .75rem 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: .6rem .75rem .6rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .875rem;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,140,255,.1);
+            outline: none;
+        }
+        .search-box i {
+            position: absolute;
+            left: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-secondary);
+        }
+
+        .top-header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .icon-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: var(--danger);
+            color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .user-profile-menu { display: flex; align-items: center; gap: 1rem; }
+
+        .avatar-sm {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .dropdown-menu {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+        }
+        .dropdown-item { color: var(--dark-text); }
+        .dropdown-item:hover { background: var(--sidebar-hover); }
+        .dropdown-divider { border-color: var(--dark-border); }
+
+        /* ── CONTENT AREA ── */
+        .content-area {
+            background: var(--dark-bg);
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        /* ── BREADCRUMB ── */
+        .breadcrumb {
+            background: transparent;
+            padding: 0.5rem 0;
+            margin-bottom: 1rem;
+        }
+        .breadcrumb-item a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-item.active { color: var(--dark-text-secondary); }
+        .breadcrumb-item + .breadcrumb-item::before { color: var(--dark-text-secondary); }
+
+        /* ── CARDS ── */
+        .card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            color: var(--dark-text);
+            box-shadow: 0 10px 25px rgba(0,0,0,.35);
+        }
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            padding: 1rem 1.25rem;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            color: var(--dark-text);
+        }
+        .card-body { padding: 1.25rem; }
+
+        /* ── FORM STYLES ── */
+        .form-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--dark-border);
+        }
+        .form-section:first-of-type {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .form-section h4 {
+            color: var(--dark-text);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .form-section h4 i {
+            color: var(--primary);
+        }
+
+        .form-control, .form-select {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.6rem 0.75rem;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79,140,255,.1);
+            background: var(--dark-card);
+            color: var(--dark-text);
+        }
+        .form-control::placeholder {
+            color: var(--dark-text-secondary);
+            opacity: 0.7;
+        }
+        .form-control option, .form-select option {
+            background: var(--dark-card);
+            color: var(--dark-text);
+        }
+
+        label {
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .required {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .field-hint {
+            font-size: 0.75rem;
+            color: var(--dark-text-secondary);
+            margin-top: 0.25rem;
+        }
+        .field-hint i {
+            margin-right: 0.25rem;
+            color: var(--info);
+        }
+
+        .text-danger {
+            color: var(--danger) !important;
+            font-size: 0.8rem;
+            margin-top: 0.25rem;
+        }
+
+        .alert-success {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.2);
+            color: var(--success);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .alert-danger {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.2);
+            color: var(--danger);
+            padding: 1rem;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ── BUTTONS ── */
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79,140,255,.3);
+        }
+
+        .btn-outline-secondary {
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: transparent;
+        }
+        .btn-outline-secondary:hover {
+            background: var(--dark-bg);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border: none;
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* ── DYNAMIC FIELDS ── */
+        .dynamic-fields {
+            display: none;
+        }
+        .dynamic-fields.active {
+            display: block;
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .mobile-menu-toggle { display: block; }
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .top-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            .search-box { width: 100%; }
+            .content-area { padding: 1rem; }
+        }
+        @media (max-width: 576px) {
+            .content-area { padding: 0.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Mobile Menu Toggle -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-project-diagram"></i></div>
+        <span id="sidebarCompanyName">PM Dashboard</span>
+    </div>
+
+    <div class="sidebar-content">
+        <nav>
+            <div class="nav-section"><i class="fas fa-home"></i> DASHBOARD</div>
+            <a class="nav-link" href="/pm/dashboard">
+                <i class="fas fa-th-large"></i> <span>Overview</span>
+            </a>
+
+            <div class="nav-section"><i class="fas fa-folder-open"></i> PROJECTS</div>
+            <a class="nav-link active" href="/pm/projects">
+                <i class="fas fa-list"></i> <span>All Projects</span>
+                <span class="nav-badge">12</span>
+            </a>
+            <a class="nav-link active" href="/pm/projects/create">
+                <i class="fas fa-plus-circle"></i> <span>Create Project</span>
+            </a>
+
+            <div class="nav-section"><i class="fas fa-tasks"></i> TASKS</div>
+            <a class="nav-link" href="/pm/tasks">
+                <i class="fas fa-check-circle"></i> <span>All Tasks</span>
+            </a>
+            <a class="nav-link" href="/pm/board">
+                <i class="fas fa-columns"></i> <span>Kanban Board</span>
+            </a>
+
+            <div class="nav-section"><i class="fas fa-users"></i> TEAMS</div>
+            <a class="nav-link" href="/pm/teams">
+                <i class="fas fa-users-cog"></i> <span>My Teams</span>
+            </a>
+
+            <div class="nav-section"><i class="fas fa-chart-line"></i> ANALYTICS</div>
+            <a class="nav-link" href="/pm/reports">
+                <i class="fas fa-chart-pie"></i> <span>Reports</span>
+            </a>
+
+            <div class="nav-section"><i class="fas fa-cog"></i> SETTINGS</div>
+            <a class="nav-link" href="/pm/settings">
+                <i class="fas fa-sliders-h"></i> <span>Preferences</span>
+            </a>
+        </nav>
+    </div>
+</div>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content">
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" placeholder="Search projects, tasks, team members...">
+        </div>
+
+        <div class="top-header-actions">
+            <div class="icon-btn" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge">5</span>
+            </div>
+            <div class="icon-btn" title="Messages">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div class="user-profile-menu">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                        <div class="avatar-sm">JD</div>
+                        <span>John Doe</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/pm/profile"><i class="fas fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="/pm/settings"><i class="fas fa-cog me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="content-area">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/pm/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="/pm/projects">Projects</a></li>
+                <li class="breadcrumb-item active" th:text="${editMode} ? 'Edit Project' : 'Create Project'">Create Project</li>
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 style="color: var(--dark-text); font-size: 1.5rem; font-weight: 600;">
+                    <i class="fas" th:classappend="${editMode} ? 'fa-edit' : 'fa-plus-circle'" style="color: var(--primary);"></i>
+                    <span th:text="${editMode} ? 'Edit Project' : 'Create New Project'">Create New Project</span>
+                </h1>
+                <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;" th:text="${editMode} ? 'Update project details' : 'Fill in the details below to create a new project'">
+                    Fill in the details below to create a new project
+                </p>
+            </div>
+            <div>
+                <a href="/pm/projects" class="btn btn-outline-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-arrow-left"></i> Back to Projects
+                </a>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div th:if="${success}" class="alert-success" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-check-circle"></i>
+            <span th:text="${successMessage}">Project created successfully!</span>
+        </div>
+        <div th:if="${error}" class="alert-danger" style="padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span th:text="${errorMessage}">Error creating project. Please check the form.</span>
+        </div>
+
+        <!-- Project Form -->
+        <div class="card">
+            <div class="card-body">
+                <form id="projectForm" th:action="@{/pm/projects/save}" th:object="${project}" method="post" novalidate>
+                    <input type="hidden" th:field="*{id}">
+
+                    <!-- ============================================================
+                         SECTION 1: BASIC INFORMATION
+                         ============================================================ -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-info-circle"></i> Basic Information</h4>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label>Project Name <span class="required">*</span></label>
+                                <input type="text" class="form-control" th:field="*{name}" placeholder="Enter project name" required>
+                                <div th:if="${#fields.hasErrors('name')}" class="text-danger">
+                                    <span th:errors="*{name}"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Project Code <span class="required">*</span></label>
+                                <input type="text" class="form-control" th:field="*{code}" placeholder="Auto-generated or custom code">
+                                <div class="field-hint"><i class="fas fa-info-circle"></i> Leave blank to auto-generate</div>
+                                <div th:if="${#fields.hasErrors('code')}" class="text-danger">
+                                    <span th:errors="*{code}"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <label>Description</label>
+                                <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Describe the project purpose, goals, and scope..."></textarea>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>Project Type <span class="required">*</span></label>
+                                <select class="form-select" th:field="*{type}" id="projectType" onchange="toggleDynamicFields()">
+                                    <option value="IT">IT Project</option>
+                                    <option value="NON_IT">Non-IT Project</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>Priority <span class="required">*</span></label>
+                                <select class="form-select" th:field="*{priority}">
+                                    <option value="LOW">Low</option>
+                                    <option value="MEDIUM" selected>Medium</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="CRITICAL">Critical</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>Department</label>
+                                <select class="form-select" th:field="*{departmentId}">
+                                    <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}">Engineering</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================
+                         SECTION 2: TIMELINE
+                         ============================================================ -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-calendar-alt"></i> Timeline</h4>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label>Start Date <span class="required">*</span></label>
+                                <input type="date" class="form-control" th:field="*{startDate}" required>
+                                <div th:if="${#fields.hasErrors('startDate')}" class="text-danger">
+                                    <span th:errors="*{startDate}"></span>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>End Date <span class="required">*</span></label>
+                                <input type="date" class="form-control" th:field="*{endDate}" required>
+                                <div th:if="${#fields.hasErrors('endDate')}" class="text-danger">
+                                    <span th:errors="*{endDate}"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================
+                         SECTION 3: OWNER & BUDGET
+                         ============================================================ -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-user-tie"></i> Owner & Budget</h4>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label>Project Owner <span class="required">*</span></label>
+                                <select class="form-select" th:field="*{ownerId}" required>
+                                    <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.name}">John Doe</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>Project Sponsor</label>
+                                <select class="form-select" th:field="*{sponsorId}">
+                                    <option value="">None</option>
+                                    <option th:each="emp : ${employees}" th:value="${emp.id}" th:text="${emp.name}">Jane Smith</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-4">
+                                <label>Planned Budget</label>
+                                <input type="number" class="form-control" th:field="*{plannedBudget}" placeholder="Enter budget amount" step="0.01">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================
+                         SECTION 4: CLIENT INFORMATION
+                         ============================================================ -->
+                    <div class="form-section">
+                        <h4><i class="fas fa-user-friends"></i> Client Information</h4>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label>Client Name</label>
+                                <input type="text" class="form-control" th:field="*{clientName}" placeholder="Enter client name">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Client Contact</label>
+                                <input type="text" class="form-control" th:field="*{clientContact}" placeholder="Enter client contact email or phone">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================
+                         SECTION 5: DYNAMIC METADATA FIELDS
+                         ============================================================ -->
+                    <div id="metadataFields">
+                        <div class="form-section">
+                            <h4><i class="fas fa-cogs"></i> <span id="metadataTitle">IT Project Details</span></h4>
+
+                            <!-- IT Fields -->
+                            <div id="itFields" class="dynamic-fields active">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label>Tech Stack</label>
+                                        <input type="text" class="form-control" name="metadata.techStack" placeholder="e.g., Java, React, MySQL">
+                                        <div class="field-hint"><i class="fas fa-info-circle"></i> Comma-separated technologies</div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Repository URL</label>
+                                        <input type="text" class="form-control" name="metadata.repoUrl" placeholder="https://github.com/org/repo">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Sprint Length (days)</label>
+                                        <input type="number" class="form-control" name="metadata.sprintLength" placeholder="14" value="14">
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-12">
+                                        <label>Acceptance Criteria</label>
+                                        <textarea class="form-control" name="metadata.acceptanceCriteria" rows="2" placeholder="Define acceptance criteria for this project..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Non-IT Fields -->
+                            <div id="nonItFields" class="dynamic-fields">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label>Department</label>
+                                        <input type="text" class="form-control" name="metadata.department" placeholder="e.g., Marketing, HR">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Location</label>
+                                        <input type="text" class="form-control" name="metadata.location" placeholder="e.g., New York, London">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label>Compliance Tags</label>
+                                        <input type="text" class="form-control" name="metadata.complianceTags" placeholder="e.g., GDPR, HIPAA">
+                                    </div>
+                                </div>
+                                <div class="row g-3 mt-2">
+                                    <div class="col-md-12">
+                                        <label>Key Stakeholders</label>
+                                        <input type="text" class="form-control" name="metadata.stakeholders" placeholder="e.g., VP Marketing, CFO">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ============================================================
+                         FORM ACTIONS
+                         ============================================================ -->
+                    <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--dark-border); display: flex; gap: 1rem; justify-content: flex-end; flex-wrap: wrap;">
+                        <a href="/pm/projects" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i>
+                            <span th:text="${editMode} ? 'Update Project' : 'Create Project'">Create Project</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ── Mobile Menu ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('mobileMenuToggle');
+        if (window.innerWidth <= 768 && sidebar.classList.contains('active') &&
+            !sidebar.contains(e.target) && e.target !== toggle) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // ── Toggle Dynamic Fields (IT vs Non-IT) ──
+    function toggleDynamicFields() {
+        const type = document.getElementById('projectType').value;
+        const itFields = document.getElementById('itFields');
+        const nonItFields = document.getElementById('nonItFields');
+        const metadataTitle = document.getElementById('metadataTitle');
+
+        if (type === 'IT') {
+            itFields.classList.add('active');
+            nonItFields.classList.remove('active');
+            metadataTitle.textContent = 'IT Project Details';
+        } else {
+            itFields.classList.remove('active');
+            nonItFields.classList.add('active');
+            metadataTitle.textContent = 'Non-IT Project Details';
+        }
+    }
+
+    // ── Initialize on page load ──
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleDynamicFields();
+    });
+
+    // ── Form Validation ──
+    document.getElementById('projectForm').addEventListener('submit', function(e) {
+        const name = document.querySelector('[name="name"]').value.trim();
+        const startDate = document.querySelector('[name="startDate"]').value;
+        const endDate = document.querySelector('[name="endDate"]').value;
+
+        if (!name) {
+            e.preventDefault();
+            alert('Project name is required.');
+            return false;
+        }
+
+        if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+            e.preventDefault();
+            alert('End date must be after start date.');
+            return false;
+        }
+
+        return true;
+    });
+</script>
+
+</body>
+</html>

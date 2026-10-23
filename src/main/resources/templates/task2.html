@@ -1,0 +1,2051 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management Suite | Dark Theme</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    <style>
+        /* ── COMPLETE DARK THEME ── */
+        :root {
+            --primary: #6C8CFF;
+            --primary-hover: #5B7CE8;
+            --primary-light: rgba(108, 140, 255, 0.15);
+            --primary-glow: rgba(108, 140, 255, 0.3);
+            --dark-bg: #070B14;
+            --dark-card: #0F172A;
+            --dark-card-hover: #1A233A;
+            --dark-border: #1E2A45;
+            --dark-text: #F1F5F9;
+            --dark-text-secondary: #94A3B8;
+            --dark-text-muted: #475569;
+            --success: #34D399;
+            --success-light: rgba(52, 211, 153, 0.15);
+            --warning: #FBBF24;
+            --warning-light: rgba(251, 191, 36, 0.15);
+            --danger: #F87171;
+            --danger-light: rgba(248, 113, 113, 0.15);
+            --info: #60A5FA;
+            --info-light: rgba(96, 165, 250, 0.15);
+            --purple: #A78BFA;
+            --purple-light: rgba(167, 139, 250, 0.15);
+            --pink: #F472B6;
+            --pink-light: rgba(244, 114, 182, 0.15);
+            --orange: #FB923C;
+            --orange-light: rgba(251, 146, 60, 0.15);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.6);
+            --shadow-hover: 0 12px 48px rgba(108, 140, 255, 0.12);
+            --border-radius: 14px;
+            --border-radius-sm: 8px;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 270px;
+            height: 100vh;
+            background: var(--dark-bg);
+            border-right: 1px solid var(--dark-border);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            background: var(--dark-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(108, 140, 255, 0.3);
+        }
+        .brand-icon i { color: white; font-size: 1.2rem; }
+
+        .brand-text { font-weight: 700; font-size: 1.1rem; color: white; letter-spacing: -0.5px; }
+        .brand-text span { color: var(--primary); }
+
+        .sidebar-content { padding: 0.5rem 0.75rem; }
+
+        .nav-section {
+            padding: 1.2rem 1rem 0.5rem;
+            color: var(--dark-text-muted);
+            font-size: 0.6rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.6rem 1rem;
+            margin: 2px 0;
+            border-radius: 8px;
+            color: var(--dark-text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            cursor: pointer;
+            position: relative;
+        }
+        .nav-link:hover { background: var(--dark-card); color: white; }
+        .nav-link.active { background: var(--primary-light); color: var(--primary); }
+        .nav-link.active i { color: var(--primary); }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--dark-text-muted);
+            transition: var(--transition);
+        }
+        .nav-link:hover i { color: white; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+        .nav-badge.warning { background: var(--warning); color: #000; }
+        .nav-badge.danger { background: var(--danger); }
+        .nav-badge.success { background: var(--success); }
+
+        .nav-indicator {
+            position: absolute;
+            right: 0.5rem;
+            width: 4px;
+            height: 4px;
+            background: var(--danger);
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: 270px; min-height: 100vh; }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 1001;
+        }
+
+        /* ── TOP HEADER ── */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 2rem;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(12px);
+        }
+
+        .header-left { display: flex; align-items: center; gap: 1.5rem; }
+
+        .breadcrumb-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+        }
+        .breadcrumb-custom a { color: var(--primary); text-decoration: none; }
+        .breadcrumb-custom a:hover { text-decoration: underline; }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border-radius: 10px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .search-box input::placeholder { color: var(--dark-text-muted); }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.15);
+            outline: none;
+            background: var(--dark-card);
+        }
+        .search-box i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-muted);
+        }
+        .search-shortcut {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.6rem;
+            color: var(--dark-text-muted);
+            background: var(--dark-border);
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .header-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(108, 140, 255, 0.25);
+        }
+
+        .header-btn .badge-dot {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--dark-card);
+            animation: pulse-dot 2s infinite;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+            border-radius: 10px;
+            transition: var(--transition);
+        }
+        .user-profile:hover { background: var(--dark-bg); }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+            box-shadow: 0 2px 8px rgba(108, 140, 255, 0.3);
+        }
+
+        .user-name { font-weight: 500; font-size: 0.85rem; }
+        .user-role { font-size: 0.7rem; color: var(--dark-text-muted); }
+
+        /* ── CONTENT AREA ── */
+        .content-area { padding: 1.5rem 2rem 3rem; }
+
+        /* ── WELCOME SECTION ── */
+        .welcome-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .welcome-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            letter-spacing: -0.5px;
+        }
+        .welcome-text h1 i { color: var(--primary); margin-right: 0.5rem; }
+        .welcome-text p { color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0; }
+
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(108, 140, 255, 0.25);
+        }
+        .btn-primary-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(108, 140, 255, 0.35);
+            color: white;
+        }
+
+        .btn-secondary-custom {
+            background: var(--dark-card);
+            color: var(--dark-text-secondary);
+            border: 1px solid var(--dark-border);
+            padding: 0.5rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-secondary-custom:hover {
+            background: var(--dark-card-hover);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        /* ── FILTER CONTROLS ── */
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-bar select, .filter-bar input {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            transition: var(--transition);
+        }
+        .filter-bar select:focus, .filter-bar input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
+        }
+        .filter-bar select option { background: var(--dark-card); }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 0.25rem 0.75rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            color: var(--dark-text-secondary);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .filter-chip:hover { border-color: var(--primary); color: var(--dark-text); }
+        .filter-chip.active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        /* ── VIEW TOGGLE ── */
+        .view-toggle {
+            display: flex;
+            gap: 4px;
+            background: var(--dark-card);
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--dark-border);
+        }
+        .view-toggle button {
+            background: none;
+            border: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 6px;
+            color: var(--dark-text-secondary);
+            font-size: 0.8rem;
+            transition: var(--transition);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .view-toggle button:hover { color: var(--dark-text); }
+        .view-toggle button.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(108, 140, 255, 0.3);
+        }
+
+        /* ── STATS BAR ── */
+        .stats-mini {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-mini-item {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            text-align: center;
+            transition: var(--transition);
+        }
+        .stat-mini-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        .stat-mini-item .number {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--dark-text);
+        }
+        .stat-mini-item .label {
+            font-size: 0.65rem;
+            color: var(--dark-text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .stat-mini-item .change {
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+        .stat-mini-item .change.up { color: var(--success); }
+        .stat-mini-item .change.down { color: var(--danger); }
+
+        /* ── VIEW CONTENT ── */
+        .view-content { display: none; }
+        .view-content.active { display: block; }
+
+        /* ── CARD ── */
+        .card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .card:hover { border-color: rgba(108, 140, 255, 0.2); }
+        .card-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+        }
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--dark-text);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .card-title i { color: var(--primary); }
+        .card-body { padding: 1.25rem; }
+
+        .card-action {
+            color: var(--dark-text-secondary);
+            font-size: 0.8rem;
+            text-decoration: none;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .card-action:hover { color: var(--primary); }
+
+        /* ── TASK LIST ── */
+        .task-list-header {
+            display: grid;
+            grid-template-columns: 36px 1fr 130px 110px 100px 100px 40px;
+            padding: 0.5rem 0.75rem;
+            border-bottom: 1px solid var(--dark-border);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--dark-text-muted);
+            font-weight: 600;
+            gap: 0.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .task-list-item {
+            display: grid;
+            grid-template-columns: 36px 1fr 130px 110px 100px 100px 40px;
+            padding: 0.6rem 0.75rem;
+            border-bottom: 1px solid var(--dark-border);
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .task-list-item:hover { background: rgba(255,255,255,0.03); }
+        .task-list-item:last-child { border-bottom: none; }
+
+        .task-list-item .task-title {
+            font-weight: 500;
+            color: var(--dark-text);
+        }
+        .task-list-item .task-title.done {
+            text-decoration: line-through;
+            color: var(--dark-text-muted);
+        }
+
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid var(--dark-border);
+            background: transparent;
+            cursor: pointer;
+            transition: var(--transition);
+            appearance: none;
+            -webkit-appearance: none;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .task-checkbox:checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        .task-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: white;
+            font-size: 0.5rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .task-checkbox:hover { border-color: var(--primary); }
+
+        /* ── STATUS BADGES ── */
+        .status-badge {
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            display: inline-block;
+            letter-spacing: 0.3px;
+        }
+        .status-badge.todo { background: var(--dark-border); color: var(--dark-text-secondary); }
+        .status-badge.inprogress { background: var(--info-light); color: var(--info); }
+        .status-badge.review { background: var(--warning-light); color: var(--warning); }
+        .status-badge.done { background: var(--success-light); color: var(--success); }
+        .status-badge.blocked { background: var(--danger-light); color: var(--danger); }
+        .status-badge.backlog { background: var(--purple-light); color: var(--purple); }
+
+        .priority-badge {
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .priority-badge.critical { background: var(--danger-light); color: var(--danger); }
+        .priority-badge.high { background: var(--orange-light); color: var(--orange); }
+        .priority-badge.medium { background: var(--info-light); color: var(--info); }
+        .priority-badge.low { background: rgba(100, 116, 139, 0.2); color: var(--dark-text-muted); }
+
+        .task-tag {
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.55rem;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .task-tag.feature { background: var(--primary-light); color: var(--primary); }
+        .task-tag.bug { background: var(--danger-light); color: var(--danger); }
+        .task-tag.story { background: var(--success-light); color: var(--success); }
+        .task-tag.task { background: var(--warning-light); color: var(--warning); }
+        .task-tag.docs { background: var(--purple-light); color: var(--purple); }
+
+        .avatar-group {
+            display: flex;
+            align-items: center;
+        }
+        .avatar-group .avatar {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: white;
+            border: 2px solid var(--dark-card);
+            margin-right: -8px;
+        }
+        .avatar-group .avatar:last-child { margin-right: 0; }
+        .avatar-group .avatar.blue { background: var(--primary); }
+        .avatar-group .avatar.green { background: var(--success); }
+        .avatar-group .avatar.yellow { background: var(--warning); color: #000; }
+        .avatar-group .avatar.red { background: var(--danger); }
+        .avatar-group .avatar.purple { background: var(--purple); }
+        .avatar-group .avatar.pink { background: var(--pink); }
+        .avatar-group .avatar.orange { background: var(--orange); }
+
+        .avatar-more {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: var(--dark-bg);
+            border: 2px solid var(--dark-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary);
+        }
+
+        /* ── KANBAN BOARD ── */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .kanban-column {
+            background: var(--dark-bg);
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-border);
+            min-width: 220px;
+        }
+
+        .kanban-header {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.02);
+            border-radius: var(--border-radius) var(--border-radius) 0 0;
+        }
+        .kanban-header h6 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dark-text-secondary);
+        }
+        .kanban-header .count {
+            background: var(--dark-border);
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.6rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .kanban-body {
+            padding: 0.5rem;
+            max-height: 500px;
+            overflow-y: auto;
+            min-height: 100px;
+        }
+
+        .kanban-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .kanban-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+        .kanban-card .task-id {
+            font-size: 0.6rem;
+            color: var(--dark-text-muted);
+            font-weight: 600;
+        }
+        .kanban-card .task-title {
+            font-weight: 500;
+            font-size: 0.85rem;
+            margin: 0.25rem 0;
+            color: var(--dark-text);
+        }
+        .kanban-card .task-title.done {
+            text-decoration: line-through;
+            color: var(--dark-text-muted);
+        }
+        .kanban-card .task-meta {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            font-size: 0.65rem;
+            color: var(--dark-text-muted);
+            margin-top: 0.5rem;
+        }
+
+        .kanban-card .task-progress {
+            width: 100%;
+            height: 3px;
+            background: var(--dark-bg);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .kanban-card .task-progress .fill {
+            height: 100%;
+            border-radius: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--purple));
+            transition: width 0.6s ease;
+        }
+
+        /* ── CALENDAR VIEW ── */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: 6px;
+            padding: 0.5rem;
+            min-height: 80px;
+            transition: var(--transition);
+        }
+        .calendar-day:hover { border-color: var(--primary); }
+        .calendar-day .day-number {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary);
+        }
+        .calendar-day .day-number.today {
+            color: var(--primary);
+            background: var(--primary-light);
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calendar-day .day-event {
+            font-size: 0.6rem;
+            padding: 0.1rem 0.3rem;
+            margin-top: 0.2rem;
+            border-radius: 3px;
+            background: var(--primary-light);
+            color: var(--primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+        .calendar-day .day-event.overdue { background: var(--danger-light); color: var(--danger); }
+        .calendar-day .day-event.completed { background: var(--success-light); color: var(--success); }
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            margin-bottom: 4px;
+        }
+        .calendar-weekdays span {
+            text-align: center;
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--dark-text-muted);
+            padding: 0.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── TASK DETAIL PANEL ── */
+        .task-detail-overlay {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 2000;
+            display: none;
+            backdrop-filter: blur(6px);
+        }
+        .task-detail-overlay.active { display: block; }
+
+        .task-detail-panel {
+            position: fixed;
+            top: 0;
+            right: -620px;
+            width: 620px;
+            height: 100vh;
+            background: var(--dark-card);
+            border-left: 1px solid var(--dark-border);
+            z-index: 2001;
+            transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+        .task-detail-panel.active { right: 0; }
+
+        .task-detail-panel .close-btn {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            color: var(--dark-text-secondary);
+            width: 36px;
+            height: 36px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .task-detail-panel .close-btn:hover {
+            background: var(--danger);
+            color: white;
+            border-color: var(--danger);
+        }
+
+        .task-detail-panel .detail-field {
+            margin-bottom: 1.25rem;
+        }
+        .task-detail-panel .detail-label {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            color: var(--dark-text-muted);
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            letter-spacing: 0.5px;
+        }
+        .task-detail-panel .detail-value {
+            font-size: 0.9rem;
+            color: var(--dark-text);
+        }
+
+        .task-detail-panel .detail-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .task-detail-panel .detail-input:focus {
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
+        }
+        .task-detail-panel textarea.detail-input {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .task-detail-panel select.detail-input { cursor: pointer; }
+        .task-detail-panel select.detail-input option { background: var(--dark-card); }
+
+        /* ── CREATE TASK MODAL ── */
+        .modal-content {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-card);
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--dark-border);
+            padding: 1.25rem;
+        }
+        .modal-header .btn-close {
+            filter: invert(1);
+            opacity: 0.7;
+        }
+        .modal-header .btn-close:hover { opacity: 1; }
+        .modal-body {
+            padding: 1.25rem;
+        }
+        .modal-body label {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--dark-text-secondary);
+        }
+        .modal-body .form-control, .modal-body .form-select {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+        }
+        .modal-body .form-control:focus, .modal-body .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 140, 255, 0.12);
+            background: var(--dark-card);
+        }
+        .modal-body .form-control::placeholder { color: var(--dark-text-muted); }
+        .modal-body .form-select option { background: var(--dark-card); }
+        .modal-footer {
+            border-top: 1px solid var(--dark-border);
+            padding: 1.25rem;
+        }
+
+        /* ── FAB ── */
+        .fab {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            color: white;
+            border: none;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 24px rgba(108, 140, 255, 0.4);
+            cursor: pointer;
+            transition: var(--transition);
+            z-index: 500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .fab:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 32px rgba(108, 140, 255, 0.6);
+        }
+        .fab.visible { display: flex; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1400px) {
+            .kanban-board { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 1200px) {
+            .kanban-board { grid-template-columns: repeat(2, 1fr); }
+            .task-list-header, .task-list-item {
+                grid-template-columns: 36px 1fr 100px 90px 80px 80px 36px;
+                font-size: 0.65rem;
+            }
+            .stats-mini { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .mobile-menu-toggle { display: block; }
+            .top-header { padding: 0.75rem 1rem; }
+            .content-area { padding: 1rem; }
+            .search-box { display: none; }
+            .task-detail-panel { width: 100%; right: -100%; }
+            .stats-mini { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board { grid-template-columns: 1fr; }
+            .task-list-header { display: none; }
+            .task-list-item {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
+                padding: 0.75rem;
+                border-bottom: 1px solid var(--dark-border);
+            }
+            .task-list-item .task-title { font-weight: 600; }
+            .filter-bar { flex-wrap: wrap; }
+            .view-toggle { flex-wrap: wrap; }
+            .stats-mini { grid-template-columns: 1fr 1fr; }
+            .welcome-section { flex-direction: column; align-items: stretch; }
+            .welcome-actions { width: 100%; }
+            .welcome-actions .btn { flex: 1; justify-content: center; }
+            .header-actions .user-name { display: none; }
+            .calendar-day { min-height: 50px; padding: 0.25rem; }
+            .calendar-day .day-number { font-size: 0.6rem; }
+            .calendar-day .day-event { font-size: 0.5rem; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-mini { grid-template-columns: 1fr; }
+            .fab { width: 48px; height: 48px; font-size: 1.2rem; bottom: 1rem; right: 1rem; }
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up { animation: fadeInUp 0.4s ease-out; }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .slide-in-right { animation: slideInRight 0.3s ease-out; }
+
+        /* ── SCROLLBAR STYLING ── */
+        .kanban-body::-webkit-scrollbar,
+        .task-detail-panel::-webkit-scrollbar {
+            width: 4px;
+        }
+        .kanban-body::-webkit-scrollbar-track,
+        .task-detail-panel::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+        .kanban-body::-webkit-scrollbar-thumb,
+        .task-detail-panel::-webkit-scrollbar-thumb {
+            background: var(--dark-border);
+            border-radius: 2px;
+        }
+        .kanban-body::-webkit-scrollbar-thumb:hover,
+        .task-detail-panel::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+
+        /* ── DROPDOWN MENU DARK ── */
+        .dropdown-menu {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-card);
+        }
+        .dropdown-item {
+            color: var(--dark-text-secondary);
+            transition: var(--transition);
+        }
+        .dropdown-item:hover {
+            background: var(--dark-bg);
+            color: var(--dark-text);
+        }
+        .dropdown-divider {
+            border-color: var(--dark-border);
+        }
+    </style>
+</head>
+<body>
+
+<!-- Mobile Menu Toggle -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-rocket"></i></div>
+        <div class="brand-text">Task<span>Flow</span></div>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">Main</div>
+        <a class="nav-link" href="/pm/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+
+        <div class="nav-section">Projects</div>
+        <a class="nav-link" href="/pm/projects"><i class="fas fa-folder-open"></i> All Projects <span class="nav-badge">12</span></a>
+        <a class="nav-link" href="/pm/projects/create"><i class="fas fa-plus-circle"></i> Create Project</a>
+
+        <div class="nav-section">Tasks</div>
+        <a class="nav-link active" href="/pm/tasks"><i class="fas fa-tasks"></i> All Tasks <span class="nav-badge warning">5</span></a>
+        <a class="nav-link" href="/pm/board"><i class="fas fa-columns"></i> Kanban Board</a>
+        <a class="nav-link" href="/pm/my-tasks"><i class="fas fa-user-check"></i> My Tasks <span class="nav-badge">12</span><span class="nav-indicator"></span></a>
+        <a class="nav-link" href="/pm/sprints"><i class="fas fa-sync-alt"></i> Sprints</a>
+
+        <div class="nav-section">Team</div>
+        <a class="nav-link" href="/pm/teams"><i class="fas fa-users"></i> Teams <span class="nav-badge">8</span></a>
+        <a class="nav-link" href="/pm/workload"><i class="fas fa-chart-pie"></i> Workload</a>
+
+        <div class="nav-section">Performance</div>
+        <a class="nav-link" href="/pm/performance"><i class="fas fa-rocket"></i> Performance Dashboard</a>
+        <a class="nav-link" href="/pm/performance/reports"><i class="fas fa-file-alt"></i> Reports</a>
+
+        <div class="nav-section">Integrations</div>
+        <a class="nav-link" href="/pm/integrations"><i class="fas fa-plug"></i> Integrations</a>
+
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="/pm/settings"><i class="fas fa-cog"></i> Preferences</a>
+    </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main-content">
+
+    <!-- TOP HEADER -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="breadcrumb-custom">
+                <a href="/pm/dashboard">Dashboard</a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <span style="color: var(--dark-text-secondary);">Tasks</span>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search tasks, assignees, projects...">
+                <span class="search-shortcut">⌘K</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" title="Quick Add" onclick="openCreateTask()"><i class="fas fa-plus"></i></button>
+            <button class="header-btn" title="Notifications"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+            <button class="header-btn" title="Help"><i class="fas fa-question-circle"></i></button>
+            <div class="user-profile" data-bs-toggle="dropdown">
+                <div class="user-avatar">JD</div>
+                <div>
+                    <div class="user-name">John Doe</div>
+                    <div class="user-role">Project Manager</div>
+                </div>
+                <i class="fas fa-chevron-down" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+            </div>
+            <div class="dropdown-menu dropdown-menu-end">
+                <a class="dropdown-item" href="/pm/profile"><i class="fas fa-user me-2"></i>Profile</a>
+                <a class="dropdown-item" href="/pm/settings"><i class="fas fa-cog me-2"></i>Settings</a>
+                <div class="dropdown-divider"></div>
+                <a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-area">
+
+        <!-- WELCOME -->
+        <div class="welcome-section fade-in-up">
+            <div class="welcome-text">
+                <h1><i class="fas fa-tasks"></i> Task Management</h1>
+                <p>Manage, track, and organize all your tasks across projects</p>
+            </div>
+            <div class="welcome-actions d-flex gap-2">
+                <button class="btn-primary-custom" onclick="openCreateTask()"><i class="fas fa-plus"></i> Create Task</button>
+                <button class="btn-secondary-custom"><i class="fas fa-download"></i> Export</button>
+                <button class="btn-secondary-custom"><i class="fas fa-sliders-h"></i> Filter</button>
+            </div>
+        </div>
+
+        <!-- STATS MINI -->
+        <div class="stats-mini fade-in-up">
+            <div class="stat-mini-item">
+                <div class="number">24</div>
+                <div class="label">Total Tasks</div>
+                <div class="change up"><i class="fas fa-arrow-up"></i> +6 this week</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="number">8</div>
+                <div class="label">In Progress</div>
+                <div class="change neutral"><i class="fas fa-minus"></i> On track</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="number">5</div>
+                <div class="label">Overdue</div>
+                <div class="change down"><i class="fas fa-arrow-down"></i> -2 this week</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="number">42</div>
+                <div class="label">Completed</div>
+                <div class="change up"><i class="fas fa-arrow-up"></i> +18%</div>
+            </div>
+            <div class="stat-mini-item">
+                <div class="number">92%</div>
+                <div class="label">Completion Rate</div>
+                <div class="change up"><i class="fas fa-arrow-up"></i> +5%</div>
+            </div>
+        </div>
+
+        <!-- FILTERS & VIEWS -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3 fade-in-up">
+            <div class="filter-bar">
+                <select class="form-select-sm">
+                    <option>All Projects</option>
+                    <option>Project Alpha</option>
+                    <option>Project Beta</option>
+                    <option>Project Gamma</option>
+                    <option>Project Delta</option>
+                </select>
+                <select class="form-select-sm">
+                    <option>All Assignees</option>
+                    <option>John Doe</option>
+                    <option>Jane Smith</option>
+                    <option>Mike Johnson</option>
+                    <option>Alex Lee</option>
+                    <option>Sarah Williams</option>
+                </select>
+                <select class="form-select-sm">
+                    <option>All Priorities</option>
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                </select>
+                <div class="d-flex gap-1 flex-wrap">
+                    <span class="filter-chip active">All</span>
+                    <span class="filter-chip">Due Today</span>
+                    <span class="filter-chip">Overdue</span>
+                    <span class="filter-chip">My Tasks</span>
+                    <span class="filter-chip">High Priority</span>
+                </div>
+            </div>
+            <div class="view-toggle">
+                <button class="active" data-view="list"><i class="fas fa-list-ul"></i> List</button>
+                <button data-view="board"><i class="fas fa-columns"></i> Board</button>
+                <button data-view="calendar"><i class="fas fa-calendar-alt"></i> Calendar</button>
+            </div>
+        </div>
+
+        <!-- ========== LIST VIEW ========== -->
+        <div class="view-content active fade-in-up" id="view-list">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-list-ul"></i> All Tasks
+                        <span class="badge" style="background: var(--dark-border); color: var(--dark-text-secondary); font-weight: 500;">24 tasks</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-sm" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.7rem;"><i class="fas fa-sort"></i> Sort</button>
+                        <button class="btn-sm" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.7rem;"><i class="fas fa-download"></i> Export</button>
+                    </div>
+                </div>
+                <div class="card-body" style="padding: 0;">
+                    <div class="task-list-header">
+                        <span></span>
+                        <span>Task</span>
+                        <span>Project</span>
+                        <span>Assignee</span>
+                        <span>Status</span>
+                        <span>Due Date</span>
+                        <span><i class="fas fa-paperclip"></i></span>
+                    </div>
+
+                    <!-- Task Items -->
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-001')">
+                        <span><input type="checkbox" class="task-checkbox"></span>
+                        <span class="task-title">Implement User Authentication API</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--primary);"></i> Project Alpha</span>
+                        <span><div class="avatar-group"><div class="avatar blue" style="width: 24px; height: 24px; font-size: 0.5rem;">JD</div></div></span>
+                        <span><span class="status-badge inprogress">In Progress</span></span>
+                        <span style="font-size: 0.75rem; color: var(--danger); font-weight: 500;"><i class="fas fa-exclamation-circle"></i> Today</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-002')">
+                        <span><input type="checkbox" class="task-checkbox"></span>
+                        <span class="task-title">Design Database Schema</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--purple);"></i> Project Beta</span>
+                        <span><div class="avatar-group"><div class="avatar green" style="width: 24px; height: 24px; font-size: 0.5rem;">JS</div></div></span>
+                        <span><span class="status-badge todo">To Do</span></span>
+                        <span style="font-size: 0.75rem; color: var(--warning); font-weight: 500;"><i class="fas fa-clock"></i> Tomorrow</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-003')">
+                        <span><input type="checkbox" class="task-checkbox"></span>
+                        <span class="task-title">Setup CI/CD Pipeline</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--orange);"></i> Project Gamma</span>
+                        <span><div class="avatar-group"><div class="avatar purple" style="width: 24px; height: 24px; font-size: 0.5rem;">MJ</div></div></span>
+                        <span><span class="status-badge review">In Review</span></span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);">3 days</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-004')">
+                        <span><input type="checkbox" class="task-checkbox" checked></span>
+                        <span class="task-title done">API Documentation</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--primary);"></i> Project Alpha</span>
+                        <span><div class="avatar-group"><div class="avatar blue" style="width: 24px; height: 24px; font-size: 0.5rem;">JD</div></div></span>
+                        <span><span class="status-badge done">Done</span></span>
+                        <span style="font-size: 0.75rem; color: var(--success); font-weight: 500;"><i class="fas fa-check-circle"></i> Completed</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-005')">
+                        <span><input type="checkbox" class="task-checkbox"></span>
+                        <span class="task-title">Fix Login Page Bug</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--primary);"></i> Project Alpha</span>
+                        <span><div class="avatar-group"><div class="avatar red" style="width: 24px; height: 24px; font-size: 0.5rem;">AL</div></div></span>
+                        <span><span class="status-badge blocked">Blocked</span></span>
+                        <span style="font-size: 0.75rem; color: var(--danger); font-weight: 500;"><i class="fas fa-exclamation-triangle"></i> 2 days overdue</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+
+                    <div class="task-list-item" onclick="openTaskDetail('TSK-006')">
+                        <span><input type="checkbox" class="task-checkbox"></span>
+                        <span class="task-title">Create User Onboarding Flow</span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);"><i class="fas fa-folder" style="color: var(--orange);"></i> Project Gamma</span>
+                        <span><div class="avatar-group"><div class="avatar purple" style="width: 24px; height: 24px; font-size: 0.5rem;">MJ</div></div></span>
+                        <span><span class="status-badge backlog">Backlog</span></span>
+                        <span style="font-size: 0.75rem; color: var(--dark-text-muted);">5 days</span>
+                        <span><i class="fas fa-paperclip" style="color: var(--dark-text-muted);"></i></span>
+                    </div>
+                </div>
+                <div class="card-footer" style="background: var(--dark-bg); border-top: 1px solid var(--dark-border); padding: 0.75rem 1.25rem;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span style="font-size: 0.8rem; color: var(--dark-text-muted);">Showing 6 of 24 tasks</span>
+                        <div class="d-flex gap-1">
+                            <button class="btn-sm" style="background: var(--dark-border); border: none; color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem;">Previous</button>
+                            <button class="btn-sm" style="background: var(--primary); border: none; color: white; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem;">1</button>
+                            <button class="btn-sm" style="background: var(--dark-border); border: none; color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem;">2</button>
+                            <button class="btn-sm" style="background: var(--dark-border); border: none; color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem;">3</button>
+                            <button class="btn-sm" style="background: var(--dark-border); border: none; color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.7rem;">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== BOARD VIEW (Kanban) ========== -->
+        <div class="view-content fade-in-up" id="view-board">
+            <div class="kanban-board">
+                <!-- Backlog -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h6><i class="fas fa-circle" style="color: var(--purple);"></i> Backlog <span class="count">6</span></h6>
+                        <button class="header-btn" style="width: 28px; height: 28px; font-size: 0.6rem;" onclick="openCreateTask()"><i class="fas fa-plus"></i></button>
+                    </div>
+                    <div class="kanban-body">
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-006')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-006</span>
+                                <span class="priority-badge high">High</span>
+                            </div>
+                            <div class="task-title">Create User Onboarding Flow</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Gamma</span>
+                                <span><i class="fas fa-user"></i> MJ</span>
+                                <span class="task-tag feature">Feature</span>
+                            </div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-007')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-007</span>
+                                <span class="priority-badge low">Low</span>
+                            </div>
+                            <div class="task-title">Update Documentation</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Alpha</span>
+                                <span><i class="fas fa-user"></i> JD</span>
+                                <span class="task-tag docs">Docs</span>
+                            </div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-008')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-008</span>
+                                <span class="priority-badge medium">Medium</span>
+                            </div>
+                            <div class="task-title">Payment Gateway Integration</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Beta</span>
+                                <span><i class="fas fa-user"></i> JS</span>
+                                <span class="task-tag story">Story</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- To Do -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h6><i class="fas fa-circle" style="color: var(--dark-text-muted);"></i> To Do <span class="count">4</span></h6>
+                    </div>
+                    <div class="kanban-body">
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-002')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-002</span>
+                                <span class="priority-badge medium">Medium</span>
+                            </div>
+                            <div class="task-title">Design Database Schema</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Beta</span>
+                                <span><i class="fas fa-user"></i> JS</span>
+                                <span class="task-tag task">Task</span>
+                            </div>
+                            <div class="task-progress"><div class="fill" style="width: 0%;"></div></div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-009')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-009</span>
+                                <span class="priority-badge critical">Critical</span>
+                            </div>
+                            <div class="task-title">Security Audit & Compliance</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Alpha</span>
+                                <span><i class="fas fa-user"></i> AL</span>
+                                <span class="task-tag task">Task</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- In Progress -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h6><i class="fas fa-circle" style="color: var(--info);"></i> In Progress <span class="count">3</span></h6>
+                    </div>
+                    <div class="kanban-body">
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-001')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-001</span>
+                                <span class="priority-badge critical">Critical</span>
+                            </div>
+                            <div class="task-title">Implement User Authentication API</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Alpha</span>
+                                <span><i class="fas fa-user"></i> JD</span>
+                                <span class="task-tag feature">Feature</span>
+                            </div>
+                            <div class="task-progress"><div class="fill" style="width: 65%;"></div></div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-010')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-010</span>
+                                <span class="priority-badge high">High</span>
+                            </div>
+                            <div class="task-title">Dashboard Analytics Widget</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Gamma</span>
+                                <span><i class="fas fa-user"></i> MJ</span>
+                                <span class="task-tag feature">Feature</span>
+                            </div>
+                            <div class="task-progress"><div class="fill" style="width: 30%;"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- In Review -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h6><i class="fas fa-circle" style="color: var(--warning);"></i> In Review <span class="count">2</span></h6>
+                    </div>
+                    <div class="kanban-body">
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-003')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-003</span>
+                                <span class="priority-badge medium">Medium</span>
+                            </div>
+                            <div class="task-title">Setup CI/CD Pipeline</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Gamma</span>
+                                <span><i class="fas fa-user"></i> MJ</span>
+                                <span class="task-tag story">Story</span>
+                            </div>
+                            <div class="task-progress"><div class="fill" style="width: 90%;"></div></div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-011')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-011</span>
+                                <span class="priority-badge high">High</span>
+                            </div>
+                            <div class="task-title">Mobile Responsive Design</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Alpha</span>
+                                <span><i class="fas fa-user"></i> JS</span>
+                                <span class="task-tag task">Task</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Done -->
+                <div class="kanban-column">
+                    <div class="kanban-header">
+                        <h6><i class="fas fa-circle" style="color: var(--success);"></i> Done <span class="count">3</span></h6>
+                    </div>
+                    <div class="kanban-body">
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-004')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-004</span>
+                                <span class="priority-badge low">Low</span>
+                            </div>
+                            <div class="task-title done">API Documentation</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Alpha</span>
+                                <span><i class="fas fa-user"></i> JD</span>
+                                <span class="task-tag docs">Docs</span>
+                                <span><span class="status-badge done">Done</span></span>
+                            </div>
+                            <div class="task-progress"><div class="fill" style="width: 100%;"></div></div>
+                        </div>
+                        <div class="kanban-card" onclick="openTaskDetail('TSK-012')">
+                            <div class="d-flex justify-content-between">
+                                <span class="task-id">TSK-012</span>
+                                <span class="priority-badge medium">Medium</span>
+                            </div>
+                            <div class="task-title done">User Testing Report</div>
+                            <div class="task-meta">
+                                <span><i class="fas fa-folder"></i> Project Beta</span>
+                                <span><i class="fas fa-user"></i> SW</span>
+                                <span class="task-tag task">Task</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== CALENDAR VIEW ========== -->
+        <div class="view-content fade-in-up" id="view-calendar">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-calendar-alt"></i> Task Calendar
+                        <span class="badge" style="background: var(--dark-border); color: var(--dark-text-secondary); font-weight: 500;">September 2026</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn-sm" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 6px;"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn-sm" style="background: var(--primary); border: none; color: white; padding: 0.25rem 0.6rem; border-radius: 6px;">Today</button>
+                        <button class="btn-sm" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text-secondary); padding: 0.25rem 0.6rem; border-radius: 6px;"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="calendar-weekdays">
+                        <span>Sun</span>
+                        <span>Mon</span>
+                        <span>Tue</span>
+                        <span>Wed</span>
+                        <span>Thu</span>
+                        <span>Fri</span>
+                        <span>Sat</span>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="calendar-day"><div class="day-number">31</div></div>
+                        <div class="calendar-day"><div class="day-number">1</div></div>
+                        <div class="calendar-day"><div class="day-number">2</div></div>
+                        <div class="calendar-day"><div class="day-number">3</div></div>
+                        <div class="calendar-day"><div class="day-number">4</div></div>
+                        <div class="calendar-day">
+                            <div class="day-number">5</div>
+                            <div class="day-event">Authentication API</div>
+                            <div class="day-event overdue">Login Bug</div>
+                        </div>
+                        <div class="calendar-day"><div class="day-number">6</div></div>
+                        <div class="calendar-day"><div class="day-number">7</div></div>
+                        <div class="calendar-day">
+                            <div class="day-number">8</div>
+                            <div class="day-event">Database Schema</div>
+                        </div>
+                        <div class="calendar-day"><div class="day-number">9</div></div>
+                        <div class="calendar-day"><div class="day-number">10</div></div>
+                        <div class="calendar-day"><div class="day-number">11</div></div>
+                        <div class="calendar-day"><div class="day-number">12</div></div>
+                        <div class="calendar-day"><div class="day-number">13</div></div>
+                        <div class="calendar-day">
+                            <div class="day-number">14</div>
+                            <div class="day-event">CI/CD Pipeline Review</div>
+                        </div>
+                        <div class="calendar-day"><div class="day-number">15</div></div>
+                        <div class="calendar-day"><div class="day-number">16</div></div>
+                        <div class="calendar-day"><div class="day-number">17</div></div>
+                        <div class="calendar-day"><div class="day-number">18</div></div>
+                        <div class="calendar-day"><div class="day-number">19</div></div>
+                        <div class="calendar-day">
+                            <div class="day-number today">20</div>
+                            <div class="day-event">Onboarding Flow</div>
+                        </div>
+                        <div class="calendar-day"><div class="day-number">21</div></div>
+                        <div class="calendar-day"><div class="day-number">22</div></div>
+                        <div class="calendar-day"><div class="day-number">23</div></div>
+                        <div class="calendar-day"><div class="day-number">24</div></div>
+                        <div class="calendar-day"><div class="day-number">25</div></div>
+                        <div class="calendar-day"><div class="day-number">26</div></div>
+                        <div class="calendar-day"><div class="day-number">27</div></div>
+                        <div class="calendar-day"><div class="day-number">28</div></div>
+                        <div class="calendar-day"><div class="day-number">29</div></div>
+                        <div class="calendar-day"><div class="day-number">30</div></div>
+                        <div class="calendar-day"><div class="day-number">1</div></div>
+                        <div class="calendar-day"><div class="day-number">2</div></div>
+                        <div class="calendar-day"><div class="day-number">3</div></div>
+                        <div class="calendar-day"><div class="day-number">4</div></div>
+                    </div>
+                    <div class="d-flex gap-4 mt-3 pt-3" style="border-top: 1px solid var(--dark-border);">
+                        <div class="d-flex align-items-center gap-2"><span style="width: 12px; height: 12px; background: var(--primary-light); border-radius: 3px;"></span><span style="font-size: 0.8rem; color: var(--dark-text-secondary);">Active Task</span></div>
+                        <div class="d-flex align-items-center gap-2"><span style="width: 12px; height: 12px; background: var(--danger-light); border-radius: 3px;"></span><span style="font-size: 0.8rem; color: var(--dark-text-secondary);">Overdue</span></div>
+                        <div class="d-flex align-items-center gap-2"><span style="width: 12px; height: 12px; background: var(--success-light); border-radius: 3px;"></span><span style="font-size: 0.8rem; color: var(--dark-text-secondary);">Completed</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- FLOATING ACTION BUTTON -->
+<button class="fab visible" id="fab" onclick="openCreateTask()">
+    <i class="fas fa-plus"></i>
+</button>
+
+<!-- ========== CREATE TASK MODAL ========== -->
+<div class="modal fade" id="createTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" style="color: var(--dark-text);">
+                    <i class="fas fa-plus-circle" style="color: var(--primary);"></i> Create New Task
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    <div class="mb-3">
+                        <label class="form-label">Task Title *</label>
+                        <input type="text" class="form-control" placeholder="e.g. Implement user authentication" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="3" placeholder="Describe the task in detail..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Project</label>
+                            <select class="form-select">
+                                <option>Project Alpha</option>
+                                <option>Project Beta</option>
+                                <option>Project Gamma</option>
+                                <option>Project Delta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Assignee</label>
+                            <select class="form-select">
+                                <option>John Doe</option>
+                                <option>Jane Smith</option>
+                                <option>Mike Johnson</option>
+                                <option>Alex Lee</option>
+                                <option>Sarah Williams</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Priority</label>
+                            <select class="form-select">
+                                <option value="critical">Critical</option>
+                                <option value="high" selected>High</option>
+                                <option value="medium">Medium</option>
+                                <option value="low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" class="form-control" value="2026-09-05">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select">
+                                <option>Backlog</option>
+                                <option selected>To Do</option>
+                                <option>In Progress</option>
+                                <option>In Review</option>
+                                <option>Done</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Story Points</label>
+                            <select class="form-select">
+                                <option>1</option>
+                                <option>2</option>
+                                <option selected>3</option>
+                                <option>5</option>
+                                <option>8</option>
+                                <option>13</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <span class="filter-chip active">Feature</span>
+                            <span class="filter-chip">Bug</span>
+                            <span class="filter-chip">Story</span>
+                            <span class="filter-chip">Task</span>
+                            <span class="filter-chip">Docs</span>
+                            <span class="filter-chip" style="border-style: dashed;">+ Add Tag</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Attachments</label>
+                        <div style="border: 2px dashed var(--dark-border); border-radius: 8px; padding: 1.5rem; text-align: center; color: var(--dark-text-muted); cursor: pointer; transition: var(--transition);">
+                            <i class="fas fa-cloud-upload-alt" style="font-size: 1.5rem; display: block; margin-bottom: 0.5rem; color: var(--primary);"></i>
+                            <span style="font-size: 0.85rem;">Drop files here or click to browse</span>
+                            <div style="font-size: 0.7rem; margin-top: 0.25rem;">Maximum file size: 10MB</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-primary-custom" onclick="saveTask()"><i class="fas fa-save"></i> Create Task</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== TASK DETAIL OVERLAY ========== -->
+<div class="task-detail-overlay" id="taskDetailOverlay" onclick="closeTaskDetail()"></div>
+
+<!-- ========== TASK DETAIL PANEL ========== -->
+<div class="task-detail-panel" id="taskDetailPanel">
+    <button class="close-btn" onclick="closeTaskDetail()"><i class="fas fa-times"></i></button>
+
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+            <span class="task-id" style="font-size: 0.75rem; color: var(--dark-text-muted); font-weight: 600;">TSK-001</span>
+            <h4 style="font-weight: 600; margin: 0.25rem 0; color: var(--dark-text);" id="detailTaskTitle">Implement User Authentication API</h4>
+        </div>
+        <div class="d-flex gap-2">
+            <span class="status-badge inprogress">In Progress</span>
+            <span class="priority-badge critical">Critical</span>
+        </div>
+    </div>
+
+    <div class="detail-field">
+        <div class="detail-label">Description</div>
+        <textarea class="detail-input" rows="3">Build a secure JWT-based authentication system with refresh tokens, password reset, and social login integration. Includes OAuth2 support for Google and GitHub.</textarea>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Project</div>
+            <select class="detail-input">
+                <option selected>Project Alpha</option>
+                <option>Project Beta</option>
+                <option>Project Gamma</option>
+                <option>Project Delta</option>
+            </select>
+        </div>
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Assignee</div>
+            <select class="detail-input">
+                <option selected>John Doe</option>
+                <option>Jane Smith</option>
+                <option>Mike Johnson</option>
+                <option>Alex Lee</option>
+                <option>Sarah Williams</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Priority</div>
+            <select class="detail-input">
+                <option>Critical</option>
+                <option selected>High</option>
+                <option>Medium</option>
+                <option>Low</option>
+            </select>
+        </div>
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Due Date</div>
+            <input type="date" class="detail-input" value="2026-09-05">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Status</div>
+            <select class="detail-input">
+                <option>Backlog</option>
+                <option>To Do</option>
+                <option selected>In Progress</option>
+                <option>In Review</option>
+                <option>Done</option>
+            </select>
+        </div>
+        <div class="col-md-6 detail-field">
+            <div class="detail-label">Story Points</div>
+            <select class="detail-input">
+                <option>1</option>
+                <option>2</option>
+                <option selected>3</option>
+                <option>5</option>
+                <option>8</option>
+                <option>13</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="detail-field">
+        <div class="detail-label">Progress</div>
+        <div style="width: 100%; height: 6px; background: var(--dark-bg); border-radius: 4px; overflow: hidden;">
+            <div style="width: 65%; height: 100%; background: linear-gradient(90deg, var(--primary), var(--purple)); border-radius: 4px; transition: width 0.6s ease;"></div>
+        </div>
+        <div style="font-size: 0.75rem; color: var(--dark-text-secondary); margin-top: 0.25rem;">65% complete</div>
+    </div>
+
+    <div class="detail-field">
+        <div class="detail-label">Tags</div>
+        <div class="d-flex gap-2 flex-wrap">
+            <span class="filter-chip active">Feature</span>
+            <span class="filter-chip active">API</span>
+            <span class="filter-chip active">Authentication</span>
+            <span class="filter-chip">+ Add</span>
+        </div>
+    </div>
+
+    <div class="detail-field">
+        <div class="detail-label">Attachments</div>
+        <div class="d-flex gap-2 flex-wrap">
+            <div style="background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-file-pdf" style="color: var(--danger);"></i> auth-spec.pdf
+                <span style="color: var(--dark-text-muted); font-size: 0.6rem;">2.4 MB</span>
+            </div>
+            <div style="background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-file-code" style="color: var(--warning);"></i> api-design.json
+                <span style="color: var(--dark-text-muted); font-size: 0.6rem;">856 KB</span>
+            </div>
+        </div>
+    </div>
+
+    <hr style="border-color: var(--dark-border);">
+
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn-primary-custom" style="font-size: 0.8rem;"><i class="fas fa-save"></i> Save</button>
+        <button class="btn-secondary-custom" style="font-size: 0.8rem;"><i class="fas fa-comment"></i> Add Comment</button>
+        <button class="btn-secondary-custom" style="font-size: 0.8rem;"><i class="fas fa-share-alt"></i> Share</button>
+        <button class="btn-secondary-custom" style="font-size: 0.8rem; color: var(--danger); border-color: var(--danger);"><i class="fas fa-trash"></i> Delete</button>
+    </div>
+
+    <hr style="border-color: var(--dark-border);">
+
+    <div class="detail-field">
+        <div class="detail-label">Activity</div>
+        <div style="font-size: 0.8rem; color: var(--dark-text-secondary); padding: 0.25rem 0;">
+            <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--dark-border);">
+                <div class="avatar blue" style="width: 28px; height: 28px; font-size: 0.5rem; flex-shrink: 0;">JD</div>
+                <div>
+                    <div><strong style="color: var(--dark-text);">John Doe</strong> updated status to <span class="status-badge inprogress" style="font-size: 0.6rem;">In Progress</span></div>
+                    <div style="font-size: 0.65rem; color: var(--dark-text-muted);">2 hours ago</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--dark-border);">
+                <div class="avatar green" style="width: 28px; height: 28px; font-size: 0.5rem; flex-shrink: 0;">JS</div>
+                <div>
+                    <div><strong style="color: var(--dark-text);">Jane Smith</strong> added a comment: "Let's schedule a review for this."</div>
+                    <div style="font-size: 0.65rem; color: var(--dark-text-muted);">5 hours ago</div>
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.75rem; padding: 0.5rem 0;">
+                <div class="avatar purple" style="width: 28px; height: 28px; font-size: 0.5rem; flex-shrink: 0;">MJ</div>
+                <div>
+                    <div><strong style="color: var(--dark-text);">Mike Johnson</strong> attached <i class="fas fa-file" style="color: var(--dark-text-muted);"></i> auth-spec.pdf</div>
+                    <div style="font-size: 0.65rem; color: var(--dark-text-muted);">Yesterday</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== SCRIPTS ========== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ── Mobile Sidebar Toggle ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    document.addEventListener('click', function(e) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('mobileMenuToggle');
+        if (window.innerWidth <= 992 && sidebar.classList.contains('active') &&
+            !sidebar.contains(e.target) && e.target !== toggle) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // ── View Toggle ──
+    document.querySelectorAll('.view-toggle button').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const view = this.dataset.view;
+            document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + view).classList.add('active');
+            document.getElementById('fab').classList.toggle('visible', view !== 'calendar');
+        });
+    });
+
+    // ── Task Checkboxes ──
+    document.querySelectorAll('.task-checkbox').forEach(cb => {
+        cb.addEventListener('change', function() {
+            const item = this.closest('.task-list-item');
+            if (item) {
+                item.querySelector('.task-title')?.classList.toggle('done');
+            }
+            // Update status badge
+            const statusBadge = item?.querySelector('.status-badge');
+            if (statusBadge && this.checked) {
+                statusBadge.className = 'status-badge done';
+                statusBadge.textContent = 'Done';
+            } else if (statusBadge && !this.checked) {
+                statusBadge.className = 'status-badge todo';
+                statusBadge.textContent = 'To Do';
+            }
+        });
+    });
+
+    // ── Task Detail Panel ──
+    function openTaskDetail(taskId) {
+        document.getElementById('taskDetailOverlay').classList.add('active');
+        document.getElementById('taskDetailPanel').classList.add('active');
+        document.body.style.overflow = 'hidden';
+        document.querySelector('#detailTaskTitle').textContent = 'Task ' + taskId + ' - Loading...';
+        // In production, would fetch task data here
+    }
+
+    function closeTaskDetail() {
+        document.getElementById('taskDetailOverlay').classList.remove('active');
+        document.getElementById('taskDetailPanel').classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeTaskDetail();
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.querySelector('.search-box input')?.focus();
+        }
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            openCreateTask();
+        }
+    });
+
+    // ── Create Task Modal ──
+    let createTaskModal;
+
+    function openCreateTask() {
+        if (!createTaskModal) {
+            createTaskModal = new bootstrap.Modal(document.getElementById('createTaskModal'));
+        }
+        createTaskModal.show();
+    }
+
+    function saveTask() {
+        alert('✅ Task created successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('createTaskModal')).hide();
+    }
+
+    // ── Filter Chips ──
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            if (this.textContent.includes('Add Tag') || this.textContent.includes('+ Add')) return;
+            this.classList.toggle('active');
+        });
+    });
+
+    // ── Calendar Day Click ──
+    document.querySelectorAll('.calendar-day').forEach(day => {
+        day.addEventListener('click', function() {
+            if (this.querySelector('.day-event')) {
+                openTaskDetail('TSK-CAL');
+            }
+        });
+        day.style.cursor = 'pointer';
+    });
+
+    // ── Close dropdown on outside click ──
+    document.addEventListener('click', function(e) {
+        const dropdown = document.querySelector('.dropdown-menu');
+        if (dropdown && dropdown.classList.contains('show')) {
+            const toggle = document.querySelector('.user-profile');
+            if (!toggle?.contains(e.target) && !dropdown.contains(e.target)) {
+                bootstrap.Dropdown.getInstance(toggle)?.hide();
+            }
+        }
+    });
+
+    console.log('🚀 TaskFlow Management Suite loaded');
+    console.log('⌨️  Shortcuts: Ctrl+K = Search | Ctrl+N = New Task | ESC = Close panel');
+</script>
+
+</body>
+</html>

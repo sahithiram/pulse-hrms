@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board - Enterprise PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── Same Enterprise Dark Theme ── */
+        :root {
+            --primary: #4F8CFF;
+            --primary-hover: #3B7AF5;
+            --primary-light: rgba(79, 140, 255, 0.12);
+            --dark-bg: #0B1120;
+            --dark-card: #141B2D;
+            --dark-card-hover: #1A2340;
+            --dark-border: #233049;
+            --dark-text: #F8FAFC;
+            --dark-text-secondary: #94A3B8;
+            --dark-text-muted: #64748B;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #06B6D4;
+            --purple: #8B5CF6;
+            --pink: #EC4899;
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --border-radius: 12px;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ── Sidebar, Header same as Dashboard ── */
+        /* (Included in full implementation) */
+
+        .content-area { padding: 1.5rem 2rem; }
+
+        .board-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 1.5rem;
+            flex-wrap: wrap; gap: 1rem;
+        }
+        .board-header h1 {
+            font-size: 1.5rem; font-weight: 700; color: var(--dark-text);
+        }
+        .board-header h1 i { color: var(--primary); margin-right: 0.5rem; }
+
+        .board-controls {
+            display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center;
+            margin-bottom: 1.5rem;
+            background: var(--dark-card);
+            padding: 0.75rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-border);
+        }
+        .board-controls .form-select {
+            width: auto; min-width: 160px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        .board-controls .search-wrapper {
+            position: relative; flex: 1;
+        }
+        .board-controls .search-wrapper input {
+            width: 100%;
+            padding: 0.35rem 0.75rem 0.35rem 2rem;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .board-controls .search-wrapper input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            outline: none;
+        }
+        .board-controls .search-wrapper i {
+            position: absolute; left: 0.6rem; top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-muted);
+        }
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+        }
+
+        .kanban-column {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            min-height: 450px;
+        }
+
+        .kanban-column-header {
+            display: flex; justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--dark-border);
+        }
+        .kanban-column-header .title {
+            font-size: 0.8rem; font-weight: 600;
+            text-transform: uppercase; color: var(--dark-text-secondary);
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .kanban-column-header .count {
+            background: var(--dark-card);
+            padding: 0.1rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .kanban-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .kanban-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .kanban-card .card-title {
+            font-weight: 500; font-size: 0.85rem;
+            color: var(--dark-text); margin-bottom: 0.25rem;
+        }
+        .kanban-card .card-meta {
+            display: flex; justify-content: space-between;
+            align-items: center; font-size: 0.7rem;
+            color: var(--dark-text-muted);
+        }
+        .kanban-card .card-meta .assignee {
+            display: flex; align-items: center; gap: 0.25rem;
+        }
+        .kanban-card .card-meta .assignee .avatar-sm {
+            width: 20px; height: 20px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.5rem; font-weight: 600; color: white;
+        }
+        .kanban-card .card-meta .assignee .avatar-sm.blue { background: var(--primary); }
+        .kanban-card .card-meta .assignee .avatar-sm.green { background: var(--success); }
+        .kanban-card .card-meta .assignee .avatar-sm.purple { background: var(--purple); }
+        .kanban-card .card-meta .assignee .avatar-sm.pink { background: var(--pink); }
+        .kanban-card .card-meta .assignee .avatar-sm.yellow { background: var(--warning); }
+
+        .kanban-card .card-labels {
+            display: flex; gap: 0.25rem; margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+        .kanban-card .card-labels .label {
+            padding: 0.05rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.55rem;
+            font-weight: 600;
+        }
+        .kanban-card .card-labels .label.feature { background: var(--primary-light); color: var(--primary); }
+        .kanban-card .card-labels .label.bug { background: var(--danger-light); color: var(--danger); }
+        .kanban-card .card-labels .label.story { background: var(--success-light); color: var(--success); }
+        .kanban-card .card-labels .label.task { background: var(--warning-light); color: var(--warning); }
+
+        .kanban-card .card-priority {
+            width: 8px; height: 8px; border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.25rem;
+        }
+        .kanban-card .card-priority.critical { background: var(--danger); }
+        .kanban-card .card-priority.high { background: var(--warning); }
+        .kanban-card .card-priority.medium { background: var(--info); }
+        .kanban-card .card-priority.low { background: var(--dark-text-muted); }
+
+        .empty-column {
+            text-align: center; padding: 2rem 0;
+            color: var(--dark-text-muted); font-size: 0.8rem;
+        }
+
+        @media (max-width: 1200px) {
+            .kanban-board { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .kanban-board { grid-template-columns: 1fr; }
+            .board-controls { flex-direction: column; align-items: stretch; }
+            .board-controls .form-select { width: 100%; }
+            .board-controls .search-wrapper { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Sidebar and Header (same as dashboard) ── -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-rocket"></i></div>
+        <div class="brand-text">HRMS<span>PM</span></div>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">Main</div>
+        <a class="nav-link" href="/pm/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+        <div class="nav-section">Projects</div>
+        <a class="nav-link" href="/pm/projects"><i class="fas fa-folder-open"></i> All Projects <span class="nav-badge">12</span></a>
+        <a class="nav-link" href="/pm/projects/create"><i class="fas fa-plus-circle"></i> Create Project</a>
+        <div class="nav-section">Tasks</div>
+        <a class="nav-link active" href="/pm/board"><i class="fas fa-columns"></i> Kanban Board</a>
+        <a class="nav-link" href="/pm/tasks"><i class="fas fa-tasks"></i> All Tasks <span class="nav-badge warning">5</span></a>
+        <div class="nav-section">Team</div>
+        <a class="nav-link" href="/pm/teams"><i class="fas fa-users"></i> Teams</a>
+        <div class="nav-section">Performance</div>
+        <a class="nav-link" href="/pm/performance"><i class="fas fa-rocket"></i> Performance</a>
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="/pm/settings"><i class="fas fa-cog"></i> Preferences</a>
+    </div>
+</div>
+
+<div class="main-content">
+
+    <header class="top-header">
+        <div class="header-left">
+            <div class="breadcrumb-custom">
+                <a href="/pm/dashboard">Dashboard</a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <span>Kanban Board</span>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search tasks...">
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn"><i class="fas fa-bell"></i></button>
+            <div class="user-profile">
+                <div class="user-avatar">JD</div>
+                <span style="font-weight: 500; font-size: 0.85rem;">John</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-area">
+
+        <div class="board-header">
+            <h1><i class="fas fa-columns"></i> Kanban Board</h1>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn-secondary-custom" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+                <button class="btn-primary-custom" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                    <i class="fas fa-plus"></i> Add Task
+                </button>
+            </div>
+        </div>
+
+        <div class="board-controls">
+            <select class="form-select">
+                <option>Project Alpha</option>
+                <option>Project Beta</option>
+                <option>All Projects</option>
+            </select>
+            <select class="form-select">
+                <option>All Assignees</option>
+                <option>John Doe</option>
+                <option>Jane Smith</option>
+                <option>Mike Johnson</option>
+            </select>
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search tasks...">
+            </div>
+            <button class="btn-secondary-custom" style="padding: 0.3rem 0.6rem; font-size: 0.75rem;">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </div>
+
+        <div class="kanban-board">
+
+            <!-- TODO Column -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="title"><i class="fas fa-circle" style="color: #64748b; font-size: 0.6rem;"></i> To Do</div>
+                    <span class="count">8</span>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority high"></span>
+                        Implement User Authentication API
+                    </div>
+                    <div class="card-labels">
+                        <span class="label feature">Feature</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm blue">JD</span>
+                            John Doe
+                        </span>
+                        <span>Due: Sep 15</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority medium"></span>
+                        Design Database Schema
+                    </div>
+                    <div class="card-labels">
+                        <span class="label task">Task</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm green">JS</span>
+                            Jane Smith
+                        </span>
+                        <span>Due: Sep 10</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority low"></span>
+                        Setup CI/CD Pipeline
+                    </div>
+                    <div class="card-labels">
+                        <span class="label story">Story</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm purple">MJ</span>
+                            Mike Johnson
+                        </span>
+                        <span>Due: Sep 20</span>
+                    </div>
+                </div>
+
+                <div class="empty-column" style="display: none;">
+                    <i class="fas fa-inbox" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 0.5rem;"></i>
+                    No tasks
+                </div>
+            </div>
+
+            <!-- IN PROGRESS Column -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="title"><i class="fas fa-spinner fa-spin" style="color: var(--warning);"></i> In Progress</div>
+                    <span class="count">5</span>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--warning);">
+                    <div class="card-title">
+                        <span class="card-priority critical"></span>
+                        API Integration
+                    </div>
+                    <div class="card-labels">
+                        <span class="label feature">Feature</span>
+                        <span class="label" style="background: var(--danger-light); color: var(--danger);">Urgent</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm blue">JD</span>
+                            John Doe
+                        </span>
+                        <span>⏳ 4/8 hrs</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority medium"></span>
+                        Frontend Development
+                    </div>
+                    <div class="card-labels">
+                        <span class="label story">Story</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm green">JS</span>
+                            Jane Smith
+                        </span>
+                        <span>⏳ 5/10 hrs</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority high"></span>
+                        Code Review PR #123
+                    </div>
+                    <div class="card-labels">
+                        <span class="label task">Task</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm pink">AL</span>
+                            Amy Lee
+                        </span>
+                        <span>⏳ 2/4 hrs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- IN REVIEW Column -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="title"><i class="fas fa-search" style="color: var(--primary);"></i> In Review</div>
+                    <span class="count">3</span>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--primary);">
+                    <div class="card-title">
+                        <span class="card-priority low"></span>
+                        Database Migration Script
+                    </div>
+                    <div class="card-labels">
+                        <span class="label task">Task</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm blue">JD</span>
+                            John Doe
+                        </span>
+                        <span>⏳ 6/8 hrs</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority critical"></span>
+                        Security Audit Report
+                    </div>
+                    <div class="card-labels">
+                        <span class="label story">Story</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm purple">MJ</span>
+                            Mike Johnson
+                        </span>
+                        <span>⏳ 7/12 hrs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TESTING Column -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="title"><i class="fas fa-flask" style="color: var(--info);"></i> Testing</div>
+                    <span class="count">4</span>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--info);">
+                    <div class="card-title">
+                        <span class="card-priority medium"></span>
+                        API Testing
+                    </div>
+                    <div class="card-labels">
+                        <span class="label feature">Feature</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm green">JS</span>
+                            Jane Smith
+                        </span>
+                        <span>⏳ 5/8 hrs</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card">
+                    <div class="card-title">
+                        <span class="card-priority high"></span>
+                        Bug Fix - Login Flow
+                    </div>
+                    <div class="card-labels">
+                        <span class="label bug">Bug</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm blue">JD</span>
+                            John Doe
+                        </span>
+                        <span>⏳ 3/5 hrs</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DONE Column -->
+            <div class="kanban-column">
+                <div class="kanban-column-header">
+                    <div class="title"><i class="fas fa-check-circle" style="color: var(--success);"></i> Done</div>
+                    <span class="count">12</span>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--success); opacity: 0.8;">
+                    <div class="card-title" style="text-decoration: line-through; color: var(--dark-text-muted);">
+                        <span class="card-priority medium"></span>
+                        Project Setup
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm blue">JD</span>
+                            John Doe
+                        </span>
+                        <span><i class="fas fa-check" style="color: var(--success);"></i> Completed</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--success); opacity: 0.8;">
+                    <div class="card-title" style="text-decoration: line-through; color: var(--dark-text-muted);">
+                        <span class="card-priority low"></span>
+                        Wireframes Design
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm green">JS</span>
+                            Jane Smith
+                        </span>
+                        <span><i class="fas fa-check" style="color: var(--success);"></i> Completed</span>
+                    </div>
+                </div>
+
+                <div class="kanban-card" style="border-color: var(--success); opacity: 0.8;">
+                    <div class="card-title" style="text-decoration: line-through; color: var(--dark-text-muted);">
+                        <span class="card-priority high"></span>
+                        System Architecture Design
+                    </div>
+                    <div class="card-meta">
+                        <span class="assignee">
+                            <span class="avatar-sm purple">MJ</span>
+                            Mike Johnson
+                        </span>
+                        <span><i class="fas fa-check" style="color: var(--success);"></i> Completed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+</script>
+
+</body>
+</html>
