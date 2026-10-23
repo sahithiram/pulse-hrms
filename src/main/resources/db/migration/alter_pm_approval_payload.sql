@@ -1,0 +1,1 @@
+ALTER TABLE pm_approval_requests ADD COLUMN payload TEXT NULL;

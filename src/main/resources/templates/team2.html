@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management - Enterprise PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── Same Enterprise Dark Theme as Above ── */
+        :root {
+            --primary: #4F8CFF;
+            --primary-hover: #3B7AF5;
+            --primary-light: rgba(79, 140, 255, 0.12);
+            --dark-bg: #0B1120;
+            --dark-card: #141B2D;
+            --dark-card-hover: #1A2340;
+            --dark-border: #233049;
+            --dark-text: #F8FAFC;
+            --dark-text-secondary: #94A3B8;
+            --dark-text-muted: #64748B;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --danger: #EF4444;
+            --info: #06B6D4;
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --border-radius: 12px;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ── Sidebar, Header, Layout same as previous ── */
+        /* (Included in full implementation) */
+
+        /* ── TEAM SPECIFIC STYLES ── */
+        .team-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .team-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        .team-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .team-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 0.75rem;
+        }
+
+        .team-card-header .team-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+        .team-card-header .team-name i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .team-card-header .team-members-count {
+            font-size: 0.75rem;
+            color: var(--dark-text-muted);
+            background: var(--dark-bg);
+            padding: 0.1rem 0.5rem;
+            border-radius: 12px;
+        }
+
+        .team-card-body .team-desc {
+            font-size: 0.85rem;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .team-members-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .team-member-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--dark-bg);
+            padding: 0.2rem 0.6rem 0.2rem 0.3rem;
+            border-radius: 20px;
+            border: 1px solid var(--dark-border);
+            font-size: 0.75rem;
+        }
+        .team-member-chip .avatar-small {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.55rem;
+            font-weight: 600;
+            color: white;
+        }
+        .team-member-chip .avatar-small.blue { background: var(--primary); }
+        .team-member-chip .avatar-small.green { background: var(--success); }
+        .team-member-chip .avatar-small.purple { background: #8B5CF6; }
+        .team-member-chip .avatar-small.pink { background: #EC4899; }
+        .team-member-chip .avatar-small.yellow { background: var(--warning); }
+
+        .team-card-footer {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--dark-border);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .team-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        .team-stat-item {
+            text-align: center;
+            background: var(--dark-bg);
+            padding: 0.4rem;
+            border-radius: 6px;
+        }
+        .team-stat-item .number {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--dark-text);
+        }
+        .team-stat-item .label {
+            font-size: 0.6rem;
+            color: var(--dark-text-muted);
+            text-transform: uppercase;
+        }
+
+        .add-member-dropdown {
+            position: relative;
+        }
+        .add-member-dropdown .dropdown-menu {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            padding: 0.5rem;
+            min-width: 200px;
+        }
+        .add-member-dropdown .dropdown-item {
+            color: var(--dark-text);
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .add-member-dropdown .dropdown-item:hover {
+            background: var(--dark-bg);
+        }
+
+        @media (max-width: 1200px) {
+            .team-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .team-grid { grid-template-columns: 1fr; }
+            .team-stats { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-bar .form-select {
+            width: auto;
+            min-width: 140px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 8px;
+            padding: 0.4rem 0.75rem;
+            font-size: 0.8rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+        }
+        .empty-state i { font-size: 4rem; color: var(--dark-text-muted); margin-bottom: 1rem; }
+        .empty-state h4 { color: var(--dark-text-secondary); font-weight: 600; }
+        .empty-state p { color: var(--dark-text-muted); }
+    </style>
+</head>
+<body>
+
+<!-- ── SIDEBAR (Same as previous) ── -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-rocket"></i></div>
+        <div class="brand-text">HRMS<span>PM</span></div>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">Main</div>
+        <a class="nav-link" href="/pm/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+        <div class="nav-section">Projects</div>
+        <a class="nav-link" href="/pm/projects"><i class="fas fa-folder-open"></i> All Projects <span class="nav-badge">12</span></a>
+        <a class="nav-link" href="/pm/projects/create"><i class="fas fa-plus-circle"></i> Create Project</a>
+        <div class="nav-section">Tasks</div>
+        <a class="nav-link" href="/pm/tasks"><i class="fas fa-tasks"></i> All Tasks <span class="nav-badge" style="background: var(--warning); color:#000;">5</span></a>
+        <a class="nav-link" href="/pm/board"><i class="fas fa-columns"></i> Kanban Board</a>
+        <a class="nav-link" href="/pm/my-tasks"><i class="fas fa-user-check"></i> My Tasks <span class="nav-badge">12</span></a>
+        <div class="nav-section">Team</div>
+        <a class="nav-link active" href="/pm/teams"><i class="fas fa-users"></i> Teams</a>
+        <a class="nav-link" href="/pm/workload"><i class="fas fa-chart-pie"></i> Workload</a>
+        <div class="nav-section">Analytics</div>
+        <a class="nav-link" href="/pm/reports"><i class="fas fa-chart-line"></i> Reports</a>
+        <a class="nav-link" href="/pm/performance"><i class="fas fa-rocket"></i> Performance</a>
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="/pm/settings"><i class="fas fa-cog"></i> Preferences</a>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="main-content">
+
+    <!-- Top Header -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="breadcrumb-custom">
+                <a href="/pm/dashboard">Dashboard</a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <span style="color: var(--dark-text);">Teams</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn"><i class="fas fa-bell"></i></button>
+            <div class="user-profile">
+                <div class="user-avatar">JD</div>
+                <span style="font-weight: 500; font-size: 0.85rem;">John</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Area -->
+    <div class="content-area">
+
+        <!-- Page Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1 style="font-size: 1.5rem; font-weight: 700; color: var(--dark-text);">
+                    <i class="fas fa-users" style="color: var(--primary);"></i>
+                    Teams
+                </h1>
+                <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;">
+                    Manage your project teams and members
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn-secondary-custom" onclick="openCreateTeam()">
+                    <i class="fas fa-plus"></i> Create Team
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--dark-text-secondary); font-size: 0.8rem;">Total Teams</span>
+                    <span style="background: var(--primary-light); color: var(--primary); padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600;">8</span>
+                </div>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--dark-text);">8</div>
+            </div>
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1rem;">
+                <span style="color: var(--dark-text-secondary); font-size: 0.8rem;">Total Members</span>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--dark-text);">24</div>
+            </div>
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1rem;">
+                <span style="color: var(--dark-text-secondary); font-size: 0.8rem;">Avg Team Size</span>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--dark-text);">3</div>
+            </div>
+            <div style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius); padding: 1rem;">
+                <span style="color: var(--dark-text-secondary); font-size: 0.8rem;">Active Members</span>
+                <div style="font-size: 1.75rem; font-weight: 700; color: var(--success);">18</div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <select class="form-select">
+                <option>All Teams</option>
+                <option>Engineering</option>
+                <option>Marketing</option>
+                <option>Design</option>
+            </select>
+            <select class="form-select">
+                <option>All Members</option>
+                <option>Active</option>
+                <option>Inactive</option>
+            </select>
+            <input type="text" class="form-control" placeholder="Search teams..." style="width: 200px; background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: 8px; padding: 0.4rem 0.75rem;">
+            <button class="btn-secondary-custom" style="padding: 0.4rem 0.75rem;">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </div>
+
+        <!-- Teams Grid -->
+        <div class="team-grid">
+            <!-- Team Card 1 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-users-cog"></i> Engineering Team
+                    </div>
+                    <span class="team-members-count">8 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Core engineering team handling all development projects
+                    </div>
+                    <div class="team-members-list">
+                        <div class="team-member-chip">
+                            <div class="avatar-small blue">JD</div>
+                            John Doe
+                        </div>
+                        <div class="team-member-chip">
+                            <div class="avatar-small green">JS</div>
+                            Jane Smith
+                        </div>
+                        <div class="team-member-chip">
+                            <div class="avatar-small purple">MJ</div>
+                            Mike Johnson
+                        </div>
+                        <div class="team-member-chip" style="background: var(--primary-light); border-color: var(--primary);">
+                            <i class="fas fa-plus" style="font-size: 0.6rem; color: var(--primary);"></i>
+                            Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--dark-border);">
+                    <div class="team-stat-item">
+                        <div class="number">12</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">45</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">92%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem; margin-left: auto; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Team Card 2 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-bullhorn" style="color: var(--warning);"></i> Marketing Team
+                    </div>
+                    <span class="team-members-count">5 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Marketing and growth team managing campaigns
+                    </div>
+                    <div class="team-members-list">
+                        <div class="team-member-chip">
+                            <div class="avatar-small pink">AL</div>
+                            Amy Lee
+                        </div>
+                        <div class="team-member-chip">
+                            <div class="avatar-small yellow">DW</div>
+                            David Wang
+                        </div>
+                        <div class="team-member-chip">
+                            <div class="avatar-small blue">SR</div>
+                            Sarah Roberts
+                        </div>
+                        <div class="team-member-chip" style="background: var(--primary-light); border-color: var(--primary);">
+                            <i class="fas fa-plus" style="font-size: 0.6rem; color: var(--primary);"></i>
+                            Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--dark-border);">
+                    <div class="team-stat-item">
+                        <div class="number">8</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">28</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">78%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem; margin-left: auto; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Team Card 3 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-paint-brush" style="color: #8B5CF6;"></i> Design Team
+                    </div>
+                    <span class="team-members-count">4 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        UX/UI design team creating user experiences
+                    </div>
+                    <div class="team-members-list">
+                        <div class="team-member-chip">
+                            <div class="avatar-small purple">AL</div>
+                            Amy Lee
+                        </div>
+                        <div class="team-member-chip">
+                            <div class="avatar-small pink">DW</div>
+                            David Wang
+                        </div>
+                        <div class="team-member-chip" style="background: var(--primary-light); border-color: var(--primary);">
+                            <i class="fas fa-plus" style="font-size: 0.6rem; color: var(--primary);"></i>
+                            Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats" style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--dark-border);">
+                    <div class="team-stat-item">
+                        <div class="number">6</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">34</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">85%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem;">
+                        <i class="fas fa-edit"></i> Edit
+                    </button>
+                    <button class="btn-secondary-custom" style="padding: 0.3rem 0.8rem; font-size: 0.75rem; margin-left: auto; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State (Hidden) -->
+        <div class="empty-state" style="display: none;">
+            <i class="fas fa-users"></i>
+            <h4>No teams created yet</h4>
+            <p>Create your first team to start collaborating</p>
+            <button class="btn-primary-custom"><i class="fas fa-plus"></i> Create Team</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── CREATE TEAM MODAL ── -->
+<div class="modal fade" id="createTeamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--border-radius);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--dark-border);">
+                <h5 class="modal-title" style="color: var(--dark-text);">
+                    <i class="fas fa-users" style="color: var(--primary);"></i> Create New Team
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Team Name <span class="required">*</span></label>
+                    <input type="text" class="form-control" placeholder="e.g., Engineering Team">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" rows="2" placeholder="Describe the team's purpose..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Team Lead</label>
+                    <select class="form-select">
+                        <option>John Doe</option>
+                        <option>Jane Smith</option>
+                        <option>Mike Johnson</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Add Members</label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--dark-bg); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--dark-border);">
+                            <div class="user-avatar" style="width: 24px; height: 24px; font-size: 0.6rem; background: var(--primary);">JD</div>
+                            <span style="font-size: 0.8rem;">John Doe</span>
+                            <i class="fas fa-times" style="font-size: 0.6rem; color: var(--dark-text-muted); cursor: pointer;"></i>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--dark-bg); padding: 0.3rem 0.6rem; border-radius: 6px; border: 1px solid var(--dark-border);">
+                            <div class="user-avatar" style="width: 24px; height: 24px; font-size: 0.6rem; background: var(--success);">JS</div>
+                            <span style="font-size: 0.8rem;">Jane Smith</span>
+                            <i class="fas fa-times" style="font-size: 0.6rem; color: var(--dark-text-muted); cursor: pointer;"></i>
+                        </div>
+                        <button class="btn-secondary-custom" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+                            <i class="fas fa-user-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--dark-border);">
+                <button class="btn-secondary-custom" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-primary-custom"><i class="fas fa-save"></i> Create Team</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    function openCreateTeam() {
+        var modal = new bootstrap.Modal(document.getElementById('createTeamModal'));
+        modal.show();
+    }
+
+    // ── Mobile Menu ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+</script>
+
+</body>
+</html>
