@@ -2,6 +2,7 @@ package com.mentis.hrms.pm.dto.response;
 
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -13,6 +14,8 @@ public class ProjectRequestResponse {
     private Integer impact, urgency, effort;
     private Integer priorityScore;
     private String suggestedPriority;
+    private LocalDate desiredStartDate;
+    private LocalDate desiredEndDate;
     private String status;
     private Long createdBy;
     private String createdByName;

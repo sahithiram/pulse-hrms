@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700;--z-modal:1500}
+    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700}
     .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
@@ -18,6 +18,7 @@
     ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
     a{color:var(--pri);text-decoration:none}
     button{font-family:inherit}
+    [hidden]{display:none!important}
     .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
     .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
     .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
@@ -59,19 +60,15 @@
     .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
     .pm-page-title i{color:var(--pri);font-size:15px}
     .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
     .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
     .pm-btn i{font-size:11px}
     .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
     .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
     .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
-    .pm-btn-icon{width:26px;height:26px;padding:0;justify-content:center}
-    .pm-btn-danger{color:var(--dng);border-color:rgba(239,68,68,.3)}
-    .pm-btn-danger:hover{border-color:var(--dng);color:var(--dng);background:var(--dng-soft)}
-    .pm-input,.pm-select,.pm-textarea{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:6px 10px;font-family:inherit;font-size:var(--fs);outline:none;width:100%;height:28px}
-    .pm-textarea{height:auto;min-height:70px;resize:vertical;line-height:1.5}
-    .pm-input:focus,.pm-select:focus,.pm-textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+    .pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
+    .pm-select:focus{border-color:var(--pri)}
     .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
     .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
     .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
@@ -80,6 +77,16 @@
     .pm-badge.warning{background:var(--wrn-soft);color:var(--wrn)}
     .pm-badge.info{background:var(--inf-soft);color:var(--inf)}
     .pm-badge.purple{background:var(--pur-soft);color:var(--pur)}
+    .pm-progress{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;width:100%}
+    .pm-progress-bar{height:100%;background:var(--pri);border-radius:10px;transition:width 300ms ease}
+    .pm-progress-bar.success{background:var(--suc)}
+    .pm-progress-bar.warning{background:var(--wrn)}
+    .pm-progress-bar.danger{background:var(--dng)}
+    .pm-table{width:100%;border-collapse:collapse;font-size:var(--fs)}
+    .pm-table thead th{text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+    .pm-table tbody td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
+    .pm-table tbody tr:hover{background:var(--card2)}
+    .pm-table tbody tr:last-child td{border-bottom:none}
     .pm-toasts{position:fixed;top:12px;right:12px;z-index:var(--z-ts);display:flex;flex-direction:column;gap:6px;max-width:340px;pointer-events:none}
     .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:var(--rl);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);transform:translateX(120%);transition:transform 280ms cubic-bezier(.4,0,.2,1);pointer-events:auto;cursor:pointer}
     .pm-toast.show{transform:translateX(0)}
@@ -102,92 +109,69 @@
     .pm-cmd-item:hover,.pm-cmd-item.active{background:var(--pri-soft)}
     .pm-cmd-item i{color:var(--pri);width:16px;text-align:center}
     .pm-cmd-foot{padding:6px 12px;border-top:1px solid var(--bd);font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:14px;background:var(--bg)}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);z-index:var(--z-modal);display:none;align-items:flex-start;justify-content:center;padding:6vh 12px 12px;overflow-y:auto}
-    .modal-backdrop.open{display:flex}
-    .modal{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:640px;box-shadow:var(--sh-lg);display:flex;flex-direction:column;max-height:88vh}
-    .modal-lg{max-width:900px}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
-    .modal-head h3{font-size:var(--fs-lg);font-weight:600;display:flex;align-items:center;gap:8px}
-    .modal-head h3 i{color:var(--pri)}
-    .modal-body{flex:1;overflow-y:auto;padding:14px}
-    .modal-foot{display:flex;justify-content:flex-end;gap:6px;padding:12px 14px;border-top:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap}
-    .set-layout{display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:start}
-    .set-nav{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:6px;position:sticky;top:58px}
-    .set-nav button{display:flex;align-items:center;gap:8px;width:100%;background:none;border:none;color:var(--tx2);padding:7px 10px;border-radius:var(--r);font-size:var(--fs);text-align:left;cursor:pointer;transition:var(--t-fast);font-family:inherit}
-    .set-nav button:hover{background:var(--card2);color:var(--tx)}
-    .set-nav button.active{background:var(--pri-soft);color:var(--pri);font-weight:600}
-    .set-nav button i{width:16px;text-align:center;font-size:12px;color:var(--pri)}
-    .set-nav button.danger-tab{color:var(--dng)}
-    .set-nav button.danger-tab i{color:var(--dng)}
-    .tab-content{display:none}
-    .tab-content.active{display:block}
-    .panel{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:14px;margin-bottom:12px}
+    .pm-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-dr);opacity:0;pointer-events:none;transition:opacity var(--t)}
+    .pm-drawer-backdrop.open{opacity:1;pointer-events:auto}
+    .pm-drawer{position:fixed;top:0;right:0;width:min(600px,96vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:calc(var(--z-dr) + 1);transform:translateX(100%);transition:transform 280ms cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-lg)}
+    .pm-drawer.open{transform:translateX(0)}
+    .pm-drawer-head{height:var(--hh);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
+    .pm-drawer-title{font-size:var(--fs-md);font-weight:600}
+    .pm-drawer-body{flex:1;overflow-y:auto;padding:12px}
+    .pm-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:12px;overflow-x:auto;padding:0 2px}
+    .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:var(--fs-md);font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--t-fast);margin-bottom:-1px}
+    .pm-tabs button:hover{color:var(--tx)}
+    .pm-tabs button.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
+    .pm-pane{display:none}
+    .pm-pane.active{display:block;animation:pmFade .18s ease}
+    @keyframes pmFade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
+    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px}
+    .kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px;margin-bottom:4px}
+    .kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}
+    .kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
+    .kpi-icon.red{background:var(--dng-soft);color:var(--dng)}
+    .kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
+    .kpi-value{font-size:var(--fs-xl);font-weight:700;line-height:1.1}
+    .kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
+    .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-bottom:12px}
+    .chart-box{height:240px;position:relative}
+    .chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+    .chart-title{font-weight:600;display:flex;align-items:center;gap:6px;font-size:var(--fs-md)}
+    .chart-title i{color:var(--pri)}
+    .empty{text-align:center;padding:36px 12px;color:var(--tx3);font-size:var(--fs)}
+    .exp-row{display:flex;gap:6px;flex-wrap:wrap}
+    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
+    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.chart-grid{grid-template-columns:1fr}}
+
+    .form-group{margin-bottom:12px}
+    .form-group label{display:block;font-size:var(--fs-sm);font-weight:600;color:var(--tx2);margin-bottom:4px}
+    .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+    .form-hint{font-size:var(--fs-xs);color:var(--tx3);margin-top:3px}
+    .pm-input{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:6px 10px;font-family:inherit;font-size:var(--fs);outline:none;width:100%;height:28px}
+    .pm-input:disabled{opacity:.8;cursor:not-allowed}
     .panel-title{font-size:var(--fs-lg);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:8px}
     .panel-title i{color:var(--pri)}
     .panel-desc{font-size:var(--fs-sm);color:var(--tx3);margin-bottom:12px}
-    .form-group{margin-bottom:12px}
-    .form-group label{display:block;font-size:var(--fs-sm);font-weight:600;color:var(--tx2);margin-bottom:4px}
-    .form-group label .req{color:var(--dng)}
-    .form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
-    .form-hint{font-size:var(--fs-xs);color:var(--tx3);margin-top:3px}
-    .toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(42,57,80,.5);gap:10px}
-    .toggle-row:last-child{border-bottom:none}
-    .toggle-label{font-size:var(--fs);font-weight:500}
-    .toggle-desc{font-size:var(--fs-xs);color:var(--tx3);margin-top:2px}
-    .toggle-switch{position:relative;width:38px;height:20px;background:var(--bd2);border-radius:12px;cursor:pointer;transition:var(--t);flex-shrink:0}
-    .toggle-switch.active{background:var(--pri)}
-    .toggle-switch .toggle-slider{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:var(--t)}
-    .toggle-switch.active .toggle-slider{left:20px}
-    .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+    .theme-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;max-width:320px}
     .theme-card{background:var(--bg);border:2px solid var(--bd);border-radius:var(--rl);padding:10px;text-align:center;cursor:pointer;transition:var(--t-fast)}
     .theme-card:hover{border-color:var(--pri)}
     .theme-card.selected{border-color:var(--pri);background:var(--pri-soft)}
     .theme-preview{height:48px;border-radius:6px;margin-bottom:6px}
     .theme-preview.dark{background:linear-gradient(135deg,#0f172a,#1e293b)}
     .theme-preview.light{background:linear-gradient(135deg,#f8fafc,#e2e8f0)}
-    .theme-preview.system{background:linear-gradient(135deg,#0f172a 50%,#f8fafc 50%)}
     .theme-label{font-size:var(--fs-sm);font-weight:600}
-    .role-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
-    .role-table th{text-align:left;color:var(--tx3);font-weight:700;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
-    .role-table td{padding:6px 8px;border-bottom:1px solid rgba(42,57,80,.5)}
-    .role-table input[type="checkbox"]{accent-color:var(--pri);width:15px;height:15px;cursor:pointer}
-    .int-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-    .int-toolbar .grow{flex:1;min-width:200px;max-width:320px;position:relative}
-    .int-toolbar .grow i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px}
-    .int-toolbar .grow input{padding-left:30px}
-    .int-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px}
-    .int-tab{padding:5px 12px;border-radius:14px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:var(--t-fast)}
-    .int-tab:hover{border-color:var(--pri);color:var(--tx)}
-    .int-tab.active{background:var(--pri);border-color:var(--pri);color:#fff}
-    .int-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
-    .int-card{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rl);padding:12px;display:flex;gap:12px;align-items:flex-start;transition:var(--t-fast);position:relative}
-    .int-card:hover{border-color:var(--pri);transform:translateY(-1px);box-shadow:var(--sh)}
-    .int-card.connected{border-left:3px solid var(--suc)}
-    .int-card.available{border-left:3px solid var(--bd2)}
-    .int-icon{width:42px;height:42px;border-radius:10px;display:grid;place-content:center;font-size:18px;flex-shrink:0;background:linear-gradient(135deg,var(--pri),var(--pur))}
-    .int-icon i{color:#fff}
-    .int-body{flex:1;min-width:0}
-    .int-name{font-weight:600;font-size:var(--fs-md);display:flex;align-items:center;gap:6px}
-    .int-desc{font-size:var(--fs-xs);color:var(--tx3);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-    .int-meta{font-size:var(--fs-xs);color:var(--tx3);margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .int-status{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:10px;font-size:var(--fs-xs);font-weight:600}
-    .int-status.connected{background:var(--suc-soft);color:var(--suc)}
-    .int-status.available{background:var(--card2);color:var(--tx3)}
-    .int-actions{display:flex;gap:4px;flex-direction:column;flex-shrink:0}
-    .int-actions button{font-size:var(--fs-xs);height:24px;padding:0 8px;white-space:nowrap}
-    .int-empty{text-align:center;padding:40px 20px;color:var(--tx3)}
-    .int-empty i{font-size:32px;opacity:.3;display:block;margin-bottom:8px}
-    .int-stats{display:flex;gap:14px;font-size:var(--fs-xs);color:var(--tx3);padding:8px 12px;background:var(--card2);border-radius:var(--rl);margin-bottom:12px;flex-wrap:wrap}
-    .int-stats strong{color:var(--tx);font-size:var(--fs-md)}
-    .int-stats .stat-item{display:flex;align-items:center;gap:6px}
-    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
-    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.set-layout{grid-template-columns:1fr}.set-nav{position:static;display:flex;gap:4px;overflow-x:auto;padding:6px}.set-nav button{width:auto;white-space:nowrap}}
+    .ref-table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+    .ref-table th{text-align:left;color:var(--tx3);font-weight:700;font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.4px;padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
+    .ref-table td{padding:6px 8px;border-bottom:1px solid rgba(42,57,80,.5);vertical-align:top}
+    .ref-table td.y{color:var(--suc);font-weight:700;text-align:center}
+    .ref-table td.n{color:var(--tx3);text-align:center}
+    .ref-table td.p{color:var(--wrn);text-align:center;font-size:var(--fs-xs)}
   </style>
 </head>
 <body>
 <button class="mob-toggle" id="mobToggle"><i class="fas fa-bars"></i></button>
 
 <div class="pm-shell" id="pmShell">
+
   <aside class="pm-sidebar" id="pmSidebar">
     <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
     <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
@@ -196,9 +180,9 @@
   <div class="pm-main">
     <header class="pm-header">
       <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search settings..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
+      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
       <div class="pm-header-right">
-        <div class="pm-live"><span class="dot"></span> Live · <span id="pmLiveAgo">just now</span></div>
+        <div class="pm-live"><span class="dot"></span> Live</div>
         <button class="pm-iconbtn" onclick="PM.openCmd()"><i class="fas fa-terminal"></i></button>
         <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
         <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'"><i class="fas fa-bell"></i><span class="dot" id="pmNotifBadge">0</span></button>
@@ -207,291 +191,70 @@
     </header>
 
     <div class="pm-content">
-      <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / Workspace / Settings</div>
+      <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / Workspace / <span id="pmCrumb">Profile</span></div>
+
       <div class="pm-page-head">
         <div>
-          <div class="pm-page-title"><i class="fas fa-gear"></i> Settings</div>
-          <div class="pm-page-sub">Configure workspace, workflows, integrations &amp; permissions</div>
-        </div>
-        <div class="pm-page-actions">
-          <button class="pm-btn" onclick="resetSettings()"><i class="fas fa-rotate-left"></i> Reset</button>
-          <button class="pm-btn pm-btn-primary" onclick="saveSettings()"><i class="fas fa-save"></i> Save Changes</button>
+          <div class="pm-page-title"><i class="fas fa-gear"></i> <span id="pmPageTitle">Settings</span></div>
+          <div class="pm-page-sub">Your profile, appearance, and a reference of who can do what</div>
         </div>
       </div>
 
-      <div class="set-layout">
-        <div class="set-nav" id="setNav">
-          <button class="active" onclick="switchSettings('general',this)"><i class="fas fa-sliders"></i> <span>General</span></button>
-          <button onclick="switchSettings('appearance',this)"><i class="fas fa-palette"></i> <span>Appearance</span></button>
-          <button onclick="switchSettings('notifications',this)"><i class="fas fa-bell"></i> <span>Notifications</span></button>
-          <button onclick="switchSettings('workflow',this)"><i class="fas fa-diagram-project"></i> <span>Workflow</span></button>
-          <button onclick="switchSettings('customfields',this)"><i class="fas fa-list"></i> <span>Custom Fields</span></button>
-          <button onclick="switchSettings('automation',this)"><i class="fas fa-robot"></i> <span>Automation</span></button>
-          <button onclick="switchSettings('integrations',this)"><i class="fas fa-plug"></i> <span>Integrations</span></button>
-          <button onclick="switchSettings('roles',this)"><i class="fas fa-user-shield"></i> <span>Roles &amp; Permissions</span></button>
-          <button class="danger-tab" onclick="switchSettings('danger',this)"><i class="fas fa-triangle-exclamation"></i> <span>Danger Zone</span></button>
-        </div>
+      <div class="pm-tabs" id="pmTabs">
+        <button class="active" data-tab="profile" onclick="switchTab('profile')">Profile</button>
+        <button data-tab="appearance" onclick="switchTab('appearance')">Appearance</button>
+        <button data-tab="access" onclick="switchTab('access')">Access reference</button>
+      </div>
 
-        <div id="settingsContent">
-          <div class="tab-content active" id="tab-general">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-building"></i> Organization</div>
-              <div class="panel-desc">Basic information about your organization.</div>
-              <div class="form-row">
-                <div class="form-group"><label>Organization Name <span class="req">*</span></label><input class="pm-input" value="Menti's IT Solutions"></div>
-                <div class="form-group"><label>Workspace URL</label><input class="pm-input" value="mentis-pm.example.com"></div>
-                <div class="form-group"><label>Timezone</label><select class="pm-select"><option selected>Asia/Kolkata (IST, UTC+5:30)</option><option>UTC</option><option>America/New_York</option></select></div>
-                <div class="form-group"><label>Default Currency</label><select class="pm-select"><option selected>INR (₹)</option><option>USD ($)</option><option>EUR (€)</option></select></div>
-              </div>
-            </div>
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-user"></i> Profile</div>
-              <div class="form-row">
-                <div class="form-group"><label>Full Name</label><input class="pm-input" id="setProfileName" value=""></div>
-                <div class="form-group"><label>Email</label><input class="pm-input" id="setProfileEmail" type="email" value=""></div>
-                <div class="form-group"><label>Role</label><input class="pm-input" id="setProfileRole" value="" disabled></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-appearance">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-palette"></i> Theme</div>
-              <div class="panel-desc">Choose how your interface looks.</div>
-              <div class="theme-grid">
-                <div class="theme-card selected" onclick="selectTheme(this)"><div class="theme-preview dark"></div><div class="theme-label">Dark (default)</div></div>
-                <div class="theme-card" onclick="selectTheme(this)"><div class="theme-preview light"></div><div class="theme-label">Light</div></div>
-                <div class="theme-card" onclick="selectTheme(this)"><div class="theme-preview system"></div><div class="theme-label">System</div></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-notifications">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-bell"></i> Notification Preferences</div>
-              <div class="panel-desc">Choose which events should trigger notifications.</div>
-              <div class="toggle-row"><div><div class="toggle-label">Task assigned to me</div><div class="toggle-desc">Get notified when someone assigns a task to you</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <div class="toggle-row"><div><div class="toggle-label">Task status changes</div><div class="toggle-desc">When a task you're following changes status</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <div class="toggle-row"><div><div class="toggle-label">@mentions</div><div class="toggle-desc">When someone mentions you in a comment</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <div class="toggle-row"><div><div class="toggle-label">Email notifications</div><div class="toggle-desc">Send notifications to your email as well</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-workflow">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-diagram-project"></i> Task Workflow</div>
-              <div class="panel-desc">Customize the statuses available for tasks.</div>
-              <div id="statusList"></div>
-              <button class="pm-btn pm-btn-primary pm-btn-sm" style="margin-top:10px" onclick="openStatusModal()"><i class="fas fa-plus"></i> Add Status</button>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-customfields">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-list"></i> Custom Fields</div>
-              <div class="panel-desc">Add extra fields to tasks, projects, or issues.</div>
-              <div class="toggle-row"><div><div class="toggle-label">Sprint Number</div><div class="toggle-desc">Number · Applies to Tasks</div></div><button class="pm-btn pm-btn-sm" onclick="openFieldModal()"><i class="fas fa-pen"></i></button></div>
-              <div class="toggle-row"><div><div class="toggle-label">Compliance Level</div><div class="toggle-desc">Dropdown · Applies to Projects</div></div><button class="pm-btn pm-btn-sm" onclick="openFieldModal()"><i class="fas fa-pen"></i></button></div>
-              <button class="pm-btn pm-btn-primary pm-btn-sm" style="margin-top:10px" onclick="openFieldModal()"><i class="fas fa-plus"></i> Add Custom Field</button>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-automation">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-robot"></i> Automation Rules</div>
-              <div class="panel-desc">If-This-Then-That rules to automate routine work.</div>
-              <div class="toggle-row"><div><div class="toggle-label">Auto-assign to team lead</div><div class="toggle-desc">Task created in HRMS Cloud Migration → assign to Arvind Kumar</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <div class="toggle-row"><div><div class="toggle-label">Notify on status change</div><div class="toggle-desc">Status changes to "Done" → notify reporter</div></div><div class="toggle-switch active" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <div class="toggle-row"><div><div class="toggle-label">Escalate overdue tasks</div><div class="toggle-desc">3+ days overdue → escalate to project manager</div></div><div class="toggle-switch" onclick="toggleSwitch(this)"><div class="toggle-slider"></div></div></div>
-              <button class="pm-btn pm-btn-primary pm-btn-sm" style="margin-top:10px" onclick="openAutomationModal()"><i class="fas fa-plus"></i> Add Rule</button>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-integrations">
-            <div class="panel" style="padding-bottom:8px">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px">
-                <div>
-                  <div class="panel-title" style="margin-bottom:4px"><i class="fas fa-plug"></i> Integrations</div>
-                  <div class="panel-desc" style="margin-bottom:0">Connect your workspace to dozens of platforms, or add your own custom integration.</div>
-                </div>
-                <button class="pm-btn pm-btn-primary" onclick="openAddIntegration()"><i class="fas fa-plus"></i> Add Platform</button>
-              </div>
-
-              <div class="int-stats">
-                <div class="stat-item"><i class="fas fa-check-circle" style="color:var(--suc)"></i> <strong id="intStatConnected">0</strong> connected</div>
-                <div class="stat-item"><i class="fas fa-plug" style="color:var(--pri)"></i> <strong id="intStatAvailable">0</strong> available</div>
-                <div class="stat-item"><i class="fas fa-rocket" style="color:var(--wrn)"></i> <strong id="intStatCustom">0</strong> custom</div>
-                <div class="stat-item" style="margin-left:auto"><i class="fas fa-sync" style="color:var(--inf)"></i> Last sync: <span>2 min ago</span></div>
-              </div>
-
-              <div class="int-toolbar">
-                <div class="grow"><i class="fas fa-search"></i><input class="pm-input" id="intSearch" placeholder="Search integrations..." oninput="renderIntegrations()"></div>
-                <select class="pm-select" style="max-width:150px" id="intStatusFilter" onchange="renderIntegrations()">
-                  <option value="all">All Status</option>
-                  <option value="connected">Connected</option>
-                  <option value="available">Available</option>
-                  <option value="custom">Custom Only</option>
-                </select>
-              </div>
-
-              <div class="int-tabs" id="intTabs">
-                <button class="int-tab active" data-cat="all" onclick="setIntCat('all',this)">All</button>
-                <button class="int-tab" data-cat="communication" onclick="setIntCat('communication',this)">Communication</button>
-                <button class="int-tab" data-cat="devtools" onclick="setIntCat('devtools',this)">Dev Tools</button>
-                <button class="int-tab" data-cat="productivity" onclick="setIntCat('productivity',this)">Productivity</button>
-                <button class="int-tab" data-cat="monitoring" onclick="setIntCat('monitoring',this)">Monitoring</button>
-                <button class="int-tab" data-cat="automation" onclick="setIntCat('automation',this)">Automation</button>
-                <button class="int-tab" data-cat="custom" onclick="setIntCat('custom',this)">Custom</button>
-              </div>
-
-              <div class="int-grid" id="intGrid"></div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-roles">
-            <div class="panel">
-              <div class="panel-title"><i class="fas fa-user-shield"></i> Roles &amp; Permissions</div>
-              <div class="panel-desc">Fine-grained access control for each role.</div>
-              <div style="overflow-x:auto">
-                <table class="role-table">
-                  <thead><tr><th>Permission</th><th>Admin</th><th>PM</th><th>TL</th><th>Member</th><th>Viewer</th></tr></thead>
-                  <tbody>
-                  <tr><td>Create Project</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-                  <tr><td>Delete Project</td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-                  <tr><td>Create Task</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td></tr>
-                  <tr><td>Assign Task</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-                  <tr><td>Approve Timesheets</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-                  <tr><td>View Reports</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td></tr>
-                  <tr><td>Manage Integrations</td><td><input type="checkbox" checked></td><td><input type="checkbox" checked></td><td><input type="checkbox"></td><td><input type="checkbox"></td><td><input type="checkbox"></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="tab-content" id="tab-danger">
-            <div class="panel" style="border-color:var(--dng)">
-              <div class="panel-title" style="color:var(--dng)"><i class="fas fa-triangle-exclamation" style="color:var(--dng)"></i> Danger Zone</div>
-              <div class="panel-desc">These actions are irreversible. Please be careful.</div>
-              <div class="toggle-row" style="border-bottom:1px solid var(--bd);padding:12px 0"><div><div class="toggle-label">Archive all completed projects</div><div class="toggle-desc">Move all 100%-complete projects to archive</div></div><button class="pm-btn pm-btn-sm" onclick="PM.toast('Archive operation started','warning')">Archive</button></div>
-              <div class="toggle-row" style="border-bottom:1px solid var(--bd);padding:12px 0"><div><div class="toggle-label">Reset workspace data</div><div class="toggle-desc">Delete all tasks, issues, and activity logs (keeps projects)</div></div><button class="pm-btn pm-btn-sm pm-btn-danger" onclick="PM.toast('Reset requires confirmation','warning')">Reset</button></div>
-              <div class="toggle-row" style="padding:12px 0"><div><div class="toggle-label">Delete workspace</div><div class="toggle-desc">Permanently delete this workspace and all data</div></div><button class="pm-btn pm-btn-danger" onclick="deleteWorkspace()">Delete Workspace</button></div>
-            </div>
+      <div class="pm-pane active" id="pane-profile">
+        <div class="pm-card">
+          <div class="panel-title"><i class="fas fa-user"></i> Profile</div>
+          <div class="panel-desc">Taken from your HRMS account. To change your name or email, update it in HRMS.</div>
+          <div class="form-row">
+            <div class="form-group"><label>Full name</label><input class="pm-input" id="setProfileName" disabled></div>
+            <div class="form-group"><label>Email</label><input class="pm-input" id="setProfileEmail" disabled></div>
+            <div class="form-group"><label>Role</label><input class="pm-input" id="setProfileRole" disabled></div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
 
-<div class="modal-backdrop" id="statusModal" onclick="if(event.target===this)document.getElementById('statusModal').classList.remove('open')">
-  <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-circle"></i> Add Workflow Status</h3><button class="pm-iconbtn" onclick="document.getElementById('statusModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div class="form-row">
-        <div class="form-group"><label>Status Name <span class="req">*</span></label><input class="pm-input" id="stName" placeholder="e.g. Blocked"></div>
-        <div class="form-group"><label>Category</label><select class="pm-select" id="stCat"><option value="todo">Not Started</option><option value="progress">Active</option><option value="done">Done</option></select></div>
-      </div>
-      <div class="form-group"><label>Color</label>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="stColors">
-          <div style="width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid var(--tx);background:#64748b" class="color-swatch active" data-color="#64748b" onclick="pickStatusColor(this)"></div>
-          <div style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:#0ea5e9" class="color-swatch" data-color="#0ea5e9" onclick="pickStatusColor(this)"></div>
-          <div style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:#a855f7" class="color-swatch" data-color="#a855f7" onclick="pickStatusColor(this)"></div>
-          <div style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:#ef4444" class="color-swatch" data-color="#ef4444" onclick="pickStatusColor(this)"></div>
-          <div style="width:24px;height:24px;border-radius:50%;cursor:pointer;background:#10b981" class="color-swatch" data-color="#10b981" onclick="pickStatusColor(this)"></div>
+      <div class="pm-pane" id="pane-appearance">
+        <div class="pm-card">
+          <div class="panel-title"><i class="fas fa-palette"></i> Theme</div>
+          <div class="panel-desc">Applies to every PM page on this browser.</div>
+          <div class="theme-grid">
+            <div class="theme-card" id="themeDark" onclick="chooseTheme('dark')"><div class="theme-preview dark"></div><div class="theme-label">Dark</div></div>
+            <div class="theme-card" id="themeLight" onclick="chooseTheme('light')"><div class="theme-preview light"></div><div class="theme-label">Light</div></div>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="modal-foot"><button class="pm-btn" onclick="document.getElementById('statusModal').classList.remove('open')">Cancel</button><button class="pm-btn pm-btn-primary" onclick="addStatus()"><i class="fas fa-check"></i> Add Status</button></div>
-  </div>
-</div>
 
-<div class="modal-backdrop" id="fieldModal" onclick="if(event.target===this)document.getElementById('fieldModal').classList.remove('open')">
-  <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-list"></i> Custom Field</h3><button class="pm-iconbtn" onclick="document.getElementById('fieldModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div class="form-group"><label>Field Name <span class="req">*</span></label><input class="pm-input" id="cfName" placeholder="e.g. Sprint Number"></div>
-      <div class="form-group"><label>Type</label><select class="pm-select" id="cfType"><option>Text</option><option>Number</option><option>Dropdown</option><option>Date</option><option>Checkbox</option></select></div>
-      <div class="form-group"><label>Applies to</label><select class="pm-select" id="cfApply"><option>Tasks</option><option>Projects</option><option>Issues</option></select></div>
-    </div>
-    <div class="modal-foot"><button class="pm-btn" onclick="document.getElementById('fieldModal').classList.remove('open')">Cancel</button><button class="pm-btn pm-btn-primary" onclick="addCustomField()"><i class="fas fa-check"></i> Save Field</button></div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="automationModal" onclick="if(event.target===this)document.getElementById('automationModal').classList.remove('open')">
-  <div class="modal" style="max-width:640px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-robot"></i> Automation Rule</h3><button class="pm-iconbtn" onclick="document.getElementById('automationModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div class="form-group"><label>Rule Name <span class="req">*</span></label><input class="pm-input" id="arName" placeholder="e.g. Auto-assign to team lead"></div>
-      <div style="background:var(--bg);border:1px solid var(--bd);border-radius:var(--rl);padding:12px">
-        <div style="display:grid;grid-template-columns:80px 1fr 1fr;gap:8px;align-items:center;margin-bottom:8px">
-          <span style="font-size:var(--fs-xs);font-weight:700;color:var(--pri)">WHEN</span>
-          <select class="pm-select" id="arWhenEvent"><option>Task created</option><option>Task status changes</option><option>Task assigned</option><option>Task overdue</option></select>
-          <select class="pm-select" id="arWhenProject"><option>Any project</option><option>HRMS Cloud Migration</option><option>Fintrack Mobile</option></select>
-        </div>
-        <div style="display:grid;grid-template-columns:80px 1fr 1fr;gap:8px;align-items:center">
-          <span style="font-size:var(--fs-xs);font-weight:700;color:var(--suc)">THEN</span>
-          <select class="pm-select" id="arThenAction"><option>Assign to user</option><option>Set priority</option><option>Set status</option><option>Send notification</option></select>
-          <input class="pm-input" id="arThenValue" placeholder="e.g. Arvind Kumar">
+      <div class="pm-pane" id="pane-access">
+        <div class="pm-card">
+          <div class="panel-title"><i class="fas fa-user-shield"></i> Who can do what</div>
+          <div class="panel-desc">A reference of the rules agreed for this workspace. It is read-only: the server enforces every rule, and it cannot be changed from this page.</div>
+          <div style="overflow-x:auto">
+            <table class="ref-table">
+              <thead><tr><th>Action</th><th>Super Admin</th><th>HR / HR Manager</th><th>PM</th><th>Team lead</th><th>Member</th><th>Viewer</th></tr></thead>
+              <tbody>
+              <tr><td>See a project</td><td class="y">✓</td><td class="p">all, read-only</td><td class="p">own &amp; member</td><td class="p">their team</td><td class="p">own</td><td class="p">own</td></tr>
+              <tr><td>Create a project directly</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td><td class="n">—</td><td class="p">request one</td><td class="n">—</td></tr>
+              <tr><td>Approve a project request</td><td class="y">✓</td><td class="p">HR Manager only</td><td class="p">can read the queue</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Create and assign tasks</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="p">subtasks on own tasks</td><td class="n">—</td></tr>
+              <tr><td>Move a task to Done when review is required</td><td class="y">✓</td><td class="n">—</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>See budget, rates and baseline</td><td class="y">✓</td><td class="n">—</td><td class="p">own projects</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Approve budget, change requests, sign-off</td><td class="y">✓</td><td class="p">budget: HR Manager</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Delete a project</td><td class="y">✓</td><td class="n">—</td><td class="p">owner only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Reopen a completed project</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Approve weekly timesheets</td><td class="p">fallback</td><td class="p">HR Manager: fallback</td><td class="p">if lead / owner</td><td class="p">their team</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Company utilization and timesheet status</td><td class="y">✓</td><td class="y">✓</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              <tr><td>Reopen an approved timesheet</td><td class="y">✓</td><td class="p">HR Manager only</td><td class="n">—</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="modal-foot"><button class="pm-btn" onclick="document.getElementById('automationModal').classList.remove('open')">Cancel</button><button class="pm-btn pm-btn-primary" onclick="addAutomation()"><i class="fas fa-check"></i> Save Rule</button></div>
-  </div>
-</div>
 
-<div class="modal-backdrop" id="addIntModal" onclick="if(event.target===this)document.getElementById('addIntModal').classList.remove('open')">
-  <div class="modal modal-lg" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-plus-circle"></i> Add Integration</h3><button class="pm-iconbtn" onclick="document.getElementById('addIntModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div style="display:flex;gap:4px;margin-bottom:14px;padding:4px;background:var(--bg);border-radius:var(--rl);border:1px solid var(--bd);width:fit-content">
-        <button class="int-tab active" id="addIntTabCatalog" onclick="switchAddIntTab('catalog')" style="border:none">Browse Catalog</button>
-        <button class="int-tab" id="addIntTabCustom" onclick="switchAddIntTab('custom')" style="border:none">Custom Integration</button>
-      </div>
-
-      <div id="addIntPaneCatalog">
-        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-          <input class="pm-input" id="addIntSearch" placeholder="Search platforms..." style="flex:1;min-width:200px" oninput="renderCatalogGrid()">
-          <select class="pm-select" id="addIntCat" style="max-width:180px" onchange="renderCatalogGrid()">
-            <option value="all">All Categories</option>
-            <option value="communication">Communication</option>
-            <option value="devtools">Dev Tools</option>
-            <option value="productivity">Productivity</option>
-            <option value="monitoring">Monitoring</option>
-            <option value="automation">Automation</option>
-          </select>
-        </div>
-        <div class="int-grid" id="catalogGrid" style="max-height:440px;overflow-y:auto;padding-right:4px"></div>
-      </div>
-
-      <div id="addIntPaneCustom" style="display:none">
-        <div class="form-row">
-          <div class="form-group"><label>Integration Name <span class="req">*</span></label><input class="pm-input" id="customIntName" placeholder="e.g. Internal HR Portal"></div>
-          <div class="form-group"><label>Category</label><select class="pm-select" id="customIntCat"><option value="custom">Custom</option><option value="communication">Communication</option><option value="devtools">Dev Tools</option><option value="automation">Automation</option></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Icon (Font Awesome class)</label><input class="pm-input" id="customIntIcon" placeholder="fa-puzzle-piece" value="fa-puzzle-piece"></div>
-          <div class="form-group"><label>API Base URL <span class="req">*</span></label><input class="pm-input" id="customIntUrl" placeholder="https://api.yourdomain.com/v1"></div>
-        </div>
-        <div class="form-group"><label>Short Description</label><input class="pm-input" id="customIntDesc" placeholder="What does this integration do?"></div>
-        <div class="form-group"><label>API Key / Token</label><input class="pm-input" type="password" id="customIntSecret" placeholder="••••••••"><div class="form-hint"><i class="fas fa-lock"></i> Encrypted at rest.</div></div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="pm-btn" onclick="document.getElementById('addIntModal').classList.remove('open')">Cancel</button>
-      <button class="pm-btn pm-btn-primary" id="addIntSubmit" onclick="submitAddIntegration()" style="display:none"><i class="fas fa-check"></i> Add Custom Integration</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="configIntModal" onclick="if(event.target===this)document.getElementById('configIntModal').classList.remove('open')">
-  <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-plug"></i> <span id="configIntName">Integration</span></h3><button class="pm-iconbtn" onclick="document.getElementById('configIntModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body" id="configIntBody"></div>
-    <div class="modal-foot">
-      <button class="pm-btn pm-btn-danger" id="configIntDisconnect" style="margin-right:auto" onclick="disconnectCurrentIntegration()"><i class="fas fa-unlink"></i> Disconnect</button>
-      <button class="pm-btn" onclick="document.getElementById('configIntModal').classList.remove('open')">Cancel</button>
-      <button class="pm-btn pm-btn-primary" onclick="saveIntegrationConfig()"><i class="fas fa-check"></i> Save</button>
     </div>
   </div>
 </div>
@@ -500,267 +263,37 @@
 <script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
 <script src="/webjars/stomp-websocket/2.3.4/lib/stomp.min.js"></script>
 <script>
-  PM.bootstrap().then(function(me){
-
-  // Fill profile from real user
-  var pn=document.getElementById('setProfileName'); if(pn) pn.value=me.name||'';
-  var pe=document.getElementById('setProfileEmail'); if(pe) pe.value=me.email||'';
-  var pr=document.getElementById('setProfileRole'); if(pr) pr.value=me.hrmsRole||'';
-
-  function switchSettings(tab,btn){
-    document.querySelectorAll('.set-nav button').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
-    document.getElementById('tab-'+tab).classList.add('active');
-    if(tab==='workflow') renderStatuses();
-    if(tab==='integrations') renderIntegrations();
-  }
-  function toggleSwitch(el){ el.classList.toggle('active'); }
-  function saveSettings(){ PM.toast('✓ Settings saved','success'); }
-  function resetSettings(){ PM.toast('Settings reset to defaults','info'); }
-  function selectTheme(el){
-    document.querySelectorAll('.theme-card').forEach(function(c){c.classList.remove('selected');});
-    el.classList.add('selected');
-    var label=el.querySelector('.theme-label').textContent;
-    if(label.indexOf('Light')>-1) document.body.classList.add('pm-light');
-    else if(label.indexOf('Dark')>-1) document.body.classList.remove('pm-light');
-    PM.toast('Theme: '+label,'info');
-  }
-  window.switchSettings = switchSettings;
-  window.toggleSwitch = toggleSwitch;
-  window.saveSettings = saveSettings;
-  window.resetSettings = resetSettings;
-  window.selectTheme = selectTheme;
-
-  /* WORKFLOW */
-  var statuses=[
-    {name:'To Do',color:'#64748b',cat:'todo'},
-    {name:'In Progress',color:'#0ea5e9',cat:'progress'},
-    {name:'In Review',color:'#a855f7',cat:'progress'},
-    {name:'Blocked',color:'#ef4444',cat:'progress'},
-    {name:'Done',color:'#10b981',cat:'done'}
-  ];
-  var pickedStatusColor='#64748b';
-  function renderStatuses(){
-    var el=document.getElementById('statusList'); if(!el) return;
-    el.innerHTML=statuses.map(function(s,i){return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);margin-bottom:6px"><i class="fas fa-grip-vertical" style="color:var(--tx3);cursor:grab;font-size:11px"></i><div style="width:12px;height:12px;border-radius:50%;background:'+s.color+'"></div><span style="flex:1;font-weight:500">'+PM.esc(s.name)+'</span><span class="pm-badge primary" style="font-size:9px">'+s.cat+'</span><button class="pm-btn pm-btn-sm pm-btn-icon pm-btn-danger" onclick="deleteStatus('+i+')"><i class="fas fa-trash"></i></button></div>';}).join('');
-  }
-  function openStatusModal(){ document.getElementById('stName').value=''; document.getElementById('statusModal').classList.add('open'); }
-  function pickStatusColor(el){ document.querySelectorAll('#stColors .color-swatch').forEach(function(s){s.style.border='none';}); el.style.border='2px solid var(--tx)'; pickedStatusColor=el.dataset.color; }
-  function addStatus(){ var name=document.getElementById('stName').value.trim(); if(!name){PM.toast('Name required','error');return;} statuses.push({name:name,color:pickedStatusColor,cat:document.getElementById('stCat').value}); renderStatuses(); document.getElementById('statusModal').classList.remove('open'); PM.toast('✓ Status added','success'); }
-  function deleteStatus(i){ if(!confirm('Delete "'+statuses[i].name+'"?'))return; statuses.splice(i,1); renderStatuses(); PM.toast('Deleted','success'); }
-  window.openStatusModal = openStatusModal;
-  window.pickStatusColor = pickStatusColor;
-  window.addStatus = addStatus;
-  window.deleteStatus = deleteStatus;
-
-  /* CUSTOM FIELDS + AUTOMATION */
-  function openFieldModal(){ document.getElementById('cfName').value=''; document.getElementById('fieldModal').classList.add('open'); }
-  function addCustomField(){ var n=document.getElementById('cfName').value.trim(); if(!n){PM.toast('Field name required','error');return;} document.getElementById('fieldModal').classList.remove('open'); PM.toast('✓ Custom field "'+n+'" created','success'); }
-  function openAutomationModal(){ document.getElementById('arName').value=''; document.getElementById('arThenValue').value=''; document.getElementById('automationModal').classList.add('open'); }
-  function addAutomation(){ var n=document.getElementById('arName').value.trim(); if(!n){PM.toast('Rule name required','error');return;} document.getElementById('automationModal').classList.remove('open'); PM.toast('✓ Automation rule "'+n+'" saved','success'); }
-  function deleteWorkspace(){ var check=prompt('Type "DELETE" to confirm:'); if(check==='DELETE') PM.toast('⚠️ Deletion requires manager approval','warning'); else PM.toast('Cancelled','error'); }
-  window.openFieldModal = openFieldModal;
-  window.addCustomField = addCustomField;
-  window.openAutomationModal = openAutomationModal;
-  window.addAutomation = addAutomation;
-  window.deleteWorkspace = deleteWorkspace;
-
-  /* INTEGRATIONS */
-  var integrationCatalog=[
-    {id:'slack',name:'Slack',icon:'fa-slack',cat:'communication',desc:'Send task notifications, daily digests, and comment mentions to Slack channels.'},
-    {id:'ms-teams',name:'Microsoft Teams',icon:'fa-microsoft',cat:'communication',desc:'Mirror PM updates and approvals into Teams channels.'},
-    {id:'discord',name:'Discord',icon:'fa-discord',cat:'communication',desc:'Post task activity to Discord servers via webhooks.'},
-    {id:'telegram',name:'Telegram',icon:'fa-telegram',cat:'communication',desc:'Send alerts to Telegram chats and channels.'},
-    {id:'jira',name:'Jira',icon:'fa-jira',cat:'devtools',desc:'Two-way sync of issues, sprints, and story points with Jira.'},
-    {id:'github',name:'GitHub',icon:'fa-github',cat:'devtools',desc:'Link PRs, commits, and issues to tasks. Auto-close on merge.'},
-    {id:'gitlab',name:'GitLab',icon:'fa-gitlab',cat:'devtools',desc:'Sync merge requests and pipelines with tasks.'},
-    {id:'bitbucket',name:'Bitbucket',icon:'fa-bitbucket',cat:'devtools',desc:'Connect repos, PRs, and pipelines.'},
-    {id:'sentry',name:'Sentry',icon:'fa-bug',cat:'devtools',desc:'Turn Sentry errors into PM issues automatically.'},
-    {id:'figma',name:'Figma',icon:'fa-figma',cat:'productivity',desc:'Embed Figma designs directly in tasks and attach previews.'},
-    {id:'notion',name:'Notion',icon:'fa-book',cat:'productivity',desc:'Sync PM docs and specs with Notion pages.'},
-    {id:'trello',name:'Trello',icon:'fa-trello',cat:'productivity',desc:'Mirror board cards as PM tasks.'},
-    {id:'asana',name:'Asana',icon:'fa-list-check',cat:'productivity',desc:'Two-way sync tasks and projects with Asana.'},
-    {id:'zoom',name:'Zoom',icon:'fa-video',cat:'productivity',desc:'Auto-create meeting links for task discussions.'},
-    {id:'google-drive',name:'Google Drive',icon:'fa-google-drive',cat:'productivity',desc:'Attach Drive files to tasks with inline preview.'},
-    {id:'pagerduty',name:'PagerDuty',icon:'fa-bell',cat:'monitoring',desc:'Trigger on-call alerts when critical issues are logged.'},
-    {id:'newrelic',name:'New Relic',icon:'fa-chart-area',cat:'monitoring',desc:'Correlate PM tasks with APM data.'},
-    {id:'datadog',name:'Datadog',icon:'fa-chart-line',cat:'monitoring',desc:'Monitor deployment events and service health.'},
-    {id:'stripe',name:'Stripe',icon:'fa-credit-card',cat:'automation',desc:'Sync invoices and payment events with client records.'},
-    {id:'zapier',name:'Zapier',icon:'fa-bolt',cat:'automation',desc:'Connect to 6000+ apps via Zapier.'},
-    {id:'make',name:'Make',icon:'fa-wand-magic-sparkles',cat:'automation',desc:'Visual automation flows with Make (Integromat).'},
-    {id:'sendgrid',name:'SendGrid',icon:'fa-envelope',cat:'automation',desc:'Reliable email delivery for scheduled reports.'}
-  ];
-  var connectedIntegrations={
-    slack:{connected:true,channel:'#pm-updates',since:'12 Aug 2026',events:1240},
-    github:{connected:true,channel:'mentis-pm/main',since:'05 Jul 2026',events:892},
-    'google-drive':{connected:true,since:'10 Aug 2026',events:340},
-    zapier:{connected:true,since:'20 Aug 2026',events:210}
-  };
-  var customIntegrations=[];
-  var currentIntCat='all';
-  var configIntId=null;
-
-  function setIntCat(cat,el){
-    currentIntCat=cat;
-    document.querySelectorAll('#intTabs .int-tab').forEach(function(t){t.classList.toggle('active',t.dataset.cat===cat);});
-    renderIntegrations();
-  }
-  function renderIntegrations(){
-    var q=(document.getElementById('intSearch').value||'').toLowerCase();
-    var statusFilter=document.getElementById('intStatusFilter').value;
-    var all=getAllIntegrations();
-    var filtered=all.filter(function(int){
-      if(q&&!(int.name.toLowerCase().includes(q)||(int.desc||'').toLowerCase().includes(q))) return false;
-      if(currentIntCat!=='all'&&int.cat!==currentIntCat) return false;
-      var isConnected=!!connectedIntegrations[int.id];
-      if(statusFilter==='connected'&&!isConnected) return false;
-      if(statusFilter==='available'&&isConnected) return false;
-      if(statusFilter==='custom'&&int.cat!=='custom') return false;
-      return true;
+  PM.bootstrap().then(function (me) {
+    document.getElementById('mobToggle').addEventListener('click', function () {
+      document.getElementById('pmSidebar').classList.toggle('open');
     });
-    var connectedCount=Object.keys(connectedIntegrations).length;
-    var customCount=customIntegrations.length;
-    document.getElementById('intStatConnected').textContent=connectedCount;
-    document.getElementById('intStatAvailable').textContent=integrationCatalog.length+customCount-connectedCount;
-    document.getElementById('intStatCustom').textContent=customCount;
-    var grid=document.getElementById('intGrid');
-    if(!filtered.length){ grid.innerHTML='<div class="int-empty" style="grid-column:1/-1"><i class="fas fa-plug-circle-xmark"></i><div style="font-weight:600;margin-bottom:4px">No integrations match</div></div>'; return; }
-    grid.innerHTML=filtered.map(function(int){
-      var conn=connectedIntegrations[int.id];
-      return '<div class="int-card '+(conn?'connected':'available')+'">'+
-        '<div class="int-icon"><i class="fab '+int.icon+'"></i></div>'+
-        '<div class="int-body">'+
-          '<div class="int-name">'+PM.esc(int.name)+'</div>'+
-          '<div class="int-desc">'+PM.esc(int.desc||'')+'</div>'+
-          '<div class="int-meta">'+
-            (conn?'<span class="int-status connected"><i class="fas fa-check"></i> Connected</span><span><i class="fas fa-clock"></i> Since '+PM.esc(conn.since||'—')+'</span><span><i class="fas fa-exchange-alt"></i> '+(conn.events||0)+' events</span>':'<span class="int-status available">Available</span>')+
-          '</div>'+
-        '</div>'+
-        '<div class="int-actions">'+
-          (conn?'<button class="pm-btn pm-btn-sm" onclick="openConfigIntegration(\''+int.id+'\')"><i class="fas fa-cog"></i> Config</button>':'<button class="pm-btn pm-btn-sm pm-btn-primary" onclick="connectIntegration(\''+int.id+'\')"><i class="fas fa-plug"></i> Connect</button>')+
-          (int.cat==='custom'?'<button class="pm-btn pm-btn-sm pm-btn-icon pm-btn-danger" onclick="removeCustomIntegration(\''+int.id+'\')"><i class="fas fa-trash"></i></button>':'')+
-        '</div>'+
-      '</div>';
-    }).join('');
-  }
-  function getAllIntegrations(){ return integrationCatalog.concat(customIntegrations); }
-  function findIntegration(id){ return integrationCatalog.find(function(i){return i.id===id;})||customIntegrations.find(function(i){return i.id===id;}); }
-  function connectIntegration(id){
-    var int=findIntegration(id); if(!int) return;
-    configIntId=id;
-    var body='<div style="margin-bottom:14px"><div style="font-weight:600;font-size:var(--fs-md)">'+PM.esc(int.name)+'</div><div style="font-size:var(--fs-xs);color:var(--tx3);margin-top:2px">'+PM.esc(int.desc||'')+'</div></div>';
-    body+='<div class="form-group"><label>Channel / Workspace</label><input class="pm-input" placeholder="#pm-updates"></div>';
-    body+='<div class="form-group"><label>API Key / Token <span class="req">*</span></label><input class="pm-input" type="password" placeholder="••••••••"></div>';
-    document.getElementById('configIntName').textContent=int.name;
-    document.getElementById('configIntBody').innerHTML=body;
-    document.getElementById('configIntDisconnect').style.display='none';
-    document.getElementById('configIntModal').classList.add('open');
-  }
-  function openConfigIntegration(id){
-    var int=findIntegration(id); if(!int) return;
-    configIntId=id;
-    var conn=connectedIntegrations[id]||{};
-    var body='<div class="pm-card" style="background:var(--bg);margin-bottom:12px"><div style="display:flex;justify-content:space-between;font-size:var(--fs-sm)"><span style="color:var(--tx3)">Status</span><span class="pm-badge success"><i class="fas fa-check"></i> Active</span></div><div style="display:flex;justify-content:space-between;font-size:var(--fs-sm);margin-top:6px"><span style="color:var(--tx3)">Events synced</span><span style="font-weight:600">'+(conn.events||0)+'</span></div></div>';
-    body+='<div class="form-group"><label>Channel / Workspace</label><input class="pm-input" value="'+PM.esc(conn.channel||'')+'"></div>';
-    document.getElementById('configIntName').textContent=int.name;
-    document.getElementById('configIntBody').innerHTML=body;
-    document.getElementById('configIntDisconnect').style.display='';
-    document.getElementById('configIntModal').classList.add('open');
-  }
-  function saveIntegrationConfig(){
-    if(!configIntId){ return; }
-    var int=findIntegration(configIntId);
-    if(!connectedIntegrations[configIntId]){ connectedIntegrations[configIntId]={connected:true,channel:'#pm-updates',since:'Just now',events:0}; PM.toast('✓ Connected to '+int.name,'success'); }
-    else { PM.toast('✓ '+int.name+' configuration saved','success'); }
-    document.getElementById('configIntModal').classList.remove('open');
-    renderIntegrations();
-  }
-  function disconnectCurrentIntegration(){
-    if(!configIntId) return;
-    var int=findIntegration(configIntId);
-    if(!confirm('Disconnect '+int.name+'?')) return;
-    delete connectedIntegrations[configIntId];
-    document.getElementById('configIntModal').classList.remove('open');
-    renderIntegrations();
-    PM.toast('Disconnected '+int.name,'warning');
-  }
-  function openAddIntegration(){
-    document.getElementById('addIntModal').classList.add('open');
-    switchAddIntTab('catalog');
-    document.getElementById('addIntSearch').value='';
-    document.getElementById('addIntCat').value='all';
-    renderCatalogGrid();
-  }
-  function switchAddIntTab(tab){
-    document.getElementById('addIntTabCatalog').classList.toggle('active',tab==='catalog');
-    document.getElementById('addIntTabCustom').classList.toggle('active',tab==='custom');
-    document.getElementById('addIntPaneCatalog').style.display=tab==='catalog'?'':'none';
-    document.getElementById('addIntPaneCustom').style.display=tab==='custom'?'':'none';
-    document.getElementById('addIntSubmit').style.display=tab==='custom'?'':'none';
-  }
-  function renderCatalogGrid(){
-    var q=(document.getElementById('addIntSearch').value||'').toLowerCase();
-    var cat=document.getElementById('addIntCat').value;
-    var available=integrationCatalog.filter(function(int){
-      if(q&&!(int.name.toLowerCase().includes(q)||(int.desc||'').toLowerCase().includes(q))) return false;
-      if(cat!=='all'&&int.cat!==cat) return false;
-      return true;
-    });
-    var grid=document.getElementById('catalogGrid');
-    if(!available.length){ grid.innerHTML='<div class="int-empty" style="grid-column:1/-1"><i class="fas fa-search"></i><div>No platforms found</div></div>'; return; }
-    grid.innerHTML=available.map(function(int){
-      var conn=connectedIntegrations[int.id];
-      return '<div class="int-card '+(conn?'connected':'available')+'">'+
-        '<div class="int-icon"><i class="fab '+int.icon+'"></i></div>'+
-        '<div class="int-body"><div class="int-name">'+PM.esc(int.name)+'</div><div class="int-desc">'+PM.esc(int.desc||'')+'</div></div>'+
-        '<div class="int-actions">'+(conn?'<span class="int-status connected" style="padding:4px 10px"><i class="fas fa-check"></i> Connected</span>':'<button class="pm-btn pm-btn-sm pm-btn-primary" onclick="addFromCatalog(\''+int.id+'\')"><i class="fas fa-plus"></i> Add</button>')+'</div>'+
-      '</div>';
-    }).join('');
-  }
-  function addFromCatalog(id){ document.getElementById('addIntModal').classList.remove('open'); connectIntegration(id); }
-  function submitAddIntegration(){
-    var name=document.getElementById('customIntName').value.trim();
-    var url=document.getElementById('customIntUrl').value.trim();
-    if(!name){ PM.toast('Integration name required','error'); return; }
-    if(!url){ PM.toast('API Base URL required','error'); return; }
-    var newId='custom-'+Date.now();
-    var newInt={ id:newId, name:name, icon:document.getElementById('customIntIcon').value.trim()||'fa-puzzle-piece', cat:document.getElementById('customIntCat').value, desc:document.getElementById('customIntDesc').value.trim()||('Custom: '+url), url:url, isCustom:true };
-    customIntegrations.push(newInt);
-    connectedIntegrations[newId]={ connected:true, channel:url, since:'Just now', events:0 };
-    document.getElementById('customIntName').value='';
-    document.getElementById('customIntUrl').value='';
-    document.getElementById('customIntDesc').value='';
-    document.getElementById('customIntSecret').value='';
-    document.getElementById('customIntIcon').value='fa-puzzle-piece';
-    document.getElementById('addIntModal').classList.remove('open');
-    renderIntegrations();
-    PM.toast('✓ Custom integration "'+name+'" added','success');
-  }
-  function removeCustomIntegration(id){
-    var int=findIntegration(id); if(!int) return;
-    if(!confirm('Remove custom integration "'+int.name+'"?')) return;
-    customIntegrations=customIntegrations.filter(function(i){return i.id!==id;});
-    delete connectedIntegrations[id];
-    renderIntegrations();
-    PM.toast('Removed '+int.name,'warning');
-  }
-  window.setIntCat = setIntCat;
-  window.renderIntegrations = renderIntegrations;
-  window.connectIntegration = connectIntegration;
-  window.openConfigIntegration = openConfigIntegration;
-  window.saveIntegrationConfig = saveIntegrationConfig;
-  window.disconnectCurrentIntegration = disconnectCurrentIntegration;
-  window.openAddIntegration = openAddIntegration;
-  window.switchAddIntTab = switchAddIntTab;
-  window.renderCatalogGrid = renderCatalogGrid;
-  window.addFromCatalog = addFromCatalog;
-  window.submitAddIntegration = submitAddIntegration;
-  window.removeCustomIntegration = removeCustomIntegration;
+    function val(id, v) { var el = document.getElementById(id); if (el) el.value = v || ''; }
+    val('setProfileName', me.name);
+    val('setProfileEmail', me.email);
+    val('setProfileRole', me.hrmsRole);
 
-  renderIntegrations();
-  document.getElementById('mobToggle').addEventListener('click',function(){ document.getElementById('pmSidebar').classList.toggle('open'); });
+    var TITLES = { profile: 'Profile', appearance: 'Appearance', access: 'Access reference' };
+    window.switchTab = function (tab) {
+      if (!TITLES[tab]) tab = 'profile';
+      document.querySelectorAll('#pmTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('.pm-pane').forEach(function (p) { p.classList.toggle('active', p.id === 'pane-' + tab); });
+      document.getElementById('pmCrumb').textContent = TITLES[tab];
+    };
 
+    function paintTheme() {
+      var light = document.body.classList.contains('pm-light');
+      document.getElementById('themeLight').classList.toggle('selected', light);
+      document.getElementById('themeDark').classList.toggle('selected', !light);
+    }
+    window.chooseTheme = function (which) {
+      var isLight = document.body.classList.contains('pm-light');
+      if ((which === 'light') !== isLight) PM.toggleTheme();   // same switch as the moon button, so it is remembered
+      paintTheme();
+    };
+    paintTheme();
+
+    var t = new URLSearchParams(location.search).get('tab');
+    if (t) window.switchTab(t);
   });
 </script>
 </body>

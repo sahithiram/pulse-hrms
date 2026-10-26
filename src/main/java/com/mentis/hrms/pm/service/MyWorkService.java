@@ -19,6 +19,12 @@ public interface MyWorkService {
     /** Projects where currentUserId is owner, team member, or task assignee. */
     List<ProjectSummaryResponse> listMyProjects(Long currentUserId);
 
+    /**
+     * STEP 7.0b: tasks sitting In Review that THIS person is allowed to review
+     * (same rule as PmAccessService.canReviewTask). Oldest waiting first.
+     */
+    List<TaskSummaryResponse> listReviewQueue(Long currentUserId);
+
     /** KPI numbers for the dashboard widget. */
     MyWorkKpi getKpi(Long currentUserId);
 

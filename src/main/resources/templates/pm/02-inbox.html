@@ -94,7 +94,10 @@
         { k:'CARD_MOVED',     label:'Moves' },
         { k:'COMMENT_ADDED',  label:'Comments' },
         { k:'DUE_SOON',       label:'Due Soon' },
-        { k:'OVERDUE',        label:'Overdue' }
+              { k:'OVERDUE',      label:'Overdue' },
+        { k:'attention',    label:'Needs my attention', types:['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION','TASK_IN_REVIEW','TASK_SENT_BACK','TASK_MENTIONED','OVERDUE_DIGEST'], unreadOnly:true },
+        { k:'blocked',      label:'Blocked', types:['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION'] },
+        { k:'review',       label:'Review', types:['TASK_IN_REVIEW','TASK_SENT_BACK'] }
       ];
       var activeNotifFilter = 'all';
 
@@ -116,7 +119,17 @@
         return 'var(--pri)';
       }
 
-      function notifRow(n) {
+      var NOTIF_ICON = {
+    TASK_BLOCKED:'fa-ban', TASK_BLOCKED_LONG:'fa-hourglass-half', TASK_ESCALATION:'fa-triangle-exclamation',
+    TASK_IN_REVIEW:'fa-magnifying-glass', TASK_DONE:'fa-circle-check', TASK_SENT_BACK:'fa-rotate-left',
+    OVERDUE_DIGEST:'fa-calendar-xmark'
+  };
+  function notifAvatar(n) {
+    var ic = NOTIF_ICON[n.action || n.type];
+    return ic ? '<i class="fas ' + ic + '"></i>' : PM.esc(PM.getInitials(n.sender || 'System'));
+  }
+
+  function notifRow(n) {
         var unreadDot = !n.read
           ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--pri);display:inline-block;margin-right:8px;"></span>'
           : '<span style="width:7px;display:inline-block;margin-right:8px;"></span>';
@@ -124,7 +137,7 @@
                (n.read ? '' : 'background:var(--pri-soft);') + '"' +
                ' onclick="onClickNotif(' + n.id + ', \'' + (n.deepLink || '').replace(/'/g, '') + '\')">' +
           unreadDot +
-          '<div class="av">' + PM.esc(PM.getInitials(n.sender || 'System')) + '</div>' +
+               '<div class="av">' + notifAvatar(n) + '</div>' +
           '<div style="flex:1;min-width:0">' +
             '<div class="msg">' + PM.esc(n.title || '') +
               '<span class="badge">' + PM.esc((n.action || '').replace(/_/g, ' ')) + '</span></div>' +
@@ -159,8 +172,14 @@
           '<i class="fas fa-check-double"></i> Mark all read</button></div>';
 
         try {
-          var url = '/api/pm/notifications?limit=50' + (activeNotifFilter !== 'all' ? '&filter=' + activeNotifFilter : '');
-          var list = await PM.api('GET', url) || [];
+               var f = NOTIF_FILTERS.filter(function (x) { return x.k === activeNotifFilter; })[0];
+        var grouped = f && f.types;
+        var url = '/api/pm/notifications?limit=' + (grouped ? 200 : 50) +
+                  (activeNotifFilter !== 'all' && !grouped ? '&filter=' + activeNotifFilter : '');
+        var list = await PM.api('GET', url) || [];
+        if (grouped) list = list.filter(function (n) {
+          return f.types.indexOf(n.action || n.type) >= 0 && (!f.unreadOnly || !n.read);
+        });
           box.innerHTML = chipsHtml + (list.length
             ? list.map(notifRow).join('')
             : '<div class="empty"><i class="fas fa-bell-slash" style="font-size:22px"></i><div style="margin-top:8px">Nothing here yet.</div></div>');

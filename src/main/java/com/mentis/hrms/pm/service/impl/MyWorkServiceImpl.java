@@ -11,6 +11,7 @@ import com.mentis.hrms.pm.enums.TaskStatus;
 import com.mentis.hrms.pm.mapper.ProjectMapper;
 import com.mentis.hrms.pm.mapper.TaskMapper;
 import com.mentis.hrms.pm.repository.*;
+import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.pm.service.MyWorkService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ public class MyWorkServiceImpl implements MyWorkService {
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectMapper projectMapper;
     private final TaskMapper taskMapper;
+    private final PmAccessService access; // STEP 7.0b
 
     @Override
     @Transactional(readOnly = true)
@@ -111,6 +113,23 @@ public class MyWorkServiceImpl implements MyWorkService {
 
         return projectRepository.findAllById(projectIds).stream()
                 .map(p -> projectMapper.toSummary(p, null))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * STEP 7.0b: the review queue. Every task In Review that this person may review
+     * (Super Admin, owner, MANAGER, LEAD role, or lead of the task's team).
+     * HR and plain members get an empty list. Oldest first, so nothing waits forever.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<TaskSummaryResponse> listReviewQueue(Long userId) {
+        if (userId == null) return List.of();
+        return taskRepository.findByStatus(TaskStatus.IN_REVIEW).stream()
+                .filter(t -> access.canReviewTask(userId, t.getId()))
+                .sorted(Comparator.comparing(Task::getUpdatedAt,
+                        Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(this::toSummary)
                 .collect(Collectors.toList());
     }
 

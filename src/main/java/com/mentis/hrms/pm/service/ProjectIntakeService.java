@@ -2,6 +2,7 @@ package com.mentis.hrms.pm.service;
 
 import com.mentis.hrms.dto.NotificationRequest;
 import com.mentis.hrms.model.Employee;
+import com.mentis.hrms.model.enums.UserRole;
 import com.mentis.hrms.pm.dto.request.CreateProjectRequest;
 import com.mentis.hrms.pm.dto.request.FromTemplateRequest;
 import com.mentis.hrms.pm.dto.request.ProjectRequestDecision;
@@ -11,24 +12,30 @@ import com.mentis.hrms.pm.dto.response.ProjectResponse;
 import com.mentis.hrms.pm.entity.ProjectRequest;
 import com.mentis.hrms.pm.enums.ProjectPriority;
 import com.mentis.hrms.pm.enums.ProjectRequestStatus;
+import com.mentis.hrms.pm.enums.ProjectRole;
 import com.mentis.hrms.pm.exception.BusinessRuleException;
 import com.mentis.hrms.pm.exception.PmAccessDeniedException;
 import com.mentis.hrms.pm.exception.ResourceNotFoundException;
+import com.mentis.hrms.pm.repository.ProjectMemberRepository;
 import com.mentis.hrms.pm.repository.ProjectRequestRepository;
 import com.mentis.hrms.pm.repository.ProjectTemplateRepository;
+import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.service.NotificationEmitter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.mentis.hrms.pm.entity.ProjectMember;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** Project intake: anyone submits an idea, an admin approves (creating the project) or rejects. */
+/**
+ * Project intake: anyone submits an idea; a reviewer (Super Admin / HR Manager) approves
+ * (creating the project) or rejects. The requester may withdraw while it is still waiting.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -40,8 +47,10 @@ public class ProjectIntakeService {
     private final ProjectService projectService;
     private final EmployeeRepository employeeRepository;
     private final NotificationEmitter notificationEmitter;
+    private final ProjectMemberRepository projectMemberRepository; // STEP 2
+    private final PmAccessService access;                          // STEP 2
 
-    /** impact 1-5, urgency 1-5, effort 1-5 (5 = biggest)  ->  20..100. */
+    /** impact 1-5, urgency 1-5, effort 1-5 (5 = biggest) -> 20..100. */
     public static int score(int impact, int urgency, int effort) {
         return (impact * 2 + urgency * 2 + (6 - effort)) * 4;
     }
@@ -54,6 +63,8 @@ public class ProjectIntakeService {
         return ProjectPriority.LOW;
     }
 
+    // ───────────────────────── submit / read ─────────────────────────
+
     @Transactional
     public ProjectRequestResponse submit(SubmitProjectRequest req, Long userId) {
         String title = text(req.getTitle(), "Title", 200, 3);
@@ -62,42 +73,56 @@ public class ProjectIntakeService {
         int impact = scale(req.getImpact(), "Impact");
         int urgency = scale(req.getUrgency(), "Urgency");
         int effort = scale(req.getEffort(), "Effort");
+        checkDates(req.getDesiredStartDate(), req.getDesiredEndDate());
 
         ProjectRequest saved = repo.save(ProjectRequest.builder()
                 .title(title).problem(problem).expectedOutcome(outcome)
                 .impact(impact).urgency(urgency).effort(effort)
                 .priorityScore(score(impact, urgency, effort))
+                .desiredStartDate(req.getDesiredStartDate())
+                .desiredEndDate(req.getDesiredEndDate())
                 .status(ProjectRequestStatus.SUBMITTED).createdBy(userId).build());
+
+        notifyReviewers(saved, userId);
         return toResponse(saved);
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectRequestResponse> list(Long userId, boolean admin) {
-        List<ProjectRequest> rows = admin ? repo.findAllByOrderByIdDesc() : repo.findByCreatedByOrderByIdDesc(userId);
+    public List<ProjectRequestResponse> list(Long userId, boolean canViewQueue) {
+        List<ProjectRequest> rows = canViewQueue
+                ? repo.findAllByOrderByIdDesc()
+                : repo.findByCreatedByOrderByIdDesc(userId);
         return rows.stream().map(this::toResponse).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public ProjectRequestResponse get(Long id, Long userId, boolean admin) {
+    public ProjectRequestResponse get(Long id, Long userId, boolean canViewQueue) {
         ProjectRequest r = find(id);
-        if (!admin && !r.getCreatedBy().equals(userId))
+        if (!canViewQueue && !r.getCreatedBy().equals(userId))
             throw new PmAccessDeniedException("You can only see your own project requests.");
         return toResponse(r);
     }
 
-    /** Admin only (checked by the controller). Creates the project in the same transaction. */
-    @Transactional
-    public ProjectRequestResponse approve(Long id, ProjectRequestDecision d, Long adminId) {
-        ProjectRequest r = find(id);
-        if (r.getStatus() != ProjectRequestStatus.SUBMITTED)
-            throw new BusinessRuleException("This request has already been " + r.getStatus().name().toLowerCase());
+    // ───────────────────────── decide ─────────────────────────
 
-        Long ownerId = d != null && d.getOwnerId() != null ? d.getOwnerId() : r.getCreatedBy();
+    /** Reviewer only (checked by the controller). Creates the project in the same transaction. */
+    @Transactional
+    public ProjectRequestResponse approve(Long id, ProjectRequestDecision d, Long reviewerId) {
+        ProjectRequest r = lockWaiting(id);
+        assertNotOwnRequest(r, reviewerId);
+
+        if (d == null || d.getOwnerId() == null)
+            throw new IllegalArgumentException("Choose the project manager (owner) before approving.");
+        Long ownerId = d.getOwnerId();
         if (!employeeRepository.existsById(ownerId))
             throw new IllegalArgumentException("Owner not found: " + ownerId);
         Long templateId = d == null ? null : d.getTemplateId();
         if (templateId != null && !templateRepository.existsById(templateId))
             throw new ResourceNotFoundException("Template not found: " + templateId);
+
+        LocalDate start = d != null && d.getStartDate() != null ? d.getStartDate() : r.getDesiredStartDate();
+        LocalDate end = d != null && d.getEndDate() != null ? d.getEndDate() : r.getDesiredEndDate();
+        checkDates(start, end);
 
         ProjectPriority priority = priorityFromScore(r.getPriorityScore());
         String description = r.getProblem() + "\n\nExpected outcome: " + r.getExpectedOutcome();
@@ -105,45 +130,97 @@ public class ProjectIntakeService {
         ProjectResponse project = templateId != null
                 ? templateService.instantiate(templateId, FromTemplateRequest.builder()
                 .name(r.getTitle()).description(description).ownerId(ownerId)
-                .priority(priority).startDate(LocalDate.now()).build(), adminId)
+                .priority(priority)
+                .startDate(start != null ? start : LocalDate.now())
+                .endDate(end)
+                .build(), reviewerId)
                 : projectService.createProject(CreateProjectRequest.builder()
                 .name(r.getTitle()).description(description).ownerId(ownerId)
-                .priority(priority).build(), adminId);
+                .priority(priority).startDate(start).endDate(end).build(), reviewerId);
 
+        // createProject makes the creator a MANAGER. A reviewer who is not the owner must not
+        // silently get Administer / finance rights on every project they approve.
+        stripReviewerManager(project.getId(), ownerId, reviewerId);
+
+        addRequesterAsViewer(project.getId(), r.getCreatedBy(), ownerId);
         r.setStatus(ProjectRequestStatus.APPROVED);
-        r.setDecidedBy(adminId);
+        r.setDecidedBy(reviewerId);
         r.setDecidedAt(LocalDateTime.now());
         r.setProjectId(project.getId());
         r.setTemplateId(templateId);
         r.setNote(d != null && d.getNote() != null && !d.getNote().isBlank() ? cut(d.getNote().trim(), 1000) : null);
         ProjectRequest saved = repo.save(r);
 
-        notifyRequester(saved, adminId, true, "Your request became the project \"" + project.getName() + "\"");
+        notifyRequester(saved, reviewerId, true, "Your request became the project \"" + project.getName() + "\"");
         return toResponse(saved);
     }
 
     @Transactional
-    public ProjectRequestResponse reject(Long id, ProjectRequestDecision d, Long adminId) {
-        ProjectRequest r = find(id);
-        if (r.getStatus() != ProjectRequestStatus.SUBMITTED)
-            throw new BusinessRuleException("This request has already been " + r.getStatus().name().toLowerCase());
+    public ProjectRequestResponse reject(Long id, ProjectRequestDecision d, Long reviewerId) {
+        ProjectRequest r = lockWaiting(id);
+        assertNotOwnRequest(r, reviewerId);
         String note = d == null || d.getNote() == null ? "" : d.getNote().trim();
         if (note.isEmpty()) throw new IllegalArgumentException("A reason is required when rejecting a request");
 
         r.setStatus(ProjectRequestStatus.REJECTED);
-        r.setDecidedBy(adminId);
+        r.setDecidedBy(reviewerId);
         r.setDecidedAt(LocalDateTime.now());
         r.setNote(cut(note, 1000));
         ProjectRequest saved = repo.save(r);
 
-        notifyRequester(saved, adminId, false, saved.getNote());
+        notifyRequester(saved, reviewerId, false, saved.getNote());
         return toResponse(saved);
+    }
+    /** The requester follows their own project (read-only) until the PM adds them properly. */
+    private void addRequesterAsViewer(Long projectId, Long requesterId, Long ownerId) {
+        if (projectId == null || requesterId == null || requesterId.equals(ownerId)) return;
+        if (projectMemberRepository.findByProjectIdAndEmployeeId(projectId, requesterId).isPresent()) return;
+        projectMemberRepository.save(com.mentis.hrms.pm.entity.ProjectMember.builder()
+                .projectId(projectId).employeeId(requesterId)
+                .role(ProjectRole.VIEWER).allocationPct(0).build());
+    }
+    /** Only the person who submitted it, and only while it is still waiting. */
+    @Transactional
+    public ProjectRequestResponse withdraw(Long id, Long userId) {
+        ProjectRequest r = lockWaiting(id);
+        if (!r.getCreatedBy().equals(userId))
+            throw new PmAccessDeniedException("Only the person who submitted a request can withdraw it.");
+        r.setStatus(ProjectRequestStatus.WITHDRAWN);
+        r.setDecidedAt(LocalDateTime.now());
+        return toResponse(repo.save(r));
     }
 
     // ───────────────────────── helpers ─────────────────────────
 
     private ProjectRequest find(Long id) {
         return repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Project request not found: " + id));
+    }
+
+    /** Loads the request with a write lock and makes sure it is still waiting. */
+    private ProjectRequest lockWaiting(Long id) {
+        ProjectRequest r = repo.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project request not found: " + id));
+        if (r.getStatus() != ProjectRequestStatus.SUBMITTED)
+            throw new BusinessRuleException("This request has already been " + r.getStatus().name().toLowerCase());
+        return r;
+    }
+
+    private void assertNotOwnRequest(ProjectRequest r, Long deciderId) {
+        if (r.getCreatedBy().equals(deciderId) && !access.isSuperAdmin(deciderId))
+            throw new PmAccessDeniedException("You can't decide your own request. Ask another reviewer.");
+    }
+
+    private void stripReviewerManager(Long projectId, Long ownerId, Long reviewerId) {
+        if (projectId == null || reviewerId == null) return;
+        if (reviewerId.equals(ownerId)) return;
+        projectMemberRepository.findByProjectIdAndEmployeeId(projectId, reviewerId)
+                .filter(m -> m.getRole() == ProjectRole.MANAGER)
+                .ifPresent(projectMemberRepository::delete);
+    }
+
+    private static void checkDates(LocalDate start, LocalDate end) {
+        if (start != null && end != null && end.isBefore(start))
+            throw new IllegalArgumentException("End date cannot be before the start date");
     }
 
     private static String text(String v, String label, int max, int min) {
@@ -160,6 +237,33 @@ public class ProjectIntakeService {
     }
 
     private static String cut(String s, int max) { return s.length() > max ? s.substring(0, max) : s; }
+
+    /** Tell every Super Admin and HR Manager that something is waiting. */
+    private void notifyReviewers(ProjectRequest r, Long submitterId) {
+        String who = nameOf(submitterId);
+        List<Employee> everyone;
+        try {
+            everyone = employeeRepository.findAll();
+        } catch (Exception e) {
+            log.warn("project request: could not load reviewers: {}", e.getMessage());
+            return;
+        }
+        for (Employee e : everyone) {
+            if (e.getRole() != UserRole.SUPER_ADMIN && e.getRole() != UserRole.HR_MANAGER) continue;
+            if (e.getEmployeeId() == null || e.getId().equals(submitterId)) continue;
+            try {
+                notificationEmitter.emit(NotificationRequest.builder()
+                        .recipientId(e.getEmployeeId()).recipientType("EMPLOYEE")
+                        .type("PROJECT_REQUEST_SUBMITTED").action("PROJECT_REQUEST_SUBMITTED")
+                        .title("New project request: " + r.getTitle())
+                        .message(who + " submitted a project request (score " + r.getPriorityScore() + ").")
+                        .actorId(submitterId).actorName(who).priority("NORMAL")
+                        .deepLink("/pm/04-projects#requests").build());
+            } catch (Exception ex) {
+                log.warn("project request notify (reviewer {}) failed: {}", e.getEmployeeId(), ex.getMessage());
+            }
+        }
+    }
 
     private void notifyRequester(ProjectRequest r, Long actorId, boolean approved, String message) {
         if (r.getCreatedBy().equals(actorId)) return;
@@ -193,6 +297,7 @@ public class ProjectIntakeService {
                 .id(r.getId()).title(r.getTitle()).problem(r.getProblem()).expectedOutcome(r.getExpectedOutcome())
                 .impact(r.getImpact()).urgency(r.getUrgency()).effort(r.getEffort())
                 .priorityScore(r.getPriorityScore()).suggestedPriority(priorityFromScore(r.getPriorityScore()).name())
+                .desiredStartDate(r.getDesiredStartDate()).desiredEndDate(r.getDesiredEndDate())
                 .status(r.getStatus().name())
                 .createdBy(r.getCreatedBy()).createdByName(nameOf(r.getCreatedBy())).createdAt(r.getCreatedAt())
                 .decidedBy(r.getDecidedBy()).decidedByName(nameOf(r.getDecidedBy())).decidedAt(r.getDecidedAt())

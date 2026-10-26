@@ -101,7 +101,12 @@ public class TaskController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "DESC") String direction) {
+            @RequestParam(defaultValue = "DESC") String direction,
+            @CurrentUserId Long userId) {
+        // STEP 1 leftover: nobody lists tasks of a project / team they cannot see
+        if (projectId != null) pmAccessService.requireCanViewProject(userId, projectId);
+        if (teamId != null) pmAccessService.requireCanViewTeam(userId, teamId);
+        if (projectId == null && teamId == null) pmAccessService.requireAdmin(userId);
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
         if (teamId != null) {

@@ -194,7 +194,7 @@
         </div>
         <div class="pm-page-actions">
           <button class="pm-btn" onclick="reloadMyWork()"><i class="fas fa-rotate"></i> Refresh</button>
-          <button class="pm-btn pm-btn-primary" onclick="newTask()"><i class="fas fa-plus"></i> New Task</button>
+          <button class="pm-btn pm-btn-primary" data-rule="lead" onclick="newTask()"><i class="fas fa-plus"></i> New Task</button>
         </div>
       </div>
 
@@ -225,6 +225,7 @@
 
       <div class="pm-tabs" id="pmTabs">
         <button class="active" data-tab="tasks" onclick="switchTab('tasks',this)">My Tasks</button>
+        <button data-tab="review" id="tabReview" style="display:none" onclick="switchTab('review',this)"><i class="fas fa-magnifying-glass"></i> To review <span class="pm-badge info" id="reviewCount" style="display:none;margin-left:4px">0</span></button>
         <button data-tab="productivity" onclick="switchTab('productivity',this)">Productivity</button>
         <button data-tab="timesheet" onclick="switchTab('timesheet',this)">Timesheet</button>
       </div>
@@ -237,6 +238,8 @@
             <option value="today">Due Today</option>
             <option value="week">This Week</option>
             <option value="later">Later</option>
+            <option value="review">Waiting for review</option>
+            <option value="blocked">Blocked</option>
             <option value="done">Completed</option>
           </select>
           <select class="pm-select" style="max-width:180px" id="mwGroup" onchange="renderTasks()">
@@ -252,6 +255,15 @@
         </div>
       </div>
 
+      <div class="pm-pane" id="pane-review">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap">
+          <div style="font-size:var(--fs-sm);color:var(--tx2)">Tasks waiting for your review, oldest first. Approve marks the task Done. Send back returns it to In Progress with your note.</div>
+          <button class="pm-btn pm-btn-sm" onclick="loadReviewQueue()"><i class="fas fa-rotate"></i> Refresh</button>
+        </div>
+        <div class="pm-card" style="padding:0;overflow:hidden" id="reviewList">
+          <div style="text-align:center;padding:40px;color:var(--tx3)">Loading…</div>
+        </div>
+      </div>
       <div class="pm-pane" id="pane-timesheet"><div id="pmtsRoot"></div></div>
 
       <div class="pm-pane" id="pane-productivity">
@@ -294,7 +306,8 @@
     const tabMeta={
       tasks:{t:'My Work',i:'fa-inbox',s:'Your personal workspace'},
      productivity:{t:'Productivity',i:'fa-chart-line',s:'Your personal productivity insights'},
-    timesheet:{t:'Timesheet',i:'fa-clock',s:'Log, submit and track your weekly hours'}
+  review:{t:'To review',i:'fa-magnifying-glass',s:'Tasks waiting for your sign-off'},
+timesheet:{t:'Timesheet',i:'fa-clock',s:'Log, submit and track your weekly hours'}
     };
     function switchTab(tab,el){
       document.querySelectorAll('#pmTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -306,7 +319,8 @@
         document.getElementById('pmPageSub').textContent=m.s;
         document.getElementById('pmCrumb').textContent=m.t;
       }
-      if(tab==='productivity') renderProductivity();
+     if(tab==='productivity') renderProductivity();
+if(tab==='review') loadReviewQueue();
     if(tab==='timesheet' && window.PMTimesheetMe) PMTimesheetMe.load();
     }
     window.switchTab = switchTab;
@@ -392,7 +406,9 @@
         if(filter==='today')return diff===0&&t.status!=='done';
         if(filter==='week')return diff>=0&&diff<=7&&t.status!=='done';
         if(filter==='later')return diff>7&&t.status!=='done';
-        if(filter==='done')return t.status==='done';
+       if(filter==='review')return t.status==='review';
+if(filter==='blocked')return t.status==='blocked';
+if(filter==='done')return t.status==='done';
         return true;
       });
       var groups={};
@@ -530,7 +546,124 @@
       }).join('');
     }
 
-    document.getElementById('mobToggle').addEventListener('click',()=>document.getElementById('pmSidebar').classList.toggle('open'));
+  /* ===== STEP 7.3: review-aware My Work ===== */
+var isLead = PM.can('lead');
+var people = {}; // employee id -> name, for the review list
+var reviewItems = [];
+
+// hide things this person may not use (New Task)
+document.querySelectorAll('[data-rule]').forEach(function(el){
+  if(!PM.can(el.getAttribute('data-rule'))) el.style.display='none';
+});
+
+// The Done checkbox, now aware of the project's review rule.
+// Review project: In Progress -> Done is refused, so the task is sent to In Review instead.
+window.toggleTask = function(id){
+  var t = tasks.find(function(x){ return x.id===id; }); if(!t) return;
+  if(t.status==='review' && !isLead){ PM.toast('Waiting for a reviewer to sign this off','info'); return; }
+  var reopening = t.status==='done';
+  var steps = reopening ? ['IN_PROGRESS']
+    : ((t.status==='todo'||t.status==='blocked') ? ['IN_PROGRESS','DONE'] : ['DONE']);
+  steps.reduce(function(p,s){
+    return p.then(function(){ return PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:s}); });
+  }, Promise.resolve()).then(function(){
+    t.status = reopening ? 'in-progress' : 'done';
+    updateKpis(); renderTasks();
+    PM.toast(reopening ? 'Reopened' : '✓ Marked complete','success');
+    if(isLead) loadReviewQueue();
+  }).catch(function(e){
+    if(!reopening && /requires review/i.test((e && e.message) || '')){
+      PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'IN_REVIEW'}).then(function(){
+        PM.toast('This project needs a review, so the task was sent for review','success');
+        loadMyTasks();
+      }).catch(function(e2){ PM.toast(e2.message||'Failed','error'); loadMyTasks(); });
+      return;
+    }
+    PM.toast(e.message||'Failed','error');
+    loadMyTasks(); // re-sync in case the first step went through
+  });
+};
+
+function loadPeople(){
+  if(Object.keys(people).length) return Promise.resolve();
+  return PM.api('GET','/api/pm/employees/dropdown').then(function(l){
+    (l||[]).forEach(function(e){ people[e.id]=e.name; });
+  }).catch(function(){});
+}
+
+function renderReviewQueue(){
+  var box=document.getElementById('reviewList'); if(!box) return;
+  var cnt=document.getElementById('reviewCount');
+  if(cnt){ cnt.textContent=reviewItems.length; cnt.style.display=reviewItems.length?'':'none'; }
+  if(!reviewItems.length){
+    box.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tx3)"><i class="fas fa-circle-check" style="font-size:32px;opacity:.4;display:block;margin-bottom:8px"></i>Nothing is waiting for your review.</div>';
+    return;
+  }
+  box.innerHTML=reviewItems.map(function(t){
+    var who=(t.assigneeIds||[]).map(function(i){ return people[i]||('#'+i); }).join(', ');
+    var pr=(t.priority||'MEDIUM').toLowerCase();
+    var due=t.dueDate?'<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> '+PM.esc(t.dueDate)+'</span>':'';
+    return '<div class="mw-task-row" onclick="openTaskInBoard('+t.id+')">'+
+      '<div class="priority-dot p-'+(priorityClass[pr]||'m')+'"></div>'+
+      '<div class="mw-task-title">'+PM.esc(t.title)+
+        '<div style="font-size:var(--fs-xs);color:var(--tx3);font-weight:400">'+PM.esc(t.projectName||'')+(who?' · '+PM.esc(who):'')+'</div></div>'+
+      '<div class="mw-task-meta">'+due+
+        '<button class="pm-btn pm-btn-sm pm-btn-primary" onclick="event.stopPropagation();reviewApprove('+t.id+')"><i class="fas fa-check"></i> Approve</button>'+
+        '<button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();reviewSendBack('+t.id+')"><i class="fas fa-rotate-left"></i> Send back</button>'+
+      '</div></div>';
+  }).join('');
+}
+
+function loadReviewQueue(){
+  var box=document.getElementById('reviewList'); if(!box||!isLead) return;
+  Promise.all([PM.api('GET','/api/pm/me/review-queue'), loadPeople()]).then(function(r){
+    reviewItems=r[0]||[];
+    renderReviewQueue();
+  }).catch(function(e){
+    console.error('Review queue failed',e);
+    box.innerHTML='<div style="text-align:center;padding:40px;color:var(--dng)">Could not load the review queue</div>';
+  });
+}
+window.loadReviewQueue = loadReviewQueue;
+
+window.reviewApprove = function(id){
+  PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'DONE'}).then(function(){
+    PM.toast('Approved. The task is marked Done','success');
+    loadReviewQueue(); loadMyTasks();
+  }).catch(function(e){ PM.toast(e.message||'Could not approve','error'); loadReviewQueue(); });
+};
+
+window.reviewSendBack = function(id){
+  var note=window.prompt('What needs to change? The assignee will see this as a comment.');
+  if(note===null) return;
+  note=note.trim();
+  if(!note){ PM.toast('Please say what needs to change','warning'); return; }
+  PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'IN_PROGRESS'}).then(function(){
+    return PM.api('POST','/api/pm/tasks/'+id+'/comments',{body:'↩ Sent back for changes: '+note})
+      .catch(function(){ PM.toast('Sent back, but the note could not be saved','warning'); });
+  }).then(function(){
+    PM.toast('Sent back to the assignee','success');
+    loadReviewQueue(); loadMyTasks();
+  }).catch(function(e){ PM.toast(e.message||'Could not send back','error'); loadReviewQueue(); });
+};
+
+// keep the review queue live
+var prevRefresh = window.pmRefresh;
+window.pmRefresh = function(){ if(prevRefresh) prevRefresh(); if(isLead) loadReviewQueue(); };
+
+// lead tier: show the tab and load the count
+if(isLead){
+  var tabBtn=document.getElementById('tabReview');
+  if(tabBtn) tabBtn.style.display='';
+  loadReviewQueue();
+}
+
+// deep links: ?tab=review (lead tier only) and ?task=ID (opens the task drawer)
+var mwQs=new URLSearchParams(location.search);
+if(mwQs.get('tab')==='review' && isLead) switchTab('review', document.getElementById('tabReview'));
+if(mwQs.get('task')) setTimeout(function(){ if(window.PMTask) PMTask.open(Number(mwQs.get('task'))); },400);
+
+document.getElementById('mobToggle').addEventListener('click',()=>document.getElementById('pmSidebar').classList.toggle('open'));
     loadMyTasks();
   });
 </script>

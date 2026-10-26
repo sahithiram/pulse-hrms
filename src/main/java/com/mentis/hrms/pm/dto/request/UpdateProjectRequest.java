@@ -27,5 +27,6 @@ public class UpdateProjectRequest {
     private BigDecimal budgetTotal;
     private Integer progressPct;
     private Long teamId;
+    private Boolean reviewRequired;
     private String lessonsLearned;
 }

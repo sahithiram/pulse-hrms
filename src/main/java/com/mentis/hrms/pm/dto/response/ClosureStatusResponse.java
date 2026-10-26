@@ -3,7 +3,8 @@ package com.mentis.hrms.pm.dto.response;
 import lombok.*;
 
 import java.util.List;
-
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class ClosureStatusResponse {
     private Long projectId;
@@ -20,4 +21,16 @@ public class ClosureStatusResponse {
     private boolean ready;
     private List<String> blockers;
     private List<ClosureItemResponse> items;
+    // ── Step 8: completion summary / reopen info ──
+    private LocalDateTime completedAt;
+    private String completedByName;
+    private LocalDateTime reopenedAt;
+    private String reopenedByName;
+    private String reopenReason;
+    /** The project's planned end date. */
+    private LocalDate plannedEnd;
+    /** completed day minus planned end: positive = late, negative = early, null = not completed / no end date. */
+    private Long delayDays;
+    private long tasksTotal;
+    private long tasksDone;
 }

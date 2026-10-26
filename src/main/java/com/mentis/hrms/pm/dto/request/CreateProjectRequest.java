@@ -38,7 +38,8 @@ public class CreateProjectRequest {
     private LocalDate endDate;
     private Long teamId;
     private BigDecimal budgetTotal;
-
+    /** Optional. Null means the default (ON). */
+    private Boolean reviewRequired;
     /** People chosen in the "People" step of the create form (added as MEMBER). */
     private List<Long> memberIds;
 }

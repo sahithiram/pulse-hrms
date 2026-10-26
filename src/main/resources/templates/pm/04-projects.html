@@ -791,7 +791,7 @@
         status:(function(s){ s=(s||'PLANNING').toLowerCase().replace(/_/g,'-'); return s==='active' ? 'on-track' : s; })(p.status),
         priority:(p.priority||'MEDIUM').toLowerCase(),
         progress:p.progressPct||0,
-   budget:budgetRupees/100000, spent:spentRupees/100000, budgetInr:budgetRupees, spentInr:spentRupees, health:p.health||null,
+   budget:budgetRupees/100000, spent:spentRupees/100000, budgetInr:budgetRupees, spentInr:spentRupees, health:p.health||null, financeVisible:p.financeVisible!==false,
         team:0, tasks:0, updated:'just now', starred:false, mine:(p.ownerId===me.id),
         start:p.startDate||'', end:p.endDate||'',
         color:'linear-gradient(135deg,#6366f1,#4f46e5)',
@@ -867,8 +867,8 @@
     }
     function updateStats(){
       var n=projects.length||1;
-      var tb=projects.reduce(function(a,p){return a+(p.budget||0);},0);
-      var ts=projects.reduce(function(a,p){return a+(p.spent||0);},0);
+    var tb=projects.reduce(function(a,p){return a+(p.financeVisible?(p.budget||0):0);},0);
+     var ts=projects.reduce(function(a,p){return a+(p.financeVisible?(p.spent||0):0);},0);
       var tt=projects.reduce(function(a,p){return a+(p.team||0);},0);
       var tta=projects.reduce(function(a,p){return a+(p.tasks||0);},0);
       var ap=Math.round(projects.reduce(function(a,p){return a+(p.progress||0);},0)/n);
@@ -912,7 +912,7 @@
             '<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px"><span>Progress</span><span style="color:var(--tx);font-weight:600">'+p.progress+'%</span></div>'+
             '<div class="pm-progress"><div class="pm-progress-bar '+(p.progress>80?'success':p.progress>50?'':'danger')+'" style="width:'+p.progress+'%"></div></div>'+
           '</div>'+
-          '<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px"><span>₹'+p.spent+'L / ₹'+p.budget+'L</span><span>'+sp.toFixed(0)+'%</span></div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px"><span>'+budgetText(p)+'</span><span>'+(p.financeVisible?sp.toFixed(0)+'%':'')+'</span></div>'+
           '<div class="pcard-meta">'+
             '<span><i class="fas fa-user"></i> '+PM.esc(p.manager)+'</span>'+
             '<span><i class="fas fa-users"></i> '+p.team+'</span>'+
@@ -935,7 +935,7 @@
             '<td><span class="pm-badge '+s[0]+'">'+s[1]+'</span></td>'+
             '<td><span class="pm-badge '+prClass+'">'+p.priority.charAt(0).toUpperCase()+p.priority.slice(1)+'</span></td>'+
             '<td><div style="display:flex;align-items:center;gap:6px;min-width:110px"><div class="pm-progress" style="flex:1"><div class="pm-progress-bar" style="width:'+p.progress+'%"></div></div><span style="font-size:var(--fs-xs);font-weight:600;min-width:28px">'+p.progress+'%</span></div></td>'+
-            '<td>₹'+p.spent+'L / ₹'+p.budget+'L</td>'+
+'<td>'+budgetText(p)+'</td>'+
             '<td onclick="event.stopPropagation()"><button class="pm-btn pm-btn-sm" onclick="openDetail('+p.id+')">Open</button></td>'+
           '</tr>';
         }).join('')+'</tbody></table></div></div>';
@@ -1058,10 +1058,29 @@
       }).catch(function(e){ PM.toast(e.message||'Failed','error'); });
     }
 
-  function fmtInr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+ function fmtInr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function budgetText(p){ return p.financeVisible ? '₹'+p.spent+'L / ₹'+p.budget+'L' : '—'; }
   function healthBadge(h){
     var m={ON_TRACK:['success','On track'],AT_RISK:['warning','At risk'],DELAYED:['danger','Delayed'],CRITICAL:['danger','Critical']}[h];
     return m?'<span class="pm-badge '+m[0]+'" title="Project health">'+m[1]+'</span>':'';
+  }
+    /* Step 4: per-project "Review required" switch */
+  function loadReviewSwitch(id){
+    var host=document.getElementById('prReviewRow'); if(!host) return;
+    PM.api('GET','/api/pm/projects/'+id).then(function(d){
+      if(!d || d.financeVisible!==true){ host.style.display='none'; return; }
+      host.innerHTML='<label class="cp-sw" title="When on, an assignee cannot mark a task Done. They send it to In Review and a reviewer (owner, manager, lead, team lead) marks it Done.">'+
+        '<input type="checkbox" id="prReviewChk" '+(d.reviewRequired?'checked':'')+' onchange="setReviewRequired('+id+',this.checked)">'+
+        '<span class="tr"></span><span><b>Review required</b> for tasks in this project</span></label>';
+    }).catch(function(){ host.style.display='none'; });
+  }
+  function setReviewRequired(id,on){
+    PM.api('PUT','/api/pm/projects/'+id,{reviewRequired:on}).then(function(){
+      PM.toast(on?'Review is now required':'Review is now optional','success');
+    }).catch(function(e){
+      var c=document.getElementById('prReviewChk'); if(c) c.checked=!on;
+      PM.toast(e.message||'Failed','error');
+    });
   }
   function openDetail(id){
       var p=projects.find(function(x){return x.id===id;}); if(!p)return;
@@ -1074,9 +1093,10 @@
         '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3)">Client</div><div style="font-weight:600">'+PM.esc(p.client)+'</div></div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
           '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Progress</div><div style="font-size:var(--fs-xl);font-weight:700">'+p.progress+'%</div></div>'+
-          '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Budget</div><div style="font-size:var(--fs-lg);font-weight:700">'+fmtInr(p.spentInr)+' / '+fmtInr(p.budgetInr)+'</div></div>'+
-        '</div>'+
-        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Budget</div><div style="font-size:var(--fs-lg);font-weight:700">'+(p.financeVisible?fmtInr(p.spentInr)+' / '+fmtInr(p.budgetInr):'—')+'</div></div>'+
+    '</div>'+
+    '<div id="prReviewRow" style="margin-bottom:10px"></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
           '<button class="pm-btn pm-btn-primary" style="flex:1;justify-content:center" onclick="PM.closeDrawer();location.href=\'/pm/06-tasks?view=board\'"><i class="fas fa-folder-open"></i> Open</button>'+
           '<button class="pm-btn" onclick="toggleStar('+p.id+')"><i class="fas fa-star"></i></button>'+
           '<select class="pm-select" style="flex:1" onchange="changeStatus('+p.id+',this.value)">'+
@@ -1092,7 +1112,9 @@
         '</div>',
         p.name
       );
-    }
+        loadReviewSwitch(id);
+}
+
     function openCtx(e,id){ e.preventDefault(); e.stopPropagation(); ctxId=id; var m=document.getElementById('ctxMenu'); m.classList.add('open'); m.style.left=Math.min(e.clientX,window.innerWidth-220)+'px'; m.style.top=Math.min(e.clientY,window.innerHeight-380)+'px'; var p=projects.find(function(x){return x.id===id;}); document.getElementById('ctxStarLabel').textContent=p&&p.starred?'Unstar':'Star'; }
     function closeCtx(){ document.getElementById('ctxMenu').classList.remove('open'); }
     document.addEventListener('click',function(e){ if(!e.target.closest('#ctxMenu')) closeCtx(); });
@@ -1390,10 +1412,1497 @@
     $('mobToggle').addEventListener('click',function(){ $('pmSidebar').classList.toggle('open'); });
 
     /* ---------- admin gating ---------- */
-      if(!(me && (me.admin === true || me.canCreateProject === true))){
+      if(!(me && me.canCreateProject === true)){
+      var nb=$('newProjectBtn'); if(nb) nb.style.display='none';
+    }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>PM · Projects</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{color-scheme:dark;--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--pad:10px 12px;--padpage:12px 14px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700;--z-ctx:1800;--z-modal:1500}
+    .pm-light{color-scheme:light;--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:'Inter',sans-serif;font-size:var(--fs);line-height:1.45;background:var(--bg);color:var(--tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
+    a{color:var(--pri);text-decoration:none}
+    button{font-family:inherit}
+    [hidden]{display:none!important}
+    .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
+    .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
+    .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
+    .pm-brand{display:flex;align-items:center;gap:8px;padding:10px 12px;height:var(--hh);border-bottom:1px solid var(--bd);flex-shrink:0}
+    .pm-brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--pri),var(--pur));display:grid;place-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
+    .pm-brand-name{font-weight:600;font-size:var(--fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+    .pm-shell.collapsed .pm-brand-name,.pm-shell.collapsed .pm-nav-section,.pm-shell.collapsed .pm-nav-label,.pm-shell.collapsed .pm-nav-badge{display:none}
+    .pm-sidebar-scroll{flex:1;overflow-y:auto;padding:6px 6px 20px}
+    .pm-nav-section{padding:12px 10px 4px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px}
+    .pm-nav-section i{font-size:9px;color:var(--pri)}
+    .pm-nav-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);color:var(--tx2);text-decoration:none;font-size:var(--fs);font-weight:500;transition:background var(--t-fast),color var(--t-fast);cursor:pointer;white-space:nowrap;margin:1px 0}
+    .pm-nav-link:hover{background:var(--card2);color:var(--tx)}
+    .pm-nav-link.active{background:var(--pri-soft);color:var(--pri)}
+    .pm-nav-link i{width:16px;text-align:center;font-size:12.5px;flex-shrink:0}
+    .pm-nav-label{flex:1;overflow:hidden;text-overflow:ellipsis}
+    .pm-nav-badge{background:var(--pri);color:#fff;font-size:var(--fs-xs);font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
+    .pm-nav-badge.warn{background:var(--wrn)}
+    .pm-main{min-width:0;display:flex;flex-direction:column}
+    .pm-header{position:sticky;top:0;z-index:var(--z-h);height:var(--hh);background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0}
+    .pm-iconbtn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx2);display:grid;place-content:center;cursor:pointer;font-size:12px;transition:var(--t-fast);position:relative;flex-shrink:0}
+    .pm-iconbtn:hover{color:var(--tx);border-color:var(--pri)}
+    .pm-iconbtn .dot{position:absolute;top:-3px;right:-3px;background:var(--dng);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:15px;text-align:center;line-height:1.2}
+    .pm-search{position:relative;flex:1;max-width:380px}
+    .pm-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--tx3)}
+    .pm-search input{width:100%;height:30px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 10px 0 30px;font-size:var(--fs);font-family:inherit;outline:none}
+    .pm-search input:focus{border-color:var(--pri)}
+    .pm-search kbd{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--card2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:var(--fs-xs);color:var(--tx3)}
+    .pm-header-right{display:flex;align-items:center;gap:6px;margin-left:auto}
+    .pm-live{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--tx3);font-weight:600;padding:0 6px}
+    .pm-live .dot{width:6px;height:6px;border-radius:50%;background:var(--suc);position:relative}
+    .pm-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-weight:700;font-size:11px;display:grid;place-content:center;cursor:pointer;flex-shrink:0}
+    .pm-content{padding:var(--padpage);flex:1;min-width:0}
+    .pm-breadcrumb{font-size:var(--fs-sm);color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+    .pm-breadcrumb a{color:var(--tx3);cursor:pointer}
+    .pm-breadcrumb a:hover{color:var(--pri)}
+    .pm-breadcrumb .cur{color:var(--tx2);font-weight:600}
+    .pm-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
+    .pm-page-title i{color:var(--pri);font-size:15px}
+    .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
+    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
+    .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
+    .pm-btn i{font-size:11px}
+    .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
+    .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
+    .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
+    .pm-btn-icon{width:26px;height:26px;padding:0;justify-content:center}
+    .pm-btn-danger{color:var(--dng);border-color:rgba(239,68,68,.3)}
+    .pm-btn-danger:hover{border-color:var(--dng);color:var(--dng);background:var(--dng-soft)}
+    .pm-btn:disabled{opacity:.5;cursor:not-allowed}
+    .pm-input,.pm-select,.pm-textarea{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:6px 10px;font-family:inherit;font-size:var(--fs);outline:none;width:100%;height:28px;transition:border-color 120ms}
+    .pm-textarea{height:auto;min-height:70px;resize:vertical}
+    .pm-input:focus,.pm-select:focus,.pm-textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+    .pm-input.err,.pm-select.err,.pm-textarea.err{border-color:var(--dng);box-shadow:0 0 0 3px var(--dng-soft)}
+    .pm-input.ok,.pm-select.ok,.pm-textarea.ok{border-color:var(--suc)}
+    .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:var(--pad);margin-bottom:10px}
+    .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
+    .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
+    .pm-badge.success{background:var(--suc-soft);color:var(--suc)}
+    .pm-badge.danger{background:var(--dng-soft);color:var(--dng)}
+    .pm-badge.warning{background:var(--wrn-soft);color:var(--wrn)}
+    .pm-badge.info{background:var(--inf-soft);color:var(--inf)}
+    .pm-badge.purple{background:var(--pur-soft);color:var(--pur)}
+    .pm-progress{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;width:100%}
+    .pm-progress-bar{height:100%;background:var(--pri);border-radius:10px;transition:width 300ms ease}
+    .pm-progress-bar.success{background:var(--suc)}
+    .pm-progress-bar.warning{background:var(--wrn)}
+    .pm-progress-bar.danger{background:var(--dng)}
+    .pm-table{width:100%;border-collapse:collapse;font-size:var(--fs)}
+    .pm-table thead th{text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap;background:var(--card);position:sticky;top:0;z-index:1}
+    .pm-table tbody td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
+    .pm-table tbody tr:hover{background:var(--card2)}
+    .pm-table tbody tr:last-child td{border-bottom:none}
+    .pm-toasts{position:fixed;top:12px;right:12px;z-index:var(--z-ts);display:flex;flex-direction:column;gap:6px;max-width:340px;pointer-events:none}
+    .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:var(--rl);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);transform:translateX(120%);transition:transform 280ms cubic-bezier(.4,0,.2,1);pointer-events:auto;cursor:pointer}
+    .pm-toast.show{transform:translateX(0)}
+    .pm-toast.success{border-left-color:var(--suc)}
+    .pm-toast.error{border-left-color:var(--dng)}
+    .pm-toast.warning{border-left-color:var(--wrn)}
+    .pm-toast-icon{width:22px;height:22px;border-radius:50%;display:grid;place-content:center;color:#fff;font-size:10px;flex-shrink:0}
+    .pm-toast.success .pm-toast-icon{background:var(--suc)}
+    .pm-toast.error .pm-toast-icon{background:var(--dng)}
+    .pm-toast.warning .pm-toast-icon{background:var(--wrn)}
+    .pm-toast.info .pm-toast-icon{background:var(--inf)}
+    .pm-toast-msg{flex:1;font-size:var(--fs);font-weight:500}
+    .pm-cmd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:var(--z-cmd);display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
+    .pm-cmd-backdrop.open{display:flex}
+    .pm-cmd{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:560px;box-shadow:var(--sh-lg);overflow:hidden}
+    .pm-cmd-input{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd)}
+    .pm-cmd-input input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:var(--fs-md);font-family:inherit}
+    .pm-cmd-list{max-height:340px;overflow-y:auto;padding:4px}
+    .pm-cmd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:var(--fs-md)}
+    .pm-cmd-item:hover,.pm-cmd-item.active{background:var(--pri-soft)}
+    .pm-cmd-item i{color:var(--pri);width:16px;text-align:center}
+    .pm-cmd-foot{padding:6px 12px;border-top:1px solid var(--bd);font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:14px;background:var(--bg)}
+    .pm-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-dr);opacity:0;pointer-events:none;transition:opacity var(--t)}
+    .pm-drawer-backdrop.open{opacity:1;pointer-events:auto}
+    .pm-drawer{position:fixed;top:0;right:0;width:min(600px,96vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:calc(var(--z-dr) + 1);transform:translateX(100%);transition:transform 280ms cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-lg)}
+    .pm-drawer.open{transform:translateX(0)}
+    .pm-drawer-head{height:var(--hh);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
+    .pm-drawer-title{font-size:var(--fs-md);font-weight:600}
+    .pm-drawer-body{flex:1;overflow-y:auto;padding:12px}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);z-index:var(--z-modal);display:none;align-items:center;justify-content:center;padding:16px;overflow-y:auto}
+    .modal-backdrop.open{display:flex}
+    .modal{position:relative;background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:680px;box-shadow:var(--sh-lg);display:flex;flex-direction:column;max-height:92vh}
+    .modal-lg{max-width:960px}
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
+    .modal-head h3{font-size:var(--fs-lg);font-weight:600;display:flex;align-items:center;gap:8px}
+    .modal-head h3 i{color:var(--pri)}
+    .modal-body{flex:1;overflow-y:auto;padding:14px}
+    .modal-foot{display:flex;justify-content:flex-end;gap:6px;padding:12px 14px;border-top:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap;align-items:center}
+
+    /* ══════════════════════════════════════════════════════
+       NEW PROJECT — FULL PAGE
+       ══════════════════════════════════════════════════════ */
+    @keyframes cpFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    #createView{animation:cpFade .22s ease}
+    .cp-wrap{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:18px;align-items:start;max-width:1240px;margin:0 auto}
+    .cp-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+    .cp-side{position:sticky;top:calc(var(--hh) + 14px);display:flex;flex-direction:column;gap:12px}
+    .cp-top{max-width:1240px;margin:0 auto 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .cp-back{width:34px;height:34px;border-radius:50%;border:1px solid var(--bd);background:var(--card);color:var(--tx2);display:grid;place-content:center;cursor:pointer;transition:var(--t-fast)}
+    .cp-back:hover{border-color:var(--pri);color:var(--pri)}
+    .cp-top h1{font-size:var(--fs-2xl);font-weight:700;line-height:1.15}
+    .cp-top p{font-size:var(--fs);color:var(--tx2);margin-top:2px}
+    .cp-top .sp{flex:1}
+    .cp-draft{display:none;align-items:center;gap:6px;padding:4px 11px;background:var(--wrn-soft);color:var(--wrn);border-radius:14px;font-size:var(--fs-sm);font-weight:600}
+    .cp-draft.show{display:inline-flex}
+    .cp-draft button{background:none;border:none;color:inherit;text-decoration:underline;font-size:inherit;cursor:pointer;padding:0}
+
+    .cp-card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:18px 20px}
+    .cp-card-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .cp-card-h .ic{width:30px;height:30px;border-radius:8px;background:var(--pri-soft);color:var(--pri);display:grid;place-content:center;font-size:13px;flex-shrink:0}
+    .cp-card-h h2{font-size:var(--fs-md);font-weight:700;line-height:1.2}
+    .cp-card-h p{font-size:var(--fs-sm);color:var(--tx3)}
+    .cp-card-h .tag{margin-left:auto;font-size:var(--fs-xs);color:var(--tx3);font-weight:500}
+
+    .cp-row{display:grid;gap:14px}
+    .cp-row.c2{grid-template-columns:1fr 1fr}
+    .cp-row.c3{grid-template-columns:repeat(3,1fr)}
+    .cp-row.name{grid-template-columns:1fr 190px}
+    .cp-gap{margin-top:16px}
+    .cp-f{min-width:0}
+    .cp-l{display:flex;align-items:center;justify-content:space-between;font-size:var(--fs-sm);font-weight:600;color:var(--tx2);margin-bottom:6px}
+    .cp-l .req{color:var(--dng);margin-left:2px}
+    .cp-l .opt{font-weight:500;color:var(--tx3);font-size:var(--fs-xs)}
+    .cp-in{height:38px;font-size:var(--fs-md);padding:0 12px;border-radius:8px}
+    .cp-in-xl{height:48px;font-size:var(--fs-xl);font-weight:600;padding:0 14px;border-radius:10px}
+    .cp-err{display:none;font-size:var(--fs-xs);color:var(--dng);margin-top:4px;gap:5px;align-items:center}
+    .cp-err.show{display:flex}
+    .cp-pre{position:relative}
+    .cp-pre>.pre{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:var(--fs-md);font-weight:600;color:var(--tx3);pointer-events:none}
+    .cp-pre .cp-in{padding-left:28px}
+    .cp-pre .post{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:none;background:transparent;color:var(--tx3);cursor:pointer;border-radius:6px;font-size:12px}
+    .cp-pre .post:hover{color:var(--pri);background:var(--pri-soft)}
+
+    /* type cards */
+    .cp-types{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .cp-type{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);cursor:pointer;text-align:left;color:var(--tx);transition:var(--t-fast)}
+    .cp-type .ti{width:38px;height:38px;border-radius:10px;background:var(--card2);color:var(--tx2);display:grid;place-content:center;font-size:16px;flex-shrink:0;transition:var(--t-fast)}
+    .cp-type b{display:block;font-size:var(--fs-md);font-weight:600}
+    .cp-type small{display:block;font-size:var(--fs-xs);color:var(--tx3);margin-top:1px;line-height:1.35}
+    .cp-type .chk{position:absolute;top:8px;right:9px;font-size:13px;color:var(--pri);opacity:0;transform:scale(.6);transition:var(--t-fast)}
+    .cp-type:hover{border-color:var(--bd2);transform:translateY(-1px)}
+    .cp-type.on{border-color:var(--pri);background:var(--pri-soft)}
+    .cp-type.on .ti{background:var(--pri);color:#fff}
+    .cp-type.on .chk{opacity:1;transform:none}
+
+    /* priority */
+    .cp-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+    .cp-seg button{height:38px;border-radius:8px;border:1.5px solid var(--bd);background:var(--bg);color:var(--tx2);font-size:var(--fs);font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:var(--t-fast)}
+    .cp-seg button .d{width:8px;height:8px;border-radius:50%}
+    .cp-seg button:hover{border-color:var(--bd2);color:var(--tx)}
+    .cp-seg button.on{color:var(--tx)}
+    .cp-seg button.on[data-v="low"]{border-color:var(--suc);background:var(--suc-soft)}
+    .cp-seg button.on[data-v="medium"]{border-color:var(--wrn);background:var(--wrn-soft)}
+    .cp-seg button.on[data-v="high"]{border-color:#f97316;background:rgba(249,115,22,.14)}
+    .cp-seg button.on[data-v="critical"]{border-color:var(--dng);background:var(--dng-soft)}
+
+    /* chips */
+    .cp-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px}
+    .cp-chips .lb{font-size:var(--fs-xs);color:var(--tx3);font-weight:600;margin-right:2px}
+    .cp-chips button{height:24px;padding:0 11px;border-radius:12px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:var(--t-fast)}
+    .cp-chips button:hover{border-color:var(--pri);color:var(--pri)}
+    .cp-chips button.on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri)}
+    .cp-chips .len{margin-left:auto;font-size:var(--fs-sm);color:var(--tx3)}
+    .cp-chips .len b{color:var(--tx)}
+    .cp-hint{font-size:var(--fs-sm);color:var(--tx3);margin-top:6px}
+    .cp-hint b{color:var(--pri);font-weight:600}
+
+    /* team + members */
+    .cp-teams{display:flex;gap:7px;flex-wrap:wrap}
+    .cp-team{display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 13px 0 10px;border-radius:8px;border:1.5px solid var(--bd);background:var(--bg);color:var(--tx2);font-size:var(--fs);font-weight:500;cursor:pointer;transition:var(--t-fast)}
+    .cp-team i{color:var(--pri);font-size:12px}
+    .cp-team small{color:var(--tx3);font-size:var(--fs-xs)}
+    .cp-team:hover{border-color:var(--bd2);color:var(--tx)}
+    .cp-team.on{background:var(--pri-soft);border-color:var(--pri);color:var(--tx)}
+    .cp-team.on::after{content:'\f00c';font-family:'Font Awesome 6 Free';font-weight:900;font-size:10px;color:var(--pri)}
+    .cp-mwrap{position:relative}
+    .cp-members{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:5px 8px;background:var(--bg);border:1px solid var(--bd);border-radius:8px;min-height:40px;cursor:text;transition:var(--t-fast)}
+    .cp-members:focus-within{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-soft)}
+    .cp-members input{flex:1;min-width:140px;border:none;background:transparent;color:var(--tx);outline:none;font-family:inherit;font-size:var(--fs-md);height:26px}
+    .cp-mchip{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 8px 0 3px;border-radius:13px;background:var(--pri-soft);color:var(--tx);font-size:var(--fs);font-weight:500}
+    .cp-mchip .a{width:20px;height:20px;border-radius:50%;background:var(--pri);color:#fff;font-size:9px;font-weight:700;display:grid;place-content:center}
+    .cp-mchip .x{cursor:pointer;opacity:.6;font-size:10px}
+    .cp-mchip .x:hover{opacity:1;color:var(--dng)}
+    .cp-dd{position:absolute;left:0;right:0;top:calc(100% + 5px);background:var(--card);border:1px solid var(--bd);border-radius:10px;box-shadow:var(--sh-lg);max-height:230px;overflow-y:auto;z-index:20;display:none;padding:4px}
+    .cp-dd.open{display:block;animation:cpFade .12s ease}
+    .cp-dd-i{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:7px;cursor:pointer;font-size:var(--fs-md)}
+    .cp-dd-i:hover,.cp-dd-i.hl{background:var(--pri-soft)}
+    .cp-dd-i .a{width:26px;height:26px;border-radius:50%;background:var(--pri);color:#fff;font-size:10px;font-weight:700;display:grid;place-content:center;flex-shrink:0}
+    .cp-dd-i small{color:var(--tx3);margin-left:auto;font-size:var(--fs-xs)}
+    .cp-dd-empty{padding:12px;text-align:center;color:var(--tx3);font-size:var(--fs)}
+
+    /* automation */
+    .cp-adv summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px}
+    .cp-adv summary::-webkit-details-marker{display:none}
+    .cp-adv summary .chev{margin-left:auto;font-size:11px;color:var(--tx3);transition:transform var(--t)}
+    .cp-adv[open] summary .chev{transform:rotate(180deg)}
+    .cp-adv summary .cnt{font-size:var(--fs-sm);color:var(--tx3);margin-left:auto;margin-right:8px}
+    .cp-adv-body{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-top:14px;padding-top:12px;border-top:1px solid var(--bd)}
+    .cp-sw{display:flex;align-items:center;gap:10px;padding:6px 0;cursor:pointer;font-size:var(--fs);color:var(--tx2)}
+    .cp-sw input{display:none}
+    .cp-sw .tr{width:32px;height:18px;border-radius:10px;background:var(--bd2);position:relative;flex-shrink:0;transition:var(--t-fast)}
+    .cp-sw .tr::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:var(--t-fast)}
+    .cp-sw input:checked+.tr{background:var(--pri)}
+    .cp-sw input:checked+.tr::after{left:16px}
+    .cp-sw b{color:var(--tx);font-weight:600}
+
+    /* side */
+    .cp-sh{font-size:var(--fs-xs);font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;display:flex;align-items:center;gap:6px;margin-bottom:10px}
+    .cp-sh i{color:var(--pri)}
+    .cp-pv{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;box-shadow:var(--sh)}
+    .cp-pv.empty .cp-pv-t{color:var(--tx3)}
+    .cp-pv-top{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+    .cp-pv-logo{width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,#6366f1,#a855f7);display:grid;place-content:center;color:#fff;font-weight:700;font-size:15px;flex-shrink:0}
+    .cp-pv-t{font-weight:600;font-size:var(--fs-lg);line-height:1.25;word-break:break-word}
+    .cp-pv-c{font-size:var(--fs-sm);color:var(--tx3)}
+    .cp-pv-b{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+    .cp-pv-r{display:flex;gap:8px;padding:7px 0;border-top:1px solid var(--bd);font-size:var(--fs);align-items:center}
+    .cp-pv-r .k{width:64px;color:var(--tx3);font-size:var(--fs-xs);text-transform:uppercase;font-weight:700;letter-spacing:.3px;flex-shrink:0}
+    .cp-pv-r .v{flex:1;font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis}
+    .cp-avs{display:flex}
+    .cp-avs span{width:22px;height:22px;border-radius:50%;background:var(--pri);border:2px solid var(--card);margin-left:-6px;color:#fff;font-size:8.5px;font-weight:700;display:grid;place-content:center}
+    .cp-avs span:first-child{margin-left:0}
+    .cp-ready{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px 16px}
+    .cp-ready-bar{height:5px;background:var(--bg);border-radius:5px;overflow:hidden;margin:2px 0 10px}
+    .cp-ready-bar div{height:100%;background:linear-gradient(90deg,var(--pri),var(--suc));transition:width .25s}
+    .cp-ready-i{display:flex;align-items:center;gap:9px;font-size:var(--fs);color:var(--tx3);padding:3px 0}
+    .cp-ready-i i{font-size:12px;width:14px;text-align:center}
+    .cp-ready-i.ok{color:var(--tx2)}
+    .cp-ready-i.ok i{color:var(--suc)}
+    .cp-keys{font-size:var(--fs-sm);color:var(--tx3);line-height:2;padding:0 4px}
+    .cp-keys kbd{background:var(--card);border:1px solid var(--bd);border-radius:4px;padding:1px 6px;font-size:10px;color:var(--tx2);font-family:inherit}
+
+    /* sticky action bar */
+    .cp-bar{position:sticky;bottom:0;z-index:50;max-width:1240px;margin:18px auto 0;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:8px;box-shadow:0 -6px 24px rgba(0,0,0,.25)}
+    .cp-bar .sp{flex:1}
+    .cp-bar .note{font-size:var(--fs-sm);color:var(--tx3)}
+    .cp-btn{height:36px;padding:0 18px;border-radius:8px;font-size:var(--fs-md);font-weight:600}
+    .cp-split{display:inline-flex;position:relative}
+    .cp-split>.pm-btn:first-child{border-radius:8px 0 0 8px}
+    .cp-split>.pm-btn:nth-child(2){border-radius:0 8px 8px 0;border-left:1px solid rgba(255,255,255,.25);padding:0 11px}
+    .cp-menu{position:absolute;right:0;bottom:calc(100% + 8px);min-width:230px;background:var(--card);border:1px solid var(--bd);border-radius:10px;box-shadow:var(--sh-lg);padding:5px;display:none;z-index:60}
+    .cp-menu.open{display:block;animation:cpFade .12s ease}
+    .cp-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 11px;border:none;background:transparent;color:var(--tx2);font-size:var(--fs);border-radius:6px;cursor:pointer;text-align:left}
+    .cp-menu button:hover{background:var(--card2);color:var(--tx)}
+    .cp-menu button i{width:14px;color:var(--pri);font-size:12px}
+    .cp-menu .kbd{margin-left:auto;font-size:10px;color:var(--tx3)}
+
+    @media(max-width:1100px){
+      .cp-wrap{grid-template-columns:1fr}
+      .cp-side{position:static;order:-1}
+      .cp-pv{display:none}
+    }
+    @media(max-width:700px){
+      .cp-types,.cp-row.c2,.cp-row.c3,.cp-row.name,.cp-adv-body{grid-template-columns:1fr}
+      .cp-seg{grid-template-columns:repeat(2,1fr)}
+      .cp-card{padding:14px}
+      .cp-bar .note{display:none}
+    }
+
+    /* ── list page ── */
+    .view-toggle{display:inline-flex;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:2px;gap:2px;margin-left:auto}
+    .view-toggle button{width:28px;height:22px;border:none;background:transparent;color:var(--tx3);border-radius:4px;cursor:pointer;font-size:11px;display:grid;place-content:center;transition:var(--t-fast)}
+    .view-toggle button.active{background:var(--pri);color:#fff}
+    .view-toggle button:hover:not(.active){color:var(--tx)}
+    .pr-saved{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+    .pr-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:14px;border:1px solid var(--bd);background:transparent;color:var(--tx2);font-size:var(--fs-sm);font-weight:500;cursor:pointer;transition:var(--t-fast);user-select:none}
+    .pr-chip:hover{border-color:var(--pri);color:var(--tx)}
+    .pr-chip.active{background:var(--pri);border-color:var(--pri);color:#fff}
+    .pr-chip i{font-size:9px}
+    .pr-chip .cnt{opacity:.7;font-weight:600}
+    .pr-toolbar{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .pr-toolbar .grow{flex:1;min-width:180px;max-width:300px}
+    .stats-bar{display:flex;gap:14px;font-size:var(--fs-xs);color:var(--tx3);padding:6px 10px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);margin-bottom:10px;flex-wrap:wrap}
+    .stats-bar strong{color:var(--tx)}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+    .pcard{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:12px;cursor:pointer;transition:var(--t-fast);position:relative}
+    .pcard:hover{border-color:var(--pri);transform:translateY(-2px);box-shadow:var(--sh)}
+    .pcard.pinned::before{content:'📌';position:absolute;top:-8px;left:12px;font-size:14px;background:var(--card);padding:0 4px;z-index:1}
+    .pcard.pinned{border-color:var(--wrn)}
+    .pcard-top{display:flex;justify-content:space-between;align-items:start;gap:8px;margin-bottom:6px}
+    .pcard-title{font-size:var(--fs-md);font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .pcard-code{font-size:var(--fs-xs);color:var(--tx3);margin-top:2px}
+    .pcard-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:var(--fs-xs);color:var(--tx3);margin-top:8px}
+    .pcard-meta span{display:flex;align-items:center;gap:3px}
+    .star-btn{background:transparent;border:none;color:var(--tx3);cursor:pointer;font-size:12px;padding:2px 4px;z-index:2;transition:var(--t-fast)}
+    .star-btn:hover,.star-btn.on{color:var(--wrn)}
+    .bulk-bar{display:none;background:var(--pri);color:#fff;border-radius:var(--rl);padding:8px 12px;margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap}
+    .bulk-bar.show{display:flex}
+    .bulk-bar button{background:rgba(255,255,255,.15);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:var(--fs-sm);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+    .bulk-bar button:hover{background:rgba(255,255,255,.25)}
+    .ctx-menu{position:fixed;background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);box-shadow:var(--sh-lg);z-index:var(--z-ctx);padding:4px;min-width:200px;display:none}
+    .ctx-menu.open{display:block;animation:cpFade .12s ease}
+    .ctx-item{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);font-size:var(--fs);cursor:pointer;color:var(--tx2);transition:var(--t-fast)}
+    .ctx-item:hover{background:var(--card2);color:var(--tx)}
+    .ctx-item.danger{color:var(--dng)}
+    .ctx-item.danger:hover{background:var(--dng-soft)}
+    .ctx-item i{width:14px;text-align:center;font-size:11px}
+    .ctx-sep{height:1px;background:var(--bd);margin:4px 0}
+    .ctx-shortcut{margin-left:auto;font-size:9px;color:var(--tx3)}
+    .empty-state{text-align:center;padding:40px 20px;color:var(--tx3)}
+    body:not(.pm-bulk) #container input[type="checkbox"]{display:none}
+    .empty-state i{font-size:32px;opacity:.3;display:block;margin-bottom:8px}
+    .rule-row{display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg);border-radius:var(--r);margin-bottom:6px;font-size:var(--fs)}
+    .rule-row .lbl{font-size:var(--fs-xs);font-weight:700;color:var(--pri);text-transform:uppercase;min-width:60px}
+    .rule-row select,.rule-row input{background:var(--card);border:1px solid var(--bd);border-radius:4px;color:var(--tx);padding:3px 6px;font-size:var(--fs-sm);font-family:inherit}
+    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
+    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.pgrid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<button class="mob-toggle" id="mobToggle"><i class="fas fa-bars"></i></button>
+
+<div class="pm-shell" id="pmShell">
+
+  <aside class="pm-sidebar" id="pmSidebar">
+    <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
+    <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
+  </aside>
+
+  <div class="pm-main">
+    <header class="pm-header">
+      <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
+      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search projects..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
+      <div class="pm-header-right">
+        <div class="pm-live"><span class="dot"></span> Live</div>
+        <button class="pm-iconbtn" onclick="PM.openCmd()"><i class="fas fa-terminal"></i></button>
+        <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
+        <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="notif-bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;padding:0 4px;place-content:center;line-height:1;"></span>
+        </button>
+        <div class="pm-avatar" id="pmUserAvatar" title="Loading...">?</div>
+      </div>
+    </header>
+
+    <div class="pm-content">
+      <div class="pm-breadcrumb" id="crumb"></div>
+
+      <!-- ═════════════ LIST VIEW ═════════════ -->
+      <div id="listView">
+        <div class="pm-page-head">
+          <div>
+            <div class="pm-page-title"><i class="fas fa-folder-open"></i> All Projects</div>
+            <div class="pm-page-sub"><span id="prCount">0</span> projects · <span id="prActive">0</span> active · <span id="prRisk">0</span> at risk</div>
+          </div>
+          <div class="pm-page-actions">
+            <button class="pm-btn" id="requestBtn" onclick="PM.openIntake('requests')"><i class="fas fa-paper-plane"></i> <span id="requestBtnLabel">Request a project</span></button>
+            <button class="pm-btn" id="autoRulesBtn" hidden onclick="openAutoRules()"><i class="fas fa-robot"></i> Auto-Rules</button>
+            <button class="pm-btn" id="recomputeBtn" hidden onclick="recomputeAllStatuses()"><i class="fas fa-sync"></i> Recompute</button>
+            <button class="pm-btn" onclick="exportProjects()"><i class="fas fa-file-export"></i> Export</button>
+            <button class="pm-btn pm-btn-primary" onclick="openCreate()" id="newProjectBtn" hidden><i class="fas fa-plus"></i> New Project</button>
+          </div>
+        </div>
+
+        <div class="pr-saved" id="savedChips">
+          <span class="pr-chip active" data-filter="all" onclick="setFilter(this,'all')"><i class="fas fa-th-large"></i> All <span class="cnt" id="cntAll">0</span></span>
+          <span class="pr-chip" data-filter="mine" onclick="setFilter(this,'mine')"><i class="fas fa-user"></i> Mine <span class="cnt" id="cntMine">0</span></span>
+          <span class="pr-chip" data-filter="active" onclick="setFilter(this,'active')"><i class="fas fa-play"></i> Active <span class="cnt" id="cntActive">0</span></span>
+          <span class="pr-chip" data-filter="at-risk" onclick="setFilter(this,'at-risk')"><i class="fas fa-exclamation-triangle"></i> At Risk <span class="cnt" id="cntRisk">0</span></span>
+          <span class="pr-chip" data-filter="delayed" onclick="setFilter(this,'delayed')"><i class="fas fa-clock"></i> Delayed <span class="cnt" id="cntDelayed">0</span></span>
+          <span class="pr-chip" data-filter="completed" onclick="setFilter(this,'completed')"><i class="fas fa-check"></i> Completed <span class="cnt" id="cntCompleted">0</span></span>
+          <span class="pr-chip" data-filter="starred" onclick="setFilter(this,'starred')"><i class="fas fa-star"></i> Starred <span class="cnt" id="cntStarred">0</span></span>
+        </div>
+
+        <div class="pr-toolbar">
+          <input class="pm-input grow" placeholder="Filter by name, code, client..." id="prSearch" oninput="render()">
+          <select class="pm-select" style="max-width:140px" id="prStatus" onchange="render()">
+            <option value="">All Status</option>
+            <option value="on-track">On Track</option>
+            <option value="at-risk">At Risk</option>
+            <option value="delayed">Delayed</option>
+            <option value="completed">Completed</option>
+            <option value="planning">Planning</option>
+          </select>
+          <select class="pm-select" style="max-width:140px" id="prPriority" onchange="render()">
+            <option value="">All Priority</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <select class="pm-select" style="max-width:150px" id="prSort" onchange="render()">
+            <option value="created-desc">Newest First</option>
+            <option value="name">Name A→Z</option>
+            <option value="progress-desc">Progress ↓</option>
+            <option value="progress-asc">Progress ↑</option>
+            <option value="budget-desc">Budget ↓</option>
+          </select>
+          <div class="view-toggle">
+            <button data-view="cards" class="active" onclick="setView('cards',this)"><i class="fas fa-th-large"></i></button>
+            <button data-view="table" onclick="setView('table',this)"><i class="fas fa-list"></i></button>
+            <button data-view="kanban" onclick="setView('kanban',this)"><i class="fas fa-table-columns"></i></button>
+            <button data-view="compact" onclick="setView('compact',this)"><i class="fas fa-bars"></i></button>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <span><i class="fas fa-arrow-up" style="color:var(--suc)"></i> Avg progress <strong id="statProgress">0%</strong></span>
+          <span><i class="fas fa-indian-rupee-sign" style="color:var(--pri)"></i> Spent <strong id="statBudget">₹0L</strong></span>
+          <span><i class="fas fa-users" style="color:var(--inf)"></i> <strong id="statTeam">0</strong> members</span>
+          <span><i class="fas fa-list-check" style="color:var(--wrn)"></i> <strong id="statTasks">0</strong> tasks</span>
+          <span style="margin-left:auto"><i class="fas fa-robot" style="color:var(--pur)"></i> Auto-rules <strong id="statRules">0</strong> active</span>
+        </div>
+
+        <div class="bulk-bar" id="bulkBar">
+          <span><span id="bulkCount">0</span> selected</span>
+          <button onclick="bulkDelete()" style="background:rgba(255,255,255,.25)"><i class="fas fa-trash"></i> Delete</button>
+          <button onclick="clearSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
+        </div>
+
+        <div id="container"></div>
+      </div>
+
+      <!-- ═════════════ CREATE PROJECT — FULL PAGE ═════════════ -->
+      <div id="createView" hidden>
+        <div class="cp-top">
+          <button type="button" class="cp-back" onclick="closeCreate()" title="Back to projects" aria-label="Back"><i class="fas fa-arrow-left"></i></button>
+          <div>
+            <h1>Create new project</h1>
+            <p>Choose a type, name it, and you're ready — everything else is optional.</p>
+          </div>
+          <div class="sp"></div>
+          <span class="cp-draft" id="draftChip"><i class="fas fa-floppy-disk"></i> Draft restored <button type="button" onclick="discardDraft()">Discard</button></span>
+        </div>
+
+        <div class="cp-wrap">
+          <div class="cp-main" id="cpForm">
+
+            <!-- 1 · BASICS: type first, name on the next line -->
+            <section class="cp-card">
+              <div class="cp-card-h"><span class="ic"><i class="fas fa-shapes"></i></span><div><h2>Project basics</h2><p>What kind of project is this?</p></div></div>
+
+              <div class="cp-l"><span>Project type <span class="req">*</span></span></div>
+              <div class="cp-types" id="segType">
+                <button type="button" class="cp-type on" data-v="it" onclick="setSeg('type','it')">
+                  <span class="ti"><i class="fas fa-code"></i></span><span><b>IT / Software</b><small>Sprints, releases, story points</small></span><i class="fas fa-circle-check chk"></i>
+                </button>
+                <button type="button" class="cp-type" data-v="nonit" onclick="setSeg('type','nonit')">
+                  <span class="ti"><i class="fas fa-list-check"></i></span><span><b>Non-IT</b><small>Simple task list &amp; milestones</small></span><i class="fas fa-circle-check chk"></i>
+                </button>
+                <button type="button" class="cp-type" data-v="ops" onclick="setSeg('type','ops')">
+                  <span class="ti"><i class="fas fa-gears"></i></span><span><b>Operations</b><small>Checklists &amp; approvals</small></span><i class="fas fa-circle-check chk"></i>
+                </button>
+              </div>
+
+              <div class="cp-row name cp-gap">
+                <div class="cp-f">
+                  <label class="cp-l" for="fldName"><span>Project name <span class="req">*</span></span></label>
+                  <input class="pm-input cp-in-xl" id="fldName" placeholder="e.g. HRMS Cloud Migration" autocomplete="off" oninput="onChange('fldName')">
+                  <div class="cp-err" data-err="fldName"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+                <div class="cp-f">
+                  <label class="cp-l" for="fldCode"><span>Project code <span class="req">*</span></span></label>
+                  <div class="cp-pre">
+                    <input class="pm-input cp-in-xl" style="font-size:var(--fs-lg);padding-right:38px" id="fldCode" placeholder="PRJ-1051" oninput="onChange('fldCode')">
+                    <button type="button" class="post" title="Generate a new code" onclick="genCode();onChange('fldCode')"><i class="fas fa-rotate"></i></button>
+                  </div>
+                  <div class="cp-err" data-err="fldCode"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 2 · DETAILS -->
+            <section class="cp-card">
+              <div class="cp-card-h"><span class="ic"><i class="fas fa-flag"></i></span><div><h2>Priority &amp; client</h2><p>How important is it, and who is it for?</p></div></div>
+              <div class="cp-row c2">
+                <div class="cp-f">
+                  <div class="cp-l"><span>Priority</span></div>
+                  <div class="cp-seg" id="segPriority">
+                    <button type="button" data-v="low" onclick="setSeg('priority','low')"><span class="d" style="background:var(--suc)"></span>Low</button>
+                    <button type="button" class="on" data-v="medium" onclick="setSeg('priority','medium')"><span class="d" style="background:var(--wrn)"></span>Medium</button>
+                    <button type="button" data-v="high" onclick="setSeg('priority','high')"><span class="d" style="background:#f97316"></span>High</button>
+                    <button type="button" data-v="critical" onclick="setSeg('priority','critical')"><span class="d" style="background:var(--dng)"></span>Critical</button>
+                  </div>
+                </div>
+                <div class="cp-f">
+                  <label class="cp-l" for="fldClient"><span>Client</span><span class="opt">optional</span></label>
+                  <select class="pm-select cp-in" id="fldClient" onchange="onChange()"><option value="">Internal / No client</option></select>
+                </div>
+              </div>
+            </section>
+
+            <!-- 3 · SCHEDULE & BUDGET -->
+            <section class="cp-card">
+              <div class="cp-card-h"><span class="ic"><i class="fas fa-calendar-days"></i></span><div><h2>Schedule &amp; budget</h2><p>When does it run and what does it cost?</p></div></div>
+              <div class="cp-row c3">
+                <div class="cp-f">
+                  <label class="cp-l" for="fldStart"><span>Start date <span class="req">*</span></span></label>
+                  <input type="date" class="pm-input cp-in" id="fldStart" oninput="onStartChange()">
+                  <div class="cp-err" data-err="fldStart"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+                <div class="cp-f">
+                  <label class="cp-l" for="fldEnd"><span>End date <span class="req">*</span></span></label>
+                  <input type="date" class="pm-input cp-in" id="fldEnd" oninput="onChange('fldEnd')">
+                  <div class="cp-err" data-err="fldEnd"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+                <div class="cp-f">
+                  <label class="cp-l" for="fldBudget"><span>Budget</span><span class="opt">optional</span></label>
+                  <div class="cp-pre">
+                    <span class="pre">₹</span>
+                    <input type="number" min="0" class="pm-input cp-in" id="fldBudget" placeholder="4200000" oninput="onChange('fldBudget')">
+                  </div>
+                  <div class="cp-err" data-err="fldBudget"><i class="fas fa-circle-exclamation"></i><span></span></div>
+                </div>
+              </div>
+              <div class="cp-chips">
+                <span class="lb">Duration</span>
+                <button type="button" data-d="14d" onclick="setDuration('14d')">2 weeks</button>
+                <button type="button" data-d="1m" onclick="setDuration('1m')">1 month</button>
+                <button type="button" data-d="3m" onclick="setDuration('3m')">3 months</button>
+                <button type="button" data-d="6m" onclick="setDuration('6m')">6 months</button>
+                <button type="button" data-d="12m" onclick="setDuration('12m')">1 year</button>
+                <span class="len" id="durLen"></span>
+              </div>
+              <div class="cp-chips">
+                <span class="lb">Budget</span>
+                <button type="button" onclick="setBudget(500000)">₹5L</button>
+                <button type="button" onclick="setBudget(1000000)">₹10L</button>
+                <button type="button" onclick="setBudget(2500000)">₹25L</button>
+                <button type="button" onclick="setBudget(5000000)">₹50L</button>
+                <span class="len" id="budLen"></span>
+              </div>
+            </section>
+
+            <!-- 4 · PEOPLE -->
+            <section class="cp-card">
+              <div class="cp-card-h"><span class="ic"><i class="fas fa-users"></i></span><div><h2>People</h2><p>You'll be the project manager. Add a team and members.</p></div><span class="tag">optional</span></div>
+              <div class="cp-f">
+                <div class="cp-l"><span>Team</span><span class="opt">pick one</span></div>
+                <div class="cp-teams" id="teamPills"><span style="font-size:var(--fs-sm);color:var(--tx3)">Loading teams…</span></div>
+              </div>
+              <div class="cp-f cp-gap">
+                <div class="cp-l"><span>Members</span><span class="opt">type to search · ↑ ↓ Enter</span></div>
+                <div class="cp-mwrap">
+                  <div class="cp-members" id="memberBox" onclick="document.getElementById('memberSearch').focus()">
+                    <span id="memberChips" style="display:contents"></span>
+                    <input id="memberSearch" placeholder="Search and add people…" autocomplete="off" oninput="renderMemberDd()" onfocus="renderMemberDd()" onkeydown="memberKey(event)">
+                  </div>
+                  <div class="cp-dd" id="memberDd"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- 5 · DESCRIPTION -->
+            <section class="cp-card">
+              <div class="cp-card-h"><span class="ic"><i class="fas fa-align-left"></i></span><div><h2>Description</h2><p>Purpose, goals and scope</p></div><span class="tag">optional</span></div>
+              <textarea class="pm-textarea" style="min-height:96px;font-size:var(--fs-md);border-radius:8px;padding:10px 12px" rows="4" id="fldDesc" placeholder="What are we building, why does it matter, and what does success look like?" oninput="onChange()"></textarea>
+            </section>
+
+            <!-- 6 · AUTOMATION -->
+            <section class="cp-card">
+              <details class="cp-adv" id="advBox">
+                <summary>
+                  <span class="cp-card-h" style="margin:0"><span class="ic" style="background:var(--pur-soft);color:var(--pur)"><i class="fas fa-robot"></i></span><span><h2>Automation &amp; notifications</h2><p>Smart defaults are already on</p></span></span>
+                  <span class="cnt" id="advCnt"></span><i class="fas fa-chevron-down chev"></i>
+                </summary>
+                <div class="cp-adv-body">
+                  <label class="cp-sw"><input type="checkbox" checked data-rule="behindSchedule" onchange="onChange()"><span class="tr"></span><span><b>At Risk</b> when 15%+ behind schedule</span></label>
+                  <label class="cp-sw"><input type="checkbox" checked data-rule="pastDue" onchange="onChange()"><span class="tr"></span><span><b>Delayed</b> when past end date</span></label>
+                  <label class="cp-sw"><input type="checkbox" checked data-rule="budgetRisk" onchange="onChange()"><span class="tr"></span><span><b>At Risk</b> when 85% budget used, &lt;75% done</span></label>
+                  <label class="cp-sw"><input type="checkbox" data-rule="complete" onchange="onChange()"><span class="tr"></span><span><b>Completed</b> at 100% progress</span></label>
+                  <label class="cp-sw"><input type="checkbox" checked data-rule="notifyWatchers" onchange="onChange()"><span class="tr"></span><span>Notify me of updates</span></label>
+                  <label class="cp-sw"><input type="checkbox" data-rule="notifyTeam" onchange="onChange()"><span class="tr"></span><span>Notify the team on creation</span></label>
+                </div>
+              </details>
+            </section>
+          </div>
+
+          <!-- RIGHT: live summary -->
+          <aside class="cp-side">
+            <div>
+              <div class="cp-sh"><i class="fas fa-eye"></i> Live preview</div>
+              <div class="cp-pv empty" id="previewCard">
+                <div class="cp-pv-top">
+                  <div class="cp-pv-logo" id="pvLogo">?</div>
+                  <div style="min-width:0">
+                    <div class="cp-pv-t" id="pvTitle">Untitled project</div>
+                    <div class="cp-pv-c" id="pvCode">PRJ-____</div>
+                  </div>
+                </div>
+                <div class="cp-pv-b">
+                  <span class="pm-badge primary" id="pvType">IT / Software</span>
+                  <span class="pm-badge warning" id="pvPriority">Medium</span>
+                  <span class="pm-badge purple">Planning</span>
+                </div>
+                <div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:4px"><span>Progress</span><span style="color:var(--tx);font-weight:600">0%</span></div>
+                  <div class="pm-progress"><div class="pm-progress-bar" style="width:0%"></div></div>
+                </div>
+                <div class="cp-pv-r"><span class="k">Client</span><span class="v" id="pvClient">Internal</span></div>
+                <div class="cp-pv-r"><span class="k">Manager</span><span class="v" id="pvPM">—</span></div>
+                <div class="cp-pv-r"><span class="k">Dates</span><span class="v" id="pvDates">—</span></div>
+                <div class="cp-pv-r"><span class="k">Budget</span><span class="v" id="pvBudget">—</span></div>
+                <div class="cp-pv-r"><span class="k">Team</span><span class="v" id="pvTeam">—</span></div>
+              </div>
+            </div>
+
+            <div class="cp-ready">
+              <div class="cp-sh" style="justify-content:space-between;margin-bottom:8px"><span><i class="fas fa-list-check"></i> Readiness</span><span id="readyPct" style="color:var(--tx)">0%</span></div>
+              <div class="cp-ready-bar"><div id="readyBar" style="width:0%"></div></div>
+              <div id="readyList"></div>
+            </div>
+
+            <div class="cp-keys">
+              <kbd>⌘</kbd> <kbd>Enter</kbd> create project<br>
+              <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>Enter</kbd> create &amp; add another
+            </div>
+          </aside>
+        </div>
+
+        <!-- sticky action bar -->
+        <div class="cp-bar">
+          <span class="note" id="footNote"><i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type</span>
+          <div class="sp"></div>
+          <button type="button" class="pm-btn cp-btn" onclick="closeCreate()">Cancel</button>
+          <div class="cp-split">
+            <button type="button" class="pm-btn pm-btn-primary cp-btn" id="createBtn" onclick="submitCreate('close')"><i class="fas fa-check"></i> Create Project</button>
+            <button type="button" class="pm-btn pm-btn-primary cp-btn" onclick="toggleCreateMenu(event)" aria-label="More create options"><i class="fas fa-chevron-up"></i></button>
+            <div class="cp-menu" id="createMenu">
+              <button type="button" onclick="submitCreate('open')"><i class="fas fa-folder-open"></i> Create &amp; open board</button>
+              <button type="button" onclick="submitCreate('another')"><i class="fas fa-plus"></i> Create &amp; add another <span class="kbd">⌘⇧↵</span></button>
+              <button type="button" onclick="saveAsDraftAndClose()"><i class="fas fa-file-pen"></i> Save as draft &amp; exit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ctx-menu" id="ctxMenu">
+  <div class="ctx-item" onclick="ctxAction('open')"><i class="fas fa-folder-open"></i> Open <span class="ctx-shortcut">↵</span></div>
+  <div class="ctx-item" onclick="ctxAction('star')"><i class="fas fa-star"></i> <span id="ctxStarLabel">Star</span> <span class="ctx-shortcut">S</span></div>
+  <div class="ctx-item" id="ctxRecompute" onclick="ctxAction('recompute')"><i class="fas fa-robot"></i> Recompute status</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item" onclick="ctxAction('link')"><i class="fas fa-link"></i> Copy link</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctxDelete" onclick="ctxAction('delete')"><i class="fas fa-trash"></i> Delete <span class="ctx-shortcut">⌫</span></div>
+</div>
+
+<!-- Auto-Rules modal -->
+<div class="modal-backdrop" id="autoRulesModal" onclick="if(event.target===this)document.getElementById('autoRulesModal').classList.remove('open')">
+  <div class="modal modal-lg" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3><i class="fas fa-robot"></i> Auto-Status Rules</h3>
+      <button class="pm-iconbtn" onclick="document.getElementById('autoRulesModal').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:var(--fs-sm);color:var(--tx2);margin-bottom:12px">Rules run automatically when a project is updated.</div>
+      <div id="rulesList"></div>
+      <button class="pm-btn pm-btn-primary" style="margin-top:10px" onclick="addAutoRule()"><i class="fas fa-plus"></i> Add Rule</button>
+    </div>
+    <div class="modal-foot">
+      <button class="pm-btn" onclick="document.getElementById('autoRulesModal').classList.remove('open')">Close</button>
+      <button class="pm-btn pm-btn-primary" onclick="saveAutoRules()"><i class="fas fa-check"></i> Save Rules</button>
+    </div>
+  </div>
+</div>
+
+<script src="/pm/pm-core.js"></script>
+<script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
+<script src="/webjars/stomp-websocket/2.3.4/lib/stomp.min.js"></script>
+<script>
+  PM.bootstrap().then(function(me){
+
+    /* ============================================================
+       AUTO-STATUS RULES (project-wide)
+       ============================================================ */
+    var autoRules=[
+      {id:1,name:'Behind schedule → At Risk',enabled:true,trigger:'behindSchedule',threshold:15,newStatus:'at-risk'},
+      {id:2,name:'Past end date → Delayed',enabled:true,trigger:'pastDue',threshold:0,newStatus:'delayed'},
+      {id:3,name:'Budget 85%+ with <75% progress → At Risk',enabled:true,trigger:'budgetRisk',threshold:85,newStatus:'at-risk'},
+      {id:4,name:'Progress = 100% → Completed',enabled:false,trigger:'complete',threshold:100,newStatus:'completed'}
+    ];
+
+    function computeProjectStatus(p){
+      if(p.progress>=100) return 'completed';
+      var now=new Date();
+      var start=new Date(p.start||'2026-06-01');
+      var end=new Date(p.end||'2026-12-15');
+      var totalDays=(end-start)/86400000;
+      var elapsedDays=(now-start)/86400000;
+      var expectedProgress=totalDays>0?Math.min(100,Math.max(0,(elapsedDays/totalDays)*100)):0;
+      var budgetPct=p.budget?((p.spent/p.budget)*100):0;
+      for(var i=0;i<autoRules.length;i++){
+        var r=autoRules[i]; if(!r.enabled) continue;
+        if(r.trigger==='behindSchedule' && (expectedProgress-p.progress)>=r.threshold && p.progress>0) return r.newStatus;
+        if(r.trigger==='pastDue' && now>end && p.progress<100) return r.newStatus;
+        if(r.trigger==='budgetRisk' && budgetPct>=r.threshold && p.progress<75) return r.newStatus;
+        if(r.trigger==='complete' && p.progress>=100) return r.newStatus;
+      }
+      return p.status==='planning'?'planning':'on-track';
+    }
+
+    function recomputeAllStatuses(){
+      var changed=0;
+      projects.forEach(function(p){
+        var old=p.status;
+        var next=computeProjectStatus(p);
+        if(next!==old){ p.status=next; changed++; }
+      });
+      render();
+      PM.toast('✓ Recomputed — '+changed+' status change'+(changed!==1?'s':''),changed?'success':'info');
+    }
+
+    function openAutoRules(){ document.getElementById('autoRulesModal').classList.add('open'); renderAutoRules(); }
+    function renderAutoRules(){
+      document.getElementById('rulesList').innerHTML=autoRules.map(function(r,i){
+        var labels={behindSchedule:'Behind schedule by',pastDue:'Past due date',budgetRisk:'Budget consumed over',complete:'Progress reaches'};
+        var units={behindSchedule:'%',pastDue:'days',budgetRisk:'%',complete:'%'};
+        return '<div class="rule-row">'+
+          '<input type="checkbox" '+(r.enabled?'checked':'')+' onchange="toggleRule('+i+',this.checked)" style="accent-color:var(--pri)">'+
+          '<span class="lbl">WHEN</span>'+
+          '<select onchange="updateRule('+i+',\'trigger\',this.value)">'+Object.keys(labels).map(function(k){return '<option value="'+k+'" '+(r.trigger===k?'selected':'')+'>'+labels[k]+'</option>';}).join('')+'</select>'+
+          '<input type="number" value="'+r.threshold+'" style="width:70px" onchange="updateRule('+i+',\'threshold\',parseInt(this.value))"><span style="font-size:var(--fs-xs);color:var(--tx3)">'+units[r.trigger]+'</span>'+
+          '<span class="lbl" style="color:var(--suc)">THEN</span>'+
+          '<select onchange="updateRule('+i+',\'newStatus\',this.value)">'+['on-track','at-risk','delayed','completed','planning'].map(function(s){return '<option value="'+s+'" '+(r.newStatus===s?'selected':'')+'>'+s+'</option>';}).join('')+'</select>'+
+          '<button class="pm-btn pm-btn-sm pm-btn-icon pm-btn-danger" onclick="removeRule('+i+')" style="margin-left:auto"><i class="fas fa-trash"></i></button>'+
+        '</div>';
+      }).join('');
+    }
+    function toggleRule(i,on){ autoRules[i].enabled=on; }
+    function updateRule(i,key,val){ autoRules[i][key]=val; if(key==='trigger') renderAutoRules(); }
+    function removeRule(i){ autoRules.splice(i,1); renderAutoRules(); }
+    function addAutoRule(){ autoRules.push({id:Date.now(),name:'New Rule',enabled:true,trigger:'behindSchedule',threshold:10,newStatus:'at-risk'}); renderAutoRules(); }
+    function saveAutoRules(){ document.getElementById('autoRulesModal').classList.remove('open'); PM.toast('✓ Auto-rules saved','success'); recomputeAllStatuses(); }
+
+    /* ============================================================
+       PROJECT DATA
+       ============================================================ */
+    var projects=[];
+    var employees=[];
+    var allTeams=[];
+
+    function mapBackendProject(p){
+      var budgetRupees=p.budgetTotal?Number(p.budgetTotal):0;
+      var spentRupees=p.budgetSpent?Number(p.budgetSpent):0;
+      return {
+        id:p.id, code:p.code, name:p.name, clientId:p.clientId,
+        client: p.clientName || (p.clientId ? ('Client #'+p.clientId) : 'Internal'),
+        teamId:p.teamId, ownerId:p.ownerId,
+        manager:p.ownerName || (p.ownerId ? ('User #'+p.ownerId) : '—'),
+        status:(function(s){ s=(s||'PLANNING').toLowerCase().replace(/_/g,'-'); return s==='active' ? 'on-track' : s; })(p.status),
+        priority:(p.priority||'MEDIUM').toLowerCase(),
+        progress:p.progressPct||0,
+   budget:budgetRupees/100000, spent:spentRupees/100000, budgetInr:budgetRupees, spentInr:spentRupees, health:p.health||null, financeVisible:p.financeVisible!==false,
+        team:0, tasks:0, updated:'just now', starred:false, mine:(p.ownerId===me.id),
+        start:p.startDate||'', end:p.endDate||'',
+        color:'linear-gradient(135deg,#6366f1,#4f46e5)',
+        logo:(p.name||'PR').split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase()
+      };
+    }
+
+    function loadProjects(){
+      PM.apiList('GET','/api/pm/projects?page=0&size=100').then(function(list){
+        projects=list.map(mapBackendProject);
+        render();
+      }).catch(function(err){
+        console.error('Failed to load projects from API.', err);
+        projects=[];
+        document.getElementById('container').innerHTML='<div class="pm-card empty-state"><i class="fas fa-triangle-exclamation"></i><div>Couldn\'t load projects — check server connection.</div></div>';
+      });
+    }
+
+    function loadEmployees(){
+      return PM.api('GET','/api/pm/employees/dropdown').then(function(list){
+        employees=(list||[]).map(function(e){ return {id:e.id,name:e.name,role:e.role||''}; });
+      }).catch(function(){ employees=[]; });
+    }
+    function loadTeams(){
+      return PM.api('GET','/api/pm/teams/cards').then(function(list){
+        allTeams=(list||[]).map(function(t){ return {id:t.id,name:t.name,icon:t.icon||'fa-users',memberCount:t.memberCount||0}; });
+      }).catch(function(){ allTeams=[]; });
+    }
+
+    /* ============================================================
+       LIST VIEWS
+       ============================================================ */
+    var statusLabel={'on-track':['success','Active'],'delayed':['danger','Delayed'],'at-risk':['warning','At Risk'],'completed':['info','Completed'],'planning':['primary','Planning'],'on-hold':['warning','On Hold'],'archived':['info','Archived']};
+    function toApiStatus(s){ return s==='on-track' ? 'ACTIVE' : String(s).toUpperCase().replace(/-/g,'_'); }
+
+    var currentView='cards',activeSavedFilter='all',selected=new Set(),ctxId=null;
+
+    function setFilter(el,f){ document.querySelectorAll('#savedChips .pr-chip').forEach(function(c){c.classList.remove('active');}); el.classList.add('active'); activeSavedFilter=f; render(); }
+    function setView(v,btn){ currentView=v; document.querySelectorAll('.view-toggle button').forEach(function(b){b.classList.remove('active');}); btn.classList.add('active'); render(); }
+    function getFiltered(){
+      var q=(document.getElementById('prSearch').value||'').toLowerCase();
+      var status=document.getElementById('prStatus').value;
+      var priority=document.getElementById('prPriority').value;
+      var sort=document.getElementById('prSort').value;
+      var list=projects.filter(function(p){
+        var mQ=!q||p.name.toLowerCase().includes(q)||p.code.toLowerCase().includes(q)||p.client.toLowerCase().includes(q);
+        var mS=!status||p.status===status;
+        var mP=!priority||p.priority===priority;
+        var mF=true;
+        if(activeSavedFilter==='mine') mF=p.mine;
+        else if(activeSavedFilter==='active') mF=p.status==='on-track'||p.status==='at-risk';
+        else if(activeSavedFilter==='at-risk') mF=p.status==='at-risk';
+        else if(activeSavedFilter==='delayed') mF=p.status==='delayed';
+        else if(activeSavedFilter==='completed') mF=p.status==='completed';
+        else if(activeSavedFilter==='starred') mF=p.starred;
+        return mQ&&mS&&mP&&mF;
+      });
+      if(sort==='created-desc') list.sort(function(a,b){return b.id-a.id;});
+      else if(sort==='progress-desc') list.sort(function(a,b){return b.progress-a.progress;});
+      else if(sort==='progress-asc') list.sort(function(a,b){return a.progress-b.progress;});
+      else if(sort==='budget-desc') list.sort(function(a,b){return b.budget-a.budget;});
+      else list.sort(function(a,b){return a.name.localeCompare(b.name);});
+      return list;
+    }
+    function updateCounts(){
+      document.getElementById('cntAll').textContent=projects.length;
+      document.getElementById('cntMine').textContent=projects.filter(function(p){return p.mine;}).length;
+      document.getElementById('cntActive').textContent=projects.filter(function(p){return p.status==='on-track'||p.status==='at-risk';}).length;
+      document.getElementById('cntRisk').textContent=projects.filter(function(p){return p.status==='at-risk';}).length;
+      document.getElementById('cntDelayed').textContent=projects.filter(function(p){return p.status==='delayed';}).length;
+      document.getElementById('cntCompleted').textContent=projects.filter(function(p){return p.status==='completed';}).length;
+      document.getElementById('cntStarred').textContent=projects.filter(function(p){return p.starred;}).length;
+    }
+    function updateStats(){
+      var n=projects.length||1;
+    var tb=projects.reduce(function(a,p){return a+(p.financeVisible?(p.budget||0):0);},0);
+     var ts=projects.reduce(function(a,p){return a+(p.financeVisible?(p.spent||0):0);},0);
+      var tt=projects.reduce(function(a,p){return a+(p.team||0);},0);
+      var tta=projects.reduce(function(a,p){return a+(p.tasks||0);},0);
+      var ap=Math.round(projects.reduce(function(a,p){return a+(p.progress||0);},0)/n);
+      document.getElementById('statProgress').textContent=ap+'%';
+      document.getElementById('statBudget').textContent='₹'+ts.toFixed(1)+'L / ₹'+tb.toFixed(1)+'L';
+      document.getElementById('statBudget').parentNode.style.display=projects.some(function(p){return p.financeVisible;})?'':'none';
+      document.getElementById('statTeam').textContent=tt;
+      document.getElementById('statTasks').textContent=tta;
+      document.getElementById('statRules').textContent=autoRules.filter(function(r){return r.enabled;}).length;
+    }
+    function render(){
+      var list=getFiltered();
+      document.getElementById('prCount').textContent=list.length;
+      document.getElementById('prActive').textContent=list.filter(function(p){return p.status==='on-track';}).length;
+      document.getElementById('prRisk').textContent=list.filter(function(p){return p.status==='at-risk';}).length;
+      updateCounts(); updateStats();
+      if(!list.length){ var none=!projects.length; document.getElementById('container').innerHTML='<div class="pm-card empty-state"><i class="fas fa-folder-open"></i><div>'+(none?'You are not on any project yet.':'No projects match your filters')+'</div>'+(none&&!PM.can('creator')?'<button class="pm-btn pm-btn-primary" style="margin-top:10px" onclick="PM.openIntake(\'requests\')"><i class="fas fa-paper-plane"></i> Request a project</button>':'')+'</div>'; return; }
+      if(currentView==='cards') renderCards(list);
+      else if(currentView==='table') renderTable(list);
+      else if(currentView==='kanban') renderKanban(list);
+      else renderCompact(list);
+      updateBulk();
+    }
+    function renderCards(list){
+      document.getElementById('container').innerHTML='<div class="pgrid">'+list.map(function(p){
+        var sp=p.budget?Math.min(100,(p.spent/p.budget)*100):0;
+        var s=statusLabel[p.status]||['primary',p.status];
+        var prClass=p.priority==='critical'?'danger':p.priority==='high'?'danger':p.priority==='medium'?'warning':'success';
+        return '<div class="pcard'+(p.starred?' pinned':'')+'" onclick="openDetail('+p.id+')" oncontextmenu="openCtx(event,'+p.id+')">'+
+          '<button class="star-btn'+(p.starred?' on':'')+'" style="position:absolute;top:8px;right:8px" onclick="event.stopPropagation();toggleStar('+p.id+')"><i class="fas fa-star"></i></button>'+
+          '<div class="pcard-top"><div style="flex:1;min-width:0;padding-right:20px">'+
+            '<div class="pcard-title">'+PM.esc(p.name)+'</div>'+
+            '<div class="pcard-code">'+p.code+' · '+PM.esc(p.client)+'</div>'+
+          '</div>'+
+          '<input type="checkbox" onclick="event.stopPropagation();toggleSel('+p.id+',this)" '+(selected.has(p.id)?'checked':'')+' style="accent-color:var(--pri);cursor:pointer;flex-shrink:0;margin-top:2px">'+
+          '</div>'+
+          '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">'+
+            '<span class="pm-badge '+s[0]+'">'+s[1]+'</span>'+
+          healthBadge(p.health)+'<span class="pm-badge '+prClass+'">'+p.priority.charAt(0).toUpperCase()+p.priority.slice(1)+'</span>'+
+          '</div>'+
+          '<div style="margin:8px 0 6px">'+
+            '<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px"><span>Progress</span><span style="color:var(--tx);font-weight:600">'+p.progress+'%</span></div>'+
+            '<div class="pm-progress"><div class="pm-progress-bar '+(p.progress>80?'success':p.progress>50?'':'danger')+'" style="width:'+p.progress+'%"></div></div>'+
+          '</div>'+
+          '<div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px"><span>'+budgetText(p)+'</span><span>'+(p.financeVisible?sp.toFixed(0)+'%':'')+'</span></div>'+
+          '<div class="pcard-meta">'+
+            '<span><i class="fas fa-user"></i> '+PM.esc(p.manager)+'</span>'+
+            '<span><i class="fas fa-users"></i> '+p.team+'</span>'+
+            '<span><i class="fas fa-list-check"></i> '+p.tasks+'</span>'+
+          '</div>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+    function renderTable(list){
+      document.getElementById('container').innerHTML='<div class="pm-card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table class="pm-table">'+
+        '<thead><tr><th style="width:32px"><input type="checkbox" onchange="toggleAll(this)" style="accent-color:var(--pri)"></th><th style="width:30px"></th><th>Project</th><th>Client</th><th>Status</th><th>Priority</th><th>Progress</th><th>Budget</th><th></th></tr></thead><tbody>'+
+        list.map(function(p){
+          var s=statusLabel[p.status]||['primary',p.status];
+          var prClass=p.priority==='critical'?'danger':p.priority==='high'?'danger':p.priority==='medium'?'warning':'success';
+          return '<tr style="cursor:pointer" onclick="openDetail('+p.id+')">'+
+            '<td onclick="event.stopPropagation()"><input type="checkbox" '+(selected.has(p.id)?'checked':'')+' onchange="toggleSel('+p.id+',this)" style="accent-color:var(--pri)"></td>'+
+            '<td onclick="event.stopPropagation()"><button class="star-btn'+(p.starred?' on':'')+'" onclick="toggleStar('+p.id+')"><i class="fas fa-star"></i></button></td>'+
+            '<td><div style="font-weight:600">'+PM.esc(p.name)+'</div><div style="font-size:var(--fs-xs);color:var(--tx3)">'+p.code+'</div></td>'+
+            '<td>'+PM.esc(p.client)+'</td>'+
+            '<td><span class="pm-badge '+s[0]+'">'+s[1]+'</span></td>'+
+            '<td><span class="pm-badge '+prClass+'">'+p.priority.charAt(0).toUpperCase()+p.priority.slice(1)+'</span></td>'+
+            '<td><div style="display:flex;align-items:center;gap:6px;min-width:110px"><div class="pm-progress" style="flex:1"><div class="pm-progress-bar" style="width:'+p.progress+'%"></div></div><span style="font-size:var(--fs-xs);font-weight:600;min-width:28px">'+p.progress+'%</span></div></td>'+
+'<td>'+budgetText(p)+'</td>'+
+            '<td onclick="event.stopPropagation()"><button class="pm-btn pm-btn-sm" onclick="openDetail('+p.id+')">Open</button></td>'+
+          '</tr>';
+        }).join('')+'</tbody></table></div></div>';
+    }
+    function renderKanban(list){
+      var cols=['on-track','at-risk','delayed','planning','completed'];
+      var lbl={'on-track':['On Track','var(--suc)'],'at-risk':['At Risk','var(--wrn)'],'delayed':['Delayed','var(--dng)'],'planning':['Planning','var(--pur)'],'completed':['Completed','var(--inf)']};
+      var grp={}; cols.forEach(function(k){grp[k]=[];});
+      list.forEach(function(p){ if(grp[p.status]) grp[p.status].push(p); });
+      document.getElementById('container').innerHTML='<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px;align-items:flex-start">'+
+        cols.map(function(c){
+          var items=grp[c];
+          return '<div style="background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);min-width:280px;flex:1;padding:10px">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-sm);font-weight:700;text-transform:uppercase;color:var(--tx3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--bd)">'+
+              '<span><i class="fas fa-circle" style="color:'+lbl[c][1]+';font-size:8px"></i> '+lbl[c][0]+'</span>'+
+              '<span style="background:var(--bg);border-radius:10px;padding:0 6px;font-size:var(--fs-xs)">'+items.length+'</span>'+
+            '</div>'+
+            (items.map(function(p){
+              return '<div onclick="openDetail('+p.id+')" style="background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px;margin-bottom:6px;cursor:pointer">'+
+                '<div style="font-size:var(--fs);font-weight:600;margin-bottom:4px">'+PM.esc(p.name)+'</div>'+
+                '<div style="font-size:var(--fs-xs);color:var(--tx3);margin-bottom:6px">'+PM.esc(p.client)+'</div>'+
+                '<div class="pm-progress" style="height:4px"><div class="pm-progress-bar" style="width:'+p.progress+'%"></div></div>'+
+              '</div>';
+            }).join('')||'<div style="text-align:center;padding:14px;color:var(--tx3);font-size:var(--fs-xs)">No projects</div>')+
+          '</div>';
+        }).join('')+'</div>';
+    }
+    function renderCompact(list){
+      document.getElementById('container').innerHTML='<div class="pm-card" style="padding:0;overflow:hidden">'+list.map(function(p){
+        var s=statusLabel[p.status]||['primary',p.status];
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--bd);cursor:pointer;font-size:var(--fs)" onclick="openDetail('+p.id+')">'+
+          '<input type="checkbox" onclick="event.stopPropagation();toggleSel('+p.id+',this)" '+(selected.has(p.id)?'checked':'')+' style="accent-color:var(--pri)">'+
+          '<i class="fas fa-star" style="color:'+(p.starred?'var(--wrn)':'var(--tx3)')+';cursor:pointer;font-size:11px" onclick="event.stopPropagation();toggleStar('+p.id+')"></i>'+
+          '<div style="width:80px;font-size:var(--fs-xs);color:var(--tx3)">'+p.code+'</div>'+
+          '<div style="flex:1;font-weight:500">'+PM.esc(p.name)+'</div>'+
+          '<span class="pm-badge '+s[0]+'">'+s[1]+'</span>'+
+          '<div class="pm-progress" style="width:100px"><div class="pm-progress-bar" style="width:'+p.progress+'%"></div></div>'+
+          '<span style="width:40px;text-align:right;font-weight:600;font-size:var(--fs-xs)">'+p.progress+'%</span>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+    function toggleStar(id){ var p=projects.find(function(x){return x.id===id;}); if(p){p.starred=!p.starred;render();PM.toast(p.starred?'⭐ Starred':'Unstarred','success');} }
+    function toggleSel(id,cb){ if(cb.checked) selected.add(id); else selected.delete(id); updateBulk(); }
+    function toggleAll(cb){ selected.clear(); if(cb.checked){ getFiltered().forEach(function(p){selected.add(p.id);}); } render(); }
+    function updateBulk(){ var bar=document.getElementById('bulkBar'); var n=selected.size; document.getElementById('bulkCount').textContent=n; bar.classList.toggle('show',n>0); }
+    function clearSelection(){ selected.clear(); updateBulk(); render(); }
+    function bulkStatus(){
+      if(!selected.size) return;
+      PM.Form.open({
+        title:'Bulk change status', icon:'fa-sync', submitLabel:'Apply to '+selected.size,
+        fields:[{name:'status',label:'New status',type:'select',required:true,value:'on-track',
+          options:[{value:'on-track',label:'Active'},{value:'at-risk',label:'At Risk'},{value:'delayed',label:'Delayed'},{value:'completed',label:'Completed'},{value:'planning',label:'Planning'}]}],
+        onSubmit:function(v){ var n=selected.size; projects.forEach(function(p){ if(selected.has(p.id)) p.status=v.status; }); clearSelection(); PM.toast('Updated '+n,'success'); }
+      });
+    }
+    function bulkAssign(){
+      if(!selected.size) return;
+      PM.Form.open({
+        title:'Bulk assign manager', icon:'fa-user', submitLabel:'Assign',
+        fields:[{name:'manager',label:'Manager name',type:'text',required:true,placeholder:'e.g. Arvind Kumar'}],
+        onSubmit:function(v){ projects.forEach(function(p){ if(selected.has(p.id)) p.manager=v.manager; }); clearSelection(); PM.toast('Assigned','success'); }
+      });
+    }
+    function bulkPriority(){
+      if(!selected.size) return;
+      PM.Form.open({
+        title:'Bulk change priority', icon:'fa-flag', submitLabel:'Apply',
+        fields:[{name:'priority',label:'Priority',type:'select',required:true,value:'medium',
+          options:[{value:'critical',label:'Critical'},{value:'high',label:'High'},{value:'medium',label:'Medium'},{value:'low',label:'Low'}]}],
+        onSubmit:function(v){ projects.forEach(function(x){ if(selected.has(x.id)) x.priority=v.priority; }); clearSelection(); PM.toast('Updated','success'); }
+      });
+    }
+    function bulkDelete(){
+      if(!selected.size) return;
+      PM.confirm({title:'Delete projects', message:'Delete '+selected.size+' project(s)? This cannot be undone.', danger:true, confirmLabel:'Delete'}).then(function(ok){
+        if(!ok) return;
+        selected.forEach(function(id){
+          PM.api('DELETE','/api/pm/projects/'+id).catch(function(e){ PM.toast(e.message,'error'); });
+        });
+        setTimeout(function(){ clearSelection(); loadProjects(); }, 400);
+      });
+    }
+
+    function changeStatus(id, uiStatus){
+      if(!uiStatus) return;
+      PM.api('PUT','/api/pm/projects/'+id,{status:toApiStatus(uiStatus)}).then(function(){
+        PM.toast('Status updated','success'); PM.closeDrawer(); loadProjects();
+      }).catch(function(e){ PM.toast(e.message,'error'); });
+    }
+    function archiveProject(id){
+      PM.api('PATCH','/api/pm/projects/'+id+'/archive').then(function(){
+        PM.toast('Project archived','success'); PM.closeDrawer(); loadProjects();
+      }).catch(function(e){ PM.toast(e.message,'error'); });
+    }
+    function deleteProject(id){
+      PM.confirm({title:'Delete project', message:'This project will be permanently deleted.', danger:true, confirmLabel:'Delete'}).then(function(ok){
+        if(!ok) return;
+        PM.api('DELETE','/api/pm/projects/'+id).then(function(){
+          PM.toast('Project deleted','success'); loadProjects();
+        }).catch(function(e){ PM.toast(e.message,'error'); });
+      });
+    }
+
+    /* ---------- FIX 13c — Request project approval ---------- */
+    function requestProjectApproval(projectId){
+      var approverIdStr = prompt('Approver employee PK (numeric):');
+      if(!approverIdStr) return;
+      var approverId = parseInt(approverIdStr,10);
+      if(!approverId){ PM.toast('Approver PK must be a number','error'); return; }
+      var reason = prompt('Reason (optional):','') || null;
+      PM.api('POST','/api/pm/approvals',{
+        entityType:'PROJECT',
+        entityId: projectId,
+        approverId: approverId,
+        reason: reason,
+        priority:'HIGH'
+      }).then(function(){
+        PM.toast('✓ Approval requested','success');
+        PM.closeDrawer();
+      }).catch(function(e){ PM.toast(e.message||'Failed','error'); });
+    }
+
+ function fmtInr(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function budgetText(p){ return p.financeVisible ? '₹'+p.spent+'L / ₹'+p.budget+'L' : '—'; }
+  function healthBadge(h){
+    var m={ON_TRACK:['success','On track'],AT_RISK:['warning','At risk'],DELAYED:['danger','Delayed'],CRITICAL:['danger','Critical']}[h];
+    return m?'<span class="pm-badge '+m[0]+'" title="Project health">'+m[1]+'</span>':'';
+  }
+    /* Step 4: per-project "Review required" switch */
+  function loadReviewSwitch(id){
+    var host=document.getElementById('prReviewRow'); if(!host) return;
+    PM.api('GET','/api/pm/projects/'+id).then(function(d){
+      if(!d || d.financeVisible!==true){ host.style.display='none'; return; }
+      host.innerHTML='<label class="cp-sw" title="When on, an assignee cannot mark a task Done. They send it to In Review and a reviewer (owner, manager, lead, team lead) marks it Done.">'+
+        '<input type="checkbox" id="prReviewChk" '+(d.reviewRequired?'checked':'')+' onchange="setReviewRequired('+id+',this.checked)">'+
+        '<span class="tr"></span><span><b>Review required</b> for tasks in this project</span></label>';
+    }).catch(function(){ host.style.display='none'; });
+  }
+  function setReviewRequired(id,on){
+    PM.api('PUT','/api/pm/projects/'+id,{reviewRequired:on}).then(function(){
+      PM.toast(on?'Review is now required':'Review is now optional','success');
+    }).catch(function(e){
+      var c=document.getElementById('prReviewChk'); if(c) c.checked=!on;
+      PM.toast(e.message||'Failed','error');
+    });
+  }
+  function openDetail(id){
+      var p=projects.find(function(x){return x.id===id;}); if(!p)return;
+      var s=statusLabel[p.status]||['primary',p.status];
+      PM.openDrawer(
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+          '<span class="pm-badge '+s[0]+'">'+s[1]+'</span>'+
+          '<span class="pm-badge primary">'+p.code+'</span>'+healthBadge(p.health)+
+        '</div>'+
+        '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3)">Client</div><div style="font-weight:600">'+PM.esc(p.client)+'</div></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
+          '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Progress</div><div style="font-size:var(--fs-xl);font-weight:700">'+p.progress+'%</div></div>'+
+          '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Budget</div><div style="font-size:var(--fs-lg);font-weight:700">'+(p.financeVisible?fmtInr(p.spentInr)+' / '+fmtInr(p.budgetInr):'—')+'</div></div>'+
+    '</div>'+
+    '<div id="prReviewRow" style="margin-bottom:10px"></div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          '<button class="pm-btn pm-btn-primary" style="flex:1;justify-content:center" onclick="PM.closeDrawer();location.href=\'/pm/06-tasks?view=board&projectId='+p.id+'\'"><i class="fas fa-folder-open"></i> Open</button>'+
+          '<button class="pm-btn" onclick="toggleStar('+p.id+')"><i class="fas fa-star"></i></button>'+
+          '<select class="pm-select" style="flex:1" data-fin="1" onchange="changeStatus('+p.id+',this.value)">'+
+            '<option value="">Move to…</option>'+
+            ['planning','on-track','at-risk','delayed','on-hold','completed'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+
+          '</select>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">'+
+          '<button class="pm-btn" style="flex:1;justify-content:center" data-fin="1" onclick="requestProjectApproval('+p.id+')"><i class="fas fa-square-check"></i> Request approval</button>'+
+ '<button class="pm-btn" style="flex:1;justify-content:center" data-fin="1" onclick="PM.openProjectMembers('+p.id+')"><i class="fas fa-user-group"></i> Members</button>'+
+ '<button class="pm-btn" style="flex:1;justify-content:center" data-fin="1" onclick="PM.openProjectFinance('+p.id+')"><i class="fas fa-chart-pie"></i> Health &amp; budget</button>'+
+          '<button class="pm-btn pm-btn-danger" data-fin="1" onclick="archiveProject('+p.id+')"><i class="fas fa-box-archive"></i> Archive</button>'+
+        '</div>',
+        p.name
+      );
+        applyDetailRoles(p);
+  loadReviewSwitch(id);
+}
+
+    function openCtx(e,id){ e.preventDefault(); e.stopPropagation(); ctxId=id; var m=document.getElementById('ctxMenu'); m.classList.add('open'); m.style.left=Math.min(e.clientX,window.innerWidth-220)+'px'; m.style.top=Math.min(e.clientY,window.innerHeight-380)+'px'; var p=projects.find(function(x){return x.id===id;});
+  document.getElementById('ctxStarLabel').textContent=p&&p.starred?'Unstar':'Star';
+  var okDel=canDeleteProject(p), dEl=document.getElementById('ctxDelete');
+  dEl.style.display=okDel?'':'none'; if(dEl.previousElementSibling) dEl.previousElementSibling.style.display=okDel?'':'none';
+  document.getElementById('ctxRecompute').style.display=PM.can('creator')?'':'none'; }
+    function closeCtx(){ document.getElementById('ctxMenu').classList.remove('open'); }
+    document.addEventListener('click',function(e){ if(!e.target.closest('#ctxMenu')) closeCtx(); });
+    function ctxAction(a){
+      var p=projects.find(function(x){return x.id===ctxId;}); if(!p)return; closeCtx();
+      if(a==='open') openDetail(p.id);
+      else if(a==='star') toggleStar(p.id);
+      else if(a==='link'){ navigator.clipboard&&navigator.clipboard.writeText(location.origin+'/pm/06-tasks?view=board&projectId='+p.id); PM.toast('Link copied','success'); }
+      else if(a==='recompute'){ serverRecompute(); }
+      else if(a==='delete'){ if(!canDeleteProject(p)){ PM.toast('Only a Super Admin or the project owner can delete a project','error'); return; } deleteProject(p.id); }
+    }
+
+    /* ============================================================
+       CREATE PROJECT — FULL PAGE
+       ============================================================ */
+    var DRAFT_KEY='pm-project-draft-v3';
+    var F={type:'it',priority:'medium',teamId:null,members:[]};
+    var mHl=0, saveT=null, creating=false;
+    var typeLabel={it:'IT / Software',nonit:'Non-IT',ops:'Operations'};
+    var typePlaceholder={it:'e.g. HRMS Cloud Migration',nonit:'e.g. Q4 Marketing Campaign',ops:'e.g. Office Relocation'};
+
+    function $(id){ return document.getElementById(id); }
+    function iso(d){ var m=d.getMonth()+1,dd=d.getDate(); return d.getFullYear()+'-'+(m<10?'0':'')+m+'-'+(dd<10?'0':'')+dd; }
+    function addDur(startStr,code){
+      var d=startStr?new Date(startStr+'T00:00:00'):new Date();
+      if(code==='14d') d.setDate(d.getDate()+14); else d.setMonth(d.getMonth()+parseInt(code,10));
+      return iso(d);
+    }
+    function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00')-new Date(a+'T00:00:00'))/86400000); }
+    function genCode(){
+      var max=1000;
+      projects.forEach(function(p){ var m=/(\d+)\s*$/.exec(p.code||''); if(m) max=Math.max(max,parseInt(m[1],10)); });
+      $('fldCode').value='PRJ-'+(max+1);
+    }
+
+    /* ---------- view switching ---------- */
+    function setCrumb(creating){
+      $('crumb').innerHTML='<a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / '+
+        (creating?'<a onclick="closeCreate()">All Projects</a> / <span class="cur">New Project</span>':'<span class="cur">All Projects</span>');
+    }
+    function showList(){
+      $('createView').hidden=true; $('listView').hidden=false; setCrumb(false); window.scrollTo(0,0);
+    }
+    function openCreate(){
+      resetForm();
+      $('listView').hidden=true; $('createView').hidden=false; setCrumb(true); window.scrollTo(0,0);
+      loadFormClients(); renderTeamPills();
+      var d=loadDraft();
+      if(d && (d.fldName||d.fldDesc)){ applyDraft(d); $('draftChip').classList.add('show'); }
+      refresh();
+      setTimeout(function(){ $('fldName').focus(); },80);
+    }
+    function closeCreate(){
+      if(isDirty()){
+        PM.confirm({title:'Leave this page?', message:'Your draft is auto-saved, so you can pick up where you left off.', confirmLabel:'Leave'}).then(function(ok){
+          if(ok){ saveDraft(); showList(); }
+        });
+      } else showList();
+    }
+    function resetForm(){
+      F={type:'it',priority:'medium',teamId:null,members:[]};
+      $('fldName').value=''; $('fldDesc').value=''; $('fldBudget').value=''; $('fldClient').value='';
+      $('fldStart').value=iso(new Date()); $('fldEnd').value=addDur($('fldStart').value,'3m');
+      genCode();
+      document.querySelectorAll('[data-rule]').forEach(function(cb){ cb.checked=['behindSchedule','pastDue','budgetRisk','notifyWatchers'].indexOf(cb.dataset.rule)>-1; });
+      document.querySelectorAll('.cp-err').forEach(function(e){e.classList.remove('show');});
+      document.querySelectorAll('#cpForm .err,#cpForm .ok').forEach(function(e){e.classList.remove('err','ok');});
+      $('draftChip').classList.remove('show'); $('advBox').open=false; $('memberSearch').value='';
+      $('footNote').innerHTML='<i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type';
+      paintSegs(); renderMembers(); syncDurChips();
+    }
+    function isDirty(){ return !!($('fldName').value.trim()||$('fldDesc').value.trim()); }
+
+    /* ---------- type & priority ---------- */
+    function setSeg(group,val){ F[group]=val; paintSegs(); refresh(); }
+    function paintSegs(){
+      document.querySelectorAll('#segType .cp-type').forEach(function(b){ b.classList.toggle('on',b.dataset.v===F.type); });
+      document.querySelectorAll('#segPriority button').forEach(function(b){ b.classList.toggle('on',b.dataset.v===F.priority); });
+      $('fldName').placeholder=typePlaceholder[F.type];
+    }
+
+    /* ---------- dates & budget ---------- */
+    function onStartChange(){
+      var s=$('fldStart').value,e=$('fldEnd').value;
+      if(s && e && e<=s) $('fldEnd').value=addDur(s,'1m');
+      validateField('fldStart'); validateField('fldEnd'); refresh();
+    }
+    function setDuration(code){
+      if(!$('fldStart').value) $('fldStart').value=iso(new Date());
+      $('fldEnd').value=addDur($('fldStart').value,code);
+      validateField('fldEnd'); refresh();
+    }
+    function syncDurChips(){
+      var s=$('fldStart').value,e=$('fldEnd').value,len=$('durLen');
+      document.querySelectorAll('.cp-chips button[data-d]').forEach(function(b){ b.classList.toggle('on', !!(s&&e&&addDur(s,b.dataset.d)===e)); });
+      if(s&&e&&e>s){ var d=daysBetween(s,e); len.innerHTML='<b>'+d+'</b> days'+(d>=14?' · '+Math.round(d/7)+' weeks':''); } else len.textContent='';
+      var b=Number($('fldBudget').value);
+      $('budLen').innerHTML=b>0?'= <b>'+(b/100000).toFixed(2).replace(/\.?0+$/,'')+' Lakh</b>':'';
+    }
+    function setBudget(n){ $('fldBudget').value=n; validateField('fldBudget'); refresh(); }
+
+    /* ---------- validation ---------- */
+    function validateField(id){
+      var el=$(id); if(!el) return true;
+      var err=document.querySelector('[data-err="'+id+'"]');
+      var v=(el.value||'').trim(), msg='';
+      if(id==='fldName' && !v) msg='Give your project a name';
+      else if(id==='fldCode' && !v) msg='Code is required';
+      else if(id==='fldCode' && projects.some(function(p){return (p.code||'').toLowerCase()===v.toLowerCase();})) msg='This code is already in use';
+      else if(id==='fldStart' && !v) msg='Pick a start date';
+      else if(id==='fldEnd'){ var s=$('fldStart').value; if(!v) msg='Pick an end date'; else if(s&&v<=s) msg='End date must be after the start date'; }
+      else if(id==='fldBudget' && v!=='' && (isNaN(Number(v))||Number(v)<0)) msg='Enter a positive amount';
+      el.classList.remove('err','ok');
+      if(msg){ el.classList.add('err'); if(err){ err.classList.add('show'); err.querySelector('span').textContent=msg; } }
+      else { if(v) el.classList.add('ok'); if(err) err.classList.remove('show'); }
+      return !msg;
+    }
+    function validateAll(){
+      var first=null;
+      ['fldName','fldCode','fldStart','fldEnd','fldBudget'].forEach(function(id){ if(!validateField(id) && !first) first=id; });
+      if(first){ var el=$(first); el.scrollIntoView({block:'center',behavior:'smooth'}); el.focus(); PM.toast('Please fix the highlighted field','error'); return false; }
+      return true;
+    }
+    function onChange(id){ if(id) validateField(id); refresh(); }
+
+    /* ---------- team + members ---------- */
+    function renderTeamPills(){
+      var host=$('teamPills');
+      if(!allTeams.length){ host.innerHTML='<span style="font-size:var(--fs-sm);color:var(--tx3)">No teams yet.</span>'; return; }
+      host.innerHTML=allTeams.map(function(t){
+        return '<button type="button" class="cp-team'+(F.teamId===t.id?' on':'')+'" onclick="pickTeam('+t.id+')"><i class="fas '+PM.esc(t.icon)+'"></i>'+PM.esc(t.name)+' <small>'+t.memberCount+'</small></button>';
+      }).join('');
+    }
+    function pickTeam(id){ F.teamId=(F.teamId===id?null:id); renderTeamPills(); refresh(); }
+    function memberMatches(){
+      var q=($('memberSearch').value||'').trim().toLowerCase();
+      return employees.filter(function(e){ return F.members.indexOf(e.id)===-1 && (!q || e.name.toLowerCase().indexOf(q)>-1 || (e.role||'').toLowerCase().indexOf(q)>-1); }).slice(0,30);
+    }
+    function renderMemberDd(){
+      var dd=$('memberDd'), list=memberMatches();
+      if(mHl>=list.length) mHl=0;
+      dd.innerHTML=list.length?list.map(function(e,i){
+        return '<div class="cp-dd-i'+(i===mHl?' hl':'')+'" onmousedown="event.preventDefault();addMember('+e.id+')"><span class="a">'+PM.getInitials(e.name)+'</span>'+PM.esc(e.name)+'<small>'+PM.esc(e.role)+'</small></div>';
+      }).join(''):'<div class="cp-dd-empty">'+(employees.length?'No matches':'No people available')+'</div>';
+      dd.classList.add('open');
+    }
+    function memberKey(e){
+      var list=memberMatches();
+      if(e.key==='ArrowDown'){ e.preventDefault(); mHl=Math.min(list.length-1,mHl+1); renderMemberDd(); }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); mHl=Math.max(0,mHl-1); renderMemberDd(); }
+      else if(e.key==='Enter'){ if(list[mHl]){ e.preventDefault(); e.stopPropagation(); addMember(list[mHl].id); } }
+      else if(e.key==='Escape'){ $('memberDd').classList.remove('open'); }
+      else if(e.key==='Backspace' && !e.target.value && F.members.length){ removeMember(F.members[F.members.length-1]); }
+    }
+    function addMember(id){
+      if(F.members.indexOf(id)===-1) F.members.push(id);
+      $('memberSearch').value=''; mHl=0; renderMembers(); renderMemberDd(); $('memberSearch').focus(); refresh();
+    }
+    function removeMember(id){ F.members=F.members.filter(function(x){return x!==id;}); renderMembers(); refresh(); }
+    function renderMembers(){
+      $('memberChips').innerHTML=F.members.map(function(id){
+        var e=employees.find(function(x){return x.id===id;}); var n=e?e.name:('User #'+id);
+        return '<span class="cp-mchip"><span class="a">'+PM.getInitials(n)+'</span>'+PM.esc(n)+'<i class="fas fa-times x" onclick="event.stopPropagation();removeMember('+id+')"></i></span>';
+      }).join('');
+    }
+    document.addEventListener('mousedown',function(e){ if(!e.target.closest('.cp-mwrap')) $('memberDd').classList.remove('open'); });
+
+    function loadFormClients(){
+      var sel=$('fldClient'), keep=sel.value;
+      PM.api('GET','/api/pm/clients/dropdown').then(function(list){
+        if(!list||!list.length) return;
+        sel.innerHTML='<option value="">Internal / No client</option>'+list.map(function(c){ return '<option value="'+c.id+'">'+PM.esc(c.name)+'</option>'; }).join('');
+        if(keep) sel.value=keep; refresh();
+      }).catch(function(){});
+    }
+
+    /* ---------- live preview + readiness ---------- */
+    function refresh(){
+      var name=$('fldName').value.trim(), code=$('fldCode').value.trim(), pr=F.priority;
+      var cs=$('fldClient');
+      var client=cs.selectedOptions[0]?cs.selectedOptions[0].textContent:'Internal';
+      var s=$('fldStart').value, e=$('fldEnd').value, b=$('fldBudget').value;
+      $('pvTitle').textContent=name||'Untitled project';
+      $('pvCode').textContent=code||'PRJ-____';
+      $('pvLogo').textContent=(name||'?').split(/\s+/).map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
+      $('pvType').textContent=typeLabel[F.type];
+      var pe=$('pvPriority'); pe.textContent=pr.charAt(0).toUpperCase()+pr.slice(1);
+      pe.className='pm-badge '+(pr==='critical'||pr==='high'?'danger':pr==='medium'?'warning':'success');
+      $('pvClient').textContent=client;
+      $('pvPM').textContent=(me.name||'You')+' (you)';
+      $('pvDates').textContent=(s?PM.fmtDate(s):'—')+' → '+(e?PM.fmtDate(e):'—');
+      $('pvBudget').textContent=b?('₹'+Number(b).toLocaleString('en-IN')):'—';
+      var t=allTeams.find(function(x){return x.id===F.teamId;});
+      if(F.members.length||t){
+        var av=F.members.slice(0,5).map(function(id){ var em=employees.find(function(x){return x.id===id;}); return '<span title="'+PM.esc(em?em.name:'')+'">'+PM.getInitials(em?em.name:'?')+'</span>'; }).join('');
+        $('pvTeam').innerHTML=(t?'<div>'+PM.esc(t.name)+'</div>':'')+(av?'<div class="cp-avs">'+av+(F.members.length>5?'<span style="background:var(--tx3)">+'+(F.members.length-5)+'</span>':'')+'</div>':'');
+      } else $('pvTeam').textContent='—';
+      $('previewCard').classList.toggle('empty',!name);
+
+      var checks=[
+        {ok:!!name,label:'Project name'},
+        {ok:!!code,label:'Unique project code'},
+        {ok:!!(s&&e&&e>s),label:'Valid schedule'},
+        {ok:!!b,label:'Budget set'},
+        {ok:!!(F.teamId||F.members.length),label:'Team or members added'},
+        {ok:!!$('fldDesc').value.trim(),label:'Description written'}
+      ];
+      var done=checks.filter(function(c){return c.ok;}).length, pct=Math.round(done/checks.length*100);
+      $('readyPct').textContent=pct+'%'; $('readyBar').style.width=pct+'%';
+      $('readyList').innerHTML=checks.map(function(c){ return '<div class="cp-ready-i'+(c.ok?' ok':'')+'"><i class="fas '+(c.ok?'fa-circle-check':'fa-circle')+'"></i>'+c.label+'</div>'; }).join('');
+      $('advCnt').textContent=document.querySelectorAll('[data-rule]:checked').length+' of '+document.querySelectorAll('[data-rule]').length+' on';
+      syncDurChips();
+      autoSaveDraft();
+    }
+
+    /* ---------- draft ---------- */
+    function collect(){
+      return {fldName:$('fldName').value,fldCode:$('fldCode').value,fldDesc:$('fldDesc').value,fldStart:$('fldStart').value,fldEnd:$('fldEnd').value,fldBudget:$('fldBudget').value,fldClient:$('fldClient').value,type:F.type,priority:F.priority,teamId:F.teamId,members:F.members};
+    }
+    function saveDraft(){ try{ if(isDirty()) localStorage.setItem(DRAFT_KEY,JSON.stringify(collect())); }catch(e){} }
+    function autoSaveDraft(){
+      if($('createView').hidden || creating) return;
+      clearTimeout(saveT);
+      saveT=setTimeout(function(){ saveDraft(); if(isDirty()) $('footNote').innerHTML='<i class="fas fa-circle-check" style="color:var(--suc)"></i> Draft saved'; },500);
+    }
+    function loadDraft(){ try{ return JSON.parse(localStorage.getItem(DRAFT_KEY)||'null'); }catch(e){ return null; } }
+    function applyDraft(d){
+      ['fldName','fldCode','fldDesc','fldStart','fldEnd','fldBudget','fldClient'].forEach(function(id){ if(d[id]!=null) $(id).value=d[id]; });
+      F.type=d.type||'it'; F.priority=d.priority||'medium'; F.teamId=d.teamId||null; F.members=d.members||[];
+      paintSegs(); renderMembers(); renderTeamPills(); refresh();
+    }
+    function clearDraft(){ clearTimeout(saveT); try{localStorage.removeItem(DRAFT_KEY);}catch(e){} }
+    function discardDraft(){ clearDraft(); resetForm(); renderTeamPills(); refresh(); $('fldName').focus(); }
+    function saveAsDraftAndClose(){ $('createMenu').classList.remove('open'); saveDraft(); showList(); PM.toast('✓ Draft saved — it will be restored when you start a new project','success'); }
+
+    /* ---------- submit ---------- */
+    function buildPayload(){
+      var b=$('fldBudget').value, c=$('fldClient').value;
+      var rules=[]; document.querySelectorAll('[data-rule]').forEach(function(cb){ rules.push({rule:cb.dataset.rule,enabled:cb.checked}); });
+      return {
+        name:$('fldName').value.trim(), code:$('fldCode').value.trim(),
+        description:$('fldDesc').value||'',
+        ownerId:me.id,                       /* creator is the project manager */
+        departmentId:null, clientId:c?parseInt(c,10):null, teamId:F.teamId||null,
+        priority:(F.priority||'medium').toUpperCase(),
+        startDate:$('fldStart').value||null, endDate:$('fldEnd').value||null,
+        budgetTotal:b?parseInt(b,10):null,
+        memberIds:F.members.slice(), autoRules:rules
+      };
+    }
+    function submitCreate(after){
+      $('createMenu').classList.remove('open');
+      if(creating) return;
+      if(!validateAll()) return;
+      creating=true;
+      var btn=$('createBtn'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Creating…';
+      PM.api('POST','/api/pm/projects',buildPayload()).then(function(data){
+        clearDraft();
+        projects.unshift(mapBackendProject(data)); render();
+        if(after==='another'){
+          PM.toast('✓ Created '+data.name+' — ready for the next one','success');
+          var keepType=F.type, keepPri=F.priority, keepClient=$('fldClient').value;
+          resetForm(); F.type=keepType; F.priority=keepPri; $('fldClient').value=keepClient;
+          paintSegs(); renderTeamPills(); refresh(); window.scrollTo(0,0); $('fldName').focus();
+        } else {
+          showList();
+          PM.toast('✓ Project created: '+data.name,'success');
+          if(after==='open') setTimeout(function(){ location.href='/pm/06-tasks?view=board&projectId='+data.id; },350);
+        }
+      }).catch(function(err){
+        console.error('Create project failed',err);
+        PM.toast(err.message||'Failed to create project','error');
+      }).finally(function(){
+        creating=false; btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> Create Project';
+      });
+    }
+    function toggleCreateMenu(e){ e&&e.stopPropagation(); $('createMenu').classList.toggle('open'); }
+    document.addEventListener('click',function(e){ if(!e.target.closest('.cp-split')) $('createMenu').classList.remove('open'); });
+
+    function exportProjects(){
+    var list=getFiltered(); if(!list.length){ PM.toast('Nothing to export','info'); return; }
+    var fin=list.some(function(p){return p.financeVisible;});
+    var head=['Code','Name','Client','Manager','Status','Priority','Progress %','Start','End']; if(fin) head.push('Budget (INR)','Spent (INR)');
+    function cell(v){ v=String(v==null?'':v); if(/^[=+\-@]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; }
+    var rows=[head].concat(list.map(function(p){
+      var r=[p.code,p.name,p.client,p.manager,p.status,p.priority,p.progress,p.start,p.end];
+      if(fin) r.push(p.financeVisible?p.budgetInr:'',p.financeVisible?p.spentInr:'');
+      return r;
+    }));
+    var csv=rows.map(function(r){return r.map(cell).join(',');}).join('\r\n');
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+    a.download='projects-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+    PM.toast('Exported '+list.length+' project(s)','success');
+  }
+
+    /* ---------- keyboard ---------- */
+    document.addEventListener('keydown',function(e){
+      if($('createView').hidden) return;
+      if(e.key==='Escape'){
+        if($('memberDd').classList.contains('open')){ $('memberDd').classList.remove('open'); return; }
+        if($('createMenu').classList.contains('open')){ $('createMenu').classList.remove('open'); return; }
+      }
+      if((e.metaKey||e.ctrlKey) && e.key==='Enter'){ e.preventDefault(); submitCreate(e.shiftKey?'another':'close'); }
+      else if(e.key==='Enter' && e.target && (e.target.id==='fldName')){ e.preventDefault(); $('fldCode').focus(); $('fldCode').select(); }
+    });
+
+    $('mobToggle').addEventListener('click',function(){ $('pmSidebar').classList.toggle('open'); });
+
+    /* ---------- admin gating ---------- */
+      if(!(me && me.canCreateProject === true)){
       var nb=$('newProjectBtn'); if(nb) nb.style.display='none';
     }
 
+    /* ---------- STEP 7.4: role-aware controls ---------- */
+  function canDeleteProject(p){ return me.superAdmin===true || (!!p && p.ownerId===me.id); }
+  function applyDetailRoles(p){
+    var fin=!!p && p.financeVisible===true;
+    document.querySelectorAll('#pmDrawerBody [data-fin]').forEach(function(el){ el.style.display=fin?'':'none'; });
+  }
+  function applyRoleUi(){
+    var creator=PM.can('creator');
+    $('newProjectBtn').hidden=!creator;
+    $('autoRulesBtn').hidden=!creator;
+    $('recomputeBtn').hidden=!creator;
+    $('requestBtnLabel').textContent=(me.admin===true||me.pm===true||me.intakeReviewer===true)?'Project requests':'Request a project';
+    $('requestBtn').className=creator?'pm-btn':'pm-btn pm-btn-primary';
+    document.body.classList.toggle('pm-bulk', me.superAdmin===true);
+    var so=document.querySelector('#prSort option[value="budget-desc"]');
+    if(so && !PM.can('finance')) so.remove();
+  }
+
+  function serverRecompute(){
+    PM.toast('Recomputing health and cost…','info');
+    PM.api('POST','/api/pm/projects/health/recompute').then(function(r){
+      PM.toast('✓ Checked '+r.checked+' project(s) · '+r.changed+' health change(s)', r.changed?'success':'info');
+      loadProjects();
+    }).catch(function(e){ PM.toast(e.message||'Failed','error'); });
+  }
+  Object.assign(window,{
+     recomputeAllStatuses:serverRecompute,  openAutoRules:openAutoRules, toggleRule:toggleRule, updateRule:updateRule, removeRule:removeRule, addAutoRule:addAutoRule, saveAutoRules:saveAutoRules,
+      render:render, setFilter:setFilter, setView:setView, toggleStar:toggleStar, toggleSel:toggleSel, toggleAll:toggleAll,
+      bulkStatus:bulkStatus, bulkAssign:bulkAssign, bulkPriority:bulkPriority, bulkDelete:bulkDelete, clearSelection:clearSelection,
+      changeStatus:changeStatus, archiveProject:archiveProject, deleteProject:deleteProject, openDetail:openDetail, openCtx:openCtx, ctxAction:ctxAction,
+      requestProjectApproval:requestProjectApproval,
+      openCreate:openCreate, closeCreate:closeCreate, setSeg:setSeg, onChange:onChange, onStartChange:onStartChange, setDuration:setDuration, setBudget:setBudget, genCode:genCode,
+      pickTeam:pickTeam, renderMemberDd:renderMemberDd, memberKey:memberKey, addMember:addMember, removeMember:removeMember,
+          loadReviewSwitch:loadReviewSwitch, setReviewRequired:setReviewRequired,
+      discardDraft:discardDraft, saveAsDraftAndClose:saveAsDraftAndClose, submitCreate:submitCreate, toggleCreateMenu:toggleCreateMenu, exportProjects:exportProjects
+
+    });
+
+    /* ---------- boot ---------- */
+    setCrumb(false);
+    applyRoleUi();
+  Promise.all([loadEmployees(), loadTeams()]).then(function(){
+      loadProjects();
+    if(/action=(templates|requests)/.test(location.search||'') || location.hash==='#requests'){
+  if(window.PM && PM.openIntake) setTimeout(function(){ PM.openIntake(/action=templates/.test(location.search||'') ? 'templates' : 'requests'); },150);
+} else if(/action=(create|describe|duplicate)/.test(location.search||'')) { if(me && me.canCreateProject===true) setTimeout(openCreate,120); }
+      else if(/action=autorules/.test(location.search||'') && PM.can('creator')) setTimeout(openAutoRules,120);
+    });
+  });
+</script>
+</body>
+</html>
     /* ---------- expose to inline handlers ---------- */
    function serverRecompute(){
     PM.toast('Recomputing health and cost…','info');
@@ -1410,14 +2919,18 @@
       requestProjectApproval:requestProjectApproval,
       openCreate:openCreate, closeCreate:closeCreate, setSeg:setSeg, onChange:onChange, onStartChange:onStartChange, setDuration:setDuration, setBudget:setBudget, genCode:genCode,
       pickTeam:pickTeam, renderMemberDd:renderMemberDd, memberKey:memberKey, addMember:addMember, removeMember:removeMember,
+          loadReviewSwitch:loadReviewSwitch, setReviewRequired:setReviewRequired,
       discardDraft:discardDraft, saveAsDraftAndClose:saveAsDraftAndClose, submitCreate:submitCreate, toggleCreateMenu:toggleCreateMenu, exportProjects:exportProjects
+
     });
 
     /* ---------- boot ---------- */
     setCrumb(false);
     Promise.all([loadEmployees(), loadTeams()]).then(function(){
       loadProjects();
-      if(/action=(create|templates|describe|duplicate)/.test(location.search||'')) setTimeout(openCreate,120);
+    if(/action=(templates|requests)/.test(location.search||'') || location.hash==='#requests'){
+  if(window.PM && PM.openIntake) setTimeout(function(){ PM.openIntake(/action=templates/.test(location.search||'') ? 'templates' : 'requests'); },150);
+} else if(/action=(create|describe|duplicate)/.test(location.search||'')) { if(me && me.canCreateProject===true) setTimeout(openCreate,120); }
       else if(/action=autorules/.test(location.search||'')) setTimeout(openAutoRules,120);
     });
   });

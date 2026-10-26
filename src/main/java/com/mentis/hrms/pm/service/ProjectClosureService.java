@@ -1,6 +1,7 @@
 package com.mentis.hrms.pm.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.mentis.hrms.dto.NotificationRequest;
 import com.mentis.hrms.pm.dto.request.ClosureItemRequest;
 import com.mentis.hrms.pm.dto.response.ClosureItemResponse;
 import com.mentis.hrms.pm.dto.response.ClosureStatusResponse;
@@ -8,6 +9,7 @@ import com.mentis.hrms.pm.entity.ActivityLog;
 import com.mentis.hrms.pm.entity.ApprovalRequest;
 import com.mentis.hrms.pm.entity.Project;
 import com.mentis.hrms.pm.entity.ProjectClosureItem;
+import com.mentis.hrms.pm.entity.ProjectMember;
 import com.mentis.hrms.pm.enums.ProjectStatus;
 import com.mentis.hrms.pm.enums.TaskStatus;
 import com.mentis.hrms.pm.exception.BusinessRuleException;
@@ -15,17 +17,23 @@ import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.repository.ActivityLogRepository;
 import com.mentis.hrms.pm.repository.ApprovalRequestRepository;
 import com.mentis.hrms.pm.repository.ProjectClosureItemRepository;
+import com.mentis.hrms.pm.repository.ProjectMemberRepository;
 import com.mentis.hrms.pm.repository.ProjectRepository;
 import com.mentis.hrms.pm.repository.TaskRepository;
 import com.mentis.hrms.repository.EmployeeRepository;
+import com.mentis.hrms.service.NotificationEmitter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -33,6 +41,14 @@ import java.util.stream.Collectors;
 /**
  * Closure checklist + the rules that decide whether a project may be COMPLETED.
  * Never calls PmAccessService (callers check permissions; this is also safe from any thread).
+ *
+ * STEP 8 changes:
+ *  - an EMPTY checklist no longer passes (at least one closure item is required)
+ *  - the standard checklist is added automatically when a project becomes ACTIVE
+ *  - lessons learned need 30 characters (was 10)
+ *  - a client sign-off given BEFORE the project was reopened no longer counts
+ *  - completion summary in the closure status
+ *  - the team is told when a project is completed or reopened
  */
 @Service
 @RequiredArgsConstructor
@@ -40,7 +56,7 @@ import java.util.stream.Collectors;
 public class ProjectClosureService {
 
     public static final String SIGN_OFF = "CLIENT_SIGN_OFF";
-    private static final int LESSONS_MIN_CHARS = 10;
+    private static final int LESSONS_MIN_CHARS = 30;
     private static final Set<ProjectStatus> SIGN_OFF_STATES =
             EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.AT_RISK, ProjectStatus.DELAYED);
     private static final Set<ProjectStatus> LOCKED =
@@ -60,6 +76,8 @@ public class ProjectClosureService {
     private final ApprovalRequestRepository approvalRepository;
     private final ActivityLogRepository activityLogRepository;
     private final EmployeeRepository employeeRepository;
+    private final ProjectMemberRepository projectMemberRepository; // STEP 8
+    private final NotificationEmitter notificationEmitter;         // STEP 8
 
     private record SignOff(String state, Long approvalId) { }
 
@@ -73,8 +91,14 @@ public class ProjectClosureService {
         long open = openTasks(p.getId());
         if (open > 0) out.add(open + " task(s) are still open");
 
-        long openItems = itemRepository.countByProjectIdAndDoneFalse(p.getId());
-        if (openItems > 0) out.add(openItems + " closure checklist item(s) are not done");
+        // STEP 8: an empty checklist must not pass
+        long totalItems = itemRepository.countByProjectId(p.getId());
+        if (totalItems == 0) {
+            out.add("the closure checklist is empty (open Closure and click 'Add standard checklist', or add your own items)");
+        } else {
+            long openItems = itemRepository.countByProjectIdAndDoneFalse(p.getId());
+            if (openItems > 0) out.add(openItems + " closure checklist item(s) are not done");
+        }
 
         if (!lessonsWritten(p)) out.add("lessons learned have not been written (at least " + LESSONS_MIN_CHARS + " characters)");
 
@@ -122,6 +146,18 @@ public class ProjectClosureService {
                 .map(this::toResponse).collect(Collectors.toList());
         List<String> blockers = blockers(p);
         SignOff so = signOff(p);
+
+        // STEP 8: numbers for the completion summary
+        long tasksTotal = 0, tasksDone = 0;
+        for (TaskStatus s : TaskStatus.values()) {
+            long n = taskRepository.countByProjectIdAndStatus(projectId, s);
+            tasksTotal += n;
+            if (s == TaskStatus.DONE) tasksDone = n;
+        }
+        Long delayDays = (p.getCompletedAt() != null && p.getEndDate() != null)
+                ? ChronoUnit.DAYS.between(p.getEndDate(), p.getCompletedAt().toLocalDate())
+                : null;
+
         return ClosureStatusResponse.builder()
                 .projectId(projectId)
                 .projectStatus(p.getStatus() == null ? null : p.getStatus().name())
@@ -134,6 +170,12 @@ public class ProjectClosureService {
                 .ready(blockers.isEmpty())
                 .blockers(blockers)
                 .items(items)
+                // STEP 8
+                .completedAt(p.getCompletedAt()).completedByName(nameOf(p.getCompletedBy()))
+                .reopenedAt(p.getReopenedAt()).reopenedByName(nameOf(p.getReopenedBy()))
+                .reopenReason(p.getReopenReason())
+                .plannedEnd(p.getEndDate()).delayDays(delayDays)
+                .tasksTotal(tasksTotal).tasksDone(tasksDone)
                 .build();
     }
 
@@ -184,10 +226,82 @@ public class ProjectClosureService {
         return list(projectId);
     }
 
+    /**
+     * STEP 8: called when a project becomes ACTIVE. Adds the standard checklist, but does nothing
+     * when the project already has closure items (so it is safe to call every time).
+     */
+    @Transactional
+    public void ensureDefaults(Long projectId, Long actorId) {
+        if (itemRepository.countByProjectId(projectId) > 0) return;
+        for (String t : DEFAULT_ITEMS)
+            itemRepository.save(ProjectClosureItem.builder().projectId(projectId).title(t).done(false).build());
+        log(projectId, "CLOSURE_ITEM_ADDED", actorId, "added the standard closure checklist when the project started");
+    }
+
     /** Called from ProjectServiceImpl.deleteProject (no foreign keys, so we clean up ourselves). */
     @Transactional
     public void deleteForProject(Long projectId) {
         itemRepository.deleteByProjectId(projectId);
+    }
+
+    // ═════════════════════════ STEP 8: tell the team ═════════════════════════
+
+    /** Owner, managers, leads, members (this includes the person who asked for the project). */
+    @Transactional(readOnly = true)
+    public void notifyCompleted(Project p, Long actorId) {
+        notifyAudience(p, actorId, "PROJECT_COMPLETED",
+                "Project completed: " + p.getName(),
+                "Closed by " + (actorId == null ? "the system" : nameOf(actorId)) + ". The project is now locked.");
+    }
+
+    @Transactional(readOnly = true)
+    public void notifyReopened(Project p, Long actorId, String reason) {
+        notifyAudience(p, actorId, "PROJECT_REOPENED",
+                "Project reopened: " + p.getName(),
+                "Reopened by " + (actorId == null ? "the system" : nameOf(actorId)) + ": " + reason);
+    }
+
+    private void notifyAudience(Project p, Long actorId, String type, String title, String msg) {
+        Set<Long> audience = new LinkedHashSet<>();
+        if (p.getOwnerId() != null) audience.add(p.getOwnerId());
+        for (ProjectMember m : projectMemberRepository.findByProjectId(p.getId())) {
+            if (m.getEmployeeId() != null) audience.add(m.getEmployeeId());
+        }
+        audience.remove(actorId);
+        if (audience.isEmpty()) return;
+
+        final Long projectId = p.getId();
+        final String actorName = actorId == null ? "System" : nameOf(actorId);
+        afterCommit(() -> {
+            for (Long pk : audience) {
+                try {
+                    String code = employeeRepository.findById(pk).map(e -> e.getEmployeeId()).orElse(null);
+                    if (code == null) continue;
+                    notificationEmitter.emit(NotificationRequest.builder()
+                            .recipientId(code).recipientType("EMPLOYEE")
+                            .type(type).action(type)
+                            .title(title).message(msg)
+                            .projectId(projectId)
+                            .actorId(actorId).actorName(actorName)
+                            .priority("NORMAL").deepLink("/pm/04-projects")
+                            .build());
+                } catch (Exception e) {
+                    log.warn("closure notify failed for employee {}: {}", pk, e.getMessage());
+                }
+            }
+        });
+    }
+
+    /** Send the bells only after the database change is really saved. */
+    private void afterCommit(Runnable r) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() { r.run(); }
+            });
+        } else {
+            r.run();
+        }
     }
 
     // ═════════════════════════ helpers ═════════════════════════
@@ -202,11 +316,19 @@ public class ProjectClosureService {
         return p.getLessonsLearned() != null && p.getLessonsLearned().trim().length() >= LESSONS_MIN_CHARS;
     }
 
-    /** Latest non-cancelled CLIENT_SIGN_OFF approval decides. */
+    /**
+     * Latest non-cancelled CLIENT_SIGN_OFF approval decides.
+     * STEP 8: a sign-off that was requested BEFORE the project was reopened no longer counts,
+     * so reopened work needs a fresh sign-off.
+     */
     private SignOff signOff(Project p) {
         if (p.getClientId() == null) return new SignOff("NOT_REQUIRED", null);
         for (ApprovalRequest a : approvalRepository.findByEntityTypeAndEntityIdOrderByCreatedAtDesc(SIGN_OFF, p.getId())) {
             if ("CANCELLED".equals(a.getStatus())) continue;
+            if (p.getReopenedAt() != null && a.getCreatedAt() != null
+                    && a.getCreatedAt().isBefore(p.getReopenedAt())) {
+                return new SignOff("NOT_REQUESTED", null);
+            }
             return new SignOff(a.getStatus(), a.getId()); // PENDING | APPROVED | REJECTED
         }
         return new SignOff("NOT_REQUESTED", null);

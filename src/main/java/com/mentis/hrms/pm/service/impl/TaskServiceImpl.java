@@ -26,6 +26,9 @@ import com.mentis.hrms.pm.security.PmCurrentUserHolder;
 import com.mentis.hrms.pm.security.PmUserProvider;
 import com.mentis.hrms.pm.enums.ProjectRole;
 import com.mentis.hrms.pm.service.TaskWorkflow;
+import com.mentis.hrms.pm.security.PmAccessService;
+import com.mentis.hrms.pm.service.TaskWorkflow;
+import com.mentis.hrms.pm.service.TaskEventNotifier;
 
 @Service
 @RequiredArgsConstructor
@@ -59,6 +62,11 @@ public class TaskServiceImpl implements TaskService {
     private final WorkloadService workloadService;
     private final TeamMemberRepository teamMemberRepository;
     private final ProjectMemberRepository projectMemberRepository;
+
+    // ─── Step 5 ───
+    private final TaskEventNotifier taskEventNotifier;
+    // ─── Step 4 ───
+    private final PmAccessService pmAccessService;
 
     // ══════════════════════════════════════════════════════════
     // CORE CRUD
@@ -155,8 +163,15 @@ public class TaskServiceImpl implements TaskService {
         if (req.getStatus() != null && req.getStatus() != task.getStatus()) {
             if (req.getStatus() == TaskStatus.BLOCKED)
                 throw new BusinessRuleException("Use the status change (with a reason) to block a task");
-            assertTransition(task, req.getStatus());
+            if (task.getStatus() == TaskStatus.IN_REVIEW && req.getStatus() == TaskStatus.IN_PROGRESS
+                    && pmAccessService.isReviewRequired(task.getProjectId())
+                    && pmAccessService.canReviewTask(currentUserId, id)
+                    && !pmAccessService.isTaskAssignee(currentUserId, id))
+                throw new BusinessRuleException(
+                        "Use the status change (with a reason) to send a task back for changes");
+            assertTransition(task, req.getStatus(), currentUserId);
             assertCanMoveTo(task, req.getStatus());
+            trackBlocked(task, task.getStatus(), req.getStatus());
             task.setStatus(req.getStatus());
             if (taskRepository.countSubtasks(id) == 0) {
                 task.setProgressPct(deriveProgress(req.getStatus()));
@@ -205,6 +220,7 @@ public class TaskServiceImpl implements TaskService {
         rollUp(saved);
 
         // ─── Step 3.2E — field-level activity log ───
+        notifyViaUpdate(before, saved, currentUserId);
         String msg = describeChanges(before, snapshot(saved));
         logActivity(id, "UPDATED", currentUserId, null, null,
                 msg.length() > 450 ? msg.substring(0, 450) + "…" : msg);
@@ -233,10 +249,26 @@ public class TaskServiceImpl implements TaskService {
                     .mentions("").edited(false).deleted(false).build());
         }
 
-        assertTransition(task, newStatus);
+        assertTransition(task, newStatus, currentUserId);
         assertCanMoveTo(task, newStatus);
 
+        // Step 4: a reviewer sending a task back must say what to change
+        if (oldStatus == TaskStatus.IN_REVIEW && newStatus == TaskStatus.IN_PROGRESS
+                && pmAccessService.isReviewRequired(task.getProjectId())
+                && pmAccessService.canReviewTask(currentUserId, id)
+                && !pmAccessService.isTaskAssignee(currentUserId, id)) {
+            String why = req.getReason();
+            if (why == null || why.isBlank())
+                throw new BusinessRuleException("Please say what needs to change before sending this task back");
+            taskCommentRepository.save(TaskComment.builder()
+                    .taskId(id).authorId(currentUserId)
+                    .authorName(resolveEmployeeName(currentUserId))
+                    .body("↩ Sent back for changes: " + why.trim())
+                    .mentions("").edited(false).deleted(false).build());
+        }
+
         task.setStatus(newStatus);
+        trackBlocked(task, oldStatus, newStatus);
         if (taskRepository.countSubtasks(id) == 0) {
             task.setProgressPct(deriveProgress(newStatus));
         }
@@ -252,9 +284,13 @@ public class TaskServiceImpl implements TaskService {
         try {
             String actorName = resolveEmployeeName(currentUserId);
             java.util.Set<Long> audience = new java.util.LinkedHashSet<>();
+            TaskEventNotifier.Plan plan =
+                    taskEventNotifier.plan(saved, oldStatus, newStatus, currentUserId, req.getReason());
             taskAssignmentRepository.findByTaskId(id).forEach(a -> audience.add(a.getEmployeeId()));
             taskWatcherRepository.findByTaskId(id).forEach(w -> audience.add(w.getEmployeeId()));
             audience.remove(currentUserId);
+            audience.removeAll(plan.covered());   // they already get a specific Step 5 bell
+            plan.sendAfterCommit();
 
             for (Long empPk : audience) {
                 String recipientCode = resolveEmployeeCode(empPk);
@@ -279,6 +315,30 @@ public class TaskServiceImpl implements TaskService {
             log.warn("Failed to emit CARD_MOVED for {}: {}", id, e.getMessage());
         }
         return toFullResponse(saved);
+    }
+
+    // ─── Step 5 helpers ───
+    private void trackBlocked(Task task, TaskStatus from, TaskStatus to) {
+        if (to == TaskStatus.BLOCKED && from != TaskStatus.BLOCKED) {
+            task.setBlockedSince(java.time.LocalDateTime.now());
+            task.setEscalationLevel(0);
+        } else if (from == TaskStatus.BLOCKED && to != TaskStatus.BLOCKED) {
+            task.setBlockedSince(null);
+            task.setEscalationLevel(0);
+        }
+    }
+
+    /** Status can also change through PUT /tasks/{id}; send the same bells there. */
+    private void notifyViaUpdate(Map<String, String> before, Task saved, Long actorId) {
+        try {
+            String b = before.get("status");
+            TaskStatus old = (b == null || "null".equals(b)) ? null : TaskStatus.valueOf(b);
+            if (saved.getStatus() != null && saved.getStatus() != old) {
+                taskEventNotifier.plan(saved, old, saved.getStatus(), actorId, null).sendAfterCommit();
+            }
+        } catch (Exception e) {
+            log.warn("notifyViaUpdate failed for task {}: {}", saved.getId(), e.getMessage());
+        }
     }
 
     private int deriveProgress(TaskStatus s) {
@@ -1036,12 +1096,14 @@ public class TaskServiceImpl implements TaskService {
             throw new BusinessRuleException("Can't mark DONE: " + openChecklist + " checklist item(s) still open");
     }
     /** Allowed-moves rule + "don't walk away from a pending sign-off". */
-    private void assertTransition(Task task, TaskStatus to) {
+    /** Allowed-moves rule (incl. Step 4 review gate) + "don't walk away from a pending sign-off". */
+    private void assertTransition(Task task, TaskStatus to, Long userId) {
         TaskStatus from = task.getStatus();
         if (from == to) return;
-        if (!TaskWorkflow.allowed(from, to))
+        boolean gate = pmAccessService.isReviewGateActive(userId, task.getId());
+        if (!TaskWorkflow.allowed(from, to, gate))
             throw new BusinessRuleException("A task cannot move from " + TaskWorkflow.label(from)
-                    + " to " + TaskWorkflow.label(to) + "." + TaskWorkflow.hint(from, to));
+                    + " to " + TaskWorkflow.label(to) + "." + TaskWorkflow.hint(from, to, gate));
         if (from == TaskStatus.IN_REVIEW && to != TaskStatus.DONE
                 && approvalRequestRepository.existsByEntityTypeAndEntityIdAndStatus("TASK", task.getId(), "PENDING"))
             throw new BusinessRuleException(

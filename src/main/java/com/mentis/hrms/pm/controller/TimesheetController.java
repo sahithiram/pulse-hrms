@@ -66,7 +66,7 @@ public class TimesheetController {
             @PathVariable Long projectId,
             @CurrentUserId Long userId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate week) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanViewProjectPeople(userId, projectId); // STEP 6: lead tier + HR (read-only)
         return ResponseEntity.ok(ApiResponse.ok(service.forProject(projectId, normWeek(week))));
     }
     /** Employee submits a week for approval. */

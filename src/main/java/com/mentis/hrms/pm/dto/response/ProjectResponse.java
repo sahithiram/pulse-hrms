@@ -40,8 +40,12 @@ public class ProjectResponse {
     private LocalDate baselineEnd;
     private BigDecimal baselineBudget;
     private LocalDateTime baselinedAt;
-    private String healthMode;          // AUTO | MANUAL
+    private String healthMode; // AUTO | MANUAL
     private String healthReason;
     private LocalDateTime healthUpdatedAt;
     private String lessonsLearned;
+
+    // STEP 1b: false when budget/baseline-budget were hidden for this viewer
+    private Boolean financeVisible;
+    private Boolean reviewRequired;
 }

@@ -89,6 +89,13 @@ public class ApprovalServiceImpl implements ApprovalService {
         String type = req.getEntityType().toUpperCase();
         validateTarget(type, req.getEntityId(), req.getPayload(), userId);
 
+        // ✅ CHANGED (a): enforce routing eligibility at create time
+        if (!pmAccessService.isEligibleApprover(type, req.getEntityId(), req.getApproverId()))
+            throw new BusinessRuleException(
+                    "That person can't approve this kind of request. Budget, change-request and client "
+                            + "sign-off approvals go to a Super Admin; project status changes to the owner, a "
+                            + "manager or a Super Admin; task sign-off to a lead, manager, owner or Super Admin.");
+
         String title = resolveEntityTitle(type, req.getEntityId());
 
         ApprovalRequest ar = ApprovalRequest.builder()
@@ -275,6 +282,13 @@ public class ApprovalServiceImpl implements ApprovalService {
             }
             default -> { }
         }
+
+        // ✅ CHANGED (b): project-level requester must be able to administer the project,
+        // applied once before the duplicate check (covers all project-level types).
+        boolean projectLevel = "PROJECT".equals(type) || "BUDGET".equals(type)
+                || "CHANGE_REQUEST".equals(type) || "CLIENT_SIGN_OFF".equals(type);
+        if (projectLevel) pmAccessService.requireCanAdminister(requesterId, entityId);
+
         if (repo.existsByEntityTypeAndEntityIdAndStatus(type, entityId, "PENDING"))
             throw new BusinessRuleException("A pending approval already exists for this item");
     }
@@ -293,16 +307,11 @@ public class ApprovalServiceImpl implements ApprovalService {
         taskService.changeStatus(taskId, r, userId);
     }
 
-    /** approver == current web user at decide time, so isAdmin works. */
+    // ✅ CHANGED (c): whole method replaced
+    /** approver == current web user at decide time. Same rule as at create time. */
     private void assertMayDecide(ApprovalRequest ar, Long userId) {
-        Long projectId = switch (ar.getEntityType()) {
-            case "PROJECT", "BUDGET", "CHANGE_REQUEST", "CLIENT_SIGN_OFF" -> ar.getEntityId();
-            case "TASK" -> pmAccessService.projectIdOfTask(ar.getEntityId());
-            default -> null;
-        };
-        if (projectId == null) return;
-        if (!pmAccessService.canManageProject(userId, projectId))
-            throw new PmAccessDeniedException("You can't approve changes for this project.");
+        if (!pmAccessService.isEligibleApprover(ar.getEntityType(), ar.getEntityId(), userId))
+            throw new PmAccessDeniedException("You can't approve this kind of request for this project.");
     }
 
     // ═════════════════════════ apply outcome ═════════════════════════

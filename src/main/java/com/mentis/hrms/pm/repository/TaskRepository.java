@@ -8,7 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
-
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -128,4 +129,13 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // ─── Step 3.3 addition — due-date reminders ───────────────
     @Query("SELECT t FROM Task t WHERE t.dueDate = :due AND t.status <> :done")
     List<Task> findOpenDueOn(@Param("due") LocalDate due, @Param("done") TaskStatus done);
+
+    // ─── Step 5 ───
+    List<Task> findByStatus(TaskStatus status);
+
+    /** JPQL update: does not touch updated_at, so "blocked since" stays stable. */
+    @Modifying
+    @Transactional
+    @Query("UPDATE Task t SET t.escalationLevel = :lvl WHERE t.id = :id")
+    int updateEscalationLevel(@Param("id") Long id, @Param("lvl") int lvl);
 }

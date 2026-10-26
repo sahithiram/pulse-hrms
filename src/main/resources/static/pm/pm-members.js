@@ -7,8 +7,8 @@
 (function () {
   'use strict';
 
-  var ROLES = ['MANAGER', 'MEMBER', 'VIEWER'];
-  var ROLE_CLS = { MANAGER: 'primary', MEMBER: 'info', VIEWER: 'warning' };
+ var ROLES = ['MANAGER', 'LEAD', 'MEMBER', 'VIEWER'];
+  var ROLE_CLS = { MANAGER: 'primary', LEAD: 'purple', MEMBER: 'info', VIEWER: 'warning' };
   var people = null;
 
   /* ───────── helpers ───────── */
@@ -61,7 +61,7 @@
   }
 
   function renderProject() {
-    var can = !!P.access.canManage;
+       var can = !!P.access.canAdminister;   // STEP 1: only owner / MANAGER / Super Admin change members and see rates
     var h = '<div class="pm-card" style="display:flex;gap:8px;align-items:center;justify-content:space-between">' +
       '<div><div style="font-weight:600">' + PM.esc(P.name) + '</div>' +
       '<div style="font-size:var(--fs-xs);color:var(--tx3)">Your access: ' + PM.esc(P.access.label || '—') + '</div></div>' +

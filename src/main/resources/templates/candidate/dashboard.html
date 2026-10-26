@@ -1360,10 +1360,38 @@
         #attendance .tab-content { width: 100%; max-width: none !important; }
         #attendance table { width: 100%; table-layout: auto; }
         #attendance .tabs { width: 100%; overflow-x: auto; }
+        /* ===== STEP 1 FIX: sidebar clipping + page scroll ===== */
+
+/* Cards inside the sidebar never shrink; the sidebar scrolls instead */
+.left-sidebar > * { flex-shrink: 0; }
+.left-sidebar {
+  min-height: 0;
+  padding-bottom: 32px;                 /* last tab never touches the bottom edge */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;                /* Firefox */
+  scrollbar-color: var(--dark-border) transparent;
+}
+@supports (height: 100dvh) {            /* mobile browsers with a moving address bar */
+  .left-sidebar { height: calc(100dvh - 64px); }
+}
+
+/* Stacked layout (narrow window or high zoom): let the whole page scroll */
+@media (max-width: 992px) {
+  html, body { height: auto; min-height: 100%; overflow-x: hidden; overflow-y: auto; }
+  .main-container { min-height: 0; }
+  .left-sidebar { height: auto; overflow: visible; position: static; }
+}
+/* ===== END STEP 1 FIX ===== */
+
     </style>
 </head>
 <body>
-
+<!-- STEP 2: employee identity for the page scripts -->
+<input type="hidden" id="currentEmployeeId"
+       th:value="${employee.employeeId}"
+       th:data-name="${employee.firstName + ' ' + employee.lastName}"
+       th:data-first="${employee.firstName}"
+       th:data-initials="${employee.initials}">
 <!-- ================= TOP NAV ================= -->
 <nav class="top-nav">
     <a href="#" class="nav-brand" style="display:flex;align-items:center;gap:10px;">
@@ -1491,6 +1519,10 @@
             <a class="menu-item" data-tab="my-notifications">
                 <i class="fas fa-bell"></i><span>Notifications</span>
                 <span id="myNotifSidebarBadge" style="margin-left:auto;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px;display:none;">0</span>
+            </a>
+
+            <a class="menu-item" data-link="/pm/01-home">
+                <i class="fas fa-diagram-project"></i><span>Project Management</span>
             </a>
         </nav>
     </aside>
@@ -2590,10 +2622,12 @@
        TAB NAVIGATION
        ═════════════════════════════════════════════════════════════════ */
     document.querySelectorAll('.menu-item').forEach(item => {
-        item.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const target = item.getAttribute('data-tab');
-            if (!target) return;
+       tem.addEventListener('click', async (e) => {
+       const link = item.getAttribute('data-link');
+       if (link) { window.location.href = link; return; }   // plain navigation
+       e.preventDefault();
+       const target = item.getAttribute('data-tab');
+       if (!target) return;
 
             document.querySelectorAll('.menu-item').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
@@ -4052,6 +4086,95 @@
     window.loadSessionsList = loadSessionsList;
     window.toggleMitiSessionsSidebar = toggleMitiSessionsSidebar;
 </script>
+<script>
+    /* ===== STEP 2: employee identity + attendance (server is the source of truth) ===== */
+    (function () {
+      'use strict';
 
+      /* 1. Fill name, id, initials in the sidebar and navbar */
+      (function fillIdentity() {
+        var h = document.getElementById('currentEmployeeId');
+        if (!h) return;
+        var name = h.getAttribute('data-name') || '';
+        var first = h.getAttribute('data-first') || '';
+        var ini = h.getAttribute('data-initials') || (name ? name.charAt(0) : 'U');
+        function put(sel, v) { var el = document.querySelector(sel); if (el && v) el.textContent = v; }
+        put('#employeeNameDisplay', name);
+        put('#employeeIdDisplay', h.value);
+        put('#profileInitials', ini);
+        put('.nav-user-name', first || name);
+      })();
+
+      /* 2. Sync today's attendance from the server. Replaces the old function. */
+      window.loadTodayAttendanceFromServer = async function () {
+        var employeeId = document.getElementById('currentEmployeeId')
+          ? document.getElementById('currentEmployeeId').value : null;
+        if (!employeeId) return false;
+        try {
+          var res = await fetch('/api/attendance/employee/today/' + encodeURIComponent(employeeId),
+                                { credentials: 'same-origin' });
+          var data = await res.json();
+          if (!data || !data.success) return false;
+
+          if (!data.hasAttendance) {                       // nothing today: clear any stale browser state
+            resetAttendanceState();
+            attendanceState.employeeId = employeeId;
+            saveAttendanceState();
+            updateAllDisplays();
+            return false;
+          }
+
+          var inT  = data.checkInTime  || data.checkIn  || null;
+          var outT = data.checkOutTime || data.checkOut || null;
+          var st   = String(data.status || '').toUpperCase();
+          var live = st === 'ACTIVE' || st === 'BREAK' ||
+                     (!!inT && !outT && ['OFFLINE', 'ABSENT', 'LEAVE'].indexOf(st) === -1);
+          var onBreak = live && st === 'BREAK';
+
+          attendanceState.employeeId        = employeeId;
+          attendanceState.isCheckedIn       = live || (!!inT && !!outT);
+          attendanceState.checkInTime       = inT;
+          attendanceState.checkOutTime      = live ? null : outT;      // ACTIVE/BREAK always means "in"
+          attendanceState.totalBreakMinutes = data.breakMinutes || 0;
+          if (onBreak && !attendanceState.isOnBreak) attendanceState.breakStartTime = new Date().toISOString();
+          if (!onBreak) attendanceState.breakStartTime = null;
+          attendanceState.isOnBreak         = onBreak;
+          attendanceState.date              = new Date().toISOString().split('T')[0];
+          saveAttendanceState();
+          updateAllDisplays();
+          return live;
+        } catch (e) { return false; }
+      };
+
+      /* 3. Dot tooltip says what a click will do */
+      var origIndicator = window.updateStatusIndicatorUI;
+      if (typeof origIndicator === 'function') {
+        window.updateStatusIndicatorUI = function () {
+          origIndicator();
+          var ind = document.getElementById('statusIndicatorCard');
+          if (!ind) return;
+          if (ind.classList.contains('active'))           ind.title = 'Active. Click to check out';
+          else if (ind.classList.contains('break'))       ind.title = 'On break. Click to end break';
+          else if (ind.classList.contains('checked-out')) ind.title = 'Checked out. Click to start a new session';
+          else                                            ind.title = 'Not checked in. Click to check in';
+        };
+      }
+
+      /* 4. Logout goes through the route that also checks the employee out */
+      window.handleLogout = function () {
+        if (!confirm('Logout? You will be checked out.')) return;
+        try {
+          if (typeof ATTENDANCE_STORAGE_KEY !== 'undefined') localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
+        } catch (e) { /* ignore */ }
+        window.location.href = '/candidate/auth/logout';
+      };
+
+      /* 5. Keep the dot honest if the employee checks out from another tab or device */
+      setInterval(function () { if (!document.hidden) window.loadTodayAttendanceFromServer(); }, 60000);
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) window.loadTodayAttendanceFromServer();
+      });
+    })();
+</script>
 </body>
 </html>

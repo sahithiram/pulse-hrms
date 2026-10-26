@@ -815,8 +815,8 @@
         var reason=prompt('Why is this task blocked?');
         if(!reason || !reason.trim()){ PM.toast('A reason is required to block a task','error'); dragTaskId=null; return; }
         body.reason=reason.trim();
-      }
-      PM.api('PATCH','/api/pm/tasks/'+t.id+'/status',body).then(function(){
+      }    sendStatus(t.id,body).then(function(){
+
         t.status=newStatus;
         renderCurrentView();
         PM.toast('✓ Moved to '+newStatus,'success');
@@ -853,7 +853,21 @@
         setTimeout(function(){ openTask(taskId); }, 250);
       }).catch(function(e){ console.error('delete failed:', e); });
     }
-
+  /* Step 4: a reviewer sending In Review -> In Progress must give a reason.
+     We don't need to know who is a reviewer: we try first, and if the server asks, we prompt and retry. */
+  function sendStatus(id, body){
+    return PM.api('PATCH','/api/pm/tasks/'+id+'/status',body).catch(function(err){
+      var m=(err&&err.message)||'';
+      if(!body.reason && /what needs to change/i.test(m)){
+        var r=prompt('What needs to change before this goes back to In Progress?');
+        if(r && r.trim()){
+          body.reason=r.trim();
+          return PM.api('PATCH','/api/pm/tasks/'+id+'/status',body);
+        }
+      }
+      throw err;
+    });
+  }
     function changeTaskStatus(id, newStatus){
       var t=tasks.find(function(x){return x.id===id;}); if(!t) return;
       if(newStatus==='in-progress' && t.openBlockerCount>0){ PM.toast('🚫 Blocked: resolve '+t.openBlockerCount+' blocker(s) first','error'); return; }
@@ -864,7 +878,7 @@
         if(!reason || !reason.trim()){ PM.toast('A reason is required to block a task','error'); return; }
         body.reason=reason.trim();
       }
-      PM.api('PATCH','/api/pm/tasks/'+id+'/status',body).then(function(){
+      sendStatus(id,body).then(function(){
         t.status=newStatus;
         openTask(id);
         renderCurrentView();

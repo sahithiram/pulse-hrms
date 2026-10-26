@@ -29,16 +29,20 @@ public class ReportController {
         else access.requireCanViewProject(userId, projectId);
     }
 
-    /** budget is money data: manage rights needed */
-    private void scopeManage(Long userId, Long projectId) {
-        if (projectId == null) access.requireAdmin(userId);
-        else access.requireCanManageProject(userId, projectId);
+    /**
+     * STEP 1b: budget is money data. All-projects budget = Super Admin only;
+     * a single project's budget = owner / MANAGER / Super Admin (finance tier).
+     * HR and the Lead tier no longer qualify.
+     */
+    private void scopeFinance(Long userId, Long projectId) {
+        if (projectId == null) access.requireSuperAdmin(userId);
+        else access.requireCanViewFinance(userId, projectId);
     }
 
     @GetMapping("/budget")
     public ResponseEntity<ApiResponse<List<BudgetRow>>> budget(
             @RequestParam(required = false) Long projectId, @CurrentUserId Long userId) {
-        scopeManage(userId, projectId);
+        scopeFinance(userId, projectId);
         return ResponseEntity.ok(ApiResponse.ok(service.budget(projectId)));
     }
 
@@ -78,7 +82,7 @@ public class ReportController {
     @GetMapping(value = "/budget/export.csv", produces = "text/csv")
     public ResponseEntity<String> budgetCsv(@RequestParam(required = false) Long projectId,
                                             @CurrentUserId Long userId) {
-        scopeManage(userId, projectId);
+        scopeFinance(userId, projectId);
         return csv(service.budgetCsv(projectId), "budget");
     }
 

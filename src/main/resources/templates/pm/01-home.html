@@ -232,16 +232,17 @@
         </div>
         <div class="pm-page-actions">
           <button class="pm-btn" onclick="reloadDashboard()"><i class="fas fa-rotate"></i> Refresh</button>
-          <button class="pm-btn pm-btn-primary" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
+          <button class="pm-btn pm-btn-primary" id="btnNewProject" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
         </div>
       </div>
 
       <div class="pm-quick-actions">
-        <button class="pm-qa-btn" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
+        <button class="pm-qa-btn" data-rule="creator" onclick="location.href='/pm/04-projects?action=create'"><i class="fas fa-plus"></i> New Project</button>
+        <button class="pm-qa-btn" id="qaRequest" style="display:none" onclick="PM.openIntake('requests')"><i class="fas fa-paper-plane"></i> Request a project</button>
         <button class="pm-qa-btn" onclick="location.href='/pm/06-tasks?view=board'"><i class="fas fa-list-check"></i> New Task</button>
-        <button class="pm-qa-btn" onclick="location.href='/pm/07-team?tab=members'"><i class="fas fa-user-plus"></i> Add Member</button>
-        <button class="pm-qa-btn" onclick="location.href='/pm/08-clients'"><i class="fas fa-user-tie"></i> New Client</button>
-        <button class="pm-qa-btn" onclick="location.href='/pm/10-insights?tab=builder'"><i class="fas fa-paint-brush"></i> Report Builder</button>
+        <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/07-team?tab=members'"><i class="fas fa-user-plus"></i> Add Member</button>
+        <button class="pm-qa-btn" data-rule="clients" onclick="location.href='/pm/08-clients'">        <i class="fas fa-user-tie"></i> New Client</button>
+        <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/10-insights?tab=builder'"><i class="fas fa-paint-brush"></i> Report Builder</button>
         <button class="pm-qa-btn" onclick="location.href='/pm/05-planning?tab=whiteboard'"><i class="fas fa-chalkboard"></i> Whiteboard</button>
       </div>
 
@@ -252,6 +253,7 @@
       </div>
 
       <div class="pm-pane active" id="pane-dashboard">
+        <div id="homeFocus"></div>
         <div class="pm-kpi-grid">
           <div class="pm-kpi" onclick="location.href='/pm/04-projects'">
             <div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-diagram-project"></i></div></div>
@@ -645,7 +647,128 @@
       document.getElementById('pmSidebar').classList.toggle('open');
     });
 
-    /* Initial load */
+    /* ===== STEP 7.2: role-aware home ===== */
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+/* hide buttons the user may not use; non-creators get "Request a project" instead */
+function applyRoleUi(){
+  document.querySelectorAll('[data-rule]').forEach(function(el){
+    if(!PM.can(el.getAttribute('data-rule'))) el.style.display='none';
+  });
+  if(!PM.can('creator')){
+    var nb=document.getElementById('btnNewProject');
+    if(nb){
+      nb.innerHTML='<i class="fas fa-paper-plane"></i> Request a project';
+      nb.onclick=function(){ PM.openIntake('requests'); };
+    }
+    var qa=document.getElementById('qaRequest');
+    if(qa) qa.style.display='';
+  }
+}
+
+function homeTile(icon,color,value,label,href){
+  return '<div class="pm-kpi" onclick="location.href=\''+href+'\'">'+
+    '<div class="pm-kpi-top"><div class="pm-kpi-icon '+color+'"><i class="fas '+icon+'"></i></div></div>'+
+    '<div class="pm-kpi-value">'+value+'</div><div class="pm-kpi-label">'+label+'</div></div>';
+}
+
+function homeRow(href,title,sub,badges){
+  return '<tr style="cursor:pointer" onclick="location.href=\''+href+'\'">'+
+    '<td style="font-weight:600">'+PM.esc(title)+
+    (sub?'<div style="font-size:var(--fs-xs);color:var(--tx3);font-weight:400">'+PM.esc(sub)+'</div>':'')+'</td>'+
+    '<td style="text-align:right;white-space:nowrap">'+badges+'</td></tr>';
+}
+
+function homePanel(title,icon,inner){
+  return '<div class="pm-widget" style="margin-bottom:12px"><div class="pm-widget-head">'+
+    '<div class="pm-widget-title"><i class="fas '+icon+'"></i> '+title+'</div></div>'+
+    '<div class="pm-widget-body">'+inner+'</div></div>';
+}
+
+var HOME_ALL_CLEAR='<div style="text-align:center;padding:14px;color:var(--tx3)"><i class="fas fa-circle-check" style="color:var(--suc)"></i> All clear. Nothing needs your attention right now.</div>';
+
+/* lead tier: what is waiting on THEM across the projects they lead */
+function loadAttention(box){
+  PM.api('GET','/api/pm/dashboard/attention').then(function(a){
+    a=a||{};
+    var total=(a.reviewWaiting||0)+(a.blocked||0)+(a.overdue||0)+(a.atRiskProjects||0);
+    var tiles='<div class="pm-kpi-grid" style="margin-bottom:8px">'+
+      homeTile('fa-magnifying-glass','cyan',a.reviewWaiting||0,'Waiting for review','/pm/03-my-work?tab=review')+
+      homeTile('fa-ban','red',a.blocked||0,'Blocked','/pm/06-tasks?view=board')+
+      homeTile('fa-fire','orange',a.overdue||0,'Overdue','/pm/06-tasks?view=list')+
+      homeTile('fa-triangle-exclamation','purple',a.atRiskProjects||0,'Projects at risk','/pm/04-projects?filter=at-risk')+
+      '</div>';
+    var seen={}, rows='';
+    function add(list,label,cls){
+      (list||[]).forEach(function(t){
+        if(seen[t.id]) return;
+        seen[t.id]=true;
+        var badges='<span class="pm-badge '+cls+'">'+label+'</span>';
+        if(t.dueDate) badges+=' <span class="pm-badge warning">Due '+PM.esc(t.dueDate)+'</span>';
+        rows+=homeRow('/pm/06-tasks?view=board&open='+t.id,t.title,t.projectName||'',badges);
+      });
+    }
+    add(a.reviewItems,'In review','info');
+    add(a.blockedItems,'Blocked','danger');
+    add(a.overdueItems,'Overdue','warning');
+    (a.riskItems||[]).forEach(function(p){
+      rows+=homeRow('/pm/04-projects',p.name,p.code||'',
+        '<span class="pm-badge danger">'+PM.esc((p.health||'AT_RISK').replace(/_/g,' '))+'</span>');
+    });
+    var inner=total===0 ? HOME_ALL_CLEAR : tiles+(rows?'<div class="widget-scroll"><table class="pm-table"><tbody>'+rows+'</tbody></table></div>':'');
+    box.innerHTML=homePanel('Needs your attention','fa-bell',inner);
+  }).catch(function(e){ box.innerHTML=''; console.warn('attention panel unavailable',e); });
+}
+
+/* everyone else: my own tasks that need action */
+function loadFocus(box){
+  PM.meTasks().then(function(list){
+    list=(list||[]).filter(function(t){ return t.status!=='DONE'; });
+    var today=todayStr();
+    var overdue=list.filter(function(t){ return t.dueDate && t.dueDate<today; });
+    var dueToday=list.filter(function(t){ return t.dueDate===today; });
+    var blocked=list.filter(function(t){ return t.status==='BLOCKED'; });
+    var inReview=list.filter(function(t){ return t.status==='IN_REVIEW'; });
+    var total=overdue.length+dueToday.length+blocked.length+inReview.length;
+    var tiles='<div class="pm-kpi-grid" style="margin-bottom:8px">'+
+      homeTile('fa-fire','red',overdue.length,'Overdue','/pm/03-my-work')+
+      homeTile('fa-calendar-day','orange',dueToday.length,'Due today','/pm/03-my-work')+
+      homeTile('fa-ban','purple',blocked.length,'Blocked','/pm/03-my-work')+
+      homeTile('fa-hourglass-half','cyan',inReview.length,'Waiting for review','/pm/03-my-work')+
+      '</div>';
+    var seen={}, rows='';
+    function add(arr,label,cls){
+      arr.slice(0,6).forEach(function(t){
+        if(seen[t.id]) return;
+        seen[t.id]=true;
+        var badges='<span class="pm-badge '+cls+'">'+label+'</span>';
+        if(t.dueDate) badges+=' <span class="pm-badge info">'+PM.esc(t.dueDate)+'</span>';
+        rows+=homeRow('/pm/03-my-work?task='+t.id,t.title,t.projectName||'',badges);
+      });
+    }
+    add(overdue,'Overdue','danger');
+    add(dueToday,'Due today','warning');
+    add(blocked,'Blocked','purple');
+    add(inReview,'In review','info');
+    var inner=total===0 ? HOME_ALL_CLEAR.replace('Nothing needs your attention right now.','You have nothing overdue, blocked or waiting.')
+      : tiles+(rows?'<div class="widget-scroll"><table class="pm-table"><tbody>'+rows+'</tbody></table></div>':'');
+    box.innerHTML=homePanel('My focus','fa-bullseye',inner);
+  }).catch(function(e){ box.innerHTML=''; console.warn('focus panel unavailable',e); });
+}
+
+function loadHomePanel(){
+  var box=document.getElementById('homeFocus'); if(!box) return;
+  if(PM.can('lead')) loadAttention(box); else loadFocus(box);
+}
+window.loadHomePanel=loadHomePanel;
+
+applyRoleUi();
+loadHomePanel();
+
+/* Initial load */
     loadDashboardKPIs();
     loadProjectProgressChart();
     loadTaskDistributionChart();

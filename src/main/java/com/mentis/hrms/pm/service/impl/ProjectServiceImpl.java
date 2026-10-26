@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.mentis.hrms.pm.service.ProjectClosureService;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -40,6 +41,7 @@ import com.mentis.hrms.pm.enums.ProjectRole;
 import com.mentis.hrms.pm.enums.HealthMode;
 import java.time.LocalDateTime;
 import com.mentis.hrms.pm.repository.ProjectMemberRepository;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -57,13 +59,13 @@ public class ProjectServiceImpl implements ProjectService {
     /** Allowed project status moves. Anything not listed is rejected. */
     private static final Map<ProjectStatus, Set<ProjectStatus>> FLOW = new EnumMap<>(ProjectStatus.class);
     static {
-        FLOW.put(ProjectStatus.PLANNING,  EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ON_HOLD, ProjectStatus.ARCHIVED));
-        FLOW.put(ProjectStatus.ACTIVE,    EnumSet.of(ProjectStatus.ON_HOLD, ProjectStatus.AT_RISK, ProjectStatus.DELAYED, ProjectStatus.COMPLETED));
-        FLOW.put(ProjectStatus.ON_HOLD,   EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED));
-        FLOW.put(ProjectStatus.AT_RISK,   EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.DELAYED, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
-        FLOW.put(ProjectStatus.DELAYED,   EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.AT_RISK, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
-        FLOW.put(ProjectStatus.COMPLETED, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED));
-        FLOW.put(ProjectStatus.ARCHIVED,  EnumSet.of(ProjectStatus.PLANNING));
+        FLOW.put(ProjectStatus.PLANNING, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ON_HOLD, ProjectStatus.ARCHIVED));
+        FLOW.put(ProjectStatus.ACTIVE, EnumSet.of(ProjectStatus.ON_HOLD, ProjectStatus.AT_RISK, ProjectStatus.DELAYED, ProjectStatus.COMPLETED));
+        FLOW.put(ProjectStatus.ON_HOLD, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED));
+        FLOW.put(ProjectStatus.AT_RISK, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.DELAYED, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
+        FLOW.put(ProjectStatus.DELAYED, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.AT_RISK, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
+        FLOW.put(ProjectStatus.COMPLETED, EnumSet.of(ProjectStatus.ARCHIVED)); // STEP 8: reopening has its own endpoint
+        FLOW.put(ProjectStatus.ARCHIVED, EnumSet.of(ProjectStatus.PLANNING));
     }
 
     @Override
@@ -102,7 +104,8 @@ public class ProjectServiceImpl implements ProjectService {
         if (req.getLessonsLearned() != null) project.setLessonsLearned(req.getLessonsLearned().trim());
         ProjectStatus oldStatus = project.getStatus();
         if (req.getStatus() != null && req.getStatus() != oldStatus) {
-            checkTransition(project, oldStatus, req.getStatus());
+            // STEP 3: the kick-off gate looks at the dates this same request is about to save
+            checkTransition(project, oldStatus, req.getStatus(), newStart, newEnd);
         }
 
         if (req.getName() != null) project.setName(req.getName());
@@ -112,9 +115,16 @@ public class ProjectServiceImpl implements ProjectService {
         if (req.getClientId() != null) project.setClientId(req.getClientId());
         if (req.getTeamId() != null) project.setTeamId(req.getTeamId() == 0L ? null : req.getTeamId());
         if (req.getStatus() != null) project.setStatus(req.getStatus());
+        if (oldStatus != ProjectStatus.COMPLETED && project.getStatus() == ProjectStatus.COMPLETED) {
+            project.setCompletedAt(LocalDateTime.now()); // STEP 8
+            project.setCompletedBy(currentUserId);
+        }
         if (oldStatus == ProjectStatus.PLANNING && project.getStatus() == ProjectStatus.ACTIVE
                 && project.getBaselinedAt() == null
-                && project.getStartDate() != null && project.getEndDate() != null) {
+                && newStart != null && newEnd != null) {
+            // dates are saved below; use the effective ones for the automatic baseline
+            project.setStartDate(newStart);
+            project.setEndDate(newEnd);
             applyBaseline(project, currentUserId);
         }
         if (req.getHealth() != null) {
@@ -126,10 +136,18 @@ public class ProjectServiceImpl implements ProjectService {
         if (req.getEndDate() != null) project.setEndDate(req.getEndDate());
         if (req.getBudgetTotal() != null) project.setBudgetTotal(req.getBudgetTotal());
         if (req.getProgressPct() != null) project.setProgressPct(req.getProgressPct());
+        if (req.getReviewRequired() != null) project.setReviewRequired(req.getReviewRequired());
         if (project.getStatus() == ProjectStatus.COMPLETED) project.setProgressPct(100);
-
         Project saved = projectRepository.save(project);
         if (req.getOwnerId() != null) ensureManager(saved.getId(), saved.getOwnerId());
+        // STEP 8: every project that starts gets the closure checklist (no-op when it already has items)
+        if (oldStatus != saved.getStatus() && saved.getStatus() == ProjectStatus.ACTIVE) {
+            closureService.ensureDefaults(saved.getId(), currentUserId);
+        }
+        // STEP 8: tell the team the project is done
+        if (oldStatus != ProjectStatus.COMPLETED && saved.getStatus() == ProjectStatus.COMPLETED) {
+            closureService.notifyCompleted(saved, currentUserId);
+        }
         if (oldStatus != saved.getStatus()) {
             logActivity(id, "STATUS_CHANGED", currentUserId, oldStatus.name(), saved.getStatus().name(),
                     "changed status of " + saved.getName() + " from " + oldStatus + " to " + saved.getStatus());
@@ -148,7 +166,6 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-
     @Transactional(readOnly = true)
     public PageResponse<ProjectSummaryResponse> listProjects(String search, ProjectStatus status,
                                                              Long ownerId, Pageable pageable) {
@@ -206,12 +223,49 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.deleteById(id);
         log.info("Project deleted id={}", id);
     }
+    /** STEP 8: Super Admin only (the controller checks). Needs a reason; leaves a trail and tells the team. */
+    @Override
+    @Transactional
+    public ProjectResponse reopenProject(Long id, String reason, Long currentUserId) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+        if (project.getStatus() != ProjectStatus.COMPLETED)
+            throw new IllegalArgumentException("Only a completed project can be reopened.");
+        String why = reason == null ? "" : reason.trim();
+        if (why.length() < 10)
+            throw new IllegalArgumentException("Please say why you are reopening this project (at least 10 characters).");
+        if (why.length() > 500) why = why.substring(0, 500);
 
+        project.setStatus(ProjectStatus.ACTIVE);
+        project.setReopenedAt(LocalDateTime.now());
+        project.setReopenedBy(currentUserId);
+        project.setReopenReason(why);
+        Project saved = projectRepository.save(project);
+
+        logActivity(id, "REOPENED", currentUserId, "COMPLETED", "ACTIVE",
+                "reopened project " + saved.getName() + ": " + why);
+        closureService.notifyReopened(saved, currentUserId, why);
+        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+    }
     // ---------------------------------------------------------------- rules
 
+    /** Status move check using the project's saved dates (archive and other callers). */
     private void checkTransition(Project project, ProjectStatus from, ProjectStatus to) {
+        checkTransition(project, from, to, project.getStartDate(), project.getEndDate());
+    }
+
+    /** STEP 3: status move check; the dates are the ones that will be saved with this move. */
+    private void checkTransition(Project project, ProjectStatus from, ProjectStatus to,
+                                 LocalDate startDate, LocalDate endDate) {
+        if (from == ProjectStatus.COMPLETED && to == ProjectStatus.ACTIVE) {
+            throw new IllegalArgumentException(
+                    "A completed project can only be reopened by a Super Admin (Closure panel → Reopen project).");
+        }
         if (!FLOW.getOrDefault(from, EnumSet.noneOf(ProjectStatus.class)).contains(to)) {
             throw new IllegalArgumentException("A project cannot move from " + from + " to " + to + ".");
+        }
+        if (from == ProjectStatus.PLANNING && to == ProjectStatus.ACTIVE) {
+            checkKickoff(project, startDate, endDate);
         }
         if (to == ProjectStatus.COMPLETED) {
             List<String> blockers = closureService.blockers(project);
@@ -220,6 +274,27 @@ public class ProjectServiceImpl implements ProjectService {
             }
         }
     }
+
+    /**
+     * STEP 3 — kick-off gate. A project may only start when it has dates and somebody to do the work.
+     * The baseline is saved automatically right after this check passes (see updateProject), so
+     * having dates guarantees a baseline.
+     */
+    private void checkKickoff(Project project, LocalDate startDate, LocalDate endDate) {
+        List<String> missing = new ArrayList<>();
+        if (startDate == null || endDate == null) {
+            missing.add("set the start and end dates");
+        }
+        boolean hasWorker = projectMemberRepository.findByProjectId(project.getId()).stream()
+                .anyMatch(m -> m.getRole() == ProjectRole.MEMBER || m.getRole() == ProjectRole.LEAD);
+        if (!hasWorker) {
+            missing.add("add at least one team member (Member or Lead)");
+        }
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("The project can't start yet. Please " + String.join(" and ", missing) + ".");
+        }
+    }
+
     /** Owner + creator become MANAGER; people picked in the create form become MEMBER. */
     private void addInitialMembers(Project saved, Long creatorPk, List<Long> memberIds) {
         ensureManager(saved.getId(), saved.getOwnerId());
@@ -247,6 +322,7 @@ public class ProjectServiceImpl implements ProjectService {
             projectMemberRepository.save(m);
         }
     }
+
     private long countTasks(Long projectId, TaskStatus... statuses) {
         long total = 0;
         for (TaskStatus s : statuses) {
@@ -290,6 +366,7 @@ public class ProjectServiceImpl implements ProjectService {
         p.setBaselinedAt(LocalDateTime.now());
         p.setBaselinedBy(userId);
     }
+
     private void logActivity(Long projectId, String action, Long actorId, String oldV, String newV, String msg) {
         try {
             String actor = actorId == null ? "System"

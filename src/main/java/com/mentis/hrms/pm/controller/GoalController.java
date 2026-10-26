@@ -28,7 +28,7 @@ public class GoalController {
     public ResponseEntity<ApiResponse<GoalResponse>> create(
             @Valid @RequestBody CreateGoalRequest req,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId); // STEP 1b (was requireAdmin: HR could write company goals)
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Goal created", service.create(req, userId)));
     }
@@ -62,14 +62,14 @@ public class GoalController {
             @PathVariable Long id,
             @Valid @RequestBody CreateGoalRequest req,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId);
         return ResponseEntity.ok(ApiResponse.ok(service.update(id, req, userId)));
     }
 
     @DeleteMapping("/goals/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long id, @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId);
         service.delete(id, userId);
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }
@@ -79,7 +79,7 @@ public class GoalController {
             @PathVariable Long id,
             @Valid @RequestBody CreateKeyResultRequest req,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Key result added", service.addKeyResult(id, req, userId)));
     }
@@ -89,14 +89,14 @@ public class GoalController {
             @PathVariable Long krId,
             @Valid @RequestBody CreateKeyResultRequest req,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId);
         return ResponseEntity.ok(ApiResponse.ok(service.updateKeyResult(krId, req, userId)));
     }
 
     @DeleteMapping("/key-results/{krId}")
     public ResponseEntity<ApiResponse<Void>> deleteKr(
             @PathVariable Long krId, @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId);
         service.deleteKeyResult(krId, userId);
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }

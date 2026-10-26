@@ -29,7 +29,10 @@ public class ProjectSummaryResponse {
     private LocalDate startDate;
     private LocalDate endDate;
 
-    // FIX: fields consumed by the frontend's mapBackendProject()
+    // fields consumed by the frontend's mapBackendProject()
     private Long ownerId;
     private Long teamId;
+
+    // STEP 1b: false when budget fields were hidden for this viewer
+    private Boolean financeVisible;
 }

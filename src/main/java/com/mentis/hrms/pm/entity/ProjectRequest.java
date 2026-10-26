@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /** A project idea waiting for a decision. Becomes a project when approved. */
@@ -39,7 +40,14 @@ public class ProjectRequest {
     private Integer effort;      // 1..5 (5 = biggest)
 
     @Column(name = "priority_score")
-    private Integer priorityScore;   // 20..100, computed
+    private Integer priorityScore; // 20..100, computed
+
+    /** STEP 2: dates the requester would like (optional, only a suggestion). */
+    @Column(name = "desired_start_date")
+    private LocalDate desiredStartDate;
+
+    @Column(name = "desired_end_date")
+    private LocalDate desiredEndDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

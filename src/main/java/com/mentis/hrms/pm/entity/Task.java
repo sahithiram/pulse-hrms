@@ -97,6 +97,15 @@ public class Task {
     /** Key result this task contributes to. NULL = no KR link. */
     @Column(name = "key_result_id")
     private Long keyResultId;
+
+    // ─── Step 5 ───
+    /** When the task last became BLOCKED. NULL when not blocked. */
+    @Column(name = "blocked_since")
+    private LocalDateTime blockedSince;
+
+    /** 0 = none sent, 1 = "still blocked" sent, 2 = escalation sent. Reset when unblocked. */
+    @Column(name = "escalation_level", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private Integer escalationLevel;
     @PrePersist
     void prePersist() {
         if (progressPct == null) progressPct = 0;
@@ -105,5 +114,6 @@ public class Task {
         if (type == null) type = TaskType.TASK;
         if (loggedHours == null) loggedHours = 0;
         if (loggedMinutes == null) loggedMinutes = 0;
+        if (escalationLevel == null) escalationLevel = 0;
     }
 }

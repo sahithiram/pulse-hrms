@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root{color-scheme:dark;--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700;--z-ctx:1800;--z-modal:1500}
@@ -283,8 +283,8 @@
             <button data-view="map" onclick="setView('map',this)"><i class="fas fa-map-location-dot"></i> Map</button>
           </div>
           <button class="pm-btn" onclick="exportClients()"><i class="fas fa-file-export"></i> Export</button>
-          <button class="pm-btn" onclick="openCreate('import')"><i class="fas fa-file-import"></i> Import CSV</button>
-          <button class="pm-btn pm-btn-primary" onclick="openCreate('blank')"><i class="fas fa-plus"></i> New Client</button>
+          <button class="pm-btn" id="importBtn" onclick="openCreate('import')"><i class="fas fa-file-import"></i> Import CSV</button>
+          <button class="pm-btn pm-btn-primary" id="newClientBtn" onclick="openCreate('blank')"><i class="fas fa-plus"></i> New Client</button>
         </div>
       </div>
 
@@ -720,9 +720,8 @@
           '</div>'+
         '</div>'+
         '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
-          '<button class="pm-btn pm-btn-primary" style="flex:1;justify-content:center" onclick="PM.toast(\'Edit mode\',\'info\')"><i class="fas fa-pen"></i> Edit</button>'+
-          '<button class="pm-btn" onclick="focusClientFromDrawer('+c.id+')"><i class="fas fa-map-location-dot"></i></button>'+
-          '<button class="pm-btn pm-btn-danger" onclick="deleteClient('+c.id+')"><i class="fas fa-trash"></i></button>'+
+          '<button class="pm-btn" style="flex:1;justify-content:center" onclick="focusClientFromDrawer('+c.id+')"><i class="fas fa-map-location-dot"></i> Show on map</button>'+
+          (canWriteClients()?'<button class="pm-btn pm-btn-danger" onclick="deleteClient('+c.id+')"><i class="fas fa-trash"></i></button>':'')+
         '</div>',
         c.name
       );
@@ -745,7 +744,24 @@
         PM.toast('Client deleted','success');
       }).catch(function(err){ PM.toast(err.message||'Failed','error'); });
     }
-    function exportClients(){ PM.toast('Exporting clients as CSV...','info'); setTimeout(function(){PM.toast('Exported successfully','success');},1200); }
+    function exportClients(){
+      var list=getFiltered(); if(!list.length){ PM.toast('Nothing to export','info'); return; }
+      var withRev=canWriteClients();
+      var head=['Company','Industry','Status','Contact','Email','Phone','City','Country']; if(withRev) head.push('Annual revenue (INR lakh)');
+      function cell(v){ v=String(v==null?'':v); if(/^[=+\-@]/.test(v)) v="'"+v; return '"'+v.replace(/"/g,'""')+'"'; }
+      var rows=[head].concat(list.map(function(c){
+        var r=[c.name,c.industry,c.status,c.contact,c.email,c.phone,c.city,c.country];
+        if(withRev) r.push(c.revenue);
+        return r;
+      }));
+      var csv=rows.map(function(r){return r.map(cell).join(',');}).join('\r\n');
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));
+      a.download='clients-'+new Date().toISOString().slice(0,10)+'.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); },1000);
+      PM.toast('Exported '+list.length+' client(s)','success');
+    }
 
     window.setView = setView;
     window.setFilter = setFilter;
@@ -763,6 +779,7 @@
 
     var createMode='blank', selectedTemplateId=null, selectedCloneId=null, csvParsed=[];
     function openCreate(mode){
+      if(!canWriteClients()){ PM.toast('You can view clients but not change them','warning'); return; }
       document.getElementById('createModal').classList.add('open');
       resetBlankForm();
       if(mode) setCreateMode(mode, document.querySelector('.create-tab[data-mode="'+mode+'"]'));
@@ -934,13 +951,13 @@
       if(!valid.length){ PM.toast('No valid rows in CSV','error'); return; }
       var btn=document.getElementById('createSubmitBtn');
       if(btn){ btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Importing '+valid.length+'...'; }
-      var created=0;
+      var created=0, failed=0;
       Promise.all(valid.map(function(row){
         var payload={ name:row.name, industry:row.industry, status:'prospect', contactName:row.contact, email:row.email, phone:row.phone, city:row.city, country:row.country, annualRevenue: row.revenue ? row.revenue*100000 : null };
-        return PM.api('POST','/api/pm/clients',payload).then(function(data){ clients.unshift(mapBackendClient(data)); created++; }).catch(function(){ created++; });
+        return PM.api('POST','/api/pm/clients',payload).then(function(data){ clients.unshift(mapBackendClient(data)); created++; }).catch(function(){ failed++; });
       })).then(function(){
         if(btn){ btn.disabled=false; btn.innerHTML='<i class="fas fa-check"></i> <span id="submitLabel">Import Clients</span>'; }
-        finishCreate('✓ Imported '+created+' client'+(created!==1?'s':''));
+        finishCreate((failed?'⚠ ':'✓ ')+'Imported '+created+' client'+(created!==1?'s':'')+(failed?' · '+failed+' failed':''));
       });
     }
     function finishCreate(msg){
@@ -978,6 +995,8 @@
     }
 
     document.getElementById('mobToggle').addEventListener('click',function(){ document.getElementById('pmSidebar').classList.toggle('open'); });
+    function canWriteClients(){ return me.canManageClients===true; }
+    ['importBtn','newClientBtn'].forEach(function(id){ var b=document.getElementById(id); if(b) b.style.display=canWriteClients()?'':'none'; });
     loadClients();
     renderChart();
     (function(){ var a=(location.search||'').match(/action=(\w+)/); if(!a) return; var act=a[1]; setTimeout(function(){ if(act==='create') openCreate('blank'); else if(act==='import') openCreate('import'); else if(act==='clone') openCreate('clone'); else if(act==='templates') openCreate('template'); else if(act==='map') setView('map',document.querySelector('[data-view="map"]')); }, 120); })();

@@ -34,7 +34,7 @@ public class TeamController {
     public ResponseEntity<ApiResponse<TeamResponse>> create(
             @Valid @RequestBody CreateTeamRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanCreateProject(userId);
+        access.requireCanCreateTeam(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Team created", teamService.createTeam(req, userId)));
     }
@@ -78,7 +78,9 @@ public class TeamController {
     // ─── PHASE 2: member management ──────────────────────────
 
     @GetMapping("/{id}/members/details")
-    public ResponseEntity<ApiResponse<List<TeamMemberResponse>>> memberDetails(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<TeamMemberResponse>>> memberDetails(
+            @PathVariable Long id, @CurrentUserId Long userId) {
+        access.requireCanViewTeam(userId, id);
         return ResponseEntity.ok(ApiResponse.ok(teamService.listTeamMembers(id)));
     }
 
@@ -126,7 +128,9 @@ public class TeamController {
     @GetMapping("/{id}/tasks")
     public ResponseEntity<ApiResponse<Map<String, Object>>> tasks(
             @PathVariable Long id,
-            @RequestParam(defaultValue = "100") int limit) {
+            @RequestParam(defaultValue = "100") int limit,
+            @CurrentUserId Long userId) {
+        access.requireCanViewTeam(userId, id);
 
         TeamService.TeamTasksResult r = teamService.listTeamTasks(id, limit);
 

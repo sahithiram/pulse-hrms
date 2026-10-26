@@ -27,14 +27,14 @@ public class ProjectClosureController {
     @GetMapping("/closure-items")
     public ResponseEntity<ApiResponse<List<ClosureItemResponse>>> list(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
-        access.requireCanViewProject(userId, projectId);
+        access.requireCanViewProject(userId, projectId); // read, leave
         return ResponseEntity.ok(ApiResponse.ok(service.list(projectId)));
     }
 
     @GetMapping("/closure-status")
     public ResponseEntity<ApiResponse<ClosureStatusResponse>> status(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
-        access.requireCanViewProject(userId, projectId);
+        access.requireCanViewProject(userId, projectId); // read, leave
         return ResponseEntity.ok(ApiResponse.ok(service.status(projectId)));
     }
 
@@ -42,7 +42,7 @@ public class ProjectClosureController {
     public ResponseEntity<ApiResponse<ClosureItemResponse>> create(
             @PathVariable Long projectId, @Valid @RequestBody ClosureItemRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId); // ✅ CHANGED
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Item added", service.add(projectId, req.getTitle(), userId)));
     }
@@ -50,7 +50,7 @@ public class ProjectClosureController {
     @PostMapping("/closure-items/defaults")
     public ResponseEntity<ApiResponse<List<ClosureItemResponse>>> defaults(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId); // ✅ CHANGED
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Standard checklist added", service.seedDefaults(projectId, userId)));
     }
@@ -59,14 +59,14 @@ public class ProjectClosureController {
     public ResponseEntity<ApiResponse<ClosureItemResponse>> update(
             @PathVariable Long projectId, @PathVariable Long itemId,
             @Valid @RequestBody ClosureItemRequest req, @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId); // ✅ CHANGED
         return ResponseEntity.ok(ApiResponse.ok(service.update(projectId, itemId, req, userId)));
     }
 
     @DeleteMapping("/closure-items/{itemId}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long projectId, @PathVariable Long itemId, @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId); // ✅ CHANGED
         service.delete(projectId, itemId, userId);
         return ResponseEntity.ok(ApiResponse.ok("Item removed", null));
     }

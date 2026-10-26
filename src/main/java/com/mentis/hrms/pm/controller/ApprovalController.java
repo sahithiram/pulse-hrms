@@ -37,7 +37,7 @@ public class ApprovalController {
             @PathVariable Long id, @CurrentUserId Long userId) {
         ApprovalResponse a = service.get(id);
         boolean mine = userId.equals(a.getRequestedBy()) || userId.equals(a.getApproverId());
-        if (!mine && !access.isAdmin(userId))
+        if (!mine && !access.isSuperAdmin(userId)) // ✅ CHANGED (was isAdmin)
             throw new PmAccessDeniedException("This approval is not yours.");
         return ResponseEntity.ok(ApiResponse.ok(a));
     }
@@ -56,7 +56,7 @@ public class ApprovalController {
     public ResponseEntity<ApiResponse<List<ApprovalResponse>>> all(
             @RequestParam(required = false) String status,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireSuperAdmin(userId); // ✅ CHANGED (was requireAdmin)
         return ResponseEntity.ok(ApiResponse.ok(service.listAll(status)));
     }
 

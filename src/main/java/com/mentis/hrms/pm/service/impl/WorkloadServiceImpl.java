@@ -80,7 +80,13 @@ public class WorkloadServiceImpl implements WorkloadService {
         out.sort(Comparator.comparingInt(WorkloadResponse::getUtilizationPct).reversed());
         return out;
     }
-
+    @Override
+    @Transactional(readOnly = true)
+    public List<WorkloadResponse> forEveryone(LocalDate from, LocalDate to) {
+        List<Long> pks = teamMemberRepository.findAll().stream()
+                .map(TeamMember::getEmployeeId).distinct().toList();
+        return forEmployees(pks, from, to);
+    }
     @Override
     @Transactional(readOnly = true)
     public String capacityWarning(Long employeePk, LocalDate from, LocalDate to) {

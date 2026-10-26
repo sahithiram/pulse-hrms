@@ -4194,7 +4194,7 @@ border-radius: 10px;
 <button class="mobile-menu-toggle" id="mobileMenuToggle">
     <i class="fas fa-bars"></i>
 </button>
-
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
 <!-- === SIDEBAR === -->
 <div class="sidebar" id="sidebar">
 
@@ -4291,7 +4291,13 @@ border-radius: 10px;
                     </a>
                 </li>
             </ul>
-
+            <div class="nav-section"><i class="fas fa-diagram-project"></i> PROJECTS</div>
+            <ul class="nav flex-column">
+                <li class="nav-item"><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i><span>PM Dashboard</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i><span>All Projects</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="/pm/04-projects#requests"><i class="fas fa-paper-plane"></i><span>Project Requests</span>
+                    <span id="pmReqBadge" class="nav-badge warning" style="display:none">0</span></a></li>
+            </ul>
             <!-- Organization Structure (SUPER ADMIN) -->
             <div class="nav-section" th:if="${isSuperAdmin}">
                 <i class="fas fa-building"></i>
@@ -4521,7 +4527,16 @@ border-radius: 10px;
                     <div class="card-footer-bar"></div>
                 </div>
             </div>
-
+            <div class="content-card" id="pmSummaryCard" style="display:none;margin-bottom:1.5rem">
+                <div class="card-header"><h5 class="card-title"><i class="fas fa-diagram-project"></i> Projects</h5>
+                    <a href="/pm/01-home" class="view-link">Open PM</a></div>
+                <div class="card-body"><div class="stats-grid" style="margin-bottom:0">
+                    <div class="stat-card"><div class="stat-card-body"><div><div class="stat-value" id="pmKActive">0</div><div class="stat-title">Active projects</div></div></div></div>
+                    <div class="stat-card"><div class="stat-card-body"><div><div class="stat-value" id="pmKRisk">0</div><div class="stat-title">At risk</div></div></div></div>
+                    <div class="stat-card"><div class="stat-card-body"><div><div class="stat-value" id="pmKTasks">0</div><div class="stat-title">Open tasks</div></div></div></div>
+                    <div class="stat-card"><div class="stat-card-body"><div><div class="stat-value" id="pmKWait">0</div><div class="stat-title">Waiting for my approval</div></div></div></div>
+                </div></div>
+            </div>
             <!-- Main Analytics Row: Applications & Monthly Metrics -->
             <!-- ========== ROW 1: Recent Applications + Jobs (2 COLUMNS) ========== -->
             <!-- ========== ROW 1: Recent Applications + Jobs (2 COLUMNS) ========== -->
@@ -7435,245 +7450,249 @@ function openAttendanceTab(tabName) {
                 }
             }
 
-            function showLeaveDetailsModal(request) {
-                console.log('📋 Showing modal for request:', request);
+           function showLeaveDetailsModal(request) {
+    // ✅ FIX: isFullAccess was used in the template below but never declared.
+    //    Read it from the hidden permission input; default to false if absent.
+    const isFullAccess = document.getElementById('hasFullLeaveAccess')?.value === 'true';
 
-                const existingModal = document.getElementById('leaveDetailsModal');
-                if (existingModal) {
-                    existingModal.remove();
-                }
+    console.log('📋 Showing modal for request:', request);
 
-                const modal = document.createElement('div');
-                modal.id = 'leaveDetailsModal';
-                modal.className = 'attendance-modal';
-                modal.style.display = 'block';
+    const existingModal = document.getElementById('leaveDetailsModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
 
-                const formatDate = (dateStr) => {
-                    if (!dateStr) return 'N/A';
-                    try {
-                        const date = new Date(dateStr);
-                        if (isNaN(date.getTime())) return dateStr;
-                        return date.toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        });
-                    } catch (e) {
-                        return dateStr;
-                    }
-                };
+    const modal = document.createElement('div');
+    modal.id = 'leaveDetailsModal';
+    modal.className = 'attendance-modal';
+    modal.style.display = 'block';
 
-                const formatShortDate = (dateStr) => {
-                    if (!dateStr) return 'N/A';
-                    try {
-                        const date = new Date(dateStr);
-                        if (isNaN(date.getTime())) return dateStr;
-                        return date.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                        });
-                    } catch (e) {
-                        return dateStr;
-                    }
-                };
+    const formatDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
+    };
 
-                let statusDisplay = request.status || 'PENDING';
-                if (typeof statusDisplay === 'string') {
-                    statusDisplay = statusDisplay.toUpperCase();
-                }
+    const formatShortDate = (dateStr) => {
+        if (!dateStr) return 'N/A';
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return dateStr;
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return dateStr;
+        }
+    };
 
-                let statusColor = '';
-                let statusBg = '';
-                let statusIcon = '';
+    let statusDisplay = request.status || 'PENDING';
+    if (typeof statusDisplay === 'string') {
+        statusDisplay = statusDisplay.toUpperCase();
+    }
 
-                if (statusDisplay === 'APPROVED') {
-                    statusColor = '#10b981';
-                    statusBg = 'rgba(16,185,129,0.1)';
-                    statusIcon = 'fa-check-circle';
-                } else if (statusDisplay === 'REJECTED') {
-                    statusColor = '#ef4444';
-                    statusBg = 'rgba(239,68,68,0.1)';
-                    statusIcon = 'fa-times-circle';
-                } else if (statusDisplay === 'PENDING') {
-                    statusColor = '#f59e0b';
-                    statusBg = 'rgba(245,158,11,0.1)';
-                    statusIcon = 'fa-clock';
-                } else {
-                    statusColor = 'var(--dark-text-secondary)';
-                    statusBg = 'rgba(148,163,184,0.1)';
-                    statusIcon = 'fa-question-circle';
-                }
+    let statusColor = '';
+    let statusBg = '';
+    let statusIcon = '';
 
-                let duration = request.totalDays;
-                if (!duration || isNaN(duration) || duration <= 0) {
-                    try {
-                        if (request.startDate && request.endDate) {
-                            const start = new Date(request.startDate);
-                            const end = new Date(request.endDate);
-                            const diffTime = Math.abs(end - start);
-                            duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                        } else {
-                            duration = 1;
-                        }
-                    } catch (e) {
-                        duration = 1;
-                    }
-                }
+    if (statusDisplay === 'APPROVED') {
+        statusColor = '#10b981';
+        statusBg = 'rgba(16,185,129,0.1)';
+        statusIcon = 'fa-check-circle';
+    } else if (statusDisplay === 'REJECTED') {
+        statusColor = '#ef4444';
+        statusBg = 'rgba(239,68,68,0.1)';
+        statusIcon = 'fa-times-circle';
+    } else if (statusDisplay === 'PENDING') {
+        statusColor = '#f59e0b';
+        statusBg = 'rgba(245,158,11,0.1)';
+        statusIcon = 'fa-clock';
+    } else {
+        statusColor = 'var(--dark-text-secondary)';
+        statusBg = 'rgba(148,163,184,0.1)';
+        statusIcon = 'fa-question-circle';
+    }
 
-                const employeeName = request.employeeName ||
-                                    (request.employeeFirstName && request.employeeLastName ?
-                                     request.employeeFirstName + ' ' + request.employeeLastName : 'N/A');
+    let duration = request.totalDays;
+    if (!duration || isNaN(duration) || duration <= 0) {
+        try {
+            if (request.startDate && request.endDate) {
+                const start = new Date(request.startDate);
+                const end = new Date(request.endDate);
+                const diffTime = Math.abs(end - start);
+                duration = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            } else {
+                duration = 1;
+            }
+        } catch (e) {
+            duration = 1;
+        }
+    }
 
-                const leaveTypeName = request.leaveTypeName ||
-                                     (request.leaveType ? request.leaveType.replace(/_/g, ' ') : 'N/A');
+    const employeeName = request.employeeName ||
+                        (request.employeeFirstName && request.employeeLastName ?
+                         request.employeeFirstName + ' ' + request.employeeLastName : 'N/A');
 
-                modal.innerHTML = `
-                    <div class="attendance-modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto; padding: 0;">
-                        <div class="attendance-modal-header" style="padding: 20px; border-bottom: 1px solid var(--dark-border); display: flex; justify-content: space-between; align-items: center;">
-                            <h3 style="display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1rem;">
-                                <i class="fas fa-calendar-alt" style="color: var(--info);"></i>
-                                Leave Request Details
-                            </h3>
-                            <button class="close-attendance-modal" onclick="closeLeaveDetailsModal()" style="background: none; border: none; color: var(--dark-text-secondary); font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">×</button>
+    const leaveTypeName = request.leaveTypeName ||
+                         (request.leaveType ? request.leaveType.replace(/_/g, ' ') : 'N/A');
+
+    modal.innerHTML = `
+        <div class="attendance-modal-content" style="max-width: 600px; max-height: 80vh; overflow-y: auto; padding: 0;">
+            <div class="attendance-modal-header" style="padding: 20px; border-bottom: 1px solid var(--dark-border); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="display: flex; align-items: center; gap: 10px; margin: 0; font-size: 1.1rem;">
+                    <i class="fas fa-calendar-alt" style="color: var(--info);"></i>
+                    Leave Request Details
+                </h3>
+                <button class="close-attendance-modal" onclick="closeLeaveDetailsModal()" style="background: none; border: none; color: var(--dark-text-secondary); font-size: 1.5rem; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">×</button>
+            </div>
+
+            <div style="padding: 20px;">
+                <div style="text-align: right; margin-bottom: 20px;">
+                    <span style="background: ${statusBg}; color: ${statusColor}; padding: 8px 20px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; border: 1px solid ${statusColor}; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas ${statusIcon}"></i>
+                        ${statusDisplay}
+                    </span>
+                </div>
+
+                <div style="background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); padding: 15px; border-radius: 12px; margin-bottom: 25px; color: white;">
+                    <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 2px;">Leave ID</div>
+                    <div style="font-weight: 700; font-size: 1.3rem;">${request.id}</div>
+                </div>
+
+                <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Employee Information</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Name</div>
+                            <div style="font-weight: 600; color: var(--dark-text);">${employeeName}</div>
                         </div>
-
-                        <div style="padding: 20px;">
-                            <div style="text-align: right; margin-bottom: 20px;">
-                                <span style="background: ${statusBg}; color: ${statusColor}; padding: 8px 20px; border-radius: 30px; font-weight: 600; font-size: 0.9rem; border: 1px solid ${statusColor}; display: inline-flex; align-items: center; gap: 8px;">
-                                    <i class="fas ${statusIcon}"></i>
-                                    ${statusDisplay}
-                                </span>
-                            </div>
-
-                            <div style="background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%); padding: 15px; border-radius: 12px; margin-bottom: 25px; color: white;">
-                                <div style="font-size: 0.75rem; opacity: 0.9; margin-bottom: 2px;">Leave ID</div>
-                                <div style="font-weight: 700; font-size: 1.3rem;">${request.id}</div>
-                            </div>
-
-                            <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                                <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Employee Information</h4>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Name</div>
-                                        <div style="font-weight: 600; color: var(--dark-text);">${employeeName}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Employee ID</div>
-                                        <div style="color: var(--dark-text);">${request.employeeId || 'N/A'}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Department</div>
-                                        <div style="color: var(--dark-text);">${request.department || 'N/A'}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                                <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Leave Details</h4>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Leave Type</div>
-                                        <div style="font-weight: 600; color: var(--dark-text);">${leaveTypeName}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Duration</div>
-                                        <div style="font-weight: 600; color: var(--dark-text);">${duration} day${duration > 1 ? 's' : ''}</div>
-                                    </div>
-                                </div>
-
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Start Date</div>
-                                        <div style="color: var(--dark-text);">${formatShortDate(request.startDate)}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">End Date</div>
-                                        <div style="color: var(--dark-text);">${formatShortDate(request.endDate)}</div>
-                                    </div>
-                                </div>
-
-                                <div style="margin-bottom: 10px;">
-                                    <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 5px;">Reason for Leave</div>
-                                    <div style="background: var(--dark-card); padding: 12px; border-radius: 8px; color: var(--dark-text); border: 1px solid var(--dark-border);">
-                                        ${request.reason || 'No reason provided'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                                <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Application Info</h4>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Applied On</div>
-                                        <div style="color: var(--dark-text);">${formatDate(request.appliedDate || request.appliedDateTime || request.createdAt)}</div>
-                                    </div>
-                                    <div>
-                                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Applied By</div>
-                                        <div style="color: var(--dark-text);">${employeeName}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            ${statusDisplay === 'APPROVED' ? `
-                            <div style="background: rgba(16,185,129,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #10b981;">
-                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.2rem;"></i>
-                                    <span style="font-weight: 600; color: #10b981;">Approval Details</span>
-                                </div>
-                                <div style="font-size: 0.85rem; display: grid; gap: 5px;">
-                                    <div><strong>Approved By:</strong> ${request.approvedBy || 'HR Manager'}</div>
-                                    <div><strong>Approved On:</strong> ${formatDate(request.approvedDate)}</div>
-                                    ${request.approvalRemarks ? `<div><strong>Remarks:</strong> ${request.approvalRemarks}</div>` : ''}
-                                </div>
-                            </div>
-                            ` : ''}
-
-                            ${statusDisplay === 'REJECTED' ? `
-                            <div style="background: rgba(239,68,68,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
-                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                    <i class="fas fa-times-circle" style="color: #ef4444; font-size: 1.2rem;"></i>
-                                    <span style="font-weight: 600; color: #ef4444;">Rejection Details</span>
-                                </div>
-                                <div style="font-size: 0.85rem; display: grid; gap: 5px;">
-                                    <div><strong>Rejected By:</strong> ${request.rejectedBy || request.approvedBy || 'HR Manager'}</div>
-                                    <div><strong>Rejected On:</strong> ${formatDate(request.rejectedDate || request.approvedDate)}</div>
-                                    <div><strong>Reason:</strong> ${request.rejectionReason || 'No reason provided'}</div>
-                                </div>
-                            </div>
-                            ` : ''}
-
-                  <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
-                                <button class="attendance-btn btn-secondary-attendance" onclick="closeLeaveDetailsModal()" style="padding: 8px 20px;">
-                                    <i class="fas fa-times"></i> Close
-                                </button>
-
-                                ${statusDisplay === 'PENDING' && isFullAccess ? `
-                                <button class="attendance-btn btn-success-attendance" onclick="approveLeaveRequest('${request.id}'); closeLeaveDetailsModal();" style="padding: 8px 20px;">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                                <button class="attendance-btn btn-danger-attendance" onclick="rejectLeaveRequest('${request.id}'); closeLeaveDetailsModal();" style="padding: 8px 20px;">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
-                                ` : ''}
-                            </div>
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Employee ID</div>
+                            <div style="color: var(--dark-text);">${request.employeeId || 'N/A'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Department</div>
+                            <div style="color: var(--dark-text);">${request.department || 'N/A'}</div>
                         </div>
                     </div>
-                `;
+                </div>
 
-                document.body.appendChild(modal);
+                <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Leave Details</h4>
 
-                setTimeout(() => {
-                    window.addEventListener('click', function closeOnOutside(e) {
-                        if (e.target === modal) {
-                            closeLeaveDetailsModal();
-                            window.removeEventListener('click', closeOnOutside);
-                        }
-                    });
-                }, 100);
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Leave Type</div>
+                            <div style="font-weight: 600; color: var(--dark-text);">${leaveTypeName}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Duration</div>
+                            <div style="font-weight: 600; color: var(--dark-text);">${duration} day${duration > 1 ? 's' : ''}</div>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Start Date</div>
+                            <div style="color: var(--dark-text);">${formatShortDate(request.startDate)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">End Date</div>
+                            <div style="color: var(--dark-text);">${formatShortDate(request.endDate)}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 10px;">
+                        <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 5px;">Reason for Leave</div>
+                        <div style="background: var(--dark-card); padding: 12px; border-radius: 8px; color: var(--dark-text); border: 1px solid var(--dark-border);">
+                            ${request.reason || 'No reason provided'}
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--dark-text-secondary);">Application Info</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Applied On</div>
+                            <div style="color: var(--dark-text);">${formatDate(request.appliedDate || request.appliedDateTime || request.createdAt)}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.7rem; color: var(--dark-text-secondary); margin-bottom: 2px;">Applied By</div>
+                            <div style="color: var(--dark-text);">${employeeName}</div>
+                        </div>
+                    </div>
+                </div>
+
+                ${statusDisplay === 'APPROVED' ? `
+                <div style="background: rgba(16,185,129,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #10b981;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.2rem;"></i>
+                        <span style="font-weight: 600; color: #10b981;">Approval Details</span>
+                    </div>
+                    <div style="font-size: 0.85rem; display: grid; gap: 5px;">
+                        <div><strong>Approved By:</strong> ${request.approvedBy || 'HR Manager'}</div>
+                        <div><strong>Approved On:</strong> ${formatDate(request.approvedDate)}</div>
+                        ${request.approvalRemarks ? `<div><strong>Remarks:</strong> ${request.approvalRemarks}</div>` : ''}
+                    </div>
+                </div>
+                ` : ''}
+
+                ${statusDisplay === 'REJECTED' ? `
+                <div style="background: rgba(239,68,68,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 4px solid #ef4444;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <i class="fas fa-times-circle" style="color: #ef4444; font-size: 1.2rem;"></i>
+                        <span style="font-weight: 600; color: #ef4444;">Rejection Details</span>
+                    </div>
+                    <div style="font-size: 0.85rem; display: grid; gap: 5px;">
+                        <div><strong>Rejected By:</strong> ${request.rejectedBy || request.approvedBy || 'HR Manager'}</div>
+                        <div><strong>Rejected On:</strong> ${formatDate(request.rejectedDate || request.approvedDate)}</div>
+                        <div><strong>Reason:</strong> ${request.rejectionReason || 'No reason provided'}</div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                    <button class="attendance-btn btn-secondary-attendance" onclick="closeLeaveDetailsModal()" style="padding: 8px 20px;">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+
+                    ${statusDisplay === 'PENDING' && isFullAccess ? `
+                    <button class="attendance-btn btn-success-attendance" onclick="approveLeaveRequest('${request.id}'); closeLeaveDetailsModal();" style="padding: 8px 20px;">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                    <button class="attendance-btn btn-danger-attendance" onclick="rejectLeaveRequest('${request.id}'); closeLeaveDetailsModal();" style="padding: 8px 20px;">
+                        <i class="fas fa-times"></i> Reject
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    setTimeout(() => {
+        window.addEventListener('click', function closeOnOutside(e) {
+            if (e.target === modal) {
+                closeLeaveDetailsModal();
+                window.removeEventListener('click', closeOnOutside);
             }
+        });
+    }, 100);
+}
 
             function closeLeaveDetailsModal() {
                 const modal = document.getElementById('leaveDetailsModal');
@@ -10285,7 +10304,115 @@ async function handleChatLeaveBalanceByDept(departmentQuery) {
         addHrAi2BotMessage('❌ Error retrieving department leave data.');
     }
 }
+// ========== PRINT HELPERS (were referenced but never defined) ==========
 
+/**
+ * Prints only the Daily Attendance card using the existing @media print CSS.
+ * The stylesheet already hides everything except .attendance-card and its
+ * children when printing, so we just need to scope which card is visible.
+ */
+function printDailyAttendance() {
+    // Temporarily tag the daily attendance card so the print CSS shows only it.
+    // The daily attendance table lives inside the #daily tab's .attendance-card.
+    const dailyTab = document.getElementById('daily');
+    const card = dailyTab ? dailyTab.querySelector('.attendance-card') : null;
+
+    if (!card) {
+        showNotification('Daily attendance card not found.', 'error');
+        return;
+    }
+
+    // Mark active print target
+    document.querySelectorAll('.attendance-card').forEach(c => c.classList.remove('print-target'));
+    card.classList.add('print-target');
+
+    // Inject a tiny one-shot rule so only .print-target is visible on print
+    const styleId = 'print-override-style';
+    let style = document.getElementById(styleId);
+    if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+    }
+    style.textContent = `
+        @media print {
+            .attendance-card { visibility: hidden !important; }
+            .attendance-card.print-target,
+            .attendance-card.print-target * { visibility: visible !important; }
+            .attendance-card.print-target {
+                position: absolute; left: 0; top: 0; width: 100%;
+                background: #fff !important; color: #000 !important;
+            }
+            .attendance-card.print-target .attendance-table th,
+            .attendance-card.print-target .attendance-table td {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+            }
+            .attendance-card.print-target .attendance-table th { background: #f0f0f0 !important; }
+        }
+    `;
+
+    // Give the browser a tick to apply, then print
+    setTimeout(() => {
+        window.print();
+        // Cleanup after the print dialog closes
+        setTimeout(() => {
+            card.classList.remove('print-target');
+            if (style && style.parentNode) style.parentNode.removeChild(style);
+        }, 500);
+    }, 50);
+}
+
+/**
+ * Prints only the "All Holidays" table card in the Calendar tab.
+ */
+function printHolidaysTable() {
+    const calendarTab = document.getElementById('calendar');
+    // The holidays table lives inside the last .attendance-card inside #calendar
+    const cards = calendarTab ? calendarTab.querySelectorAll('.attendance-card') : [];
+    const card = cards.length ? cards[cards.length - 1] : null;
+
+    if (!card) {
+        showNotification('Holidays table not found.', 'error');
+        return;
+    }
+
+    document.querySelectorAll('.attendance-card').forEach(c => c.classList.remove('print-target'));
+    card.classList.add('print-target');
+
+    const styleId = 'print-override-style';
+    let style = document.getElementById(styleId);
+    if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+    }
+    style.textContent = `
+        @media print {
+            .attendance-card { visibility: hidden !important; }
+            .attendance-card.print-target,
+            .attendance-card.print-target * { visibility: visible !important; }
+            .attendance-card.print-target {
+                position: absolute; left: 0; top: 0; width: 100%;
+                background: #fff !important; color: #000 !important;
+            }
+            .attendance-card.print-target .attendance-table th,
+            .attendance-card.print-target .attendance-table td {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+            }
+            .attendance-card.print-target .attendance-table th { background: #f0f0f0 !important; }
+        }
+    `;
+
+    setTimeout(() => {
+        window.print();
+        setTimeout(() => {
+            card.classList.remove('print-target');
+            if (style && style.parentNode) style.parentNode.removeChild(style);
+        }, 500);
+    }, 50);
+}
 // ========== EXPORT WRAPPERS (thin — they call ReportEngine) ==========
 function exportDailyAttendanceExcel()   { ReportEngine.generate('attendance', 'excel'); }
 function exportDailyAttendancePDF()     { ReportEngine.generate('attendance', 'pdf'); }
@@ -10718,6 +10845,23 @@ function sendHrAi2Suggestion(text) {
 
                 container.innerHTML = html;
             }
+
+            async function loadPmSummary() {
+  const h = { credentials:'same-origin', headers:{'Accept':'application/json','X-Requested-With':'XMLHttpRequest'} };
+  try {
+    const k = await fetch('/api/pm/dashboard/kpis', h);
+    if (!k.ok) return;                       // hide the card if the role has no access
+    const d = (await k.json()).data || {};
+    const set = (id,v) => document.getElementById(id).textContent = v ?? 0;
+    set('pmKActive', d.activeProjects); set('pmKRisk', d.atRiskProjects); set('pmKTasks', d.openTasks);
+    const a = await fetch('/api/pm/approvals/mine', h);
+    const items = a.ok ? (((await a.json()).data) || []).filter(x => x.status === 'PENDING') : [];
+    set('pmKWait', items.length);
+    const b = document.getElementById('pmReqBadge');
+    if (items.length) { b.textContent = items.length; b.style.display = 'inline-block'; }
+    document.getElementById('pmSummaryCard').style.display = 'block';
+  } catch (e) { /* PM summary is optional */ }
+}
         // ========== DEBUG FUNCTION ==========
         function checkContentStatus() {
             console.log('=== CONTENT STATUS CHECK ===');

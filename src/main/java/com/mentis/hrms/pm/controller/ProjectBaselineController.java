@@ -26,7 +26,7 @@ public class ProjectBaselineController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProjectBaselineHistory>>> history(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
-        access.requireCanViewProject(userId, projectId);
+        access.requireCanViewFinance(userId, projectId); // ✅ CHANGED (baseline = finance-tier read)
         return ResponseEntity.ok(ApiResponse.ok(repository.findByProjectIdOrderByVersionNoDesc(projectId)));
     }
 }

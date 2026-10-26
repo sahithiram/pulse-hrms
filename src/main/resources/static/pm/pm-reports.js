@@ -1,277 +1,313 @@
 /**
- * pm-reports.js — Report + Budget rendering for /pm/10-insights
- * Depends on pm-core.js and Chart.js.
+ * pm-reports.js — Reports + Budget tabs for /pm/10-insights   (STEP 7.5)
+ * Depends on pm-core.js (PM.api, PM.can, PM.user) and Chart.js 4.
+ *
+ * Every number on this page comes from /api/pm/reports/*. The server already limits who may call
+ * what (ReportController):
+ *   budget       all projects = Super Admin | one project = owner / MANAGER / Super Admin
+ *   utilization  HR, HR Manager, Super Admin
+ *   velocity / quality / risk   anyone who can view that project
+ * This file only avoids calling what the server would refuse, so nobody sees zeros or silent failures.
  */
 (function () {
   'use strict';
 
-  var state = {
-    projectId: null,
-    projects: [],
-    budgetChart: null,
-    velocityChart: null,
-    qualityChart: null,
-    riskChart: null,
-    utilChart: null
+  var TABS = {
+    reports: { title: 'Reports',  icon: 'fa-chart-pie',          sub: 'Charts and CSV exports for one project at a time' },
+    budget:  { title: 'Budget',   icon: 'fa-indian-rupee-sign',  sub: 'Budget and spend for the projects you manage' }
   };
+  var EXPORTS = {
+    budget:      '/api/pm/reports/budget/export.csv',
+    risk:        '/api/pm/reports/risk/export.csv',
+    quality:     '/api/pm/reports/quality/export.csv',
+    velocity:    '/api/pm/reports/velocity/export.csv',
+    utilization: '/api/pm/reports/utilization/export.csv'
+  };
+  var GRID = 'rgba(42,57,80,.4)', TICK = '#94a3b8';
 
+  var state = { projects: [], projectId: null, tab: 'reports' };
+
+  function $(id) { return document.getElementById(id); }
+  function inr(n) { return '₹' + Math.round(n || 0).toLocaleString('en-IN'); }
+  function isSuper() { return !!(PM.user && PM.user.superAdmin); }
+  function curProject() {
+    return state.projects.filter(function (p) { return p.id === state.projectId; })[0] || null;
+  }
+  function finProjects() { return state.projects.filter(function (p) { return p.fin; }); }
+
+  /* ---------- small html helpers ---------- */
+  function msg(t) { return '<div class="empty">' + PM.esc(t) + '</div>'; }
+  function loading() { return '<div class="pm-card" style="grid-column:1/-1">' + msg('Loading…') + '</div>'; }
+  function card(title, icon, body) {
+    return '<div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas ' + icon + '"></i> ' +
+      PM.esc(title) + '</div></div>' + body + '</div>';
+  }
+  function box(id) { return '<div class="chart-box"><canvas id="' + id + '"></canvas></div>'; }
+
+  function chart(id, cfg) {
+    var el = $(id); if (!el || !window.Chart) return null;
+    var old = Chart.getChart(el); if (old) old.destroy();
+    return new Chart(el, cfg);
+  }
+  function baseOpts(legend) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: legend !== false, labels: { color: TICK, boxWidth: 10, font: { size: 10 } } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { color: TICK }, grid: { color: GRID } },
+        x: { ticks: { color: TICK }, grid: { display: false } }
+      }
+    };
+  }
+
+  /* ---------- projects + picker ---------- */
   async function loadProjects() {
     try {
-      var list = await PM.api('GET', '/api/pm/projects?page=0&size=200') || [];
-      state.projects = (list.content || list || []).map(function (p) { return { id: p.id, name: p.name }; });
-      if (!state.projectId && state.projects.length) state.projectId = state.projects[0].id;
+      var list = await PM.apiList('GET', '/api/pm/projects?page=0&size=200');
+      state.projects = list.map(function (p) {
+        return { id: p.id, name: p.name, fin: p.financeVisible === true };
+      });
     } catch (e) { state.projects = []; }
+    if (!state.projectId || !curProject()) state.projectId = state.projects.length ? state.projects[0].id : null;
   }
 
-  function pickerHtml(id) {
-    return state.projects.map(function (p) {
+  function renderPicker() {
+    var s = $('reportsPicker');
+    s.innerHTML = state.projects.map(function (p) {
       return '<option value="' + p.id + '"' + (p.id === state.projectId ? ' selected' : '') + '>' + PM.esc(p.name) + '</option>';
     }).join('');
+    s.disabled = !state.projects.length;
   }
 
-  function ensurePicker() {
-    var host = document.getElementById('reportsPicker');
-    if (!host) {
-      host = document.createElement('select');
-      host.id = 'reportsPicker';
-      host.className = 'pm-select';
-      host.style.cssText = 'max-width:260px';
-      host.onchange = function () { state.projectId = parseInt(this.value); refresh(); };
-      var head = document.querySelector('.pm-page-head > div');
-      if (head) head.appendChild(host);
+  /* ---------- CSV export (fetch, so a refusal shows a message instead of a blank page) ---------- */
+  async function exportCsv(kind) {
+    var url = (kind === 'budgetAll') ? EXPORTS.budget : EXPORTS[kind];
+    if (!url) return;
+    if (kind !== 'utilization' && kind !== 'budgetAll') {
+      if (!state.projectId) { PM.toast('Pick a project first', 'info'); return; }
+      url += '?projectId=' + state.projectId + (kind === 'velocity' ? '&lastSprints=8' : '');
     }
-    host.innerHTML = pickerHtml();
-  }
-
-  async function loadReports() {
-    var box = document.querySelector('#pane-reports .chart-grid');
-    if (!box) return;
-    box.innerHTML = '<div class="pm-card" style="grid-column:1/-1;text-align:center;padding:20px;color:var(--tx3)"><i class="fas fa-spinner fa-spin"></i> Loading reports…</div>';
-
     try {
-      var [budget, velocity, quality, risk] = await Promise.all([
-        PM.api('GET', '/api/pm/reports/budget' + (state.projectId ? '?projectId=' + state.projectId : '')).catch(function(){ return []; }),
-        state.projectId
-          ? PM.api('GET', '/api/pm/reports/velocity?projectId=' + state.projectId + '&lastSprints=8').catch(function(){ return []; })
-          : Promise.resolve([]),
-        PM.api('GET', '/api/pm/reports/quality' + (state.projectId ? '?projectId=' + state.projectId : '')).catch(function(){ return null; }),
-        PM.api('GET', '/api/pm/reports/risk'    + (state.projectId ? '?projectId=' + state.projectId : '')).catch(function(){ return null; })
-      ]);
-
-      // Quick Generate cards get their CSV links bound
-      document.querySelectorAll('#pane-reports .pm-btn').forEach(function (b) {
-        var t = b.textContent || '';
-        if (t.indexOf('Budget Report') > -1) b.onclick = function () { downloadCsv('/api/pm/reports/budget/export.csv' + (state.projectId ? '?projectId=' + state.projectId : '')); };
-        if (t.indexOf('Risk Summary') > -1)  b.onclick = function () { downloadCsv('/api/pm/reports/risk/export.csv' + (state.projectId ? '?projectId=' + state.projectId : '')); };
-      });
-
-      var html = '';
-      html += chartCard('budgetChart', 'fa-indian-rupee-sign', 'Budget vs Actual');
-      html += chartCard('velocityChart', 'fa-chart-line', 'Velocity by Sprint');
-      html += chartCard('qualityChart', 'fa-bug', 'Quality — Issues by Severity');
-      html += chartCard('riskChart', 'fa-shield', 'Risk Register');
-      box.innerHTML = html;
-
-      renderBudgetChart(budget);
-      renderVelocityChart(velocity);
-      renderQualityChart(quality);
-      renderRiskChart(risk);
-    } catch (e) {
-      box.innerHTML = '<div class="pm-card" style="grid-column:1/-1;color:var(--dng);text-align:center;padding:20px">Failed: ' + PM.esc(e.message) + '</div>';
-    }
+      var res = await fetch(url, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+      if (!res.ok) {
+        var m = ''; try { m = (await res.json()).message; } catch (e) { /* not json */ }
+        throw new Error(m || ('HTTP ' + res.status));
+      }
+      var blob = await res.blob();
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = kind + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    } catch (e) { PM.toast(e.message || 'Export failed', 'error'); }
   }
 
-  function chartCard(id, icon, title) {
-    return '<div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas ' + icon + '"></i> ' + title + '</div></div><div class="chart-box"><canvas id="' + id + '"></canvas></div></div>';
+  function setExportButtons(p) {
+    $('expBudget').hidden   = !(p && p.fin);
+    $('expRisk').hidden     = !p;
+    $('expQuality').hidden  = !p;
+    $('expVelocity').hidden = !p;
+    $('expUtil').hidden     = !PM.can('admin');
   }
 
-  function destroyChart(key) { if (state[key]) { state[key].destroy(); state[key] = null; } }
+  /* ============================================================
+     REPORTS TAB  (one project)
+     ============================================================ */
+  async function loadReports() {
+    var grid = $('reportsGrid'), p = curProject();
+    setExportButtons(p);
+    if (!p) { grid.innerHTML = '<div class="pm-card" style="grid-column:1/-1">' + msg('No projects to report on yet.') + '</div>'; return; }
 
-  function renderBudgetChart(rows) {
-    destroyChart('budgetChart');
-    var el = document.getElementById('budgetChart');
-    if (!el) return;
-    state.budgetChart = new Chart(el, {
+    var pid = p.id, q = '?projectId=' + pid;
+    grid.innerHTML = loading();
+    var r = await Promise.all([
+      p.fin ? PM.api('GET', '/api/pm/reports/budget' + q).catch(function () { return null; }) : Promise.resolve(undefined),
+      PM.api('GET', '/api/pm/reports/velocity' + q + '&lastSprints=8').catch(function () { return null; }),
+      PM.api('GET', '/api/pm/reports/quality' + q).catch(function () { return null; }),
+      PM.api('GET', '/api/pm/reports/risk' + q).catch(function () { return null; })
+    ]);
+    if (pid !== state.projectId || state.tab !== 'reports') return;   // picker or tab changed meanwhile
+    var budget = r[0], velocity = r[1], quality = r[2], risk = r[3];
+
+    var html = '';
+    if (budget === undefined) html += card('Budget vs Actual', 'fa-indian-rupee-sign', msg('Budget figures are visible to the project owner, managers and Super Admin.'));
+    else if (!budget || !budget.length) html += card('Budget vs Actual', 'fa-indian-rupee-sign', msg(budget === null ? 'Could not load the budget.' : 'No budget set yet.'));
+    else html += card('Budget vs Actual', 'fa-indian-rupee-sign', box('budgetChart'));
+
+    html += (!velocity || !velocity.length)
+      ? card('Velocity by Sprint', 'fa-chart-line', msg(velocity === null ? 'Could not load velocity.' : 'No finished sprints yet.'))
+      : card('Velocity by Sprint', 'fa-chart-line', box('velocityChart'));
+
+    var qOk = quality && (quality.bySeverity || []).length;
+    html += card('Quality — Issues by Severity', 'fa-bug', qOk ? box('qualityChart') : msg(quality === null ? 'Could not load issues.' : 'No issues yet.'));
+
+    var rOk = risk && (risk.bySeverity || []).length;
+    html += card('Risk Register', 'fa-shield', rOk ? box('riskChart') : msg(risk === null ? 'Could not load risks.' : 'No risks yet.'));
+
+    grid.innerHTML = html;
+
+    if (budget && budget.length) chart('budgetChart', {
       type: 'bar',
       data: {
-        labels: (rows || []).map(function (r) { return r.projectName; }),
+        labels: budget.map(function (x) { return x.projectName; }),
         datasets: [
-          { label: 'Budget', data: (rows || []).map(function (r) { return r.budgetTotal; }), backgroundColor: '#334155', borderRadius: 4 },
-          { label: 'Spent',  data: (rows || []).map(function (r) { return r.budgetSpent; }), backgroundColor: '#6366f1', borderRadius: 4 }
+          { label: 'Budget', data: budget.map(function (x) { return x.budgetTotal; }), backgroundColor: '#334155', borderRadius: 4 },
+          { label: 'Spent',  data: budget.map(function (x) { return x.budgetSpent; }), backgroundColor: '#6366f1', borderRadius: 4 }
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } } },
-        scales: { y: { beginAtZero: true, grid: { color: 'rgba(42,57,80,.4)' } }, x: { grid: { display: false } } }
-      }
+      options: baseOpts()
     });
-  }
-
-  function renderVelocityChart(rows) {
-    destroyChart('velocityChart');
-    var el = document.getElementById('velocityChart');
-    if (!el) return;
-    state.velocityChart = new Chart(el, {
+    if (velocity && velocity.length) chart('velocityChart', {
       type: 'line',
       data: {
-        labels: (rows || []).map(function (r) { return r.sprintName; }),
+        labels: velocity.map(function (x) { return x.sprintName; }),
         datasets: [
-          { label: 'Committed', data: (rows || []).map(function (r) { return r.committedPoints; }), borderColor: '#64748b', borderDash: [5,5], pointRadius: 0, fill: false },
-          { label: 'Completed', data: (rows || []).map(function (r) { return r.completedPoints; }), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)', fill: true, tension: .3, pointRadius: 4 }
+          { label: 'Committed', data: velocity.map(function (x) { return x.committedPoints; }), borderColor: '#64748b', borderDash: [5, 5], pointRadius: 0, fill: false },
+          { label: 'Completed', data: velocity.map(function (x) { return x.completedPoints; }), borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,.12)', fill: true, tension: .3, pointRadius: 4 }
         ]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } } },
-        scales: { y: { beginAtZero: true, grid: { color: 'rgba(42,57,80,.4)' } }, x: { grid: { display: false } } }
-      }
+      options: baseOpts()
     });
-  }
-
-  function renderQualityChart(q) {
-    destroyChart('qualityChart');
-    var el = document.getElementById('qualityChart');
-    if (!el) return;
-    if (!q || !(q.bySeverity || []).length) {
-      el.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">No issues yet</div>';
-      return;
-    }
-    state.qualityChart = new Chart(el, {
+    if (qOk) chart('qualityChart', {
       type: 'doughnut',
       data: {
-        labels: q.bySeverity.map(function (s) { return s.severity; }),
-        datasets: [{
-          data: q.bySeverity.map(function (s) { return s.count; }),
-          backgroundColor: ['#ef4444', '#f59e0b', '#0ea5e9', '#64748b'],
-          borderWidth: 0
-        }]
+        labels: quality.bySeverity.map(function (s) { return s.severity; }),
+        datasets: [{ data: quality.bySeverity.map(function (s) { return s.count; }),
+          backgroundColor: ['#ef4444', '#f59e0b', '#0ea5e9', '#64748b'], borderWidth: 0 }]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false, cutout: '60%',
-        plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10, font: { size: 10 } } } }
-      }
+      options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { color: TICK, boxWidth: 8, padding: 10, font: { size: 10 } } } } }
     });
-  }
-
-  function renderRiskChart(r) {
-    destroyChart('riskChart');
-    var el = document.getElementById('riskChart');
-    if (!el) return;
-    if (!r || !(r.bySeverity || []).length) {
-      el.parentElement.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)">No risks yet</div>';
-      return;
-    }
-    state.riskChart = new Chart(el, {
+    if (rOk) chart('riskChart', {
       type: 'bar',
       data: {
-        labels: r.bySeverity.map(function (s) { return s.severity; }),
-        datasets: [{
-          data: r.bySeverity.map(function (s) { return s.count; }),
-          backgroundColor: ['#ef4444', '#f59e0b', '#10b981'],
-          borderRadius: 4
-        }]
+        labels: risk.bySeverity.map(function (s) { return s.severity; }),
+        datasets: [{ data: risk.bySeverity.map(function (s) { return s.count; }),
+          backgroundColor: ['#ef4444', '#f59e0b', '#10b981'], borderRadius: 4 }]
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, grid: { color: 'rgba(42,57,80,.4)' } }, x: { grid: { display: false } } }
-      }
+      options: baseOpts(false)
     });
   }
 
-  async function loadBudget() {
+  /* People utilization: HR, HR Manager and Super Admin only (the server enforces it as well) */
+  async function loadUtilization() {
+    var wrap = $('utilCard');
+    if (!PM.can('admin')) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    var body = $('utilBody');
     try {
-      var [budget, util] = await Promise.all([
-        PM.api('GET', '/api/pm/reports/budget').catch(function () { return []; }),
-        PM.api('GET', '/api/pm/reports/utilization').catch(function () { return []; })
-      ]);
+      var rows = await PM.api('GET', '/api/pm/reports/utilization') || [];
+      rows = rows.slice().sort(function (a, b) { return (b.utilizationPct || 0) - (a.utilizationPct || 0); }).slice(0, 15);
+      if (!rows.length) { body.innerHTML = msg('No time logged yet.'); return; }
+      body.innerHTML = '<div class="chart-box" style="height:' + Math.max(180, rows.length * 22 + 40) + 'px"><canvas id="utilChart"></canvas></div>';
+      chart('utilChart', {
+        type: 'bar',
+        data: {
+          labels: rows.map(function (u) { return u.employeeName; }),
+          datasets: [{ label: 'Utilization %', data: rows.map(function (u) { return u.utilizationPct; }),
+            backgroundColor: rows.map(function (u) { return u.utilizationPct > 100 ? '#ef4444' : (u.utilizationPct >= 85 ? '#f59e0b' : '#6366f1'); }),
+            borderRadius: 4 }]
+        },
+        options: Object.assign(baseOpts(false), { indexAxis: 'y' })
+      });
+    } catch (e) { body.innerHTML = msg('Could not load utilization.'); }
+  }
 
-      var totals = (budget || []).reduce(function (a, r) {
-        a.total += r.budgetTotal || 0;
-        a.spent += r.budgetSpent || 0;
-        if ((r.spentPct || 0) > 100) a.over++;
-        return a;
-      }, { total: 0, spent: 0, over: 0 });
-
-      var kpis = document.querySelectorAll('#pane-budget .kpi .kpi-value');
-      if (kpis[0]) kpis[0].textContent = '₹' + Math.round(totals.total / 100000) + 'L';
-      if (kpis[1]) kpis[1].textContent = '₹' + Math.round(totals.spent / 100000) + 'L (' + (totals.total > 0 ? Math.round(totals.spent * 100 / totals.total) : 0) + '%)';
-      if (kpis[2]) kpis[2].textContent = '₹' + Math.round((totals.total - totals.spent) / 100000) + 'L';
-      if (kpis[3]) kpis[3].textContent = totals.over;
-
-      // Export button on Budget tab
-      var exportBtn = document.querySelector('#pane-budget .pm-page-actions .pm-btn, #pane-budget .pm-btn');
-      if (exportBtn) exportBtn.onclick = function () { downloadCsv('/api/pm/reports/budget/export.csv'); };
-
-      var bEl = document.getElementById('budgetVsChart');
-      if (bEl) {
-        destroyChart('budgetChart');
-        state.budgetChart = new Chart(bEl, {
-          type: 'bar',
-          data: {
-            labels: (budget || []).map(function (r) { return r.projectName; }),
-            datasets: [
-              { label: 'Budget', data: (budget || []).map(function (r) { return r.budgetTotal; }), backgroundColor: '#334155', borderRadius: 4 },
-              { label: 'Actual', data: (budget || []).map(function (r) { return r.budgetSpent; }), backgroundColor: '#6366f1', borderRadius: 4 }
-            ]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 10, font: { size: 10 } } } },
-            scales: { y: { beginAtZero: true, grid: { color: 'rgba(42,57,80,.4)' } }, x: { grid: { display: false } } }
-          }
-        });
+  /* ============================================================
+     BUDGET TAB  (Super Admin: all projects; owner / MANAGER: their projects)
+     ============================================================ */
+  async function loadBudget() {
+    var rows = [];
+    try {
+      if (isSuper()) {
+        rows = await PM.api('GET', '/api/pm/reports/budget') || [];
+      } else {
+        var parts = await Promise.all(finProjects().slice(0, 50).map(function (p) {
+          return PM.api('GET', '/api/pm/reports/budget?projectId=' + p.id).catch(function () { return []; });
+        }));
+        parts.forEach(function (x) { rows = rows.concat(x || []); });
       }
+    } catch (e) { PM.toast('Failed to load budget: ' + e.message, 'error'); }
+    if (state.tab !== 'budget') return;
 
-      var cEl = document.getElementById('categoryChart');
-      if (cEl) {
-        destroyChart('utilChart');
-        state.utilChart = new Chart(cEl, {
-          type: 'doughnut',
-          data: {
-            labels: (util || []).slice(0, 6).map(function (u) { return u.employeeName; }),
-            datasets: [{
-              data: (util || []).slice(0, 6).map(function (u) { return u.utilizationPct; }),
-              backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#a855f7', '#0ea5e9', '#ef4444'],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false, cutout: '65%',
-            plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 10, font: { size: 10 } } } }
-          }
-        });
-      }
-    } catch (e) {
-      PM.toast('Failed to load budget: ' + e.message, 'error');
+    $('expBudgetAll').hidden = !isSuper();   // the all-projects CSV is Super Admin only on the server
+    if (!rows.length) {
+      $('budgetFull').hidden = true;
+      $('budgetEmpty').hidden = false;
+      return;
     }
+    $('budgetEmpty').hidden = true;
+    $('budgetFull').hidden = false;
+
+    var t = rows.reduce(function (a, r) {
+      a.total += r.budgetTotal || 0; a.spent += r.budgetSpent || 0;
+      if ((r.spentPct || 0) > 100) a.over++;
+      return a;
+    }, { total: 0, spent: 0, over: 0 });
+
+    $('kpiTotal').textContent = inr(t.total);
+    $('kpiSpent').textContent = inr(t.spent) + ' (' + (t.total > 0 ? Math.round(t.spent * 100 / t.total) : 0) + '%)';
+    $('kpiLeft').textContent  = inr(t.total - t.spent);
+    $('kpiOver').textContent  = t.over;
+
+    $('budgetRows').innerHTML = rows.map(function (r) {
+      var pct = r.spentPct != null ? r.spentPct : (r.budgetTotal ? r.budgetSpent * 100 / r.budgetTotal : 0);
+      var cls = pct > 100 ? 'danger' : (pct >= 85 ? 'warning' : 'success');
+      return '<tr><td style="font-weight:600">' + PM.esc(r.projectName) + '</td>' +
+        '<td>' + inr(r.budgetTotal) + '</td><td>' + inr(r.budgetSpent) + '</td>' +
+        '<td><div style="display:flex;align-items:center;gap:6px;min-width:120px"><div class="pm-progress" style="flex:1">' +
+        '<div class="pm-progress-bar ' + cls + '" style="width:' + Math.min(100, Math.round(pct)) + '%"></div></div>' +
+        '<span style="font-size:var(--fs-xs);font-weight:600;min-width:34px">' + Math.round(pct) + '%</span></div></td></tr>';
+    }).join('');
+
+    chart('budgetVsChart', {
+      type: 'bar',
+      data: {
+        labels: rows.map(function (r) { return r.projectName; }),
+        datasets: [
+          { label: 'Budget', data: rows.map(function (r) { return r.budgetTotal; }), backgroundColor: '#334155', borderRadius: 4 },
+          { label: 'Actual', data: rows.map(function (r) { return r.budgetSpent; }), backgroundColor: '#6366f1', borderRadius: 4 }
+        ]
+      },
+      options: baseOpts()
+    });
   }
 
-  function downloadCsv(url) {
-    window.location.href = url;
+  /* ============================================================
+     TABS
+     ============================================================ */
+  function switchTab(tab) {
+    if (!TABS[tab]) tab = 'reports';
+    if (tab === 'budget' && !PM.can('finance')) tab = 'reports';
+    state.tab = tab;
+
+    document.querySelectorAll('#pmTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+    document.querySelectorAll('.pm-pane').forEach(function (p) { p.classList.toggle('active', p.id === 'pane-' + tab); });
+    $('pmPageTitle').textContent = TABS[tab].title;
+    $('pmCrumb').textContent = TABS[tab].title;
+    $('pmPageSub').textContent = TABS[tab].sub;
+    $('pmPageIcon').className = 'fas ' + TABS[tab].icon;
+    $('pickerWrap').hidden = (tab !== 'reports');
+
+    try { history.replaceState(null, '', location.pathname + '?tab=' + tab); } catch (e) { /* ignore */ }
+    if (PM.user && PM.buildSidebar) PM.buildSidebar(PM.user);   // keep the highlighted menu entry right
+
+    if (tab === 'budget') loadBudget();
+    else { loadReports(); loadUtilization(); }
   }
+  window.switchTab = function (tab) { switchTab(tab); };
 
   async function init() {
     await loadProjects();
-    ensurePicker();
-    await loadReports();
-    // If the Budget pane is visible, load it too
-    var budgetPane = document.getElementById('pane-budget');
-    if (budgetPane && budgetPane.classList.contains('active')) loadBudget();
+    renderPicker();
+    $('reportsPicker').onchange = function () { state.projectId = parseInt(this.value, 10); loadReports(); };
+    switchTab(new URLSearchParams(location.search).get('tab') || 'reports');
   }
 
   async function refresh() {
-    var active = document.querySelector('#pmTabs button.active');
-    if (!active) return;
-    if (active.dataset.tab === 'reports') await loadReports();
-    if (active.dataset.tab === 'budget')  await loadBudget();
+    if (state.tab === 'budget') return loadBudget();
+    await loadReports();
   }
 
-  window.PMReports = {
-    init: init,
-    refresh: refresh,
-    loadReports: loadReports,
-    loadBudget: loadBudget
-  };
+  window.PMReports = { init: init, refresh: refresh, exportCsv: exportCsv, switchTab: switchTab };
 })();

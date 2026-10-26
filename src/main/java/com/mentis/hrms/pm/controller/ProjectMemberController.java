@@ -25,12 +25,12 @@ public class ProjectMemberController {
     private final ProjectMemberService service;
     private final PmAccessService access;
 
-    /** Anyone who can see the project can see its members; only managers see hourly rates. */
+    /** Anyone who can see the project can see its members; only the finance tier sees hourly rates. */
     @GetMapping
     public ResponseEntity<ApiResponse<List<ProjectMemberResponse>>> list(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
         access.requireCanViewProject(userId, projectId);
-        boolean showRates = access.canManageProject(userId, projectId);
+        boolean showRates = access.canViewFinance(userId, projectId);
         return ResponseEntity.ok(ApiResponse.ok(service.list(projectId, showRates)));
     }
 
@@ -39,14 +39,19 @@ public class ProjectMemberController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> myAccess(
             @PathVariable Long projectId, @CurrentUserId Long userId) {
         access.requireCanViewProject(userId, projectId);
-        String label = access.isAdmin(userId) ? "Admin"
+        String label = access.isSuperAdmin(userId) ? "Super Admin"
+                : access.isPeopleAdmin(userId) ? "HR (read-only)"
                 : access.isProjectOwner(userId, projectId) ? "Owner"
                 : access.isProjectManager(userId, projectId) ? "Manager"
+                : access.isProjectLead(userId, projectId) ? "Lead"
                 : access.isProjectViewerOnly(userId, projectId) ? "Viewer"
                 : access.isProjectMember(userId, projectId) ? "Member"
                 : "Team access";
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("canManage", access.canManageProject(userId, projectId));
+        m.put("canManage", access.canManageProject(userId, projectId));         // lead tier or higher (existing UI flag)
+        m.put("canAdminister", access.canAdministerProject(userId, projectId)); // STEP 1
+        m.put("canViewFinance", access.canViewFinance(userId, projectId));      // STEP 1
+        m.put("lead", access.isProjectLead(userId, projectId));                 // STEP 1
         m.put("label", label);
         return ResponseEntity.ok(ApiResponse.ok(m));
     }
@@ -56,7 +61,7 @@ public class ProjectMemberController {
             @PathVariable Long projectId,
             @Valid @RequestBody AddMemberRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Member added", service.add(projectId, req, userId)));
     }
@@ -67,7 +72,7 @@ public class ProjectMemberController {
             @PathVariable Long memberId,
             @Valid @RequestBody UpdateMemberRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId);
         return ResponseEntity.ok(ApiResponse.ok(service.update(projectId, memberId, req, userId)));
     }
 
@@ -76,7 +81,7 @@ public class ProjectMemberController {
             @PathVariable Long projectId,
             @PathVariable Long memberId,
             @CurrentUserId Long userId) {
-        access.requireCanManageProject(userId, projectId);
+        access.requireCanAdminister(userId, projectId);
         service.remove(projectId, memberId, userId);
         return ResponseEntity.ok(ApiResponse.ok("Removed", null));
     }

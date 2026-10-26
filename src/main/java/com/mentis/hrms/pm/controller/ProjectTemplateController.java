@@ -35,11 +35,11 @@ public class ProjectTemplateController {
         return ResponseEntity.ok(ApiResponse.ok(service.get(id)));
     }
 
-    /** Admins define templates. */
+    /** A Super Admin or HR Manager defines templates (same people who decide project requests). */
     @PostMapping("/project-templates")
     public ResponseEntity<ApiResponse<ProjectTemplateResponse>> create(
             @Valid @RequestBody CreateTemplateRequest req, @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireIntakeReviewer(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Template saved", service.create(req, userId)));
     }

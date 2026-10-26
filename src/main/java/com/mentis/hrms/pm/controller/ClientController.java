@@ -30,13 +30,14 @@ public class ClientController {
     public ResponseEntity<ApiResponse<ClientResponse>> create(
             @Valid @RequestBody CreateClientRequest req,
             @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireCanManageClients(userId); // STEP 1b: SA, HR, HR_MANAGER, PM
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Client created", clientService.createClient(req, userId)));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<ClientResponse>> get(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<ClientResponse>> get(@PathVariable Long id, @CurrentUserId Long userId) {
+        access.requireCanViewClients(userId);
         return ResponseEntity.ok(ApiResponse.ok(clientService.getClient(id)));
     }
 
@@ -45,19 +46,22 @@ public class ClientController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @CurrentUserId Long userId) {
+        access.requireCanViewClients(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
         return ResponseEntity.ok(ApiResponse.ok(clientService.listClients(search, status, pageable)));
     }
 
     @GetMapping("/dropdown")
-    public ResponseEntity<ApiResponse<List<ClientSummaryResponse>>> dropdown() {
+    public ResponseEntity<ApiResponse<List<ClientSummaryResponse>>> dropdown(@CurrentUserId Long userId) {
+        if (!access.canViewClients(userId))
+            return ResponseEntity.ok(ApiResponse.ok(List.of()));
         return ResponseEntity.ok(ApiResponse.ok(clientService.listAllForDropdown()));
     }
-
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, @CurrentUserId Long userId) {
-        access.requireCanCreateProject(userId);
+        access.requireCanManageClients(userId); // STEP 1b (was requireCanCreateProject)
         clientService.deleteClient(id);
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }

@@ -404,7 +404,18 @@
       reviews:{t:'Performance Reviews',i:'fa-star-half-stroke',s:'Review cycles · Ratings · Feedback'}
     };
 
+    var TAB_OK = {
+      teams:      function(){ return true; },
+      members:    function(){ return PM.can('manage'); },
+      resources:  function(){ return PM.can('manage'); },
+      // the server allows team timesheets only to admins and to that team's lead
+      timesheets: function(){ return PM.can('admin') || !!(me.leadOfTeamIds && me.leadOfTeamIds.length); },
+      // placeholder tab, hidden until real review data exists (see T7)
+      reviews:    function(){ return false; }
+    };
+    function tabAllowed(t){ return !TAB_OK[t] || TAB_OK[t](); }
     function switchTab(tab,el){
+      if(!tabAllowed(tab)) tab='teams';
       document.querySelectorAll('#pmTabs button').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
       document.querySelectorAll('.pm-pane').forEach(function(p){p.classList.remove('active');});
       var pane=document.getElementById('pane-'+tab); if(pane) pane.classList.add('active');
@@ -417,8 +428,8 @@
         document.getElementById('pmCrumb').textContent=m.t;
       }
       var acts={
-        teams:'<button class="pm-btn pm-btn-primary" onclick="openTeamModal()"><i class="fas fa-plus"></i> New Team</button>',
-        members:'<button class="pm-btn pm-btn-primary" onclick="PM.toast(\'Add member dialog\',\'info\')"><i class="fas fa-user-plus"></i> Add Member</button>',
+        teams:PM.can('manage')?'<button class="pm-btn pm-btn-primary" onclick="openTeamModal()"><i class="fas fa-plus"></i> New Team</button>':'',
+        members:'',
         resources:'<button class="pm-btn" onclick="PMWorkload.loadResources()"><i class="fas fa-rotate"></i> Refresh</button>',
         timesheets:'<button class="pm-btn" onclick="PMTimesheet.exportCsv()"><i class="fas fa-file-export"></i> Export</button>',
         reviews:'<button class="pm-btn pm-btn-primary" onclick="openStartReview()"><i class="fas fa-plus"></i> Start Review</button>'
@@ -447,6 +458,10 @@
           if (sel && sel.options.length <= 1) {
             try {
               var teams = await PM.api('GET','/api/pm/teams/dropdown') || [];
+              if (!PM.can('admin')) {
+                var mine = me.leadOfTeamIds || [];
+                teams = teams.filter(function(t){ return mine.indexOf(t.id) >= 0; });
+              }
               sel.innerHTML = '<option value="">Pick a team…</option>' +
                 teams.map(function(t){ return '<option value="' + t.id + '">' + PM.esc(t.name) + '</option>'; }).join('');
               if (teams[0]) sel.value = teams[0].id;
@@ -584,8 +599,8 @@
         '<div id="teamTasksSection"><div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px"><i class="fas fa-list-check"></i> Tasks</div><div style="text-align:center;padding:14px;color:var(--tx3);font-size:var(--fs-sm)"><i class="fas fa-spinner fa-spin"></i> Loading tasks...</div></div></div>'+
         '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+
           '<button class="pm-btn pm-btn-primary" style="flex:1;justify-content:center" onclick="goToTeamTasks('+t.id+')"><i class="fas fa-folder-open"></i> Open in Task Board</button>'+
-          '<button class="pm-btn" title="Manage members" onclick="PM.openTeamMembers('+t.id+')"><i class="fas fa-user-plus"></i></button>'+
-          '<button class="pm-btn pm-btn-danger" onclick="deleteTeam('+t.id+')"><i class="fas fa-trash"></i></button>'+
+          (PM.can('manage')?'<button class="pm-btn" title="Manage members" onclick="PM.openTeamMembers('+t.id+')"><i class="fas fa-user-plus"></i></button>':'')+
+          (PM.can('admin')?'<button class="pm-btn pm-btn-danger" onclick="deleteTeam('+t.id+')"><i class="fas fa-trash"></i></button>':'')+
         '</div>',
         t.name
       );
@@ -738,12 +753,21 @@
 
     document.getElementById('mobToggle').addEventListener('click', function(){ document.getElementById('pmSidebar').classList.toggle('open'); });
 
+    // T2 — hide disallowed tab buttons before start-up, and only prime allowed data
+    Object.keys(TAB_OK).forEach(function(t){
+      var b=document.querySelector('#pmTabs button[data-tab="'+t+'"]');
+      if(b && !tabAllowed(t)) b.style.display='none';
+    });
+
     Promise.all([loadEmployees()]).then(function(){
       loadTeams();
       renderMembers();
 
-      // prime the new tabs
-      setTimeout(function(){ PMWorkload.loadResources(); PMTimesheet.init(); }, 400);
+      // prime the new tabs — only where allowed
+      setTimeout(function(){
+        if(tabAllowed('resources')) PMWorkload.loadResources();
+        if(tabAllowed('timesheets')) PMTimesheet.init();
+      }, 400);
 
       // realtime refresh on any PM event
       window.pmRefresh = function(){

@@ -85,51 +85,15 @@ public class RoleInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // ============ NEW: PROJECT MANAGER MODULE (/pm and /api/pm) ============
+        // ============ PM MODULE ============
         if (uri.equals("/pm") || uri.startsWith("/pm/") || uri.startsWith("/api/pm/")) {
-            if ("PM".equals(role)) {
-                logger.debug("PM access granted for URI: {}", uri);
-                return true;
-            }
+            if (uri.startsWith("/api/pm/dev")) return deny(role, empId, uri, response); // dev triggers: SA only
 
-            // Any logged-in user may READ their own /api/pm/me/* data.
-            // MyWorkService scopes by session userId, so access is safe by construction.
-            if ("GET".equals(method)
-                    && (uri.equals("/api/pm/me") || uri.startsWith("/api/pm/me/"))) {
-                logger.debug("Self-scoped PM access granted for {} to {}", uri, empId);
-                return true;
-            }
+            boolean pmModuleRole = "PM".equals(role) || "HR".equals(role)
+                    || "HR_MANAGER".equals(role) || "EMPLOYEE".equals(role);
+            if (pmModuleRole) return true;   // PmAccessService decides what each person may do
 
-            // Notifications are per-user: every method on PmNotificationController
-            // resolves the recipient via @CurrentUserId and filters on it. Safe for any role.
-            // Notifications are per-user: every method on PmNotificationController
-            // resolves the recipient via @CurrentUserId and filters on it. Safe for any role.
-            if (uri.equals("/api/pm/notifications") || uri.startsWith("/api/pm/notifications/")) {
-                if ("GET".equals(method)) return true;
-                if ("POST".equals(method) && uri.matches("/api/pm/notifications/[^/]+/read")) return true;
-                if ("POST".equals(method) && uri.equals("/api/pm/notifications/mark-all-read")) return true;
-                if ("DELETE".equals(method) && uri.matches("/api/pm/notifications/[^/]+")) return true;
-            }
-
-            // Reference data for the task-create modal and filters.
-            // These are read-only, non-sensitive lists used by PMs on every page.
-            // Safe for any logged-in user (they only expose id + name + role).
-            if ("GET".equals(method)
-                    && (uri.equals("/api/pm/employees/dropdown")
-                    || uri.equals("/api/pm/teams/dropdown"))) {
-                logger.debug("Reference dropdown access granted for {} to {}", uri, empId);
-                return true;
-            }
-
-            logger.warn("Role {} blocked from PM module. URI: {}", role, uri);
-
-            if (uri.startsWith("/api/")) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\":\"Forbidden\"}");
-                return false;
-            }
-            return redirectToHomeBasedOnRole(role, empId, response);
+            return deny(role, empId, uri, response);
         }
 
         // ============ ADMIN DASHBOARD ACCESS ============
@@ -207,5 +171,16 @@ public class RoleInterceptor implements HandlerInterceptor {
             response.sendRedirect("/candidate/login");
         }
         return false;
+    }
+
+    private boolean deny(String role, String empId, String uri, HttpServletResponse response) throws Exception {
+        logger.warn("Role {} denied for {}", role, uri);
+        if (uri.startsWith("/api/")) {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Forbidden\"}");
+            return false;
+        }
+        return redirectToHomeBasedOnRole(role, empId, response);
     }
 }

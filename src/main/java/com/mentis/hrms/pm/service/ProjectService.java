@@ -22,8 +22,9 @@ public interface ProjectService {
                                                       Pageable pageable);
 
     ProjectResponse archiveProject(Long id, Long currentUserId);
-
+    ProjectResponse reopenProject(Long id, String reason, Long currentUserId);
     void deleteProject(Long id, Long currentUserId);
+
     PageResponse<ProjectSummaryResponse> listVisibleProjects(String search,
                                                              ProjectStatus status,
                                                              Long ownerId,

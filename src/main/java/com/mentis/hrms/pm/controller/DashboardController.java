@@ -51,7 +51,7 @@ public class DashboardController {
     private final ProjectMapper projectMapper;
     private final ClientRepository clientRepository;
     private final PmAccessService access;
-
+    private final com.mentis.hrms.pm.security.ProjectFinanceMasker masker; // STEP 1b
     /** projects the user may see, paged */
     private List<Project> visibleProjects(Long userId, Pageable pageable) {
         return projectRepository.searchVisible(null, null, null, userId, pageable).getContent();
@@ -176,7 +176,7 @@ public class DashboardController {
         List<ProjectSummaryResponse> list = projects.stream()
                 .map(p -> projectMapper.toSummary(p, clientNameMap.get(p.getClientId())))
                 .toList();
-        return ApiResponse.ok(list);
+        return ApiResponse.ok(masker.maskAll(list, userId));
     }
 
     @GetMapping("/recent-activity")

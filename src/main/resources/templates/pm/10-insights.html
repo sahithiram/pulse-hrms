@@ -7,9 +7,9 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
   <style>
-    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700;--z-modal:1500}
+    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700}
     .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
@@ -19,6 +19,7 @@
     ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
     a{color:var(--pri);text-decoration:none}
     button{font-family:inherit}
+    [hidden]{display:none!important}
     .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
     .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
     .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
@@ -60,18 +61,15 @@
     .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
     .pm-page-title i{color:var(--pri);font-size:15px}
     .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
+    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
     .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
     .pm-btn i{font-size:11px}
     .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
     .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
     .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
-    .pm-btn-icon{width:26px;height:26px;padding:0;justify-content:center}
-    .pm-btn-danger{color:var(--dng);border-color:rgba(239,68,68,.3)}
-    .pm-btn-danger:hover{border-color:var(--dng);color:var(--dng);background:var(--dng-soft)}
-    .pm-input,.pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
-    .pm-input:focus,.pm-select:focus{border-color:var(--pri)}
+    .pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
+    .pm-select:focus{border-color:var(--pri)}
     .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
     .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
     .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
@@ -119,15 +117,6 @@
     .pm-drawer-head{height:var(--hh);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
     .pm-drawer-title{font-size:var(--fs-md);font-weight:600}
     .pm-drawer-body{flex:1;overflow-y:auto;padding:12px}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(3px);z-index:var(--z-modal);display:none;align-items:flex-start;justify-content:center;padding:6vh 12px 12px;overflow-y:auto}
-    .modal-backdrop.open{display:flex}
-    .modal{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:680px;box-shadow:var(--sh-lg);display:flex;flex-direction:column;max-height:88vh}
-    .modal-lg{max-width:1100px}
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--bd);flex-shrink:0}
-    .modal-head h3{font-size:var(--fs-lg);font-weight:600;display:flex;align-items:center;gap:8px}
-    .modal-head h3 i{color:var(--pri)}
-    .modal-body{flex:1;overflow-y:auto;padding:14px}
-    .modal-foot{display:flex;justify-content:flex-end;gap:6px;padding:12px 14px;border-top:1px solid var(--bd);flex-shrink:0;flex-wrap:wrap}
     .pm-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:12px;overflow-x:auto;padding:0 2px}
     .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:var(--fs-md);font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--t-fast);margin-bottom:-1px}
     .pm-tabs button:hover{color:var(--tx)}
@@ -136,97 +125,21 @@
     .pm-pane.active{display:block;animation:pmFade .18s ease}
     @keyframes pmFade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
     .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px;cursor:pointer;transition:var(--t-fast)}
-    .kpi:hover{border-color:var(--pri);transform:translateY(-1px)}
+    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px}
     .kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px;margin-bottom:4px}
     .kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}
     .kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
     .kpi-icon.red{background:var(--dng-soft);color:var(--dng)}
     .kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
-    .kpi-icon.cyan{background:var(--inf-soft);color:var(--inf)}
-    .kpi-icon.purple{background:var(--pur-soft);color:var(--pur)}
-    .kpi-value{font-size:var(--fs-2xl);font-weight:700;line-height:1}
+    .kpi-value{font-size:var(--fs-xl);font-weight:700;line-height:1.1}
     .kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
     .chart-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:10px;margin-bottom:12px}
     .chart-box{height:240px;position:relative}
     .chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
     .chart-title{font-weight:600;display:flex;align-items:center;gap:6px;font-size:var(--fs-md)}
     .chart-title i{color:var(--pri)}
-    .report-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--bd);transition:var(--t-fast)}
-    .report-row:last-child{border-bottom:none}
-    .report-row:hover{background:var(--card2)}
-    .report-icon{width:32px;height:32px;border-radius:8px;display:grid;place-content:center;color:#fff;font-size:13px;flex-shrink:0;background:var(--pri)}
-    .report-body{flex:1;min-width:0}
-    .report-title{font-weight:600;font-size:var(--fs-md);margin-bottom:2px}
-    .report-meta{font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap}
-    .fc-card{background:linear-gradient(135deg,rgba(99,102,241,.1),rgba(168,85,247,.05));border:1px solid var(--bd);border-radius:var(--rl);padding:12px}
-    .fc-label{font-size:var(--fs-xs);color:var(--tx3);margin-bottom:3px;text-transform:uppercase;font-weight:700}
-    .fc-value{font-size:var(--fs-xl);font-weight:700}
-    .fc-sub{font-size:var(--fs-xs);margin-top:3px}
-    .builder-layout{display:grid;grid-template-columns:220px 1fr 280px;gap:10px;min-height:520px}
-    @media(max-width:1100px){.builder-layout{grid-template-columns:1fr}}
-    .builder-panel{background:var(--bg);border:1px solid var(--bd);border-radius:var(--rl);padding:10px;display:flex;flex-direction:column;max-height:calc(100vh - 200px)}
-    .builder-panel-head{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-    .builder-panel-body{flex:1;overflow-y:auto;padding-right:2px}
-    .field-group{margin-bottom:10px}
-    .field-group-title{font-size:var(--fs-xs);font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;padding-left:2px}
-    .draggable-field{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;font-size:var(--fs);display:flex;align-items:center;gap:6px;cursor:grab;margin-bottom:4px;transition:var(--t-fast);user-select:none}
-    .draggable-field:hover{border-color:var(--pri);color:var(--pri);transform:translateX(2px)}
-    .draggable-field i{font-size:10px;color:var(--tx3);width:12px}
-    .draggable-field.dragging{opacity:.5}
-    .canvas-area{background:var(--card);border:2px dashed var(--bd2);border-radius:var(--rl);padding:12px;min-height:400px;transition:var(--t-fast);overflow-y:auto;flex:1}
-    .canvas-area.drag-over{border-color:var(--pri);background:var(--pri-soft)}
-    .canvas-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--tx3);text-align:center;padding:40px 20px}
-    .canvas-empty i{font-size:42px;opacity:.35;margin-bottom:12px}
-    .canvas-block{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;margin-bottom:8px;position:relative;cursor:grab;transition:var(--t-fast);animation:pmFade .2s ease}
-    .canvas-block:hover{border-color:var(--pri)}
-    .canvas-block.dragging{opacity:.4}
-    .canvas-block .block-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-    .canvas-block .block-type{font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;color:var(--pri);letter-spacing:.4px;display:flex;align-items:center;gap:5px}
-    .canvas-block .block-actions{display:flex;gap:2px;opacity:.5;transition:opacity var(--t-fast)}
-    .canvas-block:hover .block-actions{opacity:1}
-    .canvas-block .block-actions button{background:transparent;border:none;color:var(--tx3);cursor:pointer;width:20px;height:20px;border-radius:3px;font-size:10px;display:grid;place-content:center}
-    .canvas-block .block-actions button:hover{background:var(--card2);color:var(--tx)}
-    .canvas-block .block-preview{background:var(--card);border-radius:4px;padding:8px;min-height:40px;font-size:var(--fs)}
-    .canvas-block.kpi-block .block-preview{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
-    .canvas-block.kpi-block .mini-kpi{text-align:center;padding:0 10px;border-right:1px solid var(--bd)}
-    .canvas-block.kpi-block .mini-kpi:last-child{border-right:none}
-    .canvas-block.kpi-block .mini-kpi .val{font-size:16px;font-weight:700;color:var(--pri)}
-    .canvas-block.kpi-block .mini-kpi .lbl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.3px}
-    .canvas-block.chart-block .block-preview{height:140px;position:relative}
-    .canvas-block.table-block .block-preview{padding:0;overflow:hidden}
-    .builder-props{display:flex;flex-direction:column;gap:10px}
-    .prop-row{display:flex;flex-direction:column;gap:3px}
-    .prop-row label{font-size:var(--fs-xs);color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-    .prop-row input,.prop-row select,.prop-row textarea{background:var(--card);border:1px solid var(--bd);border-radius:4px;padding:4px 8px;color:var(--tx);font-family:inherit;font-size:var(--fs);outline:none;width:100%}
-    .prop-row input:focus,.prop-row select:focus,.prop-row textarea:focus{border-color:var(--pri)}
-    .prop-row textarea{min-height:60px;resize:vertical}
-    .sched-list{display:flex;flex-direction:column;gap:6px}
-    .sched-row{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;transition:var(--t-fast)}
-    .sched-row:hover{border-color:var(--pri)}
-    .sched-row .sched-icon{width:34px;height:34px;border-radius:8px;background:var(--pri-soft);color:var(--pri);display:grid;place-content:center;font-size:13px;flex-shrink:0}
-    .sched-row .sched-body{flex:1;min-width:200px}
-    .sched-row .sched-name{font-weight:600;font-size:var(--fs-md);margin-bottom:2px}
-    .sched-row .sched-meta{font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .sched-row .sched-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
-    .chip-mini{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:8px;font-size:var(--fs-xs);font-weight:600;background:var(--card2);color:var(--tx2)}
-    .chip-mini.daily{background:var(--inf-soft);color:var(--inf)}
-    .chip-mini.weekly{background:var(--pri-soft);color:var(--pri)}
-    .chip-mini.monthly{background:var(--pur-soft);color:var(--pur)}
-    .chip-mini.active{background:var(--suc-soft);color:var(--suc)}
-    .chip-mini.paused{background:var(--card2);color:var(--tx3)}
-    .share-row{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .share-row .sh-link{flex:1;min-width:200px;font-family:'SF Mono',Consolas,monospace;font-size:var(--fs-sm);background:var(--card2);padding:4px 10px;border-radius:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--inf)}
-    .share-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;background:var(--suc-soft);color:var(--suc)}
-    .share-chip.expired{background:var(--dng-soft);color:var(--dng)}
-    .share-chip.password{background:var(--wrn-soft);color:var(--wrn)}
-    .copy-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--suc);color:#fff;padding:8px 16px;border-radius:20px;font-size:var(--fs-md);font-weight:600;box-shadow:var(--sh-lg);z-index:9999;transition:transform 280ms cubic-bezier(.4,0,.2,1)}
-    .copy-toast.show{transform:translateX(-50%) translateY(0)}
-    .email-preview{background:#fff;color:#1a1a1a;border-radius:6px;padding:14px;font-size:12px;line-height:1.5;font-family:'Inter',sans-serif}
-    .email-preview h3{color:#4f46e5;margin-bottom:8px;font-size:14px}
-    .email-preview table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
-    .email-preview th{text-align:left;padding:4px 6px;background:#f1f5f9;color:#475569;text-transform:uppercase;font-size:9px;letter-spacing:.4px}
-    .email-preview td{padding:4px 6px;border-bottom:1px solid #e2e8f0}
+    .empty{text-align:center;padding:36px 12px;color:var(--tx3);font-size:var(--fs)}
+    .exp-row{display:flex;gap:6px;flex-wrap:wrap}
     .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
     @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.chart-grid{grid-template-columns:1fr}}
   </style>
@@ -244,9 +157,9 @@
   <div class="pm-main">
     <header class="pm-header">
       <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search reports..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
+      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
       <div class="pm-header-right">
-        <div class="pm-live"><span class="dot"></span> Live · <span id="pmLiveAgo">just now</span></div>
+        <div class="pm-live"><span class="dot"></span> Live</div>
         <button class="pm-iconbtn" onclick="PM.openCmd()"><i class="fas fa-terminal"></i></button>
         <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
         <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'"><i class="fas fa-bell"></i><span class="dot" id="pmNotifBadge">0</span></button>
@@ -260,280 +173,82 @@
       <div class="pm-page-head">
         <div>
           <div class="pm-page-title"><i class="fas fa-chart-pie" id="pmPageIcon"></i> <span id="pmPageTitle">Reports</span></div>
-          <div class="pm-page-sub" id="pmPageSub">Reports, budget, and analytics</div>
+          <div class="pm-page-sub" id="pmPageSub">Charts and CSV exports for one project at a time</div>
         </div>
-        <div class="pm-page-actions" id="pmActions"></div>
+        <div class="pm-page-actions" id="pickerWrap">
+          <select class="pm-select" id="reportsPicker" style="max-width:280px" aria-label="Project"></select>
+        </div>
       </div>
 
       <div class="pm-tabs" id="pmTabs">
-        <button class="active" data-tab="reports" onclick="switchTab('reports',this)">Reports</button>
-        <button data-tab="builder" onclick="switchTab('builder',this)">Report Builder</button>
-        <button data-tab="scheduled" onclick="switchTab('scheduled',this)">Scheduled</button>
-        <button data-tab="shared" onclick="switchTab('shared',this)">Shared Links</button>
-        <button data-tab="budget" onclick="switchTab('budget',this)">Budget</button>
-        <button data-tab="analytics" onclick="switchTab('analytics',this)">Analytics</button>
+        <button class="active" data-tab="reports" onclick="switchTab('reports')">Reports</button>
+        <button data-tab="budget" onclick="switchTab('budget')">Budget</button>
       </div>
 
+      <!-- ════════ REPORTS (one project) ════════ -->
       <div class="pm-pane active" id="pane-reports">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon blue"><i class="fas fa-file-alt"></i></div><div class="kpi-value">12</div><div class="kpi-label">Saved Reports</div></div>
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-chart-line"></i></div><div class="kpi-value">8</div><div class="kpi-label">Scheduled</div></div>
-          <div class="kpi"><div class="kpi-icon cyan"><i class="fas fa-share-nodes"></i></div><div class="kpi-value">6</div><div class="kpi-label">Shared Links</div></div>
-          <div class="kpi"><div class="kpi-icon purple"><i class="fas fa-users"></i></div><div class="kpi-value">14</div><div class="kpi-label">Subscribers</div></div>
-        </div>
-
         <div class="pm-card">
-          <div class="chart-head">
-            <div class="chart-title"><i class="fas fa-file-export"></i> Quick Generate</div>
-            <button class="pm-btn pm-btn-sm pm-btn-primary" onclick="switchTab('builder',document.querySelector('[data-tab=&quot;builder&quot;]'))"><i class="fas fa-paint-brush"></i> Custom Builder</button>
-          </div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
-            <button class="pm-btn" onclick="generateReport('Status Report (PDF)')"><i class="fas fa-file-pdf"></i> Status Report (PDF)</button>
-            <button class="pm-btn" onclick="generateReport('Task List (Excel)')"><i class="fas fa-file-excel"></i> Task List (Excel)</button>
-            <button class="pm-btn" onclick="generateReport('Budget Report')"><i class="fas fa-indian-rupee-sign"></i> Budget Report</button>
-            <button class="pm-btn" onclick="generateReport('Team Performance')"><i class="fas fa-users"></i> Team Performance</button>
-            <button class="pm-btn" onclick="generateReport('Time & Attendance')"><i class="fas fa-clock"></i> Time &amp; Attendance</button>
-            <button class="pm-btn" onclick="generateReport('Risk Summary')"><i class="fas fa-shield"></i> Risk Summary</button>
+          <div class="chart-head"><div class="chart-title"><i class="fas fa-file-export"></i> Export for the selected project (CSV)</div></div>
+          <div class="exp-row">
+            <button class="pm-btn" id="expBudget" hidden onclick="PMReports.exportCsv('budget')"><i class="fas fa-indian-rupee-sign"></i> Budget</button>
+            <button class="pm-btn" id="expVelocity" hidden onclick="PMReports.exportCsv('velocity')"><i class="fas fa-chart-line"></i> Velocity</button>
+            <button class="pm-btn" id="expQuality" hidden onclick="PMReports.exportCsv('quality')"><i class="fas fa-bug"></i> Issues</button>
+            <button class="pm-btn" id="expRisk" hidden onclick="PMReports.exportCsv('risk')"><i class="fas fa-shield"></i> Risks</button>
+            <button class="pm-btn" id="expUtil" hidden onclick="PMReports.exportCsv('utilization')"><i class="fas fa-users"></i> People utilization (all)</button>
           </div>
         </div>
 
-        <div class="pm-card">
-          <div class="chart-head"><div class="chart-title"><i class="fas fa-history"></i> Recent Reports</div></div>
-          <div class="report-row"><div class="report-icon" style="background:var(--dng)"><i class="fas fa-file-pdf"></i></div><div class="report-body"><div class="report-title">Weekly Status Report — Sprint 14</div><div class="report-meta"><span>Generated 2h ago</span><span>By Rohini Anand</span><span>PDF · 1.2 MB</span></div></div><button class="pm-btn pm-btn-sm" onclick="PM.toast('Downloading...','info')"><i class="fas fa-download"></i></button></div>
-          <div class="report-row"><div class="report-icon" style="background:var(--suc)"><i class="fas fa-file-excel"></i></div><div class="report-body"><div class="report-title">Task List Export — Sep 2026</div><div class="report-meta"><span>Generated 1d ago</span><span>By Priya Menon</span><span>XLSX · 340 KB</span></div></div><button class="pm-btn pm-btn-sm" onclick="PM.toast('Downloading...','info')"><i class="fas fa-download"></i></button></div>
-          <div class="report-row"><div class="report-icon" style="background:var(--pri)"><i class="fas fa-file-alt"></i></div><div class="report-body"><div class="report-title">Q3 Budget Summary</div><div class="report-meta"><span>Generated 3d ago</span><span>By Rohini Anand</span><span>PDF · 890 KB</span></div></div><button class="pm-btn pm-btn-sm" onclick="PM.toast('Downloading...','info')"><i class="fas fa-download"></i></button></div>
-        </div>
+        <div class="chart-grid" id="reportsGrid"></div>
 
-        <div class="chart-grid">
-          <div class="pm-card">
-            <div class="chart-head"><div class="chart-title"><i class="fas fa-chart-line"></i> Velocity Trend</div></div>
-            <div class="chart-box"><canvas id="velocityChart"></canvas></div>
-          </div>
-          <div class="pm-card">
-            <div class="chart-head"><div class="chart-title"><i class="fas fa-chart-bar"></i> Tasks Completed Per Week</div></div>
-            <div class="chart-box"><canvas id="tasksWeeklyChart"></canvas></div>
-          </div>
+        <div class="pm-card" id="utilCard" hidden>
+          <div class="chart-head"><div class="chart-title"><i class="fas fa-users"></i> People utilization (top 15)</div></div>
+          <div id="utilBody"></div>
         </div>
       </div>
 
-      <div class="pm-pane" id="pane-builder">
-        <div class="builder-layout">
-          <div class="builder-panel">
-            <div class="builder-panel-head"><span><i class="fas fa-database"></i> Field Library</span></div>
-            <div class="builder-panel-body" id="fieldLibrary">
-              <div class="field-group">
-                <div class="field-group-title">Content Blocks</div>
-                <div class="draggable-field" draggable="true" data-type="heading" data-icon="fa-heading"><i class="fas fa-grip-vertical"></i><i class="fas fa-heading"></i> Heading</div>
-                <div class="draggable-field" draggable="true" data-type="text" data-icon="fa-align-left"><i class="fas fa-grip-vertical"></i><i class="fas fa-align-left"></i> Text Block</div>
-                <div class="draggable-field" draggable="true" data-type="divider" data-icon="fa-minus"><i class="fas fa-grip-vertical"></i><i class="fas fa-minus"></i> Divider</div>
-              </div>
-              <div class="field-group">
-                <div class="field-group-title">KPIs</div>
-                <div class="draggable-field" draggable="true" data-type="kpi" data-icon="fa-gauge"><i class="fas fa-grip-vertical"></i><i class="fas fa-gauge"></i> KPI Cards</div>
-                <div class="draggable-field" draggable="true" data-type="progress" data-icon="fa-percent"><i class="fas fa-grip-vertical"></i><i class="fas fa-percent"></i> Progress Bars</div>
-              </div>
-              <div class="field-group">
-                <div class="field-group-title">Charts</div>
-                <div class="draggable-field" draggable="true" data-type="bar" data-icon="fa-chart-bar"><i class="fas fa-grip-vertical"></i><i class="fas fa-chart-bar"></i> Bar Chart</div>
-                <div class="draggable-field" draggable="true" data-type="line" data-icon="fa-chart-line"><i class="fas fa-grip-vertical"></i><i class="fas fa-chart-line"></i> Line Chart</div>
-                <div class="draggable-field" draggable="true" data-type="donut" data-icon="fa-chart-pie"><i class="fas fa-grip-vertical"></i><i class="fas fa-chart-pie"></i> Donut Chart</div>
-              </div>
-              <div class="field-group">
-                <div class="field-group-title">Data Tables</div>
-                <div class="draggable-field" draggable="true" data-type="table-projects" data-icon="fa-table"><i class="fas fa-grip-vertical"></i><i class="fas fa-table"></i> Projects Table</div>
-                <div class="draggable-field" draggable="true" data-type="table-tasks" data-icon="fa-table"><i class="fas fa-grip-vertical"></i><i class="fas fa-table"></i> Tasks Table</div>
-                <div class="draggable-field" draggable="true" data-type="table-team" data-icon="fa-table"><i class="fas fa-grip-vertical"></i><i class="fas fa-table"></i> Team Table</div>
-              </div>
-            </div>
-          </div>
-
-          <div style="display:flex;flex-direction:column;gap:6px">
-            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <input class="pm-input" style="max-width:200px;height:26px;font-size:var(--fs-sm)" id="reportName" placeholder="Untitled report" value="Q3 Executive Summary">
-              <button class="pm-btn pm-btn-sm" onclick="clearCanvas()"><i class="fas fa-trash"></i> Clear</button>
-              <button class="pm-btn pm-btn-sm" onclick="loadTemplate()"><i class="fas fa-magic"></i> Load Template</button>
-              <button class="pm-btn pm-btn-sm pm-btn-primary" onclick="previewReport()"><i class="fas fa-eye"></i> Preview</button>
-            </div>
-            <div class="canvas-area" id="canvasArea" ondragover="handleCanvasDragOver(event)" ondragleave="handleCanvasDragLeave(event)" ondrop="handleCanvasDrop(event)">
-              <div class="canvas-empty" id="canvasEmpty">
-                <i class="fas fa-paint-brush"></i>
-                <div style="font-size:var(--fs-md);font-weight:600;color:var(--tx2)">Drag blocks here to build your report</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="builder-panel">
-            <div class="builder-panel-head"><span><i class="fas fa-sliders"></i> Properties</span></div>
-            <div class="builder-panel-body">
-              <div class="builder-props" id="propsPanel">
-                <div style="text-align:center;color:var(--tx3);font-size:var(--fs-sm);padding:30px 10px"><i class="fas fa-mouse-pointer" style="font-size:24px;opacity:.3;display:block;margin-bottom:8px"></i>Select a block on the canvas to edit its properties.</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="pm-pane" id="pane-scheduled">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-check-circle"></i></div><div class="kpi-value" id="schActive">0</div><div class="kpi-label">Active Schedules</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-pause"></i></div><div class="kpi-value" id="schPaused">0</div><div class="kpi-label">Paused</div></div>
-          <div class="kpi"><div class="kpi-icon cyan"><i class="fas fa-users"></i></div><div class="kpi-value" id="schRecipients">0</div><div class="kpi-label">Total Recipients</div></div>
-          <div class="kpi"><div class="kpi-icon blue"><i class="fas fa-paper-plane"></i></div><div class="kpi-value">47</div><div class="kpi-label">Sent This Month</div></div>
-        </div>
-
-        <div class="pm-card">
-          <div class="chart-head">
-            <div class="chart-title"><i class="fas fa-envelope"></i> Scheduled Reports</div>
-            <button class="pm-btn pm-btn-sm pm-btn-primary" onclick="openScheduleModal()"><i class="fas fa-plus"></i> Schedule Report</button>
-          </div>
-          <div class="sched-list" id="scheduledList"></div>
-        </div>
-
-        <div class="pm-card">
-          <div class="chart-title" style="margin-bottom:8px"><i class="fas fa-eye"></i> Sample Email Preview</div>
-          <div class="email-preview">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><strong style="color:#4f46e5">Menti's PM</strong><span style="font-size:10px;color:#64748b">Mon 09:00 AM</span></div>
-            <h3>📊 Weekly Status Report — Sprint 14</h3>
-            <p style="color:#475569">Here's your weekly summary for HRMS Cloud Migration. Overall progress is <strong style="color:#10b981">72%</strong>, on track for the 15 Dec deadline.</p>
-            <table>
-              <tr><th>Metric</th><th>This Week</th><th>Change</th></tr>
-              <tr><td>Tasks completed</td><td>12</td><td style="color:#10b981">+3</td></tr>
-              <tr><td>Tasks in progress</td><td>8</td><td style="color:#f59e0b">+1</td></tr>
-              <tr><td>Blocked</td><td>3</td><td style="color:#ef4444">+2</td></tr>
-            </table>
-            <div style="margin-top:12px;text-align:center"><a href="#" style="display:inline-block;background:#6366f1;color:#fff;padding:6px 16px;border-radius:4px;text-decoration:none;font-size:11px;font-weight:600">View Full Report →</a></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="pm-pane" id="pane-shared">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon cyan"><i class="fas fa-link"></i></div><div class="kpi-value" id="shActive">0</div><div class="kpi-label">Active Links</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-eye"></i></div><div class="kpi-value" id="shViews">0</div><div class="kpi-label">Total Views</div></div>
-          <div class="kpi"><div class="kpi-icon red"><i class="fas fa-clock"></i></div><div class="kpi-value" id="shExpired">0</div><div class="kpi-label">Expired</div></div>
-          <div class="kpi"><div class="kpi-icon purple"><i class="fas fa-lock"></i></div><div class="kpi-value" id="shPassword">0</div><div class="kpi-label">Password-protected</div></div>
-        </div>
-        <div class="pm-card">
-          <div class="chart-head">
-            <div class="chart-title"><i class="fas fa-share-nodes"></i> Public Share Links</div>
-            <button class="pm-btn pm-btn-sm pm-btn-primary" onclick="openShareModal()"><i class="fas fa-plus"></i> Create Link</button>
-          </div>
-          <div id="sharedList"></div>
-        </div>
-      </div>
-
+      <!-- ════════ BUDGET (Super Admin: all projects · owner / MANAGER: their projects) ════════ -->
       <div class="pm-pane" id="pane-budget">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon blue"><i class="fas fa-wallet"></i></div><div class="kpi-value">₹8.4Cr</div><div class="kpi-label">Total Budget</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-money-bill-trend-up"></i></div><div class="kpi-value">₹5.9Cr</div><div class="kpi-label">Spent (70%)</div></div>
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-piggy-bank"></i></div><div class="kpi-value">₹2.5Cr</div><div class="kpi-label">Remaining</div></div>
-          <div class="kpi"><div class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-value">2</div><div class="kpi-label">Over Budget</div></div>
-        </div>
-        <div class="chart-grid">
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-chart-bar"></i> Budget vs Actual</div></div><div class="chart-box"><canvas id="budgetVsChart"></canvas></div></div>
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-chart-pie"></i> Spend by Category</div></div><div class="chart-box"><canvas id="categoryChart"></canvas></div></div>
-        </div>
-        <div class="pm-card">
-          <div class="chart-head"><div class="chart-title"><i class="fas fa-chart-line"></i> Forecast &amp; Projections</div></div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
-            <div class="fc-card"><div class="fc-label">Projected Year-End</div><div class="fc-value">₹9.2Cr</div><div class="fc-sub" style="color:var(--dng)">▲ 8.5% over budget</div></div>
-            <div class="fc-card"><div class="fc-label">Forecasted Overrun</div><div class="fc-value" style="color:var(--wrn)">₹0.8Cr</div><div class="fc-sub" style="color:var(--wrn)">⚠ 2 projects at risk</div></div>
-            <div class="fc-card"><div class="fc-label">Cost Savings Target</div><div class="fc-value" style="color:var(--suc)">₹0.5Cr</div><div class="fc-sub" style="color:var(--suc)">▲ 12% achievable</div></div>
-            <div class="fc-card"><div class="fc-label">Next Quarter</div><div class="fc-value">₹2.1Cr</div><div class="fc-sub" style="color:var(--inf)">→ 8.3% increase</div></div>
+        <div class="pm-card" id="budgetEmpty" hidden><div class="empty">No budget figures to show yet. Set a budget on a project you own or manage and it will appear here.</div></div>
+        <div id="budgetFull" hidden>
+          <div class="kpi-grid">
+            <div class="kpi"><div class="kpi-icon blue"><i class="fas fa-wallet"></i></div><div class="kpi-value" id="kpiTotal">—</div><div class="kpi-label">Total budget</div></div>
+            <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-money-bill-trend-up"></i></div><div class="kpi-value" id="kpiSpent">—</div><div class="kpi-label">Spent</div></div>
+            <div class="kpi"><div class="kpi-icon green"><i class="fas fa-piggy-bank"></i></div><div class="kpi-value" id="kpiLeft">—</div><div class="kpi-label">Remaining</div></div>
+            <div class="kpi"><div class="kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div><div class="kpi-value" id="kpiOver">—</div><div class="kpi-label">Over budget</div></div>
+          </div>
+          <div class="pm-card">
+            <div class="chart-head">
+              <div class="chart-title"><i class="fas fa-chart-bar"></i> Budget vs Actual</div>
+              <button class="pm-btn pm-btn-sm" id="expBudgetAll" hidden onclick="PMReports.exportCsv('budgetAll')"><i class="fas fa-file-export"></i> CSV (all projects)</button>
+            </div>
+            <div class="chart-box"><canvas id="budgetVsChart"></canvas></div>
+          </div>
+          <div class="pm-card" style="padding:0;overflow:hidden">
+            <div style="overflow-x:auto">
+              <table class="pm-table">
+                <thead><tr><th>Project</th><th>Budget</th><th>Spent</th><th>Used</th></tr></thead>
+                <tbody id="budgetRows"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="pm-pane" id="pane-analytics">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon blue"><i class="fas fa-chart-line"></i></div><div class="kpi-value">44 pts</div><div class="kpi-label">Avg Velocity</div></div>
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-check-circle"></i></div><div class="kpi-value">87%</div><div class="kpi-label">On-Time Delivery</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-bug"></i></div><div class="kpi-value">6.2d</div><div class="kpi-label">Avg Resolution</div></div>
-          <div class="kpi"><div class="kpi-icon red"><i class="fas fa-fire"></i></div><div class="kpi-value">12%</div><div class="kpi-label">Scope Creep</div></div>
-        </div>
-        <div class="chart-grid">
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-chart-line"></i> Velocity by Sprint</div></div><div class="chart-box"><canvas id="velocitySprintChart"></canvas></div></div>
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-chart-pie"></i> Time Distribution</div></div><div class="chart-box"><canvas id="timeDistChart"></canvas></div></div>
-        </div>
-        <div class="chart-grid">
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-users"></i> Team Utilization</div></div><div class="chart-box"><canvas id="teamUtilChart"></canvas></div></div>
-          <div class="pm-card"><div class="chart-head"><div class="chart-title"><i class="fas fa-chart-area"></i> Burndown — Sprint 14</div></div><div class="chart-box"><canvas id="burndownChart"></canvas></div></div>
-        </div>
-      </div>
     </div>
   </div>
 </div>
 
-<div class="modal-backdrop" id="scheduleModal" onclick="if(event.target===this)document.getElementById('scheduleModal').classList.remove('open')">
-  <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-envelope"></i> Schedule Report Delivery</h3><button class="pm-iconbtn" onclick="document.getElementById('scheduleModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div class="form-group"><label>Report <span class="req">*</span></label><select class="pm-select" id="schReport"><option>Weekly Status Report — Sprint 14</option><option>Q3 Budget Summary</option><option>Team Performance</option><option>Risk Summary</option></select></div>
-      <div class="form-row">
-        <div class="form-group"><label>Frequency</label><select class="pm-select" id="schFreq"><option value="daily">Daily</option><option value="weekly" selected>Weekly</option><option value="monthly">Monthly</option></select></div>
-        <div class="form-group"><label>Day</label><select class="pm-select" id="schDay"><option>Monday</option><option selected>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select></div>
-        <div class="form-group"><label>Time</label><input type="time" class="pm-input" id="schTime" value="09:00"></div>
-      </div>
-      <div class="form-group"><label>Recipients (emails, comma-separated) <span class="req">*</span></label><textarea class="pm-input" style="min-height:60px;height:auto;padding:6px 10px;resize:vertical" id="schRecipients" placeholder="rohini@mentis.example, arvind@mentis.example">rohini@mentis.example, arvind@mentis.example</textarea></div>
-      <div class="form-group"><label>Format</label><select class="pm-select" id="schFormat"><option>PDF attachment</option><option>Inline HTML in email</option><option>Excel attachment</option></select></div>
-    </div>
-    <div class="modal-foot">
-      <button class="pm-btn" onclick="document.getElementById('scheduleModal').classList.remove('open')">Cancel</button>
-      <button class="pm-btn" onclick="PM.toast('Test email sent','success')"><i class="fas fa-paper-plane"></i> Send Test</button>
-      <button class="pm-btn pm-btn-primary" onclick="submitSchedule()"><i class="fas fa-check"></i> Schedule</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="shareModal" onclick="if(event.target===this)document.getElementById('shareModal').classList.remove('open')">
-  <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
-    <div class="modal-head"><h3><i class="fas fa-share-nodes"></i> Create Public Share Link</h3><button class="pm-iconbtn" onclick="document.getElementById('shareModal').classList.remove('open')"><i class="fas fa-times"></i></button></div>
-    <div class="modal-body">
-      <div class="form-group"><label>Report <span class="req">*</span></label><select class="pm-select" id="shReport"><option>Weekly Status Report — Sprint 14</option><option>Q3 Budget Summary</option><option>Team Performance</option></select></div>
-      <div class="form-group"><label>Link expiry</label><select class="pm-select" id="shExpiry"><option value="7">7 days</option><option value="30" selected>30 days</option><option value="90">90 days</option><option value="never">Never expire</option></select></div>
-      <div class="form-group"><label>Access controls</label>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs);cursor:pointer"><input type="checkbox" id="shPasswordChk" style="accent-color:var(--pri)" onchange="document.getElementById('shPassword').disabled=!this.checked"> <span>Password protect</span></label>
-          <input class="pm-input" id="shPassword" placeholder="Enter password" disabled style="margin-left:24px;max-width:260px">
-          <label style="display:flex;align-items:center;gap:8px;font-size:var(--fs);cursor:pointer"><input type="checkbox" id="shDownload" checked style="accent-color:var(--pri)"> <span>Allow PDF download</span></label>
-        </div>
-      </div>
-    </div>
-    <div class="modal-foot">
-      <button class="pm-btn" onclick="document.getElementById('shareModal').classList.remove('open')">Cancel</button>
-      <button class="pm-btn pm-btn-primary" onclick="submitShare()"><i class="fas fa-link"></i> Create Link</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-backdrop" id="previewModal" onclick="if(event.target===this)document.getElementById('previewModal').classList.remove('open')">
-  <div class="modal modal-lg" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <h3><i class="fas fa-eye"></i> Report Preview</h3>
-      <div style="display:flex;gap:6px">
-        <button class="pm-btn pm-btn-sm" onclick="PM.toast('Exported as PDF','success')"><i class="fas fa-file-pdf"></i> PDF</button>
-        <button class="pm-btn pm-btn-sm" onclick="PM.toast('Exported as Excel','success')"><i class="fas fa-file-excel"></i> Excel</button>
-        <button class="pm-iconbtn" onclick="document.getElementById('previewModal').classList.remove('open')"><i class="fas fa-times"></i></button>
-      </div>
-    </div>
-    <div class="modal-body" id="previewBody" style="background:var(--bg)"></div>
-  </div>
-</div>
-
-<div class="copy-toast" id="copyToast"><i class="fas fa-check"></i> Link copied to clipboard</div>
 <script src="/pm/pm-core.js"></script>
 <script src="/pm/pm-reports.js"></script>
 <script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
 <script src="/webjars/stomp-websocket/2.3.4/lib/stomp.min.js"></script>
 <script>
-  PM.bootstrap().then(function(me){
-  // Phase 7 wires the Reports + Budget tabs through pm-reports.js.
-  // All other tabs (Builder, Scheduled, Shared, Analytics) keep their existing behaviour.
-  window.pmRefresh = function () {
-    if (window.PMReports) window.PMReports.refresh();
-  };
-  // Initial load of the Reports tab
-  if (window.PMReports) setTimeout(function(){ window.PMReports.init(); }, 250);
+  PM.bootstrap().then(function () {
+    document.getElementById('mobToggle').addEventListener('click', function () {
+      document.getElementById('pmSidebar').classList.toggle('open');
+    });
+    window.pmRefresh = function () { if (window.PMReports) window.PMReports.refresh(); };
+    if (window.PMReports) window.PMReports.init();
   });
 </script>
 </body>

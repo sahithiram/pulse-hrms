@@ -120,13 +120,30 @@ public class Project {
     // ── Phase 6.2: closure ──
     @Column(name = "lessons_learned", columnDefinition = "TEXT")
     private String lessonsLearned;
+    // ── Step 4: review rule ──
+    @Column(name = "review_required", nullable = false)
+    private Boolean reviewRequired;
+    // ── Step 8: completion and reopen ──
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
+    @Column(name = "completed_by")
+    private Long completedBy;
+
+    @Column(name = "reopened_at")
+    private LocalDateTime reopenedAt;
+
+    @Column(name = "reopened_by")
+    private Long reopenedBy;
+
+    @Column(name = "reopen_reason", length = 500)
+    private String reopenReason;
     @PrePersist
     void prePersist() {
         if (progressPct == null) progressPct = 0;
         if (budgetSpent == null) budgetSpent = BigDecimal.ZERO;
         if (healthMode == null) healthMode = HealthMode.AUTO;
-
+        if (reviewRequired == null) reviewRequired = Boolean.TRUE; // new projects: review ON
         if (status == null) status = ProjectStatus.PLANNING;
         if (priority == null) priority = ProjectPriority.MEDIUM;
     }

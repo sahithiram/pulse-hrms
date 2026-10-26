@@ -25,6 +25,7 @@ public class ProjectMapper {
                 .status(ProjectStatus.PLANNING)
                 .progressPct(0)
                 .teamId(req.getTeamId())
+                .reviewRequired(req.getReviewRequired() == null ? Boolean.TRUE : req.getReviewRequired())
                 .createdBy(createdBy)
                 .build();
     }
@@ -58,6 +59,7 @@ public class ProjectMapper {
                 .healthReason(p.getHealthReason())
                 .healthUpdatedAt(p.getHealthUpdatedAt())
                 .lessonsLearned(p.getLessonsLearned())
+                .reviewRequired(Boolean.TRUE.equals(p.getReviewRequired()))
                 .build();
     }
 

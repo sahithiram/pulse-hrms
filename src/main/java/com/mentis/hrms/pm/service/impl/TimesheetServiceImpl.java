@@ -65,12 +65,27 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     @Transactional(readOnly = true)
     public TimesheetResponse forEmployee(Long employeePk, LocalDate weekStart) {
+        return buildWeek(employeePk, weekStart, null);
+    }
+
+    /**
+     * onlyProjectId == null : the person's whole week (self, team lead, HR/admin).
+     * onlyProjectId != null : ONLY the hours logged on that project (project view for
+     *                         owner / manager / lead). Hours on other projects stay private.
+     */
+    private TimesheetResponse buildWeek(Long employeePk, LocalDate weekStart, Long onlyProjectId) {
         Employee e = employeeRepository.findById(employeePk).orElse(null);
         if (e == null) return null;
 
         LocalDate weekEnd = weekStart.plusDays(6);
         List<TaskTimeLog> logs = timeLogRepository
                 .findByEmployeeIdAndLogDateBetweenOrderByLogDateAsc(employeePk, weekStart, weekEnd);
+        if (onlyProjectId != null) {
+            logs = logs.stream()
+                    .filter(l -> onlyProjectId.equals(
+                            taskRepository.findById(l.getTaskId()).map(Task::getProjectId).orElse(null)))
+                    .collect(Collectors.toList());
+        }
 
         Map<LocalDate, List<TaskTimeLog>> byDay = new LinkedHashMap<>();
         for (LocalDate d = weekStart; !d.isAfter(weekEnd); d = d.plusDays(1)) {
@@ -125,7 +140,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .totalHours(round1(weekMinutes / 60.0))
                 .days(days)
                 .status(st.name())
-                .editable(st == TimesheetStatus.DRAFT || st == TimesheetStatus.REJECTED)
+                // a project-scoped view is never editable
+                .editable(onlyProjectId == null && (st == TimesheetStatus.DRAFT || st == TimesheetStatus.REJECTED))
                 .statusNote(wk != null ? wk.getNote() : null)
                 .submittedAt(wk != null ? wk.getSubmittedAt() : null)
                 .decidedAt(wk != null ? wk.getDecidedAt() : null)
@@ -144,7 +160,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         return pks.stream().map(pk -> forEmployee(pk, weekStart))
                 .filter(Objects::nonNull).collect(Collectors.toList());
     }
-
     @Override
     @Transactional(readOnly = true)
     public List<TimesheetResponse> forProject(Long projectId, LocalDate weekStart) {
@@ -153,7 +168,36 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .map(TaskAssignment::getEmployeeId)
                 .distinct().toList();
         return pks.stream().map(pk -> forEmployee(pk, weekStart))
-                .filter(Objects::nonNull).collect(Collectors.toList());
+                .filter(Objects::nonNull)
+                .map(r -> onlyThisProject(r, projectId))   // STEP 6: privacy
+                .filter(r -> r.getTotalMinutes() > 0)      // hide people with no hours on this project
+                .collect(Collectors.toList());
+    }
+
+    /** STEP 6: a copy of one person's week that keeps ONLY the hours logged on this project. */
+    private TimesheetResponse onlyThisProject(TimesheetResponse r, Long projectId) {
+        List<TimesheetResponse.Day> days = new ArrayList<>();
+        int total = 0;
+        for (TimesheetResponse.Day d : r.getDays()) {
+            List<TimesheetResponse.Entry> kept = d.getEntries().stream()
+                    .filter(e -> Objects.equals(e.getProjectId(), projectId))
+                    .collect(Collectors.toList());
+            int mins = kept.stream().mapToInt(TimesheetResponse.Entry::getMinutes).sum();
+            total += mins;
+            days.add(TimesheetResponse.Day.builder()
+                    .date(d.getDate()).weekday(d.getWeekday())
+                    .minutes(mins).hours(round1(mins / 60.0))
+                    .entries(kept).build());
+        }
+        return TimesheetResponse.builder()
+                .employeePk(r.getEmployeePk()).employeeId(r.getEmployeeId())
+                .employeeName(r.getEmployeeName()).department(r.getDepartment())
+                .weekStart(r.getWeekStart()).weekEnd(r.getWeekEnd())
+                .totalMinutes(total).totalHours(round1(total / 60.0))
+                .days(days)
+                .status(r.getStatus())
+                .editable(false)            // read-only in the project view; no notes or approver details
+                .build();
     }
 
     @Override
@@ -257,9 +301,9 @@ public class TimesheetServiceImpl implements TimesheetService {
     // ═══════════════════════════ approver choice ═══════════════════════════
 
     /**
-     * Order: leads of the employee's teams → (for each project they logged on) its team lead,
-     * owner, MANAGER members → admins. Anyone on approved leave today is skipped (HRMS leave data).
-     * The employee can never approve their own week.
+     * Order: lead(s) of the employee's own teams, then for each project they logged on:
+     * its LEAD members, its team lead, its owner, its MANAGER members; then HR_MANAGER / SUPER_ADMIN.
+     * Anyone on approved leave today is skipped. The employee can never approve their own week.
      */
     private Long pickApprover(Long employeePk, List<TaskTimeLog> logs) {
         LinkedHashSet<Long> cands = new LinkedHashSet<>();
@@ -275,9 +319,14 @@ public class TimesheetServiceImpl implements TimesheetService {
         for (Long pid : projectIds) {
             Project p = projectRepository.findById(pid).orElse(null);
             if (p == null) continue;
+
             if (p.getTeamId() != null) {
                 teamRepository.findById(p.getTeamId()).map(Team::getLeadEmployeeId).ifPresent(cands::add);
             }
+            // STEP 6: explicit project LEADs run the day to day, so they come before owner / managers
+            projectMemberRepository.findByProjectId(pid).stream()
+                    .filter(m -> m.getRole() == ProjectRole.LEAD)
+                    .forEach(m -> cands.add(m.getEmployeeId()));
             if (p.getOwnerId() != null) cands.add(p.getOwnerId());
             projectMemberRepository.findByProjectId(pid).stream()
                     .filter(m -> m.getRole() == ProjectRole.MANAGER)
@@ -289,7 +338,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (!unavailable(c)) return c;
         }
 
-        // admins as the fallback  (verify: Employee#getRole() returns UserRole)
         List<Long> admins = new ArrayList<>();
         for (Employee a : employeeRepository.findAll()) {
             UserRole r = a.getRole();
@@ -301,7 +349,6 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (!unavailable(a)) return a;
         }
 
-        // everyone is on leave: still route to the first candidate, they will see it when back
         if (!cands.isEmpty()) return cands.iterator().next();
         if (!admins.isEmpty()) return admins.get(0);
         throw new BusinessRuleException(

@@ -37,13 +37,34 @@
     var locked = d.projectStatus === 'COMPLETED' || d.projectStatus === 'ARCHIVED';
 
     /* readiness */
-    h += '<div id="pmClosureRoot" class="pm-card" style="border-left:3px solid var(--' + (d.ready ? 'suc' : 'wrn') + ')">' +
+    h += '<div id="pmClosureRoot" class="pm-card" style="border-left:3px solid var(--' +     (locked ? '<b>This project is ' + d.projectStatus.toLowerCase() + '.</b> The checklist is locked.' : d.ready ? 'suc' : 'wrn') + ')">' +
       (d.ready
         ? '<b>Ready to complete.</b> Every closure rule passes.'
         : '<b>Not ready to complete:</b><ul style="margin:6px 0 0 18px;padding:0">' +
           d.blockers.map(function (b) { return '<li>' + PM.esc(b) + '</li>'; }).join('') + '</ul>') +
       '</div>';
-
+  /* STEP 8: completion summary when completed, reopen note when running again */
+  if (d.projectStatus === 'COMPLETED') {
+    var late = d.delayDays == null ? '—'
+      : (d.delayDays > 0 ? d.delayDays + ' day(s) late'
+        : (d.delayDays < 0 ? Math.abs(d.delayDays) + ' day(s) early' : 'on the planned end date'));
+    h += '<div class="pm-card" style="border-left:3px solid var(--suc)">' +
+      '<div style="font-weight:700;margin-bottom:6px"><i class="fas fa-flag-checkered"></i> Completion summary</div>' +
+      '<div style="font-size:var(--fs-sm);line-height:1.7">' +
+      'Completed: <b>' + PM.esc(PM.fmtDateTime(d.completedAt)) + '</b> by ' + PM.esc(d.completedByName || '—') + '<br>' +
+      'Planned end: <b>' + PM.esc(PM.fmtDate(d.plannedEnd)) + '</b> (' + PM.esc(late) + ')<br>' +
+      'Tasks: <b>' + d.tasksDone + '</b> of ' + d.tasksTotal + ' done</div>' +
+      ((PM.can && PM.can('super'))
+        ? '<button class="pm-btn pm-btn-sm" style="margin-top:8px" onclick="PMClosure.reopen()"><i class="fas fa-rotate-left"></i> Reopen project</button>'
+        : '<div style="margin-top:6px;font-size:var(--fs-xs);color:var(--tx3)">Only a Super Admin can reopen a completed project.</div>') +
+      '</div>';
+  } else if (d.reopenedAt) {
+    h += '<div class="pm-card" style="border-left:3px solid var(--wrn)">' +
+      '<b><i class="fas fa-rotate-left"></i> Reopened</b> on ' + PM.esc(PM.fmtDateTime(d.reopenedAt)) +
+      ' by ' + PM.esc(d.reopenedByName || '—') + '<br>' +
+      '<span style="font-size:var(--fs-sm)">Reason: ' + PM.esc(d.reopenReason || '—') + '</span><br>' +
+      '<span style="font-size:var(--fs-xs);color:var(--tx3)">Client sign-off must be requested again before the project can be completed.</span></div>';
+  }
     /* checklist */
     h += '<div class="pm-card"><div style="font-weight:700;margin-bottom:8px"><i class="fas fa-list-check"></i> Checklist (' + d.doneItems + '/' + d.totalItems + ')</div>';
     if (!d.items.length) h += '<div style="color:var(--tx3);margin-bottom:8px">No closure items yet.</div>';
@@ -110,7 +131,16 @@
       .then(function () { PM.toast('Project completed', 'success'); return load(); })
       .catch(function (e) { fail(e); load(); });   // the message lists exactly what is still missing
   }
-
+  // STEP 8: Super Admin only (the server checks too)
+  function reopen() {
+    var why = window.prompt('Why are you reopening this project? (at least 10 characters)');
+    if (why === null) return;
+    why = why.trim();
+    if (why.length < 10) { PM.toast('Please give a reason of at least 10 characters', 'warning'); return; }
+    PM.api('POST', base() + '/reopen', { reason: why })
+      .then(function () { PM.toast('Project reopened', 'success'); return load(); })
+      .catch(fail);
+  }
   /* realtime: any write anywhere re-renders the open drawer, unless the user is typing */
   window.addEventListener('pm:event', function () {
     if (!C.id || !document.getElementById('pmClosureRoot')) return;

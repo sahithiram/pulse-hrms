@@ -11,6 +11,9 @@ public interface WorkloadService {
     List<WorkloadResponse> forProject(Long projectId, LocalDate from, LocalDate to);
     List<WorkloadResponse> forEmployees(List<Long> employeePks, LocalDate from, LocalDate to);
 
+    /** STEP 6: everyone who belongs to at least one team (company-wide utilization for HR / admins). */
+    List<WorkloadResponse> forEveryone(LocalDate from, LocalDate to);
+
     /** Returns null if OK, else a human message about why this assignment is risky. */
     String capacityWarning(Long employeePk, LocalDate from, LocalDate to);
 }

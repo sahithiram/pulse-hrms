@@ -268,6 +268,15 @@ public class CandidateOnboardingController {
         employeeService.saveEmployee(employee);
 
         session.setAttribute("candidateEmployeeId", employeeId);
+        // Step 2: showDashboard() checks userId/userRole, so set them here too
+        session.setAttribute("userId", employeeId);
+        session.setAttribute("userRole", employee.getRole() != null ? employee.getRole().name() : "EMPLOYEE");
+        session.setAttribute("userName", employee.getFirstName() + " " + employee.getLastName());
+        try {
+            attendanceService.checkIn(employeeId);   // same auto check-in as normal login
+        } catch (Exception e) {
+            logger.warn("Auto check-in after password creation failed for {}: {}", employeeId, e.getMessage());
+        }
         session.setAttribute("candidateName", employee.getFirstName() + " " + employee.getLastName());
         session.setAttribute("candidateEmail", employee.getEmail());
         session.setAttribute("loginTime", LocalDateTime.now());
@@ -502,6 +511,11 @@ public class CandidateOnboardingController {
     public String logout(HttpSession session, RedirectAttributes ra) {
         String employeeId = (String) session.getAttribute("candidateEmployeeId");
         if (employeeId != null) {
+            try {
+                attendanceService.checkOut(employeeId);
+            } catch (Exception e) {
+                logger.warn("Check-out on logout failed for {}: {}", employeeId, e.getMessage());
+            }
             logger.info("Candidate logging out: {}", employeeId);
             Optional<Employee> empOpt = employeeService.getEmployeeByEmployeeId(employeeId);
             empOpt.ifPresent(emp -> {

@@ -3,31 +3,72 @@
  * Loaded on every /pm/*.html page. Replaces the copy-pasted PM object.
  *
  * Public API:
- *   PM.toast(msg, type, dur)          — show a toast
- *   PM.openDrawer(html, title)        — right-side drawer
- *   PM.closeDrawer()                  — close drawer
- *   PM.openCmd()                      — command palette (⌘K)
- *   PM.toggleSidebar()                — collapse sidebar
- *   PM.toggleTheme()                  — dark/light
- *   PM.esc(s)                         — HTML escape
- *   PM.getInitials(name)              — "Vinay Kumar" → "VK"
- *   PM.fmtDate(iso)                   — short date
- *   PM.fmtDateTime(iso)               — date + time
- *   PM.api(method, url, body?)        — fetch wrapper, throws on error
- *   PM.apiList(method, url, body?)    — same, but always returns an array
- *   PM.getMe()                        — cached /api/pm/me
- *   PM.meTasks()                      — cached /api/pm/me/tasks
- *   PM.meProjects()                   — cached /api/pm/me/projects
- *   PM.notifications                  — the shared notification client (after boot)
- *   PM.approvals()                    — the shared approval UI (after boot)
- *   PM.buildSidebar(user)             — render role-aware sidebar
- *   PM.buildHeader(user)              — render header avatar/name
- *   PM.bootstrap(opts?)               — call on DOMContentLoaded
- *   PM.logout()                       — POST /candidate/logout
- *   PM.user                           — current user (after bootstrap)
+ *   PM.toast(msg, type, dur)     — show a toast
+ *   PM.openDrawer(html, title)   — right-side drawer
+ *   PM.closeDrawer()             — close drawer
+ *   PM.openCmd()                 — command palette (⌘K)
+ *   PM.toggleSidebar()           — collapse sidebar
+ *   PM.toggleTheme()             — dark/light
+ *   PM.esc(s)                    — HTML escape
+ *   PM.getInitials(name)         — "Vinay Kumar" → "VK"
+ *   PM.fmtDate(iso)              — short date
+ *   PM.fmtDateTime(iso)          — date + time
+ *   PM.api(method, url, body?)   — fetch wrapper, throws on error
+ *   PM.apiList(method, url, body?) — same, but always returns an array
+ *   PM.getMe()                   — cached /api/pm/me
+ *   PM.meTasks()                 — cached /api/pm/me/tasks
+ *   PM.meProjects()              — cached /api/pm/me/projects
+ *   PM.notifications             — the shared notification client (after boot)
+ *   PM.approvals()               — the shared approval UI (after boot)
+ *   PM.buildSidebar(user)        — render role-aware sidebar
+ *   PM.buildHeader(user)         — render header avatar/name
+ *   PM.bootstrap(opts?)          — call on DOMContentLoaded
+ *   PM.logout()                  — POST /candidate/logout
+ *   PM.user                      — current user (after bootstrap)
+ *   PM.can(rule)                 — STEP 7.1: does the current user pass this rule?
+ *   PM.guard(rule)               — STEP 7.1: false + "No access" screen when not allowed
+ *   PM.gateTabs(map)             — STEP 7.1: hide tab buttons the user can't use
+ *   PM.openIntake(tab)           — STEP 7.1: open the project requests / templates drawer
+ *
+ * Rules for PM.can (all read from /api/pm/me):
+ *   admin      Super Admin, HR, HR Manager         (me.admin)
+ *   super      Super Admin                         (me.superAdmin)
+ *   creator    Super Admin, PM                     (me.canCreateProject)
+ *   reviewer   Super Admin, HR Manager             (me.intakeReviewer)
+ *   templates  reviewer or creator                 (may open the Templates list)
+ *   clients    Super Admin, HR, HR Manager, PM     (me.canManageClients)
+ *   finance    Super Admin, project owner/MANAGER  (me.financeAccess)
+ *   lead       runs work day to day                (me.leadTier)
+ *   manage     admin or lead                       (planning, team, reports pages)
+ *   people     HR / HR Manager                     (me.peopleAdmin)
  */
 (function () {
   'use strict';
+
+  /* ============================================================
+     ROLE RULES  (STEP 7.1)
+     ============================================================ */
+  function can(rule, u) {
+    u = u || (window.PM && window.PM.user);
+    if (!u) return false;
+    switch (rule) {
+      case undefined:
+      case null:
+      case '':
+      case 'any':       return true;
+      case 'admin':     return u.admin === true;
+      case 'super':     return u.superAdmin === true;
+      case 'creator':   return u.canCreateProject === true;
+      case 'reviewer':  return u.intakeReviewer === true;
+      case 'templates': return u.intakeReviewer === true || u.canCreateProject === true;
+      case 'clients':   return u.canManageClients === true;
+      case 'finance':   return u.financeAccess === true;
+      case 'lead':      return u.leadTier === true;
+      case 'manage':    return u.admin === true || u.leadTier === true;
+      case 'people':    return u.peopleAdmin === true;
+      default:          return false; // unknown rule: deny
+    }
+  }
 
   /* ============================================================
      THEME
@@ -65,7 +106,7 @@
     t.className = 'pm-toast ' + type;
     const icons = { success: 'fa-check', error: 'fa-times', warning: 'fa-exclamation', info: 'fa-info' };
     t.innerHTML = '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || icons.info) + '"></i></div>' +
-                  '<div class="pm-toast-msg">' + msg + '</div>';
+      '<div class="pm-toast-msg">' + msg + '</div>';
     cont.appendChild(t);
     requestAnimationFrame(() => t.classList.add('show'));
     const rm = () => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); };
@@ -91,10 +132,10 @@
       dr.id = 'pmDrawer';
       dr.className = 'pm-drawer';
       dr.innerHTML = '<div class="pm-drawer-head">' +
-                       '<div class="pm-drawer-title" id="pmDrawerTitle"></div>' +
-                       '<button class="pm-iconbtn" onclick="PM.closeDrawer()"><i class="fas fa-times"></i></button>' +
-                     '</div>' +
-                     '<div class="pm-drawer-body" id="pmDrawerBody"></div>';
+        '<div class="pm-drawer-title" id="pmDrawerTitle"></div>' +
+        '<button class="pm-iconbtn" onclick="PM.closeDrawer()"><i class="fas fa-times"></i></button>' +
+        '</div>' +
+        '<div class="pm-drawer-body" id="pmDrawerBody"></div>';
       document.body.appendChild(dr);
     }
     document.getElementById('pmDrawerTitle').textContent = title || 'Details';
@@ -191,7 +232,6 @@
   /* ============================================================
      API LIST — always returns an array, whether the backend sent
      a plain List or a Spring PageResponse ({ content: [...] }).
-     Use this for any endpoint that may be paginated.
      ============================================================ */
   async function apiList(method, url, body) {
     const data = await api(method, url, body);
@@ -246,13 +286,13 @@
         'border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.5);z-index:2000;padding:6px;min-width:200px;display:none';
       menu.innerHTML =
         '<div style="padding:8px 10px;border-bottom:1px solid var(--bd);margin-bottom:4px">' +
-          '<div style="font-weight:600;font-size:13px">' + esc(name) + '</div>' +
-          '<div style="font-size:11px;color:var(--tx3)">' + esc(user ? user.hrmsRole : '') + '</div>' +
+        '<div style="font-weight:600;font-size:13px">' + esc(name) + '</div>' +
+        '<div style="font-size:11px;color:var(--tx3)">' + esc(user ? user.hrmsRole : '') + '</div>' +
         '</div>' +
         '<div class="pm-user-menu-item" data-action="settings" style="padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12.5px">' +
-          '<i class="fas fa-gear" style="width:14px;color:var(--pri)"></i> Settings</div>' +
+        '<i class="fas fa-gear" style="width:14px;color:var(--pri)"></i> Settings</div>' +
         '<div class="pm-user-menu-item" data-action="logout" style="padding:7px 10px;border-radius:5px;cursor:pointer;font-size:12.5px;color:var(--dng)">' +
-          '<i class="fas fa-right-from-bracket" style="width:14px"></i> Logout</div>';
+        '<i class="fas fa-right-from-bracket" style="width:14px"></i> Logout</div>';
       document.body.appendChild(menu);
 
       menu.querySelectorAll('.pm-user-menu-item').forEach(item => {
@@ -278,7 +318,11 @@
   }
 
   /* ============================================================
-     SIDEBAR BUILDER
+     SIDEBAR BUILDER  (STEP 7.1: every item has a rule)
+       requires : a PM.can rule; the item is hidden when it fails
+       label    : a string, or a function(user) → string
+       intake   : 'requests' | 'templates' → opens the intake drawer
+                  in place instead of navigating
      ============================================================ */
   const SIDEBAR_NAV = [
     { section: 'DASHBOARD', icon: 'fa-home' },
@@ -289,14 +333,20 @@
 
     { section: 'PROJECTS', icon: 'fa-folder-open' },
     { icon: 'fa-list', label: 'All Projects', href: '/pm/04-projects' },
-        { icon: 'fa-plus', label: 'Create Project', href: '/pm/04-projects?action=create', requires: 'creator' },
-        { icon: 'fa-layer-group', label: 'Templates', href: '/pm/04-projects?action=templates', requires: 'creator' },
-        { icon: 'fa-robot', label: 'Auto-Rules', href: '/pm/04-projects?action=autorules', requires: 'creator' },
+    {
+      icon: 'fa-paper-plane',
+      label: function (u) { return (u.admin === true || u.pm === true || u.intakeReviewer === true) ? 'Project Requests' : 'Request a project'; },
+      href: '/pm/04-projects#requests', intake: 'requests'
+    },
+    { icon: 'fa-plus', label: 'Create Project', href: '/pm/04-projects?action=create', requires: 'creator' },
+    { icon: 'fa-layer-group', label: 'Templates', href: '/pm/04-projects#templates', intake: 'templates', requires: 'templates' },
+    { icon: 'fa-robot', label: 'Auto-Rules', href: '/pm/04-projects?action=autorules', requires: 'creator' },
+
     { section: 'PLANNING', icon: 'fa-diagram-project' },
-    { icon: 'fa-layer-group', label: 'Backlog', href: '/pm/05-planning?tab=backlog' },
-    { icon: 'fa-bolt', label: 'Sprints', href: '/pm/05-planning?tab=sprints' },
+    { icon: 'fa-layer-group', label: 'Backlog', href: '/pm/05-planning?tab=backlog', requires: 'manage' },
+    { icon: 'fa-bolt', label: 'Sprints', href: '/pm/05-planning?tab=sprints', requires: 'manage' },
     { icon: 'fa-flag-checkered', label: 'Milestones', href: '/pm/05-planning?tab=milestones' },
-    { icon: 'fa-bullseye', label: 'Goals & OKRs', href: '/pm/05-planning?tab=goals' },
+    { icon: 'fa-bullseye', label: 'Goals & OKRs', href: '/pm/05-planning?tab=goals', requires: 'manage' },
     { icon: 'fa-chart-gantt', label: 'Gantt', href: '/pm/05-planning?tab=gantt' },
 
     { section: 'TASKS', icon: 'fa-list-check' },
@@ -306,78 +356,110 @@
     { icon: 'fa-diagram-project', label: 'Dependency Graph', href: '/pm/06b-graph' },
 
     { section: 'CLIENTS', icon: 'fa-handshake' },
-    { icon: 'fa-address-card', label: 'Client Directory', href: '/pm/08-clients' },
+    { icon: 'fa-address-card', label: 'Client Directory', href: '/pm/08-clients', requires: 'clients' },
 
     { section: 'TEAM', icon: 'fa-people-group' },
     { icon: 'fa-users', label: 'Teams', href: '/pm/07-team?tab=teams' },
-    { icon: 'fa-address-book', label: 'Members', href: '/pm/07-team?tab=members' },
-    { icon: 'fa-users-gear', label: 'Resources', href: '/pm/07-team?tab=resources' },
+    { icon: 'fa-address-book', label: 'Members', href: '/pm/07-team?tab=members', requires: 'manage' },
+    { icon: 'fa-users-gear', label: 'Resources', href: '/pm/07-team?tab=resources', requires: 'manage' },
     { icon: 'fa-clock', label: 'Timesheets', href: '/pm/07-team?tab=timesheets' },
-    { icon: 'fa-star-half-stroke', label: 'Performance', href: '/pm/07-team?tab=reviews' },
+    { icon: 'fa-star-half-stroke', label: 'Performance', href: '/pm/07-team?tab=reviews', requires: 'manage' },
 
     { section: 'QUALITY', icon: 'fa-shield-halved' },
     { icon: 'fa-bug', label: 'Issues', href: '/pm/09-quality?tab=issues' },
     { icon: 'fa-triangle-exclamation', label: 'Risks', href: '/pm/09-quality?tab=risks' },
 
     { section: 'INSIGHTS', icon: 'fa-chart-pie' },
-    { icon: 'fa-chart-line', label: 'Reports', href: '/pm/10-insights?tab=reports' },
-    { icon: 'fa-indian-rupee-sign', label: 'Budget', href: '/pm/10-insights?tab=budget' },
+    { icon: 'fa-chart-line', label: 'Reports', href: '/pm/10-insights?tab=reports', requires: 'manage' },
+    { icon: 'fa-indian-rupee-sign', label: 'Budget', href: '/pm/10-insights?tab=budget', requires: 'finance' },
 
     { section: 'WORKSPACE', icon: 'fa-briefcase' },
     { icon: 'fa-bell', label: 'Notifications', href: '/pm/02-inbox?tab=notifications', badge: 'notifications' },
-    { icon: 'fa-square-check', label: 'Approvals', href: '/pm/02-inbox?tab=approvals',badge: 'approvals' },
-    { icon: 'fa-clock-rotate-left', label: 'Activity Logs', href: '/pm/02-inbox?tab=activity' },
+    { icon: 'fa-square-check', label: 'Approvals', href: '/pm/02-inbox?tab=approvals', badge: 'approvals' },
+    { icon: 'fa-clock-rotate-left', label: 'Activity Logs', href: '/pm/02-inbox?tab=activity', requires: 'manage' },
     { icon: 'fa-gear', label: 'Settings', href: '/pm/11-settings', requires: 'admin' }
   ];
+
+  function normPath(p) {
+    return String(p || '').replace(/\.html$/, '').replace(/\/+$/, '');
+  }
+
+  /** Exactly one entry should light up for the page/tab/hash the person is on. */
+  function isActiveNav(item) {
+    const hashParts = item.href.split('#');
+    const hash = hashParts[1] ? '#' + hashParts[1] : '';
+    const qParts = hashParts[0].split('?');
+    const path = normPath(qParts[0]);
+    const query = qParts[1] || '';
+    if (normPath(location.pathname) !== path) return false;
+    if (hash) return location.hash === hash;
+    if (query) return location.search.indexOf(query) !== -1;
+    // plain page link: not active while a hash entry or an ?action= of the same page is in use
+    if (/action=/.test(location.search)) return false;
+    return !SIDEBAR_NAV.some(n => n.href && n.href.indexOf('#') > -1 &&
+      normPath(n.href.split('#')[0]) === path && location.hash === '#' + n.href.split('#')[1]);
+  }
 
   function buildSidebar(user) {
     const nav = document.getElementById('pmSidebarNav');
     if (!nav) return;
+    user = user || PM.user;
 
-        const isAdmin = user && user.admin === true;
-        const canCreate = user && (user.admin === true || user.canCreateProject === true);
-    const currentPath = window.location.pathname + window.location.search;
+    // 1) keep only what this person may see
+    const visible = SIDEBAR_NAV.filter(item => item.section || !item.requires || can(item.requires, user));
+    // 2) drop section headings that ended up with nothing under them
+    const shown = visible.filter((item, i) => {
+      if (!item.section) return true;
+      const next = visible[i + 1];
+      return next && !next.section;
+    });
 
     let html = '';
-    SIDEBAR_NAV.forEach(item => {
+    shown.forEach(item => {
       if (item.section) {
         html += '<div class="pm-nav-section"><i class="fas ' + item.icon + '"></i> ' + esc(item.section) + '</div>';
         return;
       }
-            if (item.requires === 'admin' && !isAdmin) return;
-            if (item.requires === 'creator' && !canCreate) return;
-
-      const isActive = currentPath === item.href ||
-                       currentPath.startsWith(item.href.split('?')[0]) ||
-                       (item.href.includes('#') && currentPath.startsWith(item.href.split('#')[0]));
+      const label = typeof item.label === 'function' ? item.label(user || {}) : item.label;
       const badgeHtml = item.badge
         ? '<span class="pm-nav-badge" id="pmNavBadge_' + item.badge + '" style="display:none">0</span>'
         : '';
-      html += '<a class="pm-nav-link' + (isActive ? ' active' : '') + '" href="' + esc(item.href) + '">' +
-                '<i class="fas ' + item.icon + '"></i>' +
-                '<span class="pm-nav-label">' + esc(item.label) + '</span>' +
-                badgeHtml +
-              '</a>';
+      html += '<a class="pm-nav-link' + (isActiveNav(item) ? ' active' : '') + '" href="' + esc(item.href) + '"' +
+        (item.intake ? ' data-intake="' + item.intake + '"' : '') + '>' +
+        '<i class="fas ' + item.icon + '"></i>' +
+        '<span class="pm-nav-label">' + esc(label) + '</span>' +
+        badgeHtml +
+        '</a>';
     });
     nav.innerHTML = html;
+
+    // intake entries open the drawer right here, on any page, without navigating
+    nav.querySelectorAll('[data-intake]').forEach(a => {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        openIntake(a.dataset.intake);
+      });
+    });
   }
 
   /* ============================================================
-     COMMAND PALETTE
+     COMMAND PALETTE  (STEP 7.1: same rules as the sidebar)
      ============================================================ */
   const CMDS = [
     { icon: 'fa-gauge-high', label: 'Dashboard', action: () => location.href = '/pm/01-home' },
     { icon: 'fa-inbox', label: 'My Work', action: () => location.href = '/pm/03-my-work' },
     { icon: 'fa-folder-open', label: 'All Projects', action: () => location.href = '/pm/04-projects' },
+    { icon: 'fa-paper-plane', label: 'Project requests', action: () => openIntake('requests') },
+    { icon: 'fa-layer-group', label: 'Project templates', requires: 'templates', action: () => openIntake('templates') },
     { icon: 'fa-table-columns', label: 'Task Board', action: () => location.href = '/pm/06-tasks?view=board' },
     { icon: 'fa-list-ul', label: 'Task List', action: () => location.href = '/pm/06-tasks?view=list' },
     { icon: 'fa-calendar-days', label: 'Calendar', action: () => location.href = '/pm/06-tasks?view=calendar' },
     { icon: 'fa-diagram-project', label: 'Dependency Graph', action: () => location.href = '/pm/06b-graph' },
     { icon: 'fa-users', label: 'Teams', action: () => location.href = '/pm/07-team?tab=teams' },
-    { icon: 'fa-address-card', label: 'Clients', action: () => location.href = '/pm/08-clients' },
+    { icon: 'fa-address-card', label: 'Clients', requires: 'clients', action: () => location.href = '/pm/08-clients' },
     { icon: 'fa-bug', label: 'Issues', action: () => location.href = '/pm/09-quality?tab=issues' },
-    { icon: 'fa-chart-line', label: 'Reports', action: () => location.href = '/pm/10-insights?tab=reports' },
-    { icon: 'fa-gear', label: 'Settings', action: () => location.href = '/pm/11-settings' },
+    { icon: 'fa-chart-line', label: 'Reports', requires: 'manage', action: () => location.href = '/pm/10-insights?tab=reports' },
+    { icon: 'fa-gear', label: 'Settings', requires: 'admin', action: () => location.href = '/pm/11-settings' },
     { icon: 'fa-moon', label: 'Toggle theme', action: toggleTheme },
     { icon: 'fa-right-from-bracket', label: 'Logout', action: logout }
   ];
@@ -392,16 +474,16 @@
       bd.className = 'pm-cmd-backdrop';
       bd.innerHTML =
         '<div class="pm-cmd" onclick="event.stopPropagation()">' +
-          '<div class="pm-cmd-input">' +
-            '<i class="fas fa-search"></i>' +
-            '<input id="pmCmdInp" placeholder="Type a command..." autocomplete="off">' +
-            '<kbd>ESC</kbd>' +
-          '</div>' +
-          '<div class="pm-cmd-list" id="pmCmdList"></div>' +
-          '<div class="pm-cmd-foot">' +
-            '<span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>' +
-            '<span><kbd>↵</kbd> Select</span>' +
-          '</div>' +
+        '<div class="pm-cmd-input">' +
+        '<i class="fas fa-search"></i>' +
+        '<input id="pmCmdInp" placeholder="Type a command..." autocomplete="off">' +
+        '<kbd>ESC</kbd>' +
+        '</div>' +
+        '<div class="pm-cmd-list" id="pmCmdList"></div>' +
+        '<div class="pm-cmd-foot">' +
+        '<span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>' +
+        '<span><kbd>↵</kbd> Select</span>' +
+        '</div>' +
         '</div>';
       document.body.appendChild(bd);
       bd.addEventListener('click', closeCmd);
@@ -420,12 +502,12 @@
 
   function renderCmd() {
     const q = (document.getElementById('pmCmdInp').value || '').toLowerCase();
-    cmdFiltered = CMDS.filter(c => c.label.toLowerCase().includes(q));
+    cmdFiltered = CMDS.filter(c => (!c.requires || can(c.requires)) && c.label.toLowerCase().includes(q));
     cmdIndex = 0;
     const list = document.getElementById('pmCmdList');
     list.innerHTML = cmdFiltered.map((c, i) =>
       '<div class="pm-cmd-item' + (i === 0 ? ' active' : '') + '" data-i="' + i + '">' +
-        '<i class="fas ' + c.icon + '"></i><span>' + esc(c.label) + '</span>' +
+      '<i class="fas ' + c.icon + '"></i><span>' + esc(c.label) + '</span>' +
       '</div>'
     ).join('') || '<div style="padding:14px;text-align:center;color:var(--tx3);font-size:12px">No matches</div>';
     list.querySelectorAll('.pm-cmd-item').forEach(el =>
@@ -468,7 +550,7 @@
       var el = document.querySelector('.pm-live');
       if (!el) return;
       el.innerHTML = '<span class="dot"' + (on ? '' : ' style="background:#ef4444"') + '></span> ' +
-                     (on ? 'Live' : 'Reconnecting…');
+        (on ? 'Live' : 'Reconnecting…');
     }
 
     var timer;
@@ -537,68 +619,71 @@
   }
 
   // Auto-invalidate on every realtime event
-    window.addEventListener('pm:event', invalidateMeCaches);
+  window.addEventListener('pm:event', invalidateMeCaches);
 
-    /* ============================================================
-       PHASE 2 — member drawers (pm-members.js is loaded on demand)
-       ============================================================ */
-    function loadMembersScript() {
-      if (window.PMMembers) return Promise.resolve();
-      return new Promise(function (resolve) {
+  /* ============================================================
+     PHASE 2 — member drawers (pm-members.js is loaded on demand)
+     ============================================================ */
+  function loadMembersScript() {
+    if (window.PMMembers) return Promise.resolve();
+    return new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.id = 'pm-members-js';
+      s.src = '/pm/pm-members.js';
+      s.onload = resolve;
+      s.onerror = resolve;
+      document.head.appendChild(s);
+    });
+  }
+  // PHASE 5 — "Health & budget" drawer (pm-finance.js loaded on demand)
+  async function openProjectFinance(projectId) {
+    if (!window.PMFinance) {
+      await new Promise(function (resolve) {
         var s = document.createElement('script');
-        s.id = 'pm-members-js';
-        s.src = '/pm/pm-members.js';
+        s.src = '/pm/pm-finance.js';
         s.onload = resolve;
         s.onerror = resolve;
         document.head.appendChild(s);
       });
     }
-      // PHASE 5 — "Health & budget" drawer (pm-finance.js loaded on demand)
-      async function openProjectFinance(projectId) {
-        if (!window.PMFinance) {
-          await new Promise(function (resolve) {
-            var s = document.createElement('script');
-            s.src = '/pm/pm-finance.js';
-            s.onload = resolve;
-            s.onerror = resolve;
-            document.head.appendChild(s);
-          });
-        }
-        if (window.PMFinance) window.PMFinance.open(projectId);
-        else toast('Could not load the finance panel', 'error');
-      }
-        async function openProjectClosure(projectId) {
-          if (!window.PMClosure) {
-            await new Promise(function (resolve) {
-              var s = document.createElement('script');
-              s.src = '/pm/pm-closure.js';
-              s.onload = resolve;
-              s.onerror = resolve;
-              document.head.appendChild(s);
-            });
-          }
-          if (window.PMClosure) window.PMClosure.open(projectId);
-          else toast('Could not load the closure panel', 'error');
-        }
+    if (window.PMFinance) window.PMFinance.open(projectId);
+    else toast('Could not load the finance panel', 'error');
+  }
+  async function openProjectClosure(projectId) {
+    if (!window.PMClosure) {
+      await new Promise(function (resolve) {
+        var s = document.createElement('script');
+        s.src = '/pm/pm-closure.js';
+        s.onload = resolve;
+        s.onerror = resolve;
+        document.head.appendChild(s);
+      });
+    }
+    if (window.PMClosure) window.PMClosure.open(projectId);
+    else toast('Could not load the closure panel', 'error');
+  }
 
-      async function openProjectMembers(projectId, name) {
-      await loadMembersScript();
-      if (window.PMMembers) window.PMMembers.openProject(projectId, name);
-      else toast('Could not load the members panel', 'error');
-    }
-    async function openTeamMembers(teamId, name) {
-      await loadMembersScript();
-      if (window.PMMembers) window.PMMembers.openTeam(teamId, name);
-      else toast('Could not load the members panel', 'error');
-    }
-function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
-  return h ? (r ? h + 'h ' + r + 'm' : h + 'h') : r + 'm'; }
+  async function openProjectMembers(projectId, name) {
+    await loadMembersScript();
+    if (window.PMMembers) window.PMMembers.openProject(projectId, name);
+    else toast('Could not load the members panel', 'error');
+  }
+  async function openTeamMembers(teamId, name) {
+    await loadMembersScript();
+    if (window.PMMembers) window.PMMembers.openTeam(teamId, name);
+    else toast('Could not load the members panel', 'error');
+  }
+  function fmtMinutes(m) {
+    m = m || 0;
+    const h = Math.floor(m / 60), r = m % 60;
+    return h ? (r ? h + 'h ' + r + 'm' : h + 'h') : r + 'm';
+  }
+
   /* ============================================================
      PHASE 4 — boot the shared notification client
      FIX 9 — don't double-load if the page already has the script tag
      ============================================================ */
   async function bootNotifications() {
-    // If the page already has a <script src="/notifications.js"> tag, do NOT re-add it.
     const alreadyLoaded = document.querySelector('script[src="/notifications.js"]');
     if (!window.Notifications && !alreadyLoaded) {
       await new Promise((resolve, reject) => {
@@ -610,7 +695,6 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
         document.head.appendChild(s);
       });
     }
-    // Wait until Notifications is actually defined (page tag may still be loading)
     if (!window.Notifications) {
       await new Promise(resolve => {
         const t0 = Date.now();
@@ -626,11 +710,9 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
 
   /* ============================================================
      PHASE 7 — boot the shared approval client
-     FIX 9 — don't double-load if the page already has the script tag
      ============================================================ */
   async function loadApprovalsScript() {
     if (window.PMApprovals) return;
-    // If the page already has a <script src="/pm/pm-approvals.js"> tag, wait for it instead of re-adding.
     const alreadyLoaded = document.querySelector('script[src="/pm/pm-approvals.js"]');
     if (alreadyLoaded) {
       await new Promise(resolve => {
@@ -654,6 +736,114 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
   }
 
   /* ============================================================
+     PROJECT INTAKE DRAWER  (pm-intake.js is loaded on demand)
+     ============================================================ */
+  async function openIntake(tab) {
+    if (!window.PMIntake) {
+      await new Promise(function (resolve) {
+        var s = document.createElement('script');
+        s.src = '/pm/pm-intake.js';
+        s.onload = resolve;
+        s.onerror = resolve;
+        document.head.appendChild(s);
+      });
+    }
+    if (window.PMIntake) window.PMIntake.open(tab);
+    else toast('Could not load project intake', 'error');
+  }
+
+  /**
+   * #requests / #templates in the URL open the drawer. Runs on first page load AND on hashchange.
+   * The hash is cleared afterwards so clicking the same notification link again works.
+   */
+  function openIntakeFromHash() {
+    var h = (location.hash || '').replace('#', '');
+    if (h !== 'templates' && h !== 'requests') return;
+    openIntake(h);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* ignore */ }
+  }
+  window.addEventListener('hashchange', function () {
+    openIntakeFromHash();
+    if (window.PM && window.PM.user) buildSidebar(window.PM.user); // keep the highlighted entry correct
+  });
+
+  /* ============================================================
+     PAGE & TAB GUARDS  (STEP 7.1)
+     One table: a page rule blocks the whole page, a tabs map blocks single tabs.
+     The server still enforces everything — this just stops people landing on a broken page.
+     11-settings is NOT guarded here (everyone reaches it from the user menu).
+     ============================================================ */
+  const ROUTES = [
+    { path: '/pm/08-clients',  rule: 'clients' },
+    { path: '/pm/10-insights', rule: 'manage', tabs: { budget: 'finance' } },
+    { path: '/pm/05-planning', tabs: { backlog: 'manage', sprints: 'manage', goals: 'manage' } },
+    { path: '/pm/07-team',     tabs: { members: 'manage', resources: 'manage', reviews: 'manage' } },
+    { path: '/pm/02-inbox',    tabs: { activity: 'manage' } }
+  ];
+
+  function showNoAccess() {
+    if (document.getElementById('pmNoAccess')) return;
+    const el = document.createElement('div');
+    el.id = 'pmNoAccess';
+    el.style.cssText = 'position:fixed;inset:0;z-index:3000;background:var(--bg,var(--card));display:flex;' +
+      'align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--tx);text-align:center;padding:24px';
+    el.innerHTML =
+      '<i class="fas fa-lock" style="font-size:32px;color:var(--tx3)"></i>' +
+      '<div style="font-size:16px;font-weight:600">You don\u2019t have access to this page</div>' +
+      '<div style="color:var(--tx3);font-size:13px">Taking you back to the dashboard\u2026</div>' +
+      '<a href="/pm/01-home" class="pm-btn pm-btn-primary">Go to the dashboard</a>';
+    document.body.appendChild(el);
+    setTimeout(function () { location.replace('/pm/01-home'); }, 2500);
+  }
+
+  /** For a page's own code: if (!PM.guard('manage')) return; */
+  function guard(rule) {
+    if (can(rule)) return true;
+    showNoAccess();
+    return false;
+  }
+
+  /**
+   * Hide tab buttons the user can't use. map = { tabId: rule }.
+   * Looks at buttons / links / role=tab elements carrying data-tab. If the open tab gets hidden,
+   * the first visible one is clicked.
+   */
+  function gateTabs(map) {
+    if (!map) return;
+    let firstOk = null, activeHidden = false;
+    document.querySelectorAll('button[data-tab], a[data-tab], [role="tab"][data-tab], .pm-tab[data-tab]').forEach(el => {
+      const rule = map[el.getAttribute('data-tab')];
+      if (rule && !can(rule)) {
+        el.style.display = 'none';
+        el.setAttribute('data-pm-gated', '1');
+        if (el.classList.contains('active')) activeHidden = true;
+      } else if (!el.hasAttribute('data-pm-gated') && !firstOk) {
+        firstOk = el;
+      }
+    });
+    if (activeHidden && firstOk) firstOk.click();
+  }
+
+  /** Returns false (and shows "No access") when this page or tab is not for this user. */
+  function applyRouteGuard(user) {
+    const path = normPath(location.pathname);
+    const route = ROUTES.find(r => r.path === path);
+    if (!route) return true;
+
+    if (route.rule && !can(route.rule, user)) { showNoAccess(); return false; }
+
+    if (route.tabs) {
+      const tab = new URLSearchParams(location.search).get('tab');
+      if (tab && route.tabs[tab] && !can(route.tabs[tab], user)) { showNoAccess(); return false; }
+      // tab buttons may render after boot, so apply now and again shortly after
+      gateTabs(route.tabs);
+      setTimeout(function () { gateTabs(route.tabs); }, 300);
+      setTimeout(function () { gateTabs(route.tabs); }, 1000);
+    }
+    return true;
+  }
+
+  /* ============================================================
      BOOTSTRAP
      ============================================================ */
   async function bootstrap(opts) {
@@ -670,6 +860,12 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
       // Phase 7: pre-load the approval UI so drawers work everywhere
       loadApprovalsScript().catch(e => console.warn('approvals boot failed', e));
 
+      // STEP 7.1: not allowed here → "No access" screen; the page's own code never continues
+      if (!applyRouteGuard(me)) return new Promise(function () { });
+
+      // STEP 7.1: #requests / #templates links work on a fresh page load too
+      openIntakeFromHash();
+
       return me;
     } catch (err) {
       console.error('PM.bootstrap failed:', err);
@@ -682,24 +878,7 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
       throw err;
     }
   }
-  async function openIntake(tab) {
-    if (!window.PMIntake) {
-      await new Promise(function (resolve) {
-        var s = document.createElement('script');
-        s.src = '/pm/pm-intake.js';
-        s.onload = resolve;
-        s.onerror = resolve;
-        document.head.appendChild(s);
-      });
-    }
-    if (window.PMIntake) window.PMIntake.open(tab);
-    else toast('Could not load project intake', 'error');
-  }
-  function openIntakeFromHash() {
-    var h = (location.hash || '').replace('#', '');
-    if (h === 'templates' || h === 'requests') openIntake(h);
-  }
-  window.addEventListener('hashchange', openIntakeFromHash);
+
   /* ============================================================
      EXPORT
      ============================================================ */
@@ -708,24 +887,27 @@ function fmtMinutes(m){ m = m || 0; const h = Math.floor(m/60), r = m % 60;
     toast, openDrawer, closeDrawer, openCmd, closeCmd,
     toggleSidebar, toggleTheme, esc,
     // formatting
-    getInitials, fmtDate, fmtDateTime,
+    getInitials, fmtDate, fmtDateTime, fmtMinutes,
     // data
     api, apiList, getMe, bootstrap, logout,
+    buildSidebar, buildHeader,
     // Phase 3
-        meTasks, meProjects, invalidateMeCaches,
-        // Phase 2
-        openProjectMembers, openTeamMembers, openProjectFinance, openProjectClosure,
+    meTasks, meProjects, invalidateMeCaches,
+    // Phase 2
+    openProjectMembers, openTeamMembers, openProjectFinance, openProjectClosure,
+    // STEP 7.1
+    can, guard, gateTabs, openIntake,
     // Phase 4 + 7 accessors (evaluated lazily — scripts may not be loaded yet)
     get notifications() { return window.Notifications; },
     approvals: () => window.PMApprovals,
     // user (populated after bootstrap)
     user: null,
     // exposes for pages that want the raw nav list
-        _nav: SIDEBAR_NAV,
-        // simple fallback so PM.confirm(...) calls on the projects page work
-        confirm: function (o) {
-          o = o || {};
-          return Promise.resolve(window.confirm((o.title ? o.title + '\n\n' : '') + (o.message || 'Are you sure?')));
-        }
+    _nav: SIDEBAR_NAV,
+    // simple fallback so PM.confirm(...) calls on the projects page work
+    confirm: function (o) {
+      o = o || {};
+      return Promise.resolve(window.confirm((o.title ? o.title + '\n\n' : '') + (o.message || 'Are you sure?')));
+    }
   };
 })();
