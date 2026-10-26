@@ -166,6 +166,9 @@
          '<button class="pm-btn pm-btn-primary" style="width:100%;justify-content:center" ' +
          'onclick="PMTask.requestApproval(' + t.id + ')">' +
          '<i class="fas fa-square-check"></i> Request approval</button>' +
+         '<button class="pm-btn" style="width:100%;justify-content:center;margin-top:6px" ' +
+         'onclick="PMTask.requestExtension(' + t.id + ')">' +
+         '<i class="fas fa-calendar-plus"></i> Request extension</button>' +
          '</div>';
 
     h += '</div>'; // end details pane
@@ -371,9 +374,9 @@
   }
 
   async function loadHistory(taskId) {
+    const el = document.getElementById('pmHistoryList');
     try {
       const rows = await PM.api('GET', '/api/pm/tasks/' + taskId + '/history');
-      const el = document.getElementById('pmHistoryList');
       if (!el) return;
       el.innerHTML = (rows || []).length
         ? rows.map(r =>
@@ -382,9 +385,10 @@
               '<div style="font-size:12px;margin-top:2px"><strong>' + PM.esc(r.actorName || 'System') + '</strong> · ' +
               PM.esc(r.message || r.action) + '</div>' +
             '</div>').join('')
-        : '<div style="text-align:center;padding:14px;color:var(--tx3)">No history</div>';
+        : '<div style="text-align:center;padding:14px;color:var(--tx3)">No history yet</div>';
     } catch (e) {
-      PM.toast(e.message, 'error');
+      if (el) el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--dng)">Failed to load history: ' +
+        PM.esc(e.message || 'Unknown error') + '</div>';
     }
   }
 
@@ -536,6 +540,29 @@
     }
   }
 
+  async function requestExtension(taskId) {
+    const newDueDate = prompt('New due date (YYYY-MM-DD):');
+    if (!newDueDate) return;
+    const reason = prompt('Reason:') || '';
+    const approverIdStr = prompt('Approver employee PK (numeric):');
+    if (!approverIdStr) return;
+    const approverId = parseInt(approverIdStr, 10);
+    if (!approverId) { PM.toast('Approver PK must be a number', 'error'); return; }
+    try {
+      await PM.api('POST', '/api/pm/approvals', {
+        entityType: 'EXTENSION',
+        entityId: taskId,
+        approverId: approverId,
+        reason: reason,
+        priority: 'NORMAL',
+        payload: JSON.stringify({ newDueDate: newDueDate })
+      });
+      PM.toast('✓ Extension requested', 'success');
+    } catch (e) {
+      PM.toast(e.message || 'Failed to request extension', 'error');
+    }
+  }
+
   async function requestApproval(taskId) {
     const approverIdStr = prompt('Approver employee PK (numeric):');
     if (!approverIdStr) return;
@@ -563,6 +590,7 @@
     postComment, logTime, deleteTime,
     uploadFile, deleteFile, addDependency,
     changeSprint, changeMilestone,
-    requestApproval
+    requestApproval,
+    requestExtension
   };
 })();

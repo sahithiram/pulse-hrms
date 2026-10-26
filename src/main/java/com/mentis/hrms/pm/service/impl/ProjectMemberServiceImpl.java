@@ -14,6 +14,7 @@ import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.repository.ProjectMemberRepository;
 import com.mentis.hrms.pm.repository.ProjectRepository;
 import com.mentis.hrms.pm.service.ProjectMemberService;
+import com.mentis.hrms.pm.service.WorkloadService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.service.NotificationEmitter;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private final EmployeeRepository employeeRepository;
     private final NotificationEmitter notificationEmitter;
     private final ProjectFinanceService projectFinanceService;
+    private final WorkloadService workloadService;
 
     // ───────────────────────── list ─────────────────────────
 
@@ -51,10 +53,19 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         Map<Long, Employee> byId = new HashMap<>();
         employeeRepository.findAllById(ids).forEach(e -> byId.put(e.getId(), e));
 
+        LocalDate from = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate to = from.plusDays(6);
         return rows.stream()
                 .sorted(Comparator.comparingInt((ProjectMember m) -> m.getRole() == null ? 9 : m.getRole().ordinal())
                         .thenComparing(ProjectMember::getId))
-                .map(m -> toResponse(m, p, byId.get(m.getEmployeeId()), includeRates))
+                .map(m -> {
+                    ProjectMemberResponse resp = toResponse(m, p, byId.get(m.getEmployeeId()), includeRates);
+                    try {
+                        var w = workloadService.forEmployee(m.getEmployeeId(), from, to);
+                        if (w != null) resp.setUtilizationPct(w.getUtilizationPct());
+                    } catch (Exception ignored) { }
+                    return resp;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -70,6 +81,8 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         if (repo.findByProjectIdAndEmployeeId(projectId, emp.getId()).isPresent())
             throw new DuplicateResourceException("Already a member of this project");
         assertDates(req.getStartDate(), req.getEndDate());
+        int requestedAlloc = req.getAllocationPct() == null ? 100 : req.getAllocationPct();
+        assertNotOverAllocated(emp.getId(), requestedAlloc, null);
 
         ProjectMember saved = repo.save(ProjectMember.builder()
                 .projectId(projectId)
@@ -92,6 +105,11 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     public ProjectMemberResponse update(Long projectId, Long memberId, UpdateMemberRequest req, Long actorPk) {
         Project p = findProject(projectId);
         ProjectMember m = findMember(projectId, memberId);
+
+        int requestedAlloc = req.getAllocationPct() != null
+                ? req.getAllocationPct()
+                : (m.getAllocationPct() == null ? 100 : m.getAllocationPct());
+        assertNotOverAllocated(m.getEmployeeId(), requestedAlloc, m.getId());
 
         if (req.getRole() != null && req.getRole() != m.getRole()) {
             if (m.getEmployeeId().equals(p.getOwnerId()) && req.getRole() != ProjectRole.MANAGER)
@@ -138,6 +156,18 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private void assertDates(LocalDate start, LocalDate end) {
         if (start != null && end != null && end.isBefore(start))
             throw new BusinessRuleException("End date cannot be before the start date");
+    }
+
+    private void assertNotOverAllocated(Long employeeId, int requestedAlloc, Long excludeMemberId) {
+        int existingTotal = repo.findByEmployeeId(employeeId).stream()
+                .filter(row -> excludeMemberId == null || !excludeMemberId.equals(row.getId()))
+                .mapToInt(row -> row.getAllocationPct() == null ? 0 : row.getAllocationPct())
+                .sum();
+        if (existingTotal + requestedAlloc > 100) {
+            throw new BusinessRuleException(
+                    "Employee is over-allocated. Total allocation would be "
+                            + (existingTotal + requestedAlloc) + "%");
+        }
     }
 
     private ProjectMemberResponse toResponse(ProjectMember m, Project p, Employee e, boolean includeRates) {
