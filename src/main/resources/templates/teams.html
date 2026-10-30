@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Management - Enterprise PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============================================================
+           COMPLETE ENTERPRISE DARK THEME
+           ============================================================ */
+
+        :root {
+            --primary: #4F8CFF;
+            --primary-hover: #3B7AF5;
+            --primary-light: rgba(79, 140, 255, 0.12);
+            --primary-glow: rgba(79, 140, 255, 0.25);
+            --dark-bg: #0B1120;
+            --dark-card: #141B2D;
+            --dark-card-hover: #1A2340;
+            --dark-border: #233049;
+            --dark-text: #F8FAFC;
+            --dark-text-secondary: #94A3B8;
+            --dark-text-muted: #64748B;
+            --success: #10B981;
+            --success-light: rgba(16, 185, 129, 0.15);
+            --warning: #F59E0B;
+            --warning-light: rgba(245, 158, 11, 0.15);
+            --danger: #EF4444;
+            --danger-light: rgba(239, 68, 68, 0.15);
+            --info: #06B6D4;
+            --info-light: rgba(6, 182, 212, 0.15);
+            --purple: #8B5CF6;
+            --purple-light: rgba(139, 92, 246, 0.15);
+            --pink: #EC4899;
+            --pink-light: rgba(236, 72, 153, 0.15);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-hover: 0 12px 48px rgba(79, 140, 255, 0.15);
+            --border-radius: 12px;
+            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--dark-border); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 260px;
+            height: 100vh;
+            background: var(--dark-bg);
+            border-right: 1px solid var(--dark-border);
+            transition: var(--transition);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            background: var(--dark-bg);
+            z-index: 10;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--info));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .brand-icon i { color: white; font-size: 1.2rem; }
+
+        .brand-text {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: white;
+        }
+        .brand-text span { color: var(--primary); }
+
+        .sidebar-content { padding: 0.5rem 0.75rem; }
+
+        .nav-section {
+            padding: 1.2rem 1rem 0.5rem;
+            color: var(--dark-text-muted);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0.6rem 1rem;
+            margin: 2px 0;
+            border-radius: 8px;
+            color: var(--dark-text-secondary);
+            text-decoration: none;
+            transition: var(--transition);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .nav-link:hover {
+            background: var(--dark-card);
+            color: white;
+        }
+        .nav-link.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+        .nav-link.active i { color: var(--primary); }
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1rem;
+            color: var(--dark-text-muted);
+            transition: var(--transition);
+        }
+        .nav-link:hover i { color: white; }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--primary);
+            color: white;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+        .nav-badge.warning { background: var(--warning); color: #000; }
+        .nav-badge.danger { background: var(--danger); }
+        .nav-badge.success { background: var(--success); }
+
+        /* ── MAIN CONTENT ── */
+        .main-content { margin-left: 260px; min-height: 100vh; }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--dark-text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            position: fixed;
+            top: 0.75rem;
+            left: 0.75rem;
+            z-index: 1001;
+        }
+
+        /* ── TOP HEADER ── */
+        .top-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 2rem;
+            background: var(--dark-card);
+            border-bottom: 1px solid var(--dark-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 1.5rem; }
+
+        .breadcrumb-custom {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+        }
+        .breadcrumb-custom a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .breadcrumb-custom a:hover { text-decoration: underline; }
+
+        .search-box {
+            position: relative;
+            width: 280px;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 0.5rem 1rem 0.5rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            outline: none;
+        }
+        .search-box i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .header-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .header-btn .badge-dot {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--dark-card);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            padding: 0.25rem 0.75rem 0.25rem 0.5rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+        .user-profile:hover { background: var(--dark-bg); }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--info));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .user-name { font-weight: 500; font-size: 0.85rem; }
+        .user-role { font-size: 0.7rem; color: var(--dark-text-muted); }
+
+        /* ── CONTENT AREA ── */
+        .content-area { padding: 1.5rem 2rem; }
+
+        /* ── PAGE HEADER ── */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark-text);
+        }
+        .page-title i { color: var(--primary); margin-right: 0.5rem; }
+        .page-subtitle { color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0; }
+
+        /* ── STATS ROW ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-box {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            transition: var(--transition);
+        }
+        .stat-box:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-card);
+        }
+
+        .stat-box .label {
+            color: var(--dark-text-secondary);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .stat-box .value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--dark-text);
+        }
+        .stat-box .change {
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .stat-box .change.up { color: var(--success); }
+        .stat-box .change.down { color: var(--danger); }
+        .stat-box .change.neutral { color: var(--dark-text-muted); }
+
+        /* ── FILTER BAR ── */
+        .filter-bar {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            background: var(--dark-card);
+            padding: 0.75rem 1rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--dark-border);
+        }
+
+        .filter-bar .form-select {
+            width: auto;
+            min-width: 140px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.35rem 0.75rem;
+            font-size: 0.8rem;
+        }
+        .filter-bar .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+        }
+
+        .filter-bar .search-input {
+            flex: 1;
+            min-width: 180px;
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.35rem 0.75rem 0.35rem 2rem;
+            font-size: 0.8rem;
+            position: relative;
+        }
+        .filter-bar .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            outline: none;
+        }
+        .filter-bar .search-wrapper {
+            position: relative;
+            flex: 1;
+        }
+        .filter-bar .search-wrapper i {
+            position: absolute;
+            left: 0.6rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--dark-text-muted);
+            font-size: 0.8rem;
+        }
+
+        /* ── TEAM GRID ── */
+        .team-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .team-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 1.25rem;
+            transition: var(--transition);
+            cursor: default;
+        }
+        .team-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .team-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.75rem;
+        }
+
+        .team-card-header .team-name {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+        .team-card-header .team-name i {
+            margin-right: 0.5rem;
+            color: var(--primary);
+        }
+
+        .team-card-header .team-members-count {
+            font-size: 0.7rem;
+            color: var(--dark-text-muted);
+            background: var(--dark-bg);
+            padding: 0.1rem 0.6rem;
+            border-radius: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .team-card-body .team-desc {
+            font-size: 0.85rem;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.75rem;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .team-members-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+        }
+
+        .member-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--dark-bg);
+            padding: 0.15rem 0.6rem 0.15rem 0.25rem;
+            border-radius: 20px;
+            border: 1px solid var(--dark-border);
+            font-size: 0.7rem;
+            transition: var(--transition);
+        }
+        .member-chip:hover {
+            border-color: var(--primary);
+        }
+
+        .member-chip .avatar-sm {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.5rem;
+            font-weight: 600;
+            color: white;
+            flex-shrink: 0;
+        }
+        .member-chip .avatar-sm.blue { background: var(--primary); }
+        .member-chip .avatar-sm.green { background: var(--success); }
+        .member-chip .avatar-sm.purple { background: var(--purple); }
+        .member-chip .avatar-sm.pink { background: var(--pink); }
+        .member-chip .avatar-sm.yellow { background: var(--warning); }
+        .member-chip .avatar-sm.red { background: var(--danger); }
+        .member-chip .avatar-sm.info { background: var(--info); }
+
+        .member-chip .name { color: var(--dark-text-secondary); }
+        .member-chip .remove {
+            color: var(--dark-text-muted);
+            font-size: 0.5rem;
+            cursor: pointer;
+            transition: var(--transition);
+            padding: 0 2px;
+        }
+        .member-chip .remove:hover {
+            color: var(--danger);
+        }
+
+        .member-chip.add-chip {
+            border: 1px dashed var(--dark-border);
+            background: transparent;
+            color: var(--dark-text-muted);
+            cursor: pointer;
+            padding: 0.15rem 0.6rem;
+        }
+        .member-chip.add-chip:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .team-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .team-stat-item {
+            text-align: center;
+            background: var(--dark-bg);
+            padding: 0.4rem;
+            border-radius: 6px;
+        }
+        .team-stat-item .number {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--dark-text);
+        }
+        .team-stat-item .label {
+            font-size: 0.6rem;
+            color: var(--dark-text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .team-card-footer {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--dark-border);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm-custom {
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            border: 1px solid var(--dark-border);
+            background: transparent;
+            color: var(--dark-text-secondary);
+            transition: var(--transition);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .btn-sm-custom:hover {
+            background: var(--dark-bg);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+        .btn-sm-custom.primary { color: var(--primary); }
+        .btn-sm-custom.primary:hover { background: var(--primary-light); }
+        .btn-sm-custom.success { color: var(--success); }
+        .btn-sm-custom.success:hover { background: var(--success-light); }
+        .btn-sm-custom.danger { color: var(--danger); }
+        .btn-sm-custom.danger:hover { background: var(--danger-light); border-color: var(--danger); }
+
+        /* ── BUTTONS ── */
+        .btn-primary-custom {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-primary-custom:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(79, 140, 255, 0.35);
+            color: white;
+        }
+
+        .btn-secondary-custom {
+            background: transparent;
+            color: var(--dark-text-secondary);
+            border: 1px solid var(--dark-border);
+            padding: 0.5rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: var(--transition);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .btn-secondary-custom:hover {
+            background: var(--dark-bg);
+            border-color: var(--primary);
+            color: var(--dark-text);
+        }
+
+        /* ── MODAL ── */
+        .modal-content {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+        }
+        .modal-header {
+            border-bottom: 1px solid var(--dark-border);
+            padding: 1rem 1.25rem;
+        }
+        .modal-header .modal-title {
+            color: var(--dark-text);
+            font-weight: 600;
+        }
+        .modal-header .modal-title i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+        .modal-header .btn-close {
+            filter: invert(1);
+            opacity: 0.6;
+        }
+        .modal-header .btn-close:hover {
+            opacity: 1;
+        }
+        .modal-body {
+            padding: 1.25rem;
+        }
+        .modal-footer {
+            border-top: 1px solid var(--dark-border);
+            padding: 1rem 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--dark-text-secondary);
+            margin-bottom: 0.25rem;
+        }
+        .form-group label .required {
+            color: var(--danger);
+        }
+
+        .form-control, .form-select {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            color: var(--dark-text);
+            border-radius: 6px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.85rem;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            outline: none;
+        }
+        .form-control::placeholder { color: var(--dark-text-muted); }
+        .form-control option, .form-select option { background: var(--dark-card); }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+        }
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--dark-text-muted);
+            opacity: 0.5;
+            margin-bottom: 1rem;
+        }
+        .empty-state h4 {
+            color: var(--dark-text-secondary);
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        .empty-state p {
+            color: var(--dark-text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        /* ── TOAST ── */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 9999;
+        }
+        .toast-custom {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-card);
+            animation: slideIn 0.3s ease;
+            min-width: 280px;
+        }
+        .toast-custom .icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .toast-custom .icon.success { background: var(--success-light); color: var(--success); }
+        .toast-custom .icon.error { background: var(--danger-light); color: var(--danger); }
+        .toast-custom .icon.info { background: var(--primary-light); color: var(--primary); }
+        .toast-custom .message { flex: 1; }
+        .toast-custom .message .title { font-weight: 600; font-size: 0.85rem; }
+        .toast-custom .message .sub { font-size: 0.75rem; color: var(--dark-text-secondary); }
+        .toast-custom .close-btn {
+            background: none;
+            border: none;
+            color: var(--dark-text-muted);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 1200px) {
+            .team-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 992px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .mobile-menu-toggle { display: block; }
+            .top-header { padding: 0.75rem 1rem; }
+            .content-area { padding: 1rem; }
+            .search-box { display: none; }
+            .stats-row { grid-template-columns: 1fr 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .team-grid { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: 1fr; }
+            .page-header { flex-direction: column; align-items: stretch; }
+            .filter-bar { flex-direction: column; align-items: stretch; }
+            .filter-bar .form-select { width: 100%; }
+            .filter-bar .search-wrapper { width: 100%; }
+            .top-header { padding: 0.5rem 0.75rem; }
+            .header-actions .user-name { display: none; }
+        }
+
+        @media (max-width: 576px) {
+            .content-area { padding: 0.75rem; }
+            .team-card { padding: 1rem; }
+            .team-stats { grid-template-columns: 1fr 1fr 1fr; }
+        }
+
+        /* ── ANIMATIONS ── */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in-up { animation: fadeInUp 0.4s ease-out; }
+
+        @keyframes pulse-dot {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+        .pulse-dot { animation: pulse-dot 2s infinite; }
+    </style>
+</head>
+<body>
+
+<!-- ── MOBILE MENU TOGGLE ── -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- ── SIDEBAR ── -->
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fas fa-rocket"></i></div>
+        <div class="brand-text">HRMS<span>PM</span></div>
+    </div>
+    <div class="sidebar-content">
+        <div class="nav-section">Main</div>
+        <a class="nav-link" href="/pm/dashboard"><i class="fas fa-th-large"></i> Dashboard</a>
+
+        <div class="nav-section">Projects</div>
+        <a class="nav-link" href="/pm/projects"><i class="fas fa-folder-open"></i> All Projects <span class="nav-badge">12</span></a>
+        <a class="nav-link" href="/pm/projects/create"><i class="fas fa-plus-circle"></i> Create Project</a>
+
+        <div class="nav-section">Tasks</div>
+        <a class="nav-link" href="/pm/tasks"><i class="fas fa-tasks"></i> All Tasks <span class="nav-badge warning">5</span></a>
+        <a class="nav-link" href="/pm/board"><i class="fas fa-columns"></i> Kanban Board</a>
+        <a class="nav-link" href="/pm/my-tasks"><i class="fas fa-user-check"></i> My Tasks <span class="nav-badge">12</span></a>
+
+        <div class="nav-section">Team</div>
+        <a class="nav-link active" href="/pm/teams"><i class="fas fa-users"></i> Teams</a>
+        <a class="nav-link" href="/pm/workload"><i class="fas fa-chart-pie"></i> Workload</a>
+
+        <div class="nav-section">Analytics</div>
+        <a class="nav-link" href="/pm/reports"><i class="fas fa-chart-line"></i> Reports</a>
+        <a class="nav-link" href="/pm/performance"><i class="fas fa-rocket"></i> Performance</a>
+
+        <div class="nav-section">Settings</div>
+        <a class="nav-link" href="/pm/settings"><i class="fas fa-cog"></i> Preferences</a>
+    </div>
+</div>
+
+<!-- ── MAIN CONTENT ── -->
+<div class="main-content">
+
+    <!-- ── TOP HEADER ── -->
+    <header class="top-header">
+        <div class="header-left">
+            <div class="breadcrumb-custom">
+                <a href="/pm/dashboard"><i class="fas fa-home"></i></a>
+                <i class="fas fa-chevron-right" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+                <span style="color: var(--dark-text);">Teams</span>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search teams, members...">
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" title="Create">
+                <i class="fas fa-plus"></i>
+            </button>
+            <button class="header-btn" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="badge-dot"></span>
+            </button>
+            <div class="user-profile" data-bs-toggle="dropdown">
+                <div class="user-avatar">JD</div>
+                <div>
+                    <div class="user-name">John Doe</div>
+                    <div class="user-role">Project Manager</div>
+                </div>
+                <i class="fas fa-chevron-down" style="font-size: 0.6rem; color: var(--dark-text-muted);"></i>
+            </div>
+            <div class="dropdown-menu dropdown-menu-end" style="background: var(--dark-card); border: 1px solid var(--dark-border);">
+                <a class="dropdown-item" href="/pm/profile" style="color: var(--dark-text);"><i class="fas fa-user me-2"></i>Profile</a>
+                <a class="dropdown-item" href="/pm/settings" style="color: var(--dark-text);"><i class="fas fa-cog me-2"></i>Settings</a>
+                <div class="dropdown-divider" style="border-color: var(--dark-border);"></div>
+                <a class="dropdown-item text-danger" href="/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── CONTENT AREA ── -->
+    <div class="content-area">
+
+        <!-- ── PAGE HEADER ── -->
+        <div class="page-header fade-in-up">
+            <div>
+                <h1 class="page-title">
+                    <i class="fas fa-users"></i> Teams
+                </h1>
+                <p class="page-subtitle">Manage your project teams and members</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem;">
+                <button class="btn-secondary-custom" onclick="showToast('info', 'Teams exported successfully!')">
+                    <i class="fas fa-file-export"></i> Export
+                </button>
+                <button class="btn-primary-custom" data-bs-toggle="modal" data-bs-target="#createTeamModal">
+                    <i class="fas fa-plus"></i> Create Team
+                </button>
+            </div>
+        </div>
+
+        <!-- ── STATS ROW ── -->
+        <div class="stats-row fade-in-up">
+            <div class="stat-box">
+                <div class="label"><i class="fas fa-users" style="color: var(--primary); margin-right: 0.25rem;"></i> Total Teams</div>
+                <div class="value">8</div>
+                <div class="change up"><i class="fas fa-arrow-up"></i> +2 this month</div>
+            </div>
+            <div class="stat-box">
+                <div class="label"><i class="fas fa-user-friends" style="color: var(--success); margin-right: 0.25rem;"></i> Total Members</div>
+                <div class="value">24</div>
+                <div class="change neutral"><i class="fas fa-minus"></i> Active: 18</div>
+            </div>
+            <div class="stat-box">
+                <div class="label"><i class="fas fa-chart-bar" style="color: var(--warning); margin-right: 0.25rem;"></i> Avg Team Size</div>
+                <div class="value">3</div>
+                <div class="change neutral"><i class="fas fa-minus"></i> Members per team</div>
+            </div>
+            <div class="stat-box">
+                <div class="label"><i class="fas fa-rocket" style="color: var(--info); margin-right: 0.25rem;"></i> Active Members</div>
+                <div class="value">18</div>
+                <div class="change up"><i class="fas fa-arrow-up"></i> 75% availability</div>
+            </div>
+        </div>
+
+        <!-- ── FILTER BAR ── -->
+        <div class="filter-bar fade-in-up">
+            <select class="form-select">
+                <option>All Teams</option>
+                <option>Engineering</option>
+                <option>Marketing</option>
+                <option>Design</option>
+                <option>Sales</option>
+                <option>Finance</option>
+            </select>
+            <select class="form-select">
+                <option>All Members</option>
+                <option>Active</option>
+                <option>Inactive</option>
+                <option>On Leave</option>
+            </select>
+            <select class="form-select">
+                <option>Sort by: Name</option>
+                <option>Sort by: Size</option>
+                <option>Sort by: Tasks</option>
+                <option>Sort by: Recent</option>
+            </select>
+            <div class="search-wrapper">
+                <i class="fas fa-search"></i>
+                <input type="text" class="search-input" placeholder="Search teams, members...">
+            </div>
+            <button class="btn-sm-custom primary"><i class="fas fa-filter"></i> Filter</button>
+            <button class="btn-sm-custom" onclick="resetFilters()"><i class="fas fa-times"></i> Reset</button>
+        </div>
+
+        <!-- ── TEAMS GRID ── -->
+        <div class="team-grid fade-in-up">
+
+            <!-- Team Card 1 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-code" style="color: var(--primary);"></i>
+                        Engineering Team
+                    </div>
+                    <span class="team-members-count">8 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Core engineering team handling all development projects and technical initiatives.
+                    </div>
+                    <div class="team-members-list">
+                        <div class="member-chip">
+                            <div class="avatar-sm blue">JD</div>
+                            <span class="name">John Doe</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm green">JS</div>
+                            <span class="name">Jane Smith</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm purple">MJ</div>
+                            <span class="name">Mike J.</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm pink">AL</div>
+                            <span class="name">Amy Lee</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip add-chip" onclick="addMember(this)">
+                            <i class="fas fa-plus"></i> Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <div class="team-stat-item">
+                        <div class="number">12</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">45</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">92%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-sm-custom primary"><i class="fas fa-eye"></i> View</button>
+                    <button class="btn-sm-custom"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-sm-custom success"><i class="fas fa-envelope"></i> Message</button>
+                    <button class="btn-sm-custom danger" style="margin-left: auto;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+
+            <!-- Team Card 2 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-bullhorn" style="color: var(--warning);"></i>
+                        Marketing Team
+                    </div>
+                    <span class="team-members-count">5 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Marketing and growth team managing campaigns, content, and brand initiatives.
+                    </div>
+                    <div class="team-members-list">
+                        <div class="member-chip">
+                            <div class="avatar-sm pink">AL</div>
+                            <span class="name">Amy Lee</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm yellow">DW</div>
+                            <span class="name">David Wang</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm purple">SR</div>
+                            <span class="name">Sarah R.</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip add-chip" onclick="addMember(this)">
+                            <i class="fas fa-plus"></i> Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <div class="team-stat-item">
+                        <div class="number">8</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">28</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">78%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-sm-custom primary"><i class="fas fa-eye"></i> View</button>
+                    <button class="btn-sm-custom"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-sm-custom success"><i class="fas fa-envelope"></i> Message</button>
+                    <button class="btn-sm-custom danger" style="margin-left: auto;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+
+            <!-- Team Card 3 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-paint-brush" style="color: var(--purple);"></i>
+                        Design Team
+                    </div>
+                    <span class="team-members-count">4 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        UX/UI design team creating user experiences and visual designs for products.
+                    </div>
+                    <div class="team-members-list">
+                        <div class="member-chip">
+                            <div class="avatar-sm purple">AL</div>
+                            <span class="name">Amy Lee</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm info">DW</div>
+                            <span class="name">David Wang</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip add-chip" onclick="addMember(this)">
+                            <i class="fas fa-plus"></i> Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <div class="team-stat-item">
+                        <div class="number">6</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">34</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">85%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-sm-custom primary"><i class="fas fa-eye"></i> View</button>
+                    <button class="btn-sm-custom"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-sm-custom success"><i class="fas fa-envelope"></i> Message</button>
+                    <button class="btn-sm-custom danger" style="margin-left: auto;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+
+            <!-- Team Card 4 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-chart-line" style="color: var(--success);"></i>
+                        Sales Team
+                    </div>
+                    <span class="team-members-count">4 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Sales team driving revenue growth and customer acquisition.
+                    </div>
+                    <div class="team-members-list">
+                        <div class="member-chip">
+                            <div class="avatar-sm green">SR</div>
+                            <span class="name">Sarah R.</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm blue">MJ</div>
+                            <span class="name">Mike J.</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip add-chip" onclick="addMember(this)">
+                            <i class="fas fa-plus"></i> Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <div class="team-stat-item">
+                        <div class="number">5</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">22</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">70%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-sm-custom primary"><i class="fas fa-eye"></i> View</button>
+                    <button class="btn-sm-custom"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-sm-custom success"><i class="fas fa-envelope"></i> Message</button>
+                    <button class="btn-sm-custom danger" style="margin-left: auto;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+
+            <!-- Team Card 5 -->
+            <div class="team-card">
+                <div class="team-card-header">
+                    <div class="team-name">
+                        <i class="fas fa-calculator" style="color: var(--info);"></i>
+                        Finance Team
+                    </div>
+                    <span class="team-members-count">3 members</span>
+                </div>
+                <div class="team-card-body">
+                    <div class="team-desc">
+                        Finance team managing budgets, forecasting, and financial reporting.
+                    </div>
+                    <div class="team-members-list">
+                        <div class="member-chip">
+                            <div class="avatar-sm info">JS</div>
+                            <span class="name">Jane Smith</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip add-chip" onclick="addMember(this)">
+                            <i class="fas fa-plus"></i> Add
+                        </div>
+                    </div>
+                </div>
+                <div class="team-stats">
+                    <div class="team-stat-item">
+                        <div class="number">4</div>
+                        <div class="label">Projects</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">18</div>
+                        <div class="label">Tasks</div>
+                    </div>
+                    <div class="team-stat-item">
+                        <div class="number">90%</div>
+                        <div class="label">Completion</div>
+                    </div>
+                </div>
+                <div class="team-card-footer">
+                    <button class="btn-sm-custom primary"><i class="fas fa-eye"></i> View</button>
+                    <button class="btn-sm-custom"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn-sm-custom success"><i class="fas fa-envelope"></i> Message</button>
+                    <button class="btn-sm-custom danger" style="margin-left: auto;"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+
+            <!-- Add Team Card -->
+            <div class="team-card" style="border: 2px dashed var(--dark-border); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 280px; cursor: pointer;" onclick="document.querySelector('[data-bs-target=\"#createTeamModal\"]').click();">
+            <div style="font-size: 3rem; color: var(--dark-text-muted); opacity: 0.4; margin-bottom: 0.5rem;">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <h4 style="color: var(--dark-text-secondary); font-weight: 600;">Create New Team</h4>
+            <p style="color: var(--dark-text-muted); font-size: 0.85rem;">Add a new team to your organization</p>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ── CREATE TEAM MODAL ── -->
+<div class="modal fade" id="createTeamModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-users"></i> Create New Team
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Team Name <span class="required">*</span></label>
+                    <input type="text" class="form-control" placeholder="e.g., Engineering Team" id="teamNameInput">
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" rows="2" placeholder="Describe the team's purpose..." id="teamDescInput"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Team Lead</label>
+                    <select class="form-select" id="teamLeadSelect">
+                        <option>John Doe</option>
+                        <option>Jane Smith</option>
+                        <option>Mike Johnson</option>
+                        <option>Amy Lee</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Add Members</label>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <div class="member-chip">
+                            <div class="avatar-sm blue">JD</div>
+                            <span class="name">John Doe</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <div class="member-chip">
+                            <div class="avatar-sm green">JS</div>
+                            <span class="name">Jane Smith</span>
+                            <span class="remove" onclick="removeMember(this)">&times;</span>
+                        </div>
+                        <select class="form-select" style="width: auto; min-width: 140px; padding: 0.2rem 0.6rem; font-size: 0.8rem;">
+                            <option>Select member...</option>
+                            <option>Mike Johnson</option>
+                            <option>Amy Lee</option>
+                            <option>David Wang</option>
+                            <option>Sarah Roberts</option>
+                        </select>
+                        <button class="btn-sm-custom primary" onclick="showToast('success', 'Member added successfully!')">
+                            <i class="fas fa-user-plus"></i> Add
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary-custom" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-primary-custom" onclick="createTeam()">
+                    <i class="fas fa-save"></i> Create Team
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── TOAST CONTAINER ── -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    // ── MOBILE MENU ──
+    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
+        document.getElementById('sidebar').classList.toggle('active');
+    });
+
+    // Close sidebar on outside click (mobile)
+    document.addEventListener('click', function(e) {
+        const sidebar = document.getElementById('sidebar');
+        const toggle = document.getElementById('mobileMenuToggle');
+        if (window.innerWidth <= 992 &&
+            sidebar.classList.contains('active') &&
+            !sidebar.contains(e.target) &&
+            e.target !== toggle) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // ── REMOVE MEMBER ──
+    function removeMember(el) {
+        const chip = el.closest('.member-chip');
+        if (chip) {
+            chip.style.transition = 'all 0.2s';
+            chip.style.transform = 'scale(0.8)';
+            chip.style.opacity = '0';
+            setTimeout(() => chip.remove(), 200);
+            showToast('info', 'Member removed from team');
+        }
+    }
+
+    // ── ADD MEMBER ──
+    function addMember(el) {
+        const list = el.closest('.team-members-list');
+        if (list) {
+            // Simulate adding a member
+            const names = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Amy Lee', 'David Wang', 'Sarah Roberts'];
+            const colors = ['blue', 'green', 'purple', 'pink', 'yellow', 'red', 'info'];
+            const randomName = names[Math.floor(Math.random() * names.length)];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            const initials = randomName.split(' ').map(n => n[0]).join('');
+
+            const chip = document.createElement('div');
+            chip.className = 'member-chip';
+            chip.innerHTML = `
+                <div class="avatar-sm ${randomColor}">${initials}</div>
+                <span class="name">${randomName}</span>
+                <span class="remove" onclick="removeMember(this)">&times;</span>
+            `;
+            list.insertBefore(chip, el);
+            showToast('success', `${randomName} added to team`);
+        }
+    }
+
+    // ── CREATE TEAM ──
+    function createTeam() {
+        const name = document.getElementById('teamNameInput').value.trim();
+        if (!name) {
+            showToast('error', 'Please enter a team name');
+            return;
+        }
+        showToast('success', `Team "${name}" created successfully!`);
+        setTimeout(() => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createTeamModal'));
+            if (modal) modal.hide();
+        }, 1500);
+    }
+
+    // ── RESET FILTERS ──
+    function resetFilters() {
+        document.querySelectorAll('.filter-bar select').forEach(el => el.selectedIndex = 0);
+        document.querySelector('.filter-bar .search-input').value = '';
+        showToast('info', 'Filters reset');
+    }
+
+    // ── TOAST ──
+    function showToast(type, message) {
+        const container = document.getElementById('toastContainer');
+        const colors = {
+            success: { bg: 'var(--success-light)', icon: 'success', iconClass: 'fa-check-circle' },
+            error: { bg: 'var(--danger-light)', icon: 'error', iconClass: 'fa-exclamation-circle' },
+            info: { bg: 'var(--primary-light)', icon: 'info', iconClass: 'fa-info-circle' }
+        };
+
+        const config = colors[type] || colors.info;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast-custom';
+        toast.innerHTML = `
+            <div class="icon ${config.icon}">
+                <i class="fas ${config.iconClass}"></i>
+            </div>
+            <div class="message">
+                <div class="title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+                <div class="sub">${message}</div>
+            </div>
+            <button class="close-btn" onclick="this.closest('.toast-custom').remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // ── KEYBOARD SHORTCUTS ──
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            document.querySelector('.search-box input')?.focus();
+        }
+    });
+
+    console.log('🏢 Team Management loaded successfully');
+</script>
+
+</body>
+</html>

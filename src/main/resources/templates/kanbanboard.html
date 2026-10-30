@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kanban Board - PM Dashboard</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Include dashboard styles */
+
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+        }
+
+        .kanban-column {
+            background: var(--dark-bg);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+            padding: 1rem;
+            min-height: 400px;
+        }
+
+        .kanban-column h4 {
+            color: var(--dark-text-secondary);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--dark-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kanban-column .badge {
+            font-size: 0.7rem;
+        }
+
+        .kanban-card {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 6px;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+
+        .kanban-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .kanban-card .title {
+            color: var(--dark-text);
+            font-weight: 500;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .kanban-card .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+            color: var(--dark-text-secondary);
+        }
+
+        .kanban-card .meta .assignee {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .kanban-card .meta .assignee .avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+
+        .project-selector {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 8px;
+        }
+
+        .project-selector label {
+            color: var(--dark-text-secondary);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 992px) {
+            .kanban-board {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 576px) {
+            .kanban-board {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Sidebar and Header same as dashboard -->
+<div class="content-area">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/pm/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item active">Kanban Board</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: var(--dark-text); font-size: 1.5rem; font-weight: 600;">
+                <i class="fas fa-columns" style="color: var(--primary);"></i>
+                Kanban Board
+            </h1>
+            <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;">
+                Visualize and manage your workflow
+            </p>
+        </div>
+        <div>
+            <a href="/pm/tasks/create" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-plus"></i> Add Task
+            </a>
+        </div>
+    </div>
+
+    <!-- Project Selector -->
+    <div class="project-selector">
+        <label for="boardProjectSelect"><i class="fas fa-folder"></i> Project:</label>
+        <select id="boardProjectSelect" class="form-select" style="width: auto; flex: 1;" onchange="changeBoardProject()">
+            <option value="">All Projects</option>
+            <option th:each="project : ${projects}" th:value="${project.id}" th:text="${project.name}" th:selected="${project.id == selectedProjectId}">Project</option>
+        </select>
+        <button class="btn btn-sm btn-primary" onclick="refreshBoard()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+    </div>
+
+    <!-- Board -->
+    <div class="kanban-board">
+        <!-- TODO -->
+        <div class="kanban-column" data-status="TODO">
+            <h4>
+                <span><i class="fas fa-circle" style="color: #64748b;"></i> To Do</span>
+                <span class="badge badge-secondary" th:text="${#lists.size(tasksByStatus['TODO'])}">0</span>
+            </h4>
+            <div th:each="task : ${tasksByStatus['TODO']}" class="kanban-card" onclick="location.href='/pm/tasks/' + ${task.id}">
+                <div class="title" th:text="${task.title}">Task Title</div>
+                <div class="meta">
+                        <span class="assignee">
+                            <span class="avatar" th:text="${task.assigneeInitials}">JD</span>
+                            <span th:text="${task.assigneeName}">Assignee</span>
+                        </span>
+                    <span class="badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(tasksByStatus['TODO'])}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary); font-size: 0.85rem;">
+                No tasks
+            </div>
+        </div>
+
+        <!-- IN PROGRESS -->
+        <div class="kanban-column" data-status="IN_PROGRESS">
+            <h4>
+                <span><i class="fas fa-spinner fa-spin" style="color: var(--warning);"></i> In Progress</span>
+                <span class="badge badge-warning" th:text="${#lists.size(tasksByStatus['IN_PROGRESS'])}">0</span>
+            </h4>
+            <div th:each="task : ${tasksByStatus['IN_PROGRESS']}" class="kanban-card" onclick="location.href='/pm/tasks/' + ${task.id}">
+                <div class="title" th:text="${task.title}">Task Title</div>
+                <div class="meta">
+                        <span class="assignee">
+                            <span class="avatar" th:text="${task.assigneeInitials}">JD</span>
+                            <span th:text="${task.assigneeName}">Assignee</span>
+                        </span>
+                    <span class="badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(tasksByStatus['IN_PROGRESS'])}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary); font-size: 0.85rem;">
+                No tasks
+            </div>
+        </div>
+
+        <!-- IN REVIEW -->
+        <div class="kanban-column" data-status="IN_REVIEW">
+            <h4>
+                <span><i class="fas fa-search" style="color: var(--primary);"></i> In Review</span>
+                <span class="badge badge-primary" th:text="${#lists.size(tasksByStatus['IN_REVIEW'])}">0</span>
+            </h4>
+            <div th:each="task : ${tasksByStatus['IN_REVIEW']}" class="kanban-card" onclick="location.href='/pm/tasks/' + ${task.id}">
+                <div class="title" th:text="${task.title}">Task Title</div>
+                <div class="meta">
+                        <span class="assignee">
+                            <span class="avatar" th:text="${task.assigneeInitials}">JD</span>
+                            <span th:text="${task.assigneeName}">Assignee</span>
+                        </span>
+                    <span class="badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(tasksByStatus['IN_REVIEW'])}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary); font-size: 0.85rem;">
+                No tasks
+            </div>
+        </div>
+
+        <!-- BLOCKED -->
+        <div class="kanban-column" data-status="BLOCKED">
+            <h4>
+                <span><i class="fas fa-ban" style="color: var(--danger);"></i> Blocked</span>
+                <span class="badge badge-danger" th:text="${#lists.size(tasksByStatus['BLOCKED'])}">0</span>
+            </h4>
+            <div th:each="task : ${tasksByStatus['BLOCKED']}" class="kanban-card" onclick="location.href='/pm/tasks/' + ${task.id}">
+                <div class="title" th:text="${task.title}">Task Title</div>
+                <div class="meta">
+                        <span class="assignee">
+                            <span class="avatar" th:text="${task.assigneeInitials}">JD</span>
+                            <span th:text="${task.assigneeName}">Assignee</span>
+                        </span>
+                    <span class="badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(tasksByStatus['BLOCKED'])}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary); font-size: 0.85rem;">
+                No tasks
+            </div>
+        </div>
+
+        <!-- DONE -->
+        <div class="kanban-column" data-status="DONE">
+            <h4>
+                <span><i class="fas fa-check-circle" style="color: var(--success);"></i> Done</span>
+                <span class="badge badge-success" th:text="${#lists.size(tasksByStatus['DONE'])}">0</span>
+            </h4>
+            <div th:each="task : ${tasksByStatus['DONE']}" class="kanban-card" onclick="location.href='/pm/tasks/' + ${task.id}">
+                <div class="title" th:text="${task.title}">Task Title</div>
+                <div class="meta">
+                        <span class="assignee">
+                            <span class="avatar" th:text="${task.assigneeInitials}">JD</span>
+                            <span th:text="${task.assigneeName}">Assignee</span>
+                        </span>
+                    <span class="badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(tasksByStatus['DONE'])}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary); font-size: 0.85rem;">
+                No tasks
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function changeBoardProject() {
+        const projectId = document.getElementById('boardProjectSelect').value;
+        window.location.href = '/pm/board?projectId=' + projectId;
+    }
+
+    function refreshBoard() {
+        location.reload();
+    }
+</script>
+</body>
+</html>

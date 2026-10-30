@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${editMode} ? 'Edit Task' : 'Create Task'">Create Task - PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Include dashboard and form styles from project form */
+
+        .task-form-section {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--dark-border);
+        }
+
+        .task-form-section:first-of-type {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
+        }
+
+        .task-form-section h4 {
+            color: var(--dark-text);
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .task-form-section h4 i {
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+<!-- Sidebar and Header same as dashboard -->
+<div class="content-area">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/pm/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/pm/tasks">Tasks</a></li>
+            <li class="breadcrumb-item active" th:text="${editMode} ? 'Edit Task' : 'Create Task'">Create Task</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 style="color: var(--dark-text); font-size: 1.5rem; font-weight: 600;">
+                <i class="fas" th:classappend="${editMode} ? 'fa-edit' : 'fa-plus-circle'" style="color: var(--primary);"></i>
+                <span th:text="${editMode} ? 'Edit Task' : 'Create New Task'">Create New Task</span>
+            </h1>
+            <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin: 0;" th:text="${editMode} ? 'Update task details' : 'Create a new task for your project'">
+                Create a new task for your project
+            </p>
+        </div>
+        <div>
+            <a th:href="@{/pm/tasks}" class="btn btn-outline-secondary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <i class="fas fa-arrow-left"></i> Back to Tasks
+            </a>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="card">
+        <div class="card-body">
+            <form id="taskForm" th:action="@{/pm/tasks/save}" th:object="${task}" method="post">
+                <input type="hidden" th:field="*{id}">
+                <input type="hidden" th:field="*{projectId}">
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Task Title <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" th:field="*{title}" placeholder="Enter task title">
+                        <div th:if="${#fields.hasErrors('title')}" class="text-danger" style="font-size: 0.8rem; margin-top: 0.25rem;">
+                            <span th:errors="*{title}"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Task Type
+                        </label>
+                        <select class="form-select" th:field="*{type}">
+                            <option value="TASK">Task</option>
+                            <option value="FEATURE">Feature</option>
+                            <option value="BUG">Bug</option>
+                            <option value="STORY">Story</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-12">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Description
+                        </label>
+                        <textarea class="form-control" th:field="*{description}" rows="3" placeholder="Describe the task in detail..."></textarea>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Priority <span class="required">*</span>
+                        </label>
+                        <select class="form-select" th:field="*{priority}">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Assign To
+                        </label>
+                        <select class="form-select" th:field="*{assigneeId}">
+                            <option value="">Unassigned</option>
+                            <option th:each="member : ${members}" th:value="${member.id}" th:text="${member.name}">John Doe</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Story Points
+                        </label>
+                        <input type="number" class="form-control" th:field="*{storyPoints}" placeholder="e.g., 8" min="0" max="100">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Due Date
+                        </label>
+                        <input type="date" class="form-control" th:field="*{dueDate}">
+                        <div th:if="${#fields.hasErrors('dueDate')}" class="text-danger" style="font-size: 0.8rem; margin-top: 0.25rem;">
+                            <span th:errors="*{dueDate}"></span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Estimated Hours
+                        </label>
+                        <input type="number" class="form-control" th:field="*{estimatedHours}" placeholder="e.g., 8" step="0.5" min="0">
+                    </div>
+
+                    <div class="col-md-12">
+                        <label style="color: var(--dark-text-secondary); font-size: 0.85rem; font-weight: 500; display: block; margin-bottom: 0.25rem;">
+                            Labels
+                        </label>
+                        <input type="text" class="form-control" th:field="*{labels}" placeholder="e.g., backend, api, urgent (comma separated)">
+                        <div class="field-hint"><i class="fas fa-info-circle"></i> Comma-separated labels for filtering</div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--dark-border); display: flex; gap: 1rem; justify-content: flex-end;">
+                    <a th:href="@{/pm/tasks}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-save"></i> <span th:text="${editMode} ? 'Update Task' : 'Create Task'">Create Task</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

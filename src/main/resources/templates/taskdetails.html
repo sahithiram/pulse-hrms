@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${task.title} + ' - Task Details'">Task Details - PM</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Include dashboard styles */
+
+        .task-header {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .task-header .status-badge {
+            font-size: 0.85rem;
+            padding: 0.4rem 1rem;
+        }
+
+        .detail-sidebar .info-item {
+            background: var(--dark-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+        }
+
+        .detail-sidebar .info-item label {
+            color: var(--dark-text-secondary);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            display: block;
+        }
+
+        .detail-sidebar .info-item .value {
+            color: var(--dark-text);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .comment-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+
+        .status-update-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .status-update-btns .btn {
+            text-align: left;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--dark-border);
+        }
+
+        .attachment-item:last-child {
+            border-bottom: none;
+        }
+
+        .attachment-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--dark-bg);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+<!-- Sidebar and Header same as dashboard -->
+<div class="content-area">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/pm/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="/pm/tasks">Tasks</a></li>
+            <li class="breadcrumb-item active" th:text="${task.title}">Task Title</li>
+        </ol>
+    </nav>
+
+    <!-- Task Header -->
+    <div class="task-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                    <h1 style="color: var(--dark-text); font-size: 1.3rem; font-weight: 600; margin: 0;" th:text="${task.title}">Task Title</h1>
+                    <span class="badge status-badge" th:classappend="
+                            ${task.status == 'DONE'} ? 'badge-success' :
+                            ${task.status == 'IN_PROGRESS'} ? 'badge-warning' :
+                            ${task.status == 'IN_REVIEW'} ? 'badge-primary' :
+                            ${task.status == 'BLOCKED'} ? 'badge-danger' :
+                            'badge-secondary'" th:text="${task.status}">TODO</span>
+                    <span class="badge status-badge" th:classappend="
+                            ${task.priority == 'CRITICAL'} ? 'badge-danger' :
+                            ${task.priority == 'HIGH'} ? 'badge-warning' :
+                            ${task.priority == 'MEDIUM'} ? 'badge-info' :
+                            'badge-secondary'" th:text="${task.priority}">Medium</span>
+                    <span class="badge status-badge" th:classappend="${task.isOverdue} ? 'badge-danger' : 'badge-success'">
+                            <i th:if="${task.isOverdue}" class="fas fa-exclamation-triangle"></i>
+                            <i th:unless="${task.isOverdue}" class="fas fa-check-circle"></i>
+                            <span th:text="${task.isOverdue} ? 'Overdue' : 'On Track'">On Track</span>
+                        </span>
+                </div>
+                <p style="color: var(--dark-text-secondary); font-size: 0.9rem; margin-top: 0.25rem;">
+                    <span>Project: <a th:href="@{/pm/projects/{id}(id=${task.projectId})}" style="color: var(--primary); text-decoration: none;" th:text="${task.projectName}">Project</a></span>
+                    <span style="margin: 0 0.5rem;">•</span>
+                    <span>Created: <span th:text="${#temporals.format(task.createdAt, 'MMM dd, yyyy')}">Jan 01</span></span>
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <a th:href="@{/pm/tasks/{id}/edit(id=${task.id})}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <button class="btn btn-danger" onclick="deleteTask(${task.id})" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+
+        <!-- Description -->
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--dark-border);">
+            <label style="color: var(--dark-text-secondary); font-size: 0.7rem; text-transform: uppercase; font-weight: 600;">Description</label>
+            <div style="color: var(--dark-text); margin-top: 0.25rem; white-space: pre-wrap;" th:text="${task.description}">Task description goes here.</div>
+        </div>
+    </div>
+
+    <!-- Two Column Layout -->
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-md-8">
+            <!-- Comments -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="fas fa-comments" style="color: var(--primary);"></i> Comments</h5>
+                </div>
+                <div class="card-body">
+                    <!-- Add Comment -->
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="text" id="commentInput" class="form-control" placeholder="Add a comment...">
+                        <button class="btn btn-primary" onclick="addComment(${task.id})">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+
+                    <!-- Comments List -->
+                    <div id="commentsList">
+                        <div th:each="comment : ${comments}" class="comment-item">
+                            <div style="display: flex; gap: 0.75rem;">
+                                <div class="comment-avatar" th:text="${comment.authorInitials}">JD</div>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 600; color: var(--primary);" th:text="${comment.authorName}">John Doe</span>
+                                        <span style="font-size: 0.75rem; color: var(--dark-text-secondary);" th:text="${#temporals.format(comment.createdAt, 'MMM dd, yyyy HH:mm')}">Jan 01, 10:00</span>
+                                    </div>
+                                    <div style="color: var(--dark-text); margin-top: 0.25rem;" th:text="${comment.content}">Comment content</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${comments == null or comments.empty}" style="text-align: center; padding: 1rem; color: var(--dark-text-secondary);">
+                            No comments yet.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-md-4">
+            <!-- Task Details -->
+            <div class="card detail-sidebar">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="fas fa-info-circle" style="color: var(--primary);"></i> Task Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <label>Assigned To</label>
+                        <div class="value" th:text="${task.assigneeName}">John Doe</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Reported By</label>
+                        <div class="value" th:text="${task.reporterName}">Jane Smith</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Story Points</label>
+                        <div class="value" th:text="${task.storyPoints}">8</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Estimated Hours</label>
+                        <div class="value" th:text="${task.estimatedHours}">16</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Actual Hours</label>
+                        <div class="value" th:text="${task.actualHours}">12</div>
+                    </div>
+                    <div class="info-item">
+                        <label>Due Date</label>
+                        <div class="value" th:text="${#temporals.format(task.dueDate, 'MMM dd, yyyy')}">Dec 31, 2026</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Update Status -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <h5 class="card-title"><i class="fas fa-sync" style="color: var(--primary);"></i> Update Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="status-update-btns">
+                        <button class="btn btn-outline-secondary" onclick="updateStatus(${task.id}, 'TODO')">
+                            <i class="fas fa-circle" style="color: #64748b;"></i> To Do
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="updateStatus(${task.id}, 'IN_PROGRESS')">
+                            <i class="fas fa-spinner fa-spin"></i> In Progress
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="updateStatus(${task.id}, 'IN_REVIEW')">
+                            <i class="fas fa-search"></i> In Review
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="updateStatus(${task.id}, 'BLOCKED')">
+                            <i class="fas fa-ban"></i> Blocked
+                        </button>
+                        <button class="btn btn-outline-success" onclick="updateStatus(${task.id}, 'DONE')">
+                            <i class="fas fa-check"></i> Done
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function updateStatus(taskId, status) {
+        window.location.href = '/pm/tasks/' + taskId + '/status?status=' + status;
+    }
+
+    function deleteTask(id) {
+        if (confirm('Are you sure you want to delete this task?')) {
+            window.location.href = '/pm/tasks/' + id + '/delete';
+        }
+    }
+
+    function addComment(taskId) {
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+        if (!content) return;
+
+        fetch('/pm/api/tasks/' + taskId + '/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content })
+        }).then(response => {
+            if (response.ok) location.reload();
+        });
+    }
+</script>
+</body>
+</html>
