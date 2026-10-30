@@ -52,3 +52,9 @@ out/
 *.iws
 .DS_Store
 logs/
+# Debug dumps and audit files
+all_files.txt
+files*.txt
+pm-audit-*/
+pm-audit-*.zip
+replacements.txt
