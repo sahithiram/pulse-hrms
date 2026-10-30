@@ -38,16 +38,16 @@
             padding: 20px;
         }
 
-      .form-popup {
-    background: var(--dark-card);
-    border: 1px solid var(--dark-border);
-    border-radius: 16px;
-    width: 100%;
-    max-width: 1100px;
-    max-height: 92vh;
-    overflow-y: auto;
-    animation: modalSlideDown 0.3s ease-out;
-}
+        .form-popup {
+            background: var(--dark-card);
+            border: 1px solid var(--dark-border);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 1100px;
+            max-height: 92vh;
+            overflow-y: auto;
+            animation: modalSlideDown 0.3s ease-out;
+        }
 
         @keyframes modalSlideDown {
             from { opacity: 0; transform: translateY(-20px); }
@@ -92,13 +92,12 @@
 
         /* TWO COLUMN LAYOUT */
         .two-column-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-    padding: 0.25rem;
-}
-
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+            padding: 0.25rem;
+        }
 
         /* LEFT COLUMN - AI Controls - COMPACT */
         .ai-controls-column {
@@ -287,29 +286,30 @@
             box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
         }
 
-       textarea.form-control-custom {
-    resize: vertical;
-    min-height: 200px;
-    line-height: 1.6;
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-}
+        textarea.form-control-custom {
+            resize: vertical;
+            min-height: 200px;
+            line-height: 1.6;
+            padding: 0.75rem 1rem;
+            font-size: 0.9rem;
+        }
 
-/* Improved form field spacing */
-.form-group {
-    margin-bottom: 1.2rem;
-}
+        /* Improved form field spacing */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
 
-.form-group textarea {
-    font-family: 'Inter', sans-serif;
-    font-size: 0.9rem;
-    line-height: 1.7;
-}
+        .form-group textarea {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
 
-.form-group textarea:focus {
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
+        .form-group textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
         .settings-panel {
             background: rgba(255, 255, 255, 0.02);
             padding: 0.7rem;
@@ -641,7 +641,6 @@
     </div>
 
     <div class="popup-footer">
-
         <button class="btn-cancel" id="cancelBtn">Cancel</button>
         <button class="btn-post" id="postBtn">Post</button>
     </div>
@@ -651,7 +650,6 @@
     const closeModalBtn = document.getElementById('closeModalBtn');
     const cancelBtn = document.getElementById('cancelBtn');
     const postBtn = document.getElementById('postBtn');
-    const backToAiBtn = document.getElementById('backToAiBtn');
     const announcementTitle = document.getElementById('announcementTitle');
     const announcementContent = document.getElementById('announcementContent');
     const announcementPriority = document.getElementById('announcementPriority');
@@ -707,55 +705,54 @@
         if (announcementPinned) announcementPinned.checked = data.pinned || false;
         toggleAnnouncementExpiryField();
     }
-// REPLACE THE ENTIRE generateAnnouncementContent function with this:
 
-async function generateAnnouncementContent(promptText) {
-    if (!promptText || !promptText.trim()) {
-        showToast('Please provide announcement details', 'warning');
-        return false;
-    }
-
-    if (regenerateStatus) regenerateStatus.classList.add('show');
-
-    try {
-        const response = await fetch('/api/ai/generate-announcement', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ prompt: promptText })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || `Server error: ${response.status}`);
+    async function generateAnnouncementContent(promptText) {
+        if (!promptText || !promptText.trim()) {
+            showToast('Please provide announcement details', 'warning');
+            return false;
         }
 
-        const generatedData = await response.json();
+        if (regenerateStatus) regenerateStatus.classList.add('show');
 
-        const newGeneratedData = {
-            title: generatedData.title || promptText.charAt(0).toUpperCase() + promptText.slice(1),
-            content: generatedData.content || `Dear Team,\n\n📢 ${promptText}\n\nBest regards,\nHR Department`,
-            priority: generatedData.priority || 'NORMAL',
-            type: generatedData.type || 'TEMPORARY',
-            category: generatedData.category || 'Corporate',
-            pinned: generatedData.pinned || false
-        };
+        try {
+            const response = await fetch('/api/ai/generate-announcement', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ prompt: promptText })
+            });
 
-        populateFormWithData(newGeneratedData);
-        currentGeneratedData = newGeneratedData;
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `Server error: ${response.status}`);
+            }
 
-        showToast('Announcement generated by AI!', 'success');
-        return true;
+            const generatedData = await response.json();
 
-    } catch (error) {
-        console.error('Generation Error:', error);
-        showToast('AI generation failed: ' + error.message, 'error');
-        return false;
-    } finally {
-        if (regenerateStatus) regenerateStatus.classList.remove('show');
+            const newGeneratedData = {
+                title: generatedData.title || promptText.charAt(0).toUpperCase() + promptText.slice(1),
+                content: generatedData.content || `Dear Team,\n\n📢 ${promptText}\n\nBest regards,\nHR Department`,
+                priority: generatedData.priority || 'NORMAL',
+                type: generatedData.type || 'TEMPORARY',
+                category: generatedData.category || 'Corporate',
+                pinned: generatedData.pinned || false
+            };
+
+            populateFormWithData(newGeneratedData);
+            currentGeneratedData = newGeneratedData;
+
+            showToast('Announcement generated by AI!', 'success');
+            return true;
+
+        } catch (error) {
+            console.error('Generation Error:', error);
+            showToast('AI generation failed: ' + error.message, 'error');
+            return false;
+        } finally {
+            if (regenerateStatus) regenerateStatus.classList.remove('show');
+        }
     }
-}
 
     function setupTypeChangeButtons() {
         const buttons = document.querySelectorAll('.type-change-btn');
@@ -849,19 +846,6 @@ async function generateAnnouncementContent(promptText) {
 
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeThisModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeThisModal);
-
-   // if (backToAiBtn) {
-     //   backToAiBtn.addEventListener('click', function() {
-       //     closeThisModal();
-         //   if (window.parent && window.parent.reopenAIPopup) {
-           //     setTimeout(() => window.parent.reopenAIPopup(), 100);
-            //} else if (window.parent && window.parent.openAIPopup) {
-            //    setTimeout(() => window.parent.openAIPopup(), 100);
-           // } else {
-             //   window.open('/announcement/ai-popup', '_blank', 'width=550,height=600');
-           // }
-        // });
-   // }
 
     function showToast(message, type = 'success') {
         const existing = document.querySelector('.toast-notification');

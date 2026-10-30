@@ -44,7 +44,7 @@ public interface TaskService {
     void addWatcher(Long taskId, Long employeeId);
     void removeWatcher(Long taskId, Long employeeId);
     List<Long> listWatchers(Long taskId);
-
+    PageResponse<TaskSummaryResponse> filterTasks(TaskFilterRequest f);
     void addDependency(Long taskId, AddDependencyRequest req);
     void removeDependency(Long depId);
     List<TaskDependency> listDependencies(Long taskId);

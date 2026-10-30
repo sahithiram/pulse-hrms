@@ -12,12 +12,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "pm_tasks", indexes = {
-        @Index(name = "idx_pm_task_project", columnList = "project_id"),
-        @Index(name = "idx_pm_task_status",  columnList = "status"),
-        @Index(name = "idx_pm_task_parent",  columnList = "parent_task_id"),
-        @Index(name = "idx_pm_task_team",    columnList = "team_id")
-})
+@Table(name = "pm_tasks",
+        uniqueConstraints = @UniqueConstraint(name = "uq_pm_task_recurring", columnNames = {"recurring_rule_id", "recurring_occurrence"}),
+        indexes = {
+                @Index(name = "idx_pm_task_project", columnList = "project_id"),
+                @Index(name = "idx_pm_task_status", columnList = "status"),
+                @Index(name = "idx_pm_task_parent", columnList = "parent_task_id"),
+                @Index(name = "idx_pm_task_team", columnList = "team_id")
+        })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Task {
 
@@ -30,8 +32,12 @@ public class Task {
 
     @Column(name = "parent_task_id")
     private Long parentTaskId;
+    @Column(name = "recurring_rule_id")
+    private Long recurringRuleId;
 
-    // NEW: optional team ownership — filters assignees, drives team dashboard
+    @Column(name = "recurring_occurrence")
+    private java.time.LocalDate recurringOccurrence;
+    // optional team ownership — filters assignees, drives team dashboard
     @Column(name = "team_id")
     private Long teamId;
 
@@ -40,6 +46,26 @@ public class Task {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    // ─── Baseline (planned) values ───────────────────────────────────────────
+    // Set once at baseline time and never mutated afterwards. Used by the
+    // planned-vs-actual / schedule-slip report.
+    @Column(name = "baseline_start")
+    private LocalDate baselineStart;
+
+    @Column(name = "baseline_due")
+    private LocalDate baselineDue;
+
+    @Column(name = "baseline_estimate_hours")
+    private Integer baselineEstimateHours;
+
+    // ─── Actuals ─────────────────────────────────────────────────────────────
+    // Stamped/cleared by applyCompletionTransition(...) whenever the task
+    // transitions into or out of DONE. Both updateTask/changeStatus (via
+    // trackBlocked) and the sign-off approval path must call it so the slip
+    // report has a consistent completion timestamp.
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
@@ -85,7 +111,8 @@ public class Task {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    // ─── PHASE 5 additions ─────────────────────────────────────
+
+    // ─── PHASE 5 additions ────────────────────────────────────────────────
     /** Sprint this task belongs to. NULL = backlog. */
     @Column(name = "sprint_id")
     private Long sprintId;
@@ -98,7 +125,7 @@ public class Task {
     @Column(name = "key_result_id")
     private Long keyResultId;
 
-    // ─── Step 5 ───
+    // ─── Step 5 ───────────────────────────────────────────────────────────
     /** When the task last became BLOCKED. NULL when not blocked. */
     @Column(name = "blocked_since")
     private LocalDateTime blockedSince;
@@ -106,6 +133,25 @@ public class Task {
     /** 0 = none sent, 1 = "still blocked" sent, 2 = escalation sent. Reset when unblocked. */
     @Column(name = "escalation_level", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
     private Integer escalationLevel;
+
+    /**
+     * Applies the completion side-effects of a status transition.
+     *
+     * Centralised so that EVERY path that moves a task into or out of DONE
+     * (updateTask, changeStatus, sign-off approval, future automation) stamps
+     * or clears completedAt identically. Otherwise the slip report would have
+     * to fall back to dueDate for some tasks and report zero slip.
+     *
+     * Safe to call with {@code from == null} (create path).
+     */
+    public void applyCompletionTransition(TaskStatus from, TaskStatus to) {
+        if (to == TaskStatus.DONE && from != TaskStatus.DONE) {
+            this.completedAt = LocalDateTime.now();
+        } else if (from == TaskStatus.DONE && to != TaskStatus.DONE) {
+            this.completedAt = null;
+        }
+    }
+
     @PrePersist
     void prePersist() {
         if (progressPct == null) progressPct = 0;

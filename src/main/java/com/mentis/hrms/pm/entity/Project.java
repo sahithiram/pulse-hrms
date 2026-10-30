@@ -146,5 +146,6 @@ public class Project {
         if (reviewRequired == null) reviewRequired = Boolean.TRUE; // new projects: review ON
         if (status == null) status = ProjectStatus.PLANNING;
         if (priority == null) priority = ProjectPriority.MEDIUM;
+
     }
 }

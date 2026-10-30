@@ -62,117 +62,95 @@
             text-decoration: none;
         }
 
+        /* Navigation - Fixed styling with proper logo alignment */
+        .navbar {
+            background-color: var(--primary-color);
+            padding: 5px 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+        }
 
+        .navbar .container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
 
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 0;
+            margin-right: 20px;
+        }
 
+        .brand-logo {
+            height: 70px;
+            width: auto;
+            border-radius: 8px;
+            display: none;
+            object-fit: contain;
+        }
 
-/* Navigation - Fixed styling with proper logo alignment */
-.navbar {
-    background-color: var(--primary-color);
-    padding: 5px 0;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    min-height: 80px;
-    display: flex;
-    align-items: center;
-}
+        .brand-text-container {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
 
-.navbar .container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
+        .brand-text {
+            font-family: var(--font-heading);
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: white;
+            line-height: 1.2;
+        }
 
-.navbar-brand {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 0;
-    margin-right: 20px;
-}
+        .brand-tagline {
+            font-size: 0.7rem;
+            font-weight: 300;
+            opacity: 0.9;
+            color: white;
+            line-height: 1.2;
+        }
 
-.brand-logo {
-    height: 70px;
-    width: auto;
-    border-radius: 8px;
-    display: none;
-    object-fit: contain;
-}
+        /* Navbar collapse and navigation */
+        .navbar-collapse { flex-grow: 0; }
+        .navbar-nav { display: flex; align-items: center; gap: 5px; }
+        .nav-item { display: flex; align-items: center; }
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 500;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+            font-family: var(--font-title);
+            font-size: 1rem;
+            padding: 8px 12px !important;
+            position: relative;
+            white-space: nowrap;
+        }
+        .nav-link:hover {
+            color: var(--accent-color) !important;
+            transform: translateY(-2px);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: 0;
+            left: 50%;
+            background-color: var(--accent-color);
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        .nav-link:hover::after { width: 70%; }
 
-.brand-text-container {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.2;
-}
-
-.brand-text {
-    font-family: var(--font-heading);
-    font-weight: 600;
-    font-size: 1.2rem;
-    color: white;
-    line-height: 1.2;
-}
-
-.brand-tagline {
-    font-size: 0.7rem;
-    font-weight: 300;
-    opacity: 0.9;
-    color: white;
-    line-height: 1.2;
-}
-
-/* Navbar collapse and navigation */
-.navbar-collapse {
-    flex-grow: 0; /* Prevents stretching */
-}
-
-.navbar-nav {
-    display: flex;
-    align-items: center;
-    gap: 5px; /* Space between nav items */
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-}
-
-.nav-link {
-    color: rgba(255, 255, 255, 0.9) !important;
-    font-weight: 500;
-    margin: 0 5px;
-    transition: all 0.3s ease;
-    font-family: var(--font-title);
-    font-size: 1rem;
-    padding: 8px 12px !important;
-    position: relative;
-    white-space: nowrap; /* Prevents text wrapping */
-}
-
-.nav-link:hover {
-    color: var(--accent-color) !important;
-    transform: translateY(-2px);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-/* Underline animation */
-.nav-link::after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    bottom: 0;
-    left: 50%;
-    background-color: var(--accent-color);
-    transition: all 0.3s ease;
-    transform: translateX(-50%);
-}
-
-.nav-link:hover::after {
-    width: 70%;
-}
-
-/* Login Button - Properly styled and aligned */
-   .btn-login {
+        /* Login Button - Properly styled and aligned */
+        .btn-login {
             background-color: white;
             color: var(--primary-color) !important;
             border-radius: 30px;
@@ -183,85 +161,53 @@
             border: 2px solid white;
             margin-left: 10px;
         }
-
         .btn-login:hover {
             background-color: var(--primary-color);
             color: white !important;
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
         }
+        .btn-login i { font-size: 0.9rem; color: var(--primary-color); transition: all 0.3s ease; }
+        .btn-login:hover i { color: white !important; transform: translateX(-2px); }
+        .btn-login:active { transform: translateY(0); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); }
 
-.btn-login i {
-    font-size: 0.9rem;
-    color: var(--primary-color);
-    transition: all 0.3s ease;
-}
-
-
-
-.btn-login:hover i {
-    color: white !important;
-    transform: translateX(-2px);
-}
-
-/* Active state for login button */
-.btn-login:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-/* Hero CTA Button - SMALLER SIZE with Theme Matching Colors */
-.hero-cta {
-    padding: 10px 30px; /* REDUCED from 14px 40px to 10px 30px */
-    border-radius: 40px; /* Slightly smaller radius */
-    font-weight: 600;
-    font-size: 1rem; /* REDUCED from 1.2rem to 1rem */
-    font-family: var(--font-title);
-    background: linear-gradient(135deg, #2c3e50, #3498db);
-    border: none;
-    color: white;
-    box-shadow: 0 8px 15px rgba(52, 152, 219, 0.3);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
-    text-transform: uppercase;
-    letter-spacing: 0.5px; /* Reduced letter spacing */
-}
-
-.hero-cta::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(135deg, #3498db, #2c3e50);
-    transition: all 0.4s ease;
-    z-index: -1;
-}
-
-.hero-cta:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 20px rgba(52, 152, 219, 0.4);
-    color: white;
-}
-
-.hero-cta:hover::before {
-    left: 0;
-}
-
-.hero-cta i {
-    margin-right: 6px; /* Reduced margin */
-    font-size: 0.9rem; /* Smaller icon */
-    transition: transform 0.3s ease;
-}
-
-.hero-cta:hover i {
-    transform: translateX(5px);
-}
-
-
+        /* Hero CTA Button - SMALLER SIZE with Theme Matching Colors */
+        .hero-cta {
+            padding: 10px 30px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            font-family: var(--font-title);
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            border: none;
+            color: white;
+            box-shadow: 0 8px 15px rgba(52, 152, 219, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .hero-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            transition: all 0.4s ease;
+            z-index: -1;
+        }
+        .hero-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(52, 152, 219, 0.4);
+            color: white;
+        }
+        .hero-cta:hover::before { left: 0; }
+        .hero-cta i { margin-right: 6px; font-size: 0.9rem; transition: transform 0.3s ease; }
+        .hero-cta:hover i { transform: translateX(5px); }
 
         /* Hero Section - Fixed */
         .hero-section {
@@ -271,16 +217,6 @@
             color: white;
             padding: 100px 0 80px;
             text-align: center;
-        }
-
-        .hero-logo {
-            max-width: 120px;
-            max-height: 120px;
-            border-radius: 12px;
-            background: white;
-            padding: 10px;
-            margin-bottom: 20px;
-            display: none;
         }
 
         .company-name {
@@ -323,93 +259,30 @@
             color: var(--accent-color);
         }
 
-    /* Updated responsive adjustments for larger logo */
-@media (max-width: 991px) {
-    .navbar {
-        min-height: auto;
-        padding: 10px 0;
-    }
-
-    .navbar-brand {
-        gap: 10px;
-    }
-
-    .brand-logo {
-        height: 55px; /* Still larger on mobile */
-    }
-
-    .brand-text {
-        font-size: 1.3rem;
-    }
-
-    .brand-tagline {
-        font-size: 0.8rem;
-    }
-
-    .navbar-nav {
-        padding: 15px 0;
-        background-color: var(--primary-color);
-    }
-
-    .nav-link {
-        padding: 12px 15px !important;
-        margin: 2px 0;
-        text-align: center;
-        font-size: 1.1rem;
-    }
-
-    .btn-login {
-        margin: 10px auto !important;
-        text-align: center;
-        display: inline-block;
-        width: fit-content;
-        padding: 10px 30px !important;
-    }
-
-    .nav-link::after {
-        display: none;
-    }
-
-    /* Smaller button on mobile */
-    .hero-cta {
-        padding: 8px 25px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .brand-logo {
-        height: 50px;
-    }
-
-    .brand-text {
-        font-size: 1.2rem;
-    }
-
-    .hero-cta {
-        padding: 8px 20px;
-        font-size: 0.9rem;
-    }
-}
-
-@media (max-width: 576px) {
-    .brand-logo {
-        height: 45px;
-    }
-
-    .brand-text {
-        font-size: 1rem;
-    }
-
-    .brand-tagline {
-        display: none; /* Hide tagline on very small screens */
-    }
-
-    .hero-cta {
-        padding: 7px 18px;
-        font-size: 0.85rem;
-    }
-}
+        /* Updated responsive adjustments for larger logo */
+        @media (max-width: 991px) {
+            .navbar { min-height: auto; padding: 10px 0; }
+            .navbar-brand { gap: 10px; }
+            .brand-logo { height: 55px; }
+            .brand-text { font-size: 1.3rem; }
+            .brand-tagline { font-size: 0.8rem; }
+            .navbar-nav { padding: 15px 0; background-color: var(--primary-color); }
+            .nav-link { padding: 12px 15px !important; margin: 2px 0; text-align: center; font-size: 1.1rem; }
+            .btn-login { margin: 10px auto !important; text-align: center; display: inline-block; width: fit-content; padding: 10px 30px !important; }
+            .nav-link::after { display: none; }
+            .hero-cta { padding: 8px 25px; font-size: 0.9rem; }
+        }
+        @media (max-width: 768px) {
+            .brand-logo { height: 50px; }
+            .brand-text { font-size: 1.2rem; }
+            .hero-cta { padding: 8px 20px; font-size: 0.9rem; }
+        }
+        @media (max-width: 576px) {
+            .brand-logo { height: 45px; }
+            .brand-text { font-size: 1rem; }
+            .brand-tagline { display: none; }
+            .hero-cta { padding: 7px 18px; font-size: 0.85rem; }
+        }
 
         /* Section Titles */
         .section-title {
@@ -421,7 +294,6 @@
             font-family: var(--font-heading);
             color: var(--dark-color);
         }
-
         .section-title:after {
             content: '';
             display: block;
@@ -431,7 +303,6 @@
             margin: 15px auto;
             border-radius: 2px;
         }
-
         .section-subtitle {
             text-align: center;
             margin-bottom: 40px;
@@ -444,13 +315,8 @@
         }
 
         /* Section Spacing */
-        .about-section, .services-section, .jobs-section, .locations-section, .contact-section {
-            padding: 70px 0;
-        }
-
-        .about-section {
-            background-color: var(--light-color);
-        }
+        .about-section, .services-section, .jobs-section, .locations-section, .contact-section { padding: 70px 0; }
+        .about-section { background-color: var(--light-color); }
 
         .about-stats {
             display: flex;
@@ -458,24 +324,14 @@
             margin: 30px 0;
             text-align: center;
         }
-
-        .stat-item {
-            display: flex;
-            flex-direction: column;
-        }
-
+        .stat-item { display: flex; flex-direction: column; }
         .stat-number {
             font-size: 2rem;
             font-weight: 700;
             color: var(--primary-color);
             font-family: var(--font-title);
         }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: var(--text-color);
-            font-family: var(--font-body);
-        }
+        .stat-label { font-size: 0.9rem; color: var(--text-color); font-family: var(--font-body); }
 
         /* Service Cards */
         .service-card {
@@ -488,12 +344,10 @@
             background: var(--card-bg);
             position: relative;
         }
-
         .service-card:hover {
             transform: translateY(-8px);
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
         }
-
         .service-card .card-body {
             padding: 30px 20px;
             position: relative;
@@ -501,19 +355,13 @@
             background: white;
             transition: all 0.3s ease;
         }
-
         .service-icon {
             font-size: 2.5rem;
             color: var(--primary-color);
             margin-bottom: 20px;
             transition: all 0.3s ease;
         }
-
-        .service-card:hover .service-icon {
-            color: var(--accent-color);
-            transform: scale(1.1);
-        }
-
+        .service-card:hover .service-icon { color: var(--accent-color); transform: scale(1.1); }
         .service-title {
             font-size: 1.4rem;
             margin-bottom: 15px;
@@ -521,13 +369,7 @@
             font-weight: 600;
             color: var(--dark-color);
         }
-
-        .service-card p {
-            color: var(--text-color);
-            margin-bottom: 20px;
-            font-family: var(--font-body);
-        }
-
+        .service-card p { color: var(--text-color); margin-bottom: 20px; font-family: var(--font-body); }
         .service-hover-content {
             position: absolute;
             bottom: 0;
@@ -541,12 +383,7 @@
             z-index: 3;
             text-align: center;
         }
-
-        .service-card:hover .service-hover-content {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
+        .service-card:hover .service-hover-content { transform: translateY(0); opacity: 1; }
         .service-hover-content .btn-link {
             color: var(--primary-color);
             text-decoration: none;
@@ -554,17 +391,10 @@
             padding: 0;
             font-family: var(--font-title);
         }
-
-        .service-hover-content .btn-link:hover {
-            color: var(--secondary-color);
-            text-decoration: underline;
-        }
+        .service-hover-content .btn-link:hover { color: var(--secondary-color); text-decoration: underline; }
 
         /* Job Cards */
-        .jobs-section {
-            background-color: var(--light-color);
-        }
-
+        .jobs-section { background-color: var(--light-color); }
         .job-card {
             border: none;
             border-radius: 10px;
@@ -577,28 +407,15 @@
             flex-direction: column;
             padding: 20px;
         }
-
-        .job-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-        }
-
-        .job-header {
-            margin-bottom: 15px;
-        }
-
+        .job-card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12); }
+        .job-header { margin-bottom: 15px; }
         .job-header h3 {
             font-size: 1.3rem;
             margin-bottom: 5px;
             font-family: var(--font-title);
             color: var(--dark-color);
         }
-
-        .job-description {
-            margin-bottom: 15px;
-            flex-grow: 1;
-        }
-
+        .job-description { margin-bottom: 15px; flex-grow: 1; }
         .job-footer {
             margin-top: auto;
             display: flex;
@@ -607,18 +424,10 @@
             flex-wrap: wrap;
             gap: 10px;
         }
-
-        .job-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
+        .job-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 
         /* Location Cards */
-        .locations-section {
-            background-color: var(--light-color);
-        }
-
+        .locations-section { background-color: var(--light-color); }
         .location-card {
             border: none;
             border-radius: 12px;
@@ -628,26 +437,19 @@
             background: var(--card-bg);
             height: 100%;
         }
-
-        .location-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
-        }
-
+        .location-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15); }
         .location-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
-
         .location-header h3 {
             font-size: 1.3rem;
             margin-bottom: 0;
             font-family: var(--font-title);
             color: var(--primary-color);
         }
-
         .location-badge {
             background: var(--accent-color);
             color: white;
@@ -657,7 +459,6 @@
             font-weight: 600;
             font-family: var(--font-body);
         }
-
         .location-info p {
             margin-bottom: 8px;
             display: flex;
@@ -665,14 +466,12 @@
             font-family: var(--font-body);
             font-size: 0.9rem;
         }
-
         .location-info i {
             color: var(--primary-color);
             margin-top: 4px;
             min-width: 18px;
             font-size: 0.9rem;
         }
-
         .location-map {
             border-radius: 8px;
             overflow: hidden;
@@ -681,12 +480,7 @@
         }
 
         /* Contact Section */
-        .contact-section {
-            background-color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
+        .contact-section { background-color: white; position: relative; overflow: hidden; }
         .contact-form-container {
             position: relative;
             background: white;
@@ -695,123 +489,59 @@
             overflow: hidden;
             padding: 30px;
         }
-
         .form-background {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            overflow: hidden;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0; overflow: hidden;
             background: linear-gradient(135deg, rgba(37, 99, 235, 0.05) 0%, rgba(59, 130, 246, 0.05) 50%, rgba(16, 185, 129, 0.05) 100%);
         }
-
-        .form-background-shapes {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-
+        .form-background-shapes { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
         .shape {
             position: absolute;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             opacity: 0.1;
         }
-
-        .shape-1 {
-            width: 100px;
-            height: 100px;
-            top: -30px;
-            left: -30px;
-        }
-
-        .shape-2 {
-            width: 150px;
-            height: 150px;
-            bottom: -50px;
-            right: -50px;
-        }
-
-        .shape-3 {
-            width: 70px;
-            height: 70px;
-            top: 50%;
-            left: 70%;
-        }
-
-        .shape-4 {
-            width: 50px;
-            height: 50px;
-            bottom: 30%;
-            right: 80%;
-        }
-
-        .contact-form-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        .contact-info-sidebar {
-            padding: 20px;
-            height: 100%;
-        }
-
+        .shape-1 { width: 100px; height: 100px; top: -30px; left: -30px; }
+        .shape-2 { width: 150px; height: 150px; bottom: -50px; right: -50px; }
+        .shape-3 { width: 70px; height: 70px; top: 50%; left: 70%; }
+        .shape-4 { width: 50px; height: 50px; bottom: 30%; right: 80%; }
+        .contact-form-content { position: relative; z-index: 2; }
+        .contact-info-sidebar { padding: 20px; height: 100%; }
         .contact-info-sidebar h3 {
             color: var(--primary-color);
             font-family: var(--font-title);
             margin-bottom: 15px;
             font-size: 1.5rem;
         }
-
-        .contact-info-sidebar p {
-            margin-bottom: 20px;
-            font-family: var(--font-body);
-            font-size: 0.95rem;
-        }
-
+        .contact-info-sidebar p { margin-bottom: 20px; font-family: var(--font-body); font-size: 0.95rem; }
         .contact-details p {
-            display: flex;
-            align-items: flex-start;
+            display: flex; align-items: flex-start;
             margin-bottom: 15px;
             font-family: var(--font-body);
             font-size: 0.9rem;
         }
-
         .contact-icon {
             color: var(--primary-color);
             margin-right: 12px;
             margin-top: 4px;
             min-width: 20px;
         }
-
-        .business-hours {
-            border-top: 1px solid rgba(0, 0, 0, 0.1);
-            padding-top: 20px;
-        }
-
+        .business-hours { border-top: 1px solid rgba(0, 0, 0, 0.1); padding-top: 20px; }
         .business-hours h4 {
             color: var(--dark-color);
             font-size: 1.1rem;
             margin-bottom: 10px;
             font-family: var(--font-title);
         }
-
-        .business-hours p {
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
+        .business-hours p { margin-bottom: 5px; font-size: 0.9rem; }
         .contact-form {
             padding: 20px;
             background: white;
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
         }
-
         .contact-form .form-label {
             font-weight: 500;
             color: var(--dark-color);
@@ -819,7 +549,6 @@
             margin-bottom: 8px;
             font-size: 0.95rem;
         }
-
         .contact-form .form-control {
             border: 1px solid #e2e8f0;
             border-radius: 8px;
@@ -828,12 +557,10 @@
             transition: all 0.3s ease;
             font-size: 0.95rem;
         }
-
         .contact-form .form-control:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
         }
-
         .btn-send {
             padding: 10px 25px;
             border-radius: 30px;
@@ -843,12 +570,7 @@
             margin-top: 10px;
             font-size: 1rem;
         }
-
-        .social-links {
-            display: flex;
-            gap: 15px;
-        }
-
+        .social-links { display: flex; gap: 15px; }
         .social-links a {
             display: inline-flex;
             align-items: center;
@@ -860,7 +582,6 @@
             color: white;
             transition: all 0.3s ease;
         }
-
         .social-links a:hover {
             background: white;
             color: var(--primary-color);
@@ -873,27 +594,17 @@
             color: white;
             padding: 40px 0 20px;
         }
-
         .footer h3, .footer h5 {
             color: white;
             margin-bottom: 20px;
             font-family: var(--font-heading);
         }
-
         .footer-contact p {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+            display: flex; align-items: center; gap: 10px;
             margin-bottom: 10px;
             font-family: var(--font-body);
         }
-
-        .footer-social {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
+        .footer-social { display: flex; gap: 15px; margin-bottom: 20px; }
         .footer-social a {
             display: inline-flex;
             align-items: center;
@@ -905,12 +616,7 @@
             color: white;
             transition: all 0.3s ease;
         }
-
-        .footer-social a:hover {
-            background: var(--primary-color);
-            transform: translateY(-3px);
-        }
-
+        .footer-social a:hover { background: var(--primary-color); transform: translateY(-3px); }
         .footer ul li {
             margin-bottom: 10px;
             display: flex;
@@ -918,23 +624,14 @@
             gap: 8px;
             font-family: var(--font-body);
         }
-
-        .footer ul li i {
-            color: var(--accent-color);
-            font-size: 0.8rem;
-        }
-
+        .footer ul li i { color: var(--accent-color); font-size: 0.8rem; }
         .footer a {
             color: rgba(255, 255, 255, 0.8);
             text-decoration: none;
             transition: all 0.3s ease;
             font-family: var(--font-body);
         }
-
-        .footer a:hover {
-            color: white;
-            text-decoration: underline;
-        }
+        .footer a:hover { color: white; text-decoration: underline; }
 
         /* Back to Top Button */
         .back-to-top {
@@ -957,38 +654,15 @@
             opacity: 0;
             visibility: hidden;
         }
-
-        .back-to-top.show {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .back-to-top:hover {
-            background-color: var(--secondary-color);
-            color: white;
-            transform: translateY(-3px);
-        }
+        .back-to-top.show { opacity: 1; visibility: visible; }
+        .back-to-top:hover { background-color: var(--secondary-color); color: white; transform: translateY(-3px); }
 
         /* Animation for elements */
-        .fade-in {
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-
-        .fade-in.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
 
         /* Alert Styles */
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            border: 1px solid transparent;
-        }
-
+        .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid transparent; }
         .alert-info {
             background-color: rgba(14, 165, 233, 0.2);
             border-color: rgba(14, 165, 233, 0.3);
@@ -997,133 +671,37 @@
 
         /* Responsive adjustments */
         @media (max-width: 992px) {
-            :root {
-                --font-size-hero: 2.5rem;
-                --font-size-h1: 2rem;
-                --font-size-h2: 1.8rem;
-            }
-
-            .navbar-brand {
-                max-width: 70%;
-            }
-
-            .brand-text {
-                font-size: 1rem;
-            }
-
-            .contact-form-container .row {
-                flex-direction: column-reverse;
-            }
-
-            .contact-info-sidebar {
-                text-align: center;
-            }
-
-            .contact-details p {
-                justify-content: center;
-            }
-
-            .social-links {
-                justify-content: center;
-            }
+            :root { --font-size-hero: 2.5rem; --font-size-h1: 2rem; --font-size-h2: 1.8rem; }
+            .navbar-brand { max-width: 70%; }
+            .brand-text { font-size: 1rem; }
+            .contact-form-container .row { flex-direction: column-reverse; }
+            .contact-info-sidebar { text-align: center; }
+            .contact-details p { justify-content: center; }
+            .social-links { justify-content: center; }
         }
-
         @media (max-width: 768px) {
-            .company-name {
-                font-size: 2.2rem;
-            }
-
-            .company-tagline {
-                font-size: 1.1rem;
-            }
-
-            .hero-features {
-                flex-direction: column;
-                gap: 15px;
-            }
-
-            .hero-section {
-                padding: 70px 0 50px;
-            }
-
-            .about-section, .services-section, .jobs-section, .locations-section, .contact-section {
-                padding: 50px 0;
-            }
-
-            .about-stats {
-                flex-direction: column;
-                gap: 20px;
-            }
-
-            .job-footer {
-                flex-direction: column;
-                gap: 12px;
-                align-items: flex-start;
-            }
-
-            .section-title {
-                font-size: 1.8rem;
-            }
-
-            .navbar-brand {
-                flex-direction: row;
-                align-items: center;
-                gap: 10px;
-            }
-
-            .brand-tagline {
-                display: none;
-            }
-
-            .location-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .contact-form-container {
-                padding: 20px;
-            }
-
-            .btn-login {
-                margin-left: 0;
-                margin-top: 10px;
-                text-align: center;
-            }
+            .company-name { font-size: 2.2rem; }
+            .company-tagline { font-size: 1.1rem; }
+            .hero-features { flex-direction: column; gap: 15px; }
+            .hero-section { padding: 70px 0 50px; }
+            .about-section, .services-section, .jobs-section, .locations-section, .contact-section { padding: 50px 0; }
+            .about-stats { flex-direction: column; gap: 20px; }
+            .job-footer { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .section-title { font-size: 1.8rem; }
+            .navbar-brand { flex-direction: row; align-items: center; gap: 10px; }
+            .brand-tagline { display: none; }
+            .location-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .contact-form-container { padding: 20px; }
+            .btn-login { margin-left: 0; margin-top: 10px; text-align: center; }
         }
-
         @media (max-width: 576px) {
-            .job-card {
-                margin-bottom: 20px;
-            }
-
-            .footer .row > div {
-                margin-bottom: 30px;
-            }
-
-            .service-card .card-body {
-                padding: 20px 15px;
-            }
-
-            .location-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            .job-footer {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
-
-            .job-tags {
-                width: 100%;
-            }
-
-            .contact-form {
-                padding: 15px;
-            }
+            .job-card { margin-bottom: 20px; }
+            .footer .row > div { margin-bottom: 30px; }
+            .service-card .card-body { padding: 20px 15px; }
+            .location-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .job-footer { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .job-tags { width: 100%; }
+            .contact-form { padding: 15px; }
         }
     </style>
 </head>
@@ -1143,21 +721,11 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="#services">Services</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#jobs">Job Offers</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#locations">Locations</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#about">About</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#contact">Contact Us</a>
-                </li>
+                <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
+                <li class="nav-item"><a class="nav-link" href="#jobs">Job Offers</a></li>
+                <li class="nav-item"><a class="nav-link" href="#locations">Locations</a></li>
+                <li class="nav-item"><a class="nav-link" href="#about">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="#contact">Contact Us</a></li>
                 <li class="nav-item">
                     <a href="/candidate/login" class="nav-link btn-login">
                         <i class="fas fa-sign-in-alt me-1"></i> Login
@@ -1168,17 +736,15 @@
     </div>
 </nav>
 
-<!-- Hero Section - Fixed (removed duplicate) -->
-<!-- Hero Section - Fixed (removed duplicate) -->
+<!-- Hero Section -->
 <section class="hero-section">
     <div class="container">
-        <!-- The logo line has been removed from here -->
         <h1 class="company-name" id="heroCompanyName">Menti's IT Solutions</h1>
         <p class="company-tagline" id="heroCompanyTagline">Transforming businesses with innovative digital solutions and cutting-edge technology</p>
         <div class="hero-features">
             <div class="feature-item">
                 <i class="fas fa-rocket"></i>
-                <span>Fast & Reliable</span>
+                <span>Fast &amp; Reliable</span>
             </div>
             <div class="feature-item">
                 <i class="fas fa-lightbulb"></i>
@@ -1204,84 +770,60 @@
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-chart-line"></i></div>
                         <h3 class="service-title">Digital Marketing</h3>
                         <p>Comprehensive digital marketing strategies to boost your online presence and drive growth.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-search"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-search"></i></div>
                         <h3 class="service-title">SEO</h3>
                         <p>Search engine optimization services to improve your visibility and organic traffic.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-paint-brush"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-paint-brush"></i></div>
                         <h3 class="service-title">Graphic Designing</h3>
                         <p>Creative and impactful visual designs that communicate your brand's message effectively.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-code"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-code"></i></div>
                         <h3 class="service-title">API Development</h3>
                         <p>Robust and scalable API solutions to power your applications and integrations.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-laptop-code"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-laptop-code"></i></div>
                         <h3 class="service-title">UI Development</h3>
                         <p>Intuitive and engaging user interfaces that provide exceptional user experiences.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6 col-lg-4">
                 <div class="card service-card fade-in">
                     <div class="card-body text-center p-4">
-                        <div class="service-icon">
-                            <i class="fas fa-layer-group"></i>
-                        </div>
+                        <div class="service-icon"><i class="fas fa-layer-group"></i></div>
                         <h3 class="service-title">Full Stack Development</h3>
                         <p>End-to-end web application development from frontend to backend solutions.</p>
-                        <div class="service-hover-content">
-                            <a href="#" class="btn btn-link">Learn More</a>
-                        </div>
+                        <div class="service-hover-content"><a href="#" class="btn btn-link">Learn More</a></div>
                     </div>
                 </div>
             </div>
@@ -1387,22 +929,10 @@
                 <p class="lead">Menti's IT Solutions is a leading technology company dedicated to delivering exceptional digital experiences and innovative solutions to businesses worldwide.</p>
                 <p>Founded in 2010, we have grown into a trusted partner for businesses seeking to transform their digital presence. Our team of experts combines technical expertise with creative thinking to deliver solutions that drive growth and innovation.</p>
                 <div class="about-stats">
-                    <div class="stat-item">
-                        <span class="stat-number">500+</span>
-                        <span class="stat-label">Projects Completed</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">200+</span>
-                        <span class="stat-label">Happy Clients</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number">50+</span>
-                        <span class="stat-label">Experts Team</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" th:text="${jobCount != null ? jobCount : '15+'}">15+</span>
-                        <span class="stat-label">Job Openings</span>
-                    </div>
+                    <div class="stat-item"><span class="stat-number">500+</span><span class="stat-label">Projects Completed</span></div>
+                    <div class="stat-item"><span class="stat-number">200+</span><span class="stat-label">Happy Clients</span></div>
+                    <div class="stat-item"><span class="stat-number">50+</span><span class="stat-label">Experts Team</span></div>
+                    <div class="stat-item"><span class="stat-number" th:text="${jobCount != null ? jobCount : '15+'}">15+</span><span class="stat-label">Job Openings</span></div>
                 </div>
                 <p>We believe in building long-term relationships with our clients by providing exceptional service, cutting-edge solutions, and measurable results.</p>
             </div>
@@ -1531,7 +1061,7 @@
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Home Page JavaScript -->
+<!-- Home Page JavaScript (unchanged) -->
 <script>
     // Load company data from localStorage on home page
     document.addEventListener('DOMContentLoaded', function() {

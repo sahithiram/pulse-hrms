@@ -1,8 +1,9 @@
 /**
- * pm-sprints.js — PHASE 4
+ * pm-sprints.js — PHASE 4 + GAP 19b
  * Adds to /pm/05-planning: sprint picker, Start / Complete buttons, a Complete dialog with
- * carry-over, real retrospective notes, and the velocity hint.
+ * carry-over, and retrospective integration (opens pm-retro.js on demand).
  * Needs pm-core.js and the small hooks added to 05-planning.html (window.__pmPlanState).
+ * Also needs pm/js/pm-retro.js (loaded lazily by withRetro).
  */
 (function () {
   'use strict';
@@ -10,6 +11,19 @@
   function S() { return window.__pmPlanState || {}; }
   function api(m, u, b) { return PM.api(m, u, b); }
   function fail(e) { PM.toast((e && e.message) || 'Failed', 'error'); }
+
+  /* ───────── Gap 19b: lazy-load pm-retro.js ───────── */
+  function withRetro(fn) {
+    if (window.PMRetro) return fn();
+    var s = document.createElement('script');
+    s.src = '/pm/js/pm-retro.js';
+    s.onload = fn;
+    s.onerror = function () { PM.toast('Could not load the retrospective module', 'error'); };
+    document.body.appendChild(s);
+  }
+  function openRetro(id) { withRetro(function () { PMRetro.open(id); }); }
+  function retroHistory() { withRetro(function () { PMRetro.history(S().projectId); }); }
+
   function cur() {
     var st = S();
     return (st.sprints || []).find(function (s) { return s.id === st.activeSprintId; }) || null;
@@ -120,9 +134,8 @@
         h += '<div class="pm-card" style="color:var(--suc)"><i class="fas fa-circle-check"></i> Everything in this sprint is done.</div>';
       }
 
-      h += '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px">Retrospective notes (optional)</div>' +
-        '<textarea class="pm-input" id="pmCompleteRetro" style="height:110px;padding:8px;resize:vertical" placeholder="What went well? What didn\'t? Actions…">' +
-        PM.esc(s.retroNotes || '') + '</textarea></div>' +
+      // Gap 19b Edit 2: no more retro textarea in the Complete dialog.
+      h += '<div class="pm-card" style="font-size:var(--fs-sm);color:var(--tx2)"><i class="fas fa-comments"></i> After completing, you will be asked to start the retrospective.</div>' +
         '<div style="display:flex;gap:6px;justify-content:flex-end">' +
         '<button class="pm-btn" onclick="PM.closeDrawer()">Cancel</button>' +
         '<button class="pm-btn pm-btn-primary" id="pmCompleteBtn"><i class="fas fa-flag-checkered"></i> Complete sprint</button></div>';
@@ -131,13 +144,14 @@
       document.getElementById('pmCompleteBtn').onclick = function () {
         var sel = document.getElementById('pmCarrySel');
         var carry = sel && sel.value ? parseInt(sel.value, 10) : null;
-        var retro = document.getElementById('pmCompleteRetro').value;
         this.disabled = true;
-        api('POST', '/api/pm/sprints/' + id + '/complete', { carryOverSprintId: carry, retroNotes: retro || null })
+        // Gap 19b Edit 3: no retroNotes in the body; prompt the retro after completion instead.
+        api('POST', '/api/pm/sprints/' + id + '/complete', { carryOverSprintId: carry })
           .then(function (r) {
             PM.toast('Sprint completed · velocity ' + (r && r.velocity != null ? r.velocity : 0) + ' pts', 'success');
             PM.closeDrawer();
             pin(id);
+            withRetro(function () { PMRetro.promptAfterComplete(id, s.name); });
           })
           .catch(function (e) { fail(e); var b = document.getElementById('pmCompleteBtn'); if (b) b.disabled = false; });
       };
@@ -147,13 +161,9 @@
     });
   }
 
+  // Kept for backwards compatibility. The real retro editing lives in pm-retro.js.
   function saveRetro() {
-    var s = cur();
-    if (!s) return;
-    var txt = document.getElementById('pmRetroText').value;
-    api('PUT', '/api/pm/sprints/' + s.id + '/retro', { retroNotes: txt })
-      .then(function () { s.retroNotes = txt; PM.toast('Retro notes saved', 'success'); })
-      .catch(fail);
+    PM.toast('Use the Retrospective panel to edit notes', 'info');
   }
 
   /* ───────── rendering (called by the page after each loadSprints) ───────── */
@@ -205,17 +215,18 @@
         : 'Velocity appears after your first completed sprint') +
       '</span></div>';
 
-    retroHost.innerHTML = '<div class="pm-card"><div style="font-weight:600;margin-bottom:8px"><i class="fas fa-comments" style="color:var(--pri)"></i> Retrospective notes · ' +
-      PM.esc(s.name) + '</div>' +
-      '<textarea class="pm-input" id="pmRetroText" style="height:130px;padding:8px;resize:vertical" ' + (canManage ? '' : 'readonly ') +
-      'placeholder="What went well? What didn\'t? Actions…">' + PM.esc(s.retroNotes || '') + '</textarea>' +
-      (canManage ? '<div style="text-align:right;margin-top:6px"><button class="pm-btn pm-btn-primary" onclick="PMSprints.saveRetro()"><i class="fas fa-floppy-disk"></i> Save notes</button></div>' : '') +
-      '</div>';
+    // Gap 19b Edit 4: Retrospective card with Open + History buttons (edit rights enforced in pm-retro.js).
+    retroHost.innerHTML = '<div class="pm-card" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+      '<div style="font-weight:600"><i class="fas fa-comments" style="color:var(--pri)"></i> Retrospective · ' + PM.esc(s.name) + '</div>' +
+      '<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">' +
+      '<button class="pm-btn pm-btn-primary" onclick="PMSprints.openRetro(' + s.id + ')"><i class="fas fa-comments"></i> Open retrospective</button>' +
+      '<button class="pm-btn" onclick="PMSprints.retroHistory()"><i class="fas fa-clock-rotate-left"></i> History</button></span></div>';
   }
 
   window.PMSprints = {
     render: render, pin: pin, start: start, startNext: startNext,
     openComplete: openComplete, saveRetro: saveRetro,
+    openRetro: openRetro, retroHistory: retroHistory,
     targetSprintId: targetSprintId, refreshDropzone: refreshDropzone
   };
 })();

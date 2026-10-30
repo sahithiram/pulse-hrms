@@ -1,8 +1,11 @@
 package com.mentis.hrms.config;
 
+import com.mentis.hrms.pm.security.PmAccessService;
+import com.mentis.hrms.repository.EmployeeRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -26,6 +29,15 @@ import java.util.Map;
 @Slf4j
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final PmAccessService access;
+    private final EmployeeRepository employeeRepository;
+
+    public WebSocketConfig(@Lazy PmAccessService access,
+                           @Lazy EmployeeRepository employeeRepository) {
+        this.access = access;
+        this.employeeRepository = employeeRepository;
+    }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic", "/queue", "/user");
@@ -48,10 +60,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .addInterceptors(new SessionPrincipalHandshakeInterceptor());
     }
 
-    /**
-     * Reads HttpSession attribute "userId" (set by the HRMS login)
-     * and attaches it as a Principal on the WebSocket session.
-     */
     public static class SessionPrincipalHandshakeInterceptor implements HandshakeInterceptor {
         @Override
         public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
@@ -65,8 +73,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     }
                 }
             }
-            // permit anonymous handshake so SockJS info requests still work;
-            // the inbound interceptor below rejects subscriptions without a Principal
             return true;
         }
 
@@ -75,11 +81,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                    WebSocketHandler wsHandler, Exception exception) { }
     }
 
-    /**
-     * Plain Principal — no Spring Security dependency.
-     * STOMP only needs getName(); we don't need authorities here because
-     * message-level auth is handled by PmAccessService at the REST layer.
-     */
     private static final class SimplePrincipal implements Principal {
         private final String name;
         SimplePrincipal(String name) { this.name = name; }
@@ -87,10 +88,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         @Override public String toString() { return name; }
     }
 
-    /**
-     * Attaches a Principal on CONNECT from the handshake attributes and
-     * blocks subscriptions to another user's personal topic.
-     */
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new ChannelInterceptor() {
@@ -100,7 +97,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
                 if (acc == null) return message;
 
-                // Attach principal on CONNECT from handshake attributes
                 if (StompCommand.CONNECT.equals(acc.getCommand())
                         && acc.getSessionAttributes() != null) {
                     Object uid = acc.getSessionAttributes().get("userId");
@@ -109,25 +105,51 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     }
                 }
 
-                // Authorize /topic/user/{id}/... subscriptions
                 if (StompCommand.SUBSCRIBE.equals(acc.getCommand())) {
                     String dest = acc.getDestination();
+
+                    // existing per-user topic check
                     if (dest != null && dest.startsWith("/topic/user/")) {
                         String[] parts = dest.split("/");
-                        // /topic/user/{userId}/notifications → parts[3]
                         if (parts.length >= 4) {
                             String requested = parts[3];
                             Principal me = acc.getUser();
                             if (me == null || !me.getName().equals(requested)) {
                                 log.warn("Blocked topic subscription: {} (me={})", dest,
                                         me == null ? "anon" : me.getName());
-                                return null; // silently drop the frame
+                                return null;
                             }
+                        }
+                    }
+
+                    // PM topic check (Step 6)
+                    if (dest != null && dest.startsWith("/topic/pm/")) {
+                        Principal me = acc.getUser();
+                        if (me == null) {
+                            log.warn("Blocked anonymous subscription: {}", dest);
+                            return null;
+                        }
+                        if (dest.startsWith("/topic/pm/team/")
+                                && !mayJoinTeamTopic(me.getName(), dest)) {
+                            log.warn("Blocked team topic: {} (me={})", dest, me.getName());
+                            return null;
                         }
                     }
                 }
                 return message;
             }
         });
+    }
+
+    /** me = employee code (session userId), not the primary key. Team topics are open to leads and members. */
+    private boolean mayJoinTeamTopic(String employeeCode, String dest) {
+        try {
+            Long teamId = Long.valueOf(dest.substring("/topic/pm/team/".length()));
+            Long pk = employeeRepository.findByEmployeeId(employeeCode)
+                    .map(e -> e.getId()).orElse(null);
+            return pk != null && (access.isTeamLead(pk, teamId) || access.isTeamMember(pk, teamId));
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

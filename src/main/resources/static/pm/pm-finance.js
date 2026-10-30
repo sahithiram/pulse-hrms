@@ -149,9 +149,21 @@
       .catch(fail);
   }
   function saveBaseline() {
-    if (!window.confirm('Save the current dates and budget as the baseline? This replaces any earlier baseline.')) return;
-    PM.api('POST', '/api/pm/projects/' + P.id + '/baseline')
-      .then(function () { PM.toast('Baseline saved', 'success'); return load(); })
+    var replacing = !!(P.data && P.data.baseline);
+    var url = '/api/pm/projects/' + P.id + '/baseline';
+    if (replacing) {
+      var reason = window.prompt('Reason for re-baselining (required, at least 10 characters):', '');
+      if (reason === null) return;
+      if (String(reason).trim().length < 10) {
+        PM.toast('Please give a reason of at least 10 characters.', 'warning');
+        return;
+      }
+      url += '?reason=' + encodeURIComponent(reason.trim());
+    } else if (!window.confirm('Save the current dates and budget as the baseline?')) {
+      return;
+    }
+    PM.api('POST', url)
+      .then(function () { PM.toast(replacing ? 'Re-baselined' : 'Baseline saved', 'success'); return load(); })
       .catch(fail);
   }
   function sendReport() {

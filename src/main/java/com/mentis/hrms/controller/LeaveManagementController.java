@@ -43,6 +43,18 @@ public class LeaveManagementController {
     @Autowired
     private com.mentis.hrms.service.LeaveActionService leaveActionService;
 
+    @GetMapping("/conflicts")
+    public ResponseEntity<?> conflicts(@RequestParam String employeeId,
+                                       @RequestParam String startDate,
+                                       @RequestParam String endDate) {
+        try {
+            return ResponseEntity.ok(leaveActionService.checkConflicts(
+                    employeeId, LocalDate.parse(startDate), LocalDate.parse(endDate)));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/pending")
     public ResponseEntity<?> getPendingLeaves() {
         List<LeaveRequest> pending = leaveRequestRepository.findByStatus("PENDING");

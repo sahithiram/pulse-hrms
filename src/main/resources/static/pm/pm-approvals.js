@@ -37,6 +37,7 @@
     if (t === 'BUDGET')          return 'fa-indian-rupee-sign';
     if (t === 'TIMESHEET')       return 'fa-clock';
     if (t === 'CLIENT_SIGN_OFF') return 'fa-signature';
+    if (t === 'EXTENSION') return 'fa-calendar-plus';
     return 'fa-square-check';
   }
 
@@ -57,6 +58,8 @@
       if (a.entityType === 'CLIENT_SIGN_OFF') {
         return p.note ? 'Client accepted the work · ' + p.note : 'Client accepted the work';
       }
+      if (a.entityType === 'EXTENSION' && p.newDueDate)
+        return 'New due date: ' + p.newDueDate;
     } catch (e) {}
     return '';
   }

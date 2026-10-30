@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employment Offer Letter - Mentis IT Solutions</title>
 
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
@@ -41,7 +38,7 @@
         }
 
         /* =========================================================
-           SIDEBAR STYLES
+           SIDEBAR / HEADER (mirrors the shared theme so it looks consistent)
            ========================================================= */
         .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: var(--sidebar-bg); box-shadow: 2px 0 10px rgba(0,0,0,.2); transition: var(--transition); z-index: 1000; }
         .sidebar-brand { display: flex; align-items: center; gap: 10px; padding: 1.5rem; border-bottom: 1px solid var(--dark-border); color: #fff; font-weight: 600; font-size: 1.25rem; position: sticky; top: 0; background: var(--sidebar-bg); z-index: 10; }
@@ -65,11 +62,7 @@
             gap: 8px;
             margin-top: 1rem;
         }
-        .nav-section i {
-            font-size: 0.8rem;
-            color: var(--primary);
-            opacity: 0.8;
-        }
+        .nav-section i { font-size: 0.8rem; color: var(--primary); opacity: 0.8; }
         .nav-link {
             display: flex;
             align-items: center;
@@ -91,16 +84,8 @@
             color: #fff;
             transform: translateX(2px);
         }
-        .nav-link i {
-            width: 20px;
-            text-align: center;
-            font-size: 1rem;
-            color: var(--primary);
-            transition: all 0.2s;
-        }
-        .nav-link:hover i, .nav-link.active i {
-            color: #fff;
-        }
+        .nav-link i { width: 20px; text-align: center; font-size: 1rem; color: var(--primary); transition: all 0.2s; }
+        .nav-link:hover i, .nav-link.active i { color: #fff; }
         .nav-badge {
             margin-left: auto; background: var(--danger); color: white;
             padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.65rem;
@@ -128,7 +113,7 @@
         .dropdown-item.text-danger:hover { background: var(--danger); color: white !important; }
 
         /* =========================================================
-           OFFER LETTER SPECIFIC STYLES (Your Original CSS)
+           OFFER LETTER SPECIFIC STYLES
            ========================================================= */
         .content-area { padding: 2rem; }
 
@@ -139,7 +124,7 @@
             box-shadow: 0 4px 25px rgba(0,0,0,0.3);
             border-radius: 4px;
             overflow: hidden;
-            color: #333; /* Forcing text inside letter to be dark */
+            color: #333;
         }
 
         .letter-header {
@@ -152,102 +137,24 @@
             justify-content: space-between;
             align-items: flex-start;
         }
-        .letter-logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 10;
-            position: relative;
-        }
-        .letter-logo-text {
-            color: white;
-            font-size: 24px;
-            font-weight: 600;
-            letter-spacing: 1.5px;
-        }
-        .letter-date {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 14px;
-            z-index: 10;
-            position: relative;
-        }
-        .letter-content {
-            padding: 50px 60px 80px;
-            position: relative;
-        }
-        .letter-addresses {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 40px;
-            gap: 30px;
-        }
-        .letter-candidate-address {
-            text-align: right;
-            flex: 1;
-        }
-        .letter-candidate-name {
-            font-size: 18px;
-            font-weight: 600;
-            color: #d946a6;
-            margin-bottom: 8px;
-        }
-        .letter-subtitle {
-            font-size: 32px;
-            font-weight: 700;
-            color: #8bc34a;
-            margin-bottom: 30px;
-            letter-spacing: 1px;
-            line-height: 1.1;
-            text-align: center;
-        }
-        .letter-body {
-            color: #333;
-            font-size: 15px;
-            line-height: 1.8;
-        }
-        .letter-greeting {
-            margin-bottom: 25px;
-            font-weight: 500;
-        }
-        .letter-paragraph {
-            margin-bottom: 20px;
-            text-align: left;
-            line-height: 1.9;
-        }
-        .letter-acceptance-section {
-            margin-top: 40px;
-        }
-        .letter-acceptance-title {
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: #2a1a5e;
-        }
-        .letter-signature-section {
-            margin-top: 50px;
-        }
-        .letter-name {
-            font-weight: 700;
-            color: #d946a6;
-            font-size: 16px;
-            margin-bottom: 2px;
-        }
-        .letter-signature-image {
-            width: 150px;
-            height: auto;
-            margin-bottom: 10px;
-            margin-top: 20px;
-        }
-        .letter-signature-line {
-            color: #999;
-            font-size: 12px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            width: 240px;
-        }
-        .letter-footer {
-            height: 40px;
-            background: #2a1a5e;
-        }
+        .letter-logo { display: flex; align-items: center; gap: 12px; z-index: 10; position: relative; }
+        .letter-logo-text { color: white; font-size: 24px; font-weight: 600; letter-spacing: 1.5px; }
+        .letter-date { color: rgba(255, 255, 255, 0.9); font-size: 14px; z-index: 10; position: relative; }
+        .letter-content { padding: 50px 60px 80px; position: relative; }
+        .letter-addresses { display: flex; justify-content: space-between; margin-bottom: 40px; gap: 30px; }
+        .letter-candidate-address { text-align: right; flex: 1; }
+        .letter-candidate-name { font-size: 18px; font-weight: 600; color: #d946a6; margin-bottom: 8px; }
+        .letter-subtitle { font-size: 32px; font-weight: 700; color: #8bc34a; margin-bottom: 30px; letter-spacing: 1px; line-height: 1.1; text-align: center; }
+        .letter-body { color: #333; font-size: 15px; line-height: 1.8; }
+        .letter-greeting { margin-bottom: 25px; font-weight: 500; }
+        .letter-paragraph { margin-bottom: 20px; text-align: left; line-height: 1.9; }
+        .letter-acceptance-section { margin-top: 40px; }
+        .letter-acceptance-title { font-weight: 700; margin-bottom: 10px; color: #2a1a5e; }
+        .letter-signature-section { margin-top: 50px; }
+        .letter-name { font-weight: 700; color: #d946a6; font-size: 16px; margin-bottom: 2px; }
+        .letter-signature-image { width: 150px; height: auto; margin-bottom: 10px; margin-top: 20px; }
+        .letter-signature-line { color: #999; font-size: 12px; padding-top: 10px; border-top: 1px solid #ddd; width: 240px; }
+        .letter-footer { height: 40px; background: #2a1a5e; }
 
         /* Action Buttons outside letter */
         .page-actions {
@@ -316,7 +223,7 @@
     <i class="fas fa-bars"></i>
 </button>
 
-<!-- === SIDEBAR === -->
+<!-- === SIDEBAR (inline, mirrors the fragment layout) === -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <div class="brand-icon" id="sidebarBrandIcon">
@@ -597,7 +504,7 @@
                     </div>
 
                     <div class="letter-paragraph">
-                        <strong>Benefits & Perks:</strong><br>
+                        <strong>Benefits &amp; Perks:</strong><br>
                         • Health insurance coverage<br>
                         • Provident Fund (PF) and ESI<br>
                         • 18 days paid annual leave<br>

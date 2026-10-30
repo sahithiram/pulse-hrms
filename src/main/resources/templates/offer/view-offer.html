@@ -5,18 +5,24 @@
     <title>View Offer Letter</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --dark-bg: #0f172a;
             --dark-card: #1e293b;
             --dark-border: #334155;
             --dark-text: #f8fafc;
+            --dark-text-secondary: #94a3b8;
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --success: #10b981;
         }
         body {
             background: var(--dark-bg);
             color: var(--dark-text);
             font-family: 'Inter', sans-serif;
             padding: 20px;
+            min-height: 100vh;
         }
         .pdf-container {
             background: white;
@@ -39,18 +45,36 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .action-bar h4 {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--dark-text);
+            flex: 1;
+            min-width: 200px;
+            text-align: center;
         }
         .btn-download {
-            background: #10b981;
+            background: var(--success);
             color: white;
             border: none;
             padding: 8px 16px;
             border-radius: 6px;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            font-weight: 600;
+            font-size: .875rem;
+            transition: background .2s ease, transform .2s ease;
         }
         .btn-download:hover {
             background: #059669;
             color: white;
+            transform: translateY(-1px);
         }
         .btn-back {
             background: transparent;
@@ -59,6 +83,15 @@
             padding: 8px 16px;
             border-radius: 6px;
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            font-size: .875rem;
+            transition: border-color .2s ease, color .2s ease;
+        }
+        .btn-back:hover {
+            border-color: var(--primary);
+            color: var(--primary);
         }
     </style>
 </head>
@@ -68,7 +101,10 @@
         <a href="/dashboard/hr/offer-candidates" class="btn-back">
             <i class="fas fa-arrow-left"></i> Back to List
         </a>
-        <h4 style="margin: 0;">Offer Letter: <span th:text="${offer.candidateName}">Candidate</span></h4>
+        <h4>
+            <i class="fas fa-file-contract" style="color: var(--primary); margin-right: .4rem;"></i>
+            Offer Letter: <span th:text="${offer.candidateName}">Candidate</span>
+        </h4>
         <a th:href="@{/dashboard/hr/download-offer/{id}(id=${offer.id}, download=true)}" class="btn-download">
             <i class="fas fa-download"></i> Download PDF
         </a>

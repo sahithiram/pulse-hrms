@@ -30,7 +30,7 @@ public class ClientController {
     public ResponseEntity<ApiResponse<ClientResponse>> create(
             @Valid @RequestBody CreateClientRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageClients(userId); // STEP 1b: SA, HR, HR_MANAGER, PM
+        access.requireCanManageClients(userId); // SA, HR, HR_MANAGER, PM
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Client created", clientService.createClient(req, userId)));
     }
@@ -59,9 +59,11 @@ public class ClientController {
             return ResponseEntity.ok(ApiResponse.ok(List.of()));
         return ResponseEntity.ok(ApiResponse.ok(clientService.listAllForDropdown()));
     }
+
+    // ✅ PHASE 4 (F-P15): HR is read-only in PM — only SA or a PM can delete a client.
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, @CurrentUserId Long userId) {
-        access.requireCanManageClients(userId); // STEP 1b (was requireCanCreateProject)
+        access.requireCanDeleteClient(userId);
         clientService.deleteClient(id);
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }

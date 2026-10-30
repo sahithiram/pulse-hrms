@@ -2,22 +2,28 @@ package com.mentis.hrms.pm.service.impl;
 
 import com.mentis.hrms.pm.dto.request.CreateProjectRequest;
 import com.mentis.hrms.pm.dto.request.UpdateProjectRequest;
+import com.mentis.hrms.pm.dto.response.BaselineHistoryResponse;
 import com.mentis.hrms.pm.dto.response.PageResponse;
 import com.mentis.hrms.pm.dto.response.ProjectResponse;
 import com.mentis.hrms.pm.dto.response.ProjectSummaryResponse;
-import com.mentis.hrms.pm.entity.ActivityLog;
-import com.mentis.hrms.pm.entity.Client;
-import com.mentis.hrms.pm.entity.Project;
+import com.mentis.hrms.pm.entity.*;
+import com.mentis.hrms.pm.enums.HealthMode;
+import com.mentis.hrms.pm.enums.ProjectRole;
 import com.mentis.hrms.pm.enums.ProjectStatus;
 import com.mentis.hrms.pm.enums.TaskStatus;
+import com.mentis.hrms.pm.exception.BusinessRuleException;
 import com.mentis.hrms.pm.exception.DuplicateResourceException;
 import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.mapper.ProjectMapper;
 import com.mentis.hrms.pm.repository.ActivityLogRepository;
 import com.mentis.hrms.pm.repository.ClientRepository;
+import com.mentis.hrms.pm.repository.ProjectBaselineHistoryRepository;
+import com.mentis.hrms.pm.repository.ProjectMemberRepository;
 import com.mentis.hrms.pm.repository.ProjectRepository;
 import com.mentis.hrms.pm.repository.TaskRepository;
+import com.mentis.hrms.pm.service.ProjectClosureService;
 import com.mentis.hrms.pm.service.ProjectService;
+import com.mentis.hrms.pm.service.ProjectVarianceService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +31,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.mentis.hrms.pm.service.ProjectClosureService;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -36,11 +43,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import com.mentis.hrms.pm.entity.ProjectMember;
-import com.mentis.hrms.pm.enums.ProjectRole;
-import com.mentis.hrms.pm.enums.HealthMode;
-import java.time.LocalDateTime;
-import com.mentis.hrms.pm.repository.ProjectMemberRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +57,8 @@ public class ProjectServiceImpl implements ProjectService {
     private final EmployeeRepository employeeRepository;
     private final ProjectMemberRepository projectMemberRepository;
     private final ProjectClosureService closureService;
+    private final ProjectVarianceService varianceService;
+    private final ProjectBaselineHistoryRepository baselineHistoryRepository;
 
     /** Allowed project status moves. Anything not listed is rejected. */
     private static final Map<ProjectStatus, Set<ProjectStatus>> FLOW = new EnumMap<>(ProjectStatus.class);
@@ -90,7 +94,15 @@ public class ProjectServiceImpl implements ProjectService {
         log.info("Project created id={} code={}", saved.getId(), saved.getCode());
         return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
     }
-
+    @Override
+    @Transactional(readOnly = true)
+    public List<BaselineHistoryResponse> baselineHistory(Long id) {
+        return baselineHistoryRepository.findByProjectIdOrderByVersionNoDesc(id).stream()
+                .map(h -> new BaselineHistoryResponse(h.getVersionNo(), h.getBaselineStart(), h.getBaselineEnd(),
+                        h.getBaselineBudget(), h.getBaselinedAt(), h.getBaselinedBy(),
+                        h.getSupersededAt(), h.getChangeRequestId(), h.getReason()))
+                .collect(Collectors.toList());
+    }
     @Override
     @Transactional
     public ProjectResponse updateProject(Long id, UpdateProjectRequest req, Long currentUserId) {
@@ -119,13 +131,13 @@ public class ProjectServiceImpl implements ProjectService {
             project.setCompletedAt(LocalDateTime.now()); // STEP 8
             project.setCompletedBy(currentUserId);
         }
-        if (oldStatus == ProjectStatus.PLANNING && project.getStatus() == ProjectStatus.ACTIVE
-                && project.getBaselinedAt() == null
-                && newStart != null && newEnd != null) {
-            // dates are saved below; use the effective ones for the automatic baseline
+        // 2b: activation hook. Any transition INTO ACTIVE from any state (PLANNING, ON_HOLD,
+        // AT_RISK, DELAYED) captures the baseline if one doesn't exist yet.
+        if (project.getStatus() == ProjectStatus.ACTIVE && oldStatus != ProjectStatus.ACTIVE
+                && project.getBaselinedAt() == null && newStart != null && newEnd != null) {
             project.setStartDate(newStart);
             project.setEndDate(newEnd);
-            applyBaseline(project, currentUserId);
+            applyBaseline(project, currentUserId, false);   // false = never overwrite
         }
         if (req.getHealth() != null) {
             if (req.getHealth() != project.getHealth()) project.setHealthMode(HealthMode.MANUAL);
@@ -223,6 +235,7 @@ public class ProjectServiceImpl implements ProjectService {
         projectRepository.deleteById(id);
         log.info("Project deleted id={}", id);
     }
+
     /** STEP 8: Super Admin only (the controller checks). Needs a reason; leaves a trail and tells the team. */
     @Override
     @Transactional
@@ -247,6 +260,7 @@ public class ProjectServiceImpl implements ProjectService {
         closureService.notifyReopened(saved, currentUserId, why);
         return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
     }
+
     // ---------------------------------------------------------------- rules
 
     /** Status move check using the project's saved dates (archive and other callers). */
@@ -264,7 +278,9 @@ public class ProjectServiceImpl implements ProjectService {
         if (!FLOW.getOrDefault(from, EnumSet.noneOf(ProjectStatus.class)).contains(to)) {
             throw new IllegalArgumentException("A project cannot move from " + from + " to " + to + ".");
         }
-        if (from == ProjectStatus.PLANNING && to == ProjectStatus.ACTIVE) {
+        // 2c: kick-off gate on every first activation, not just PLANNING → ACTIVE.
+        // (PLANNING → ON_HOLD → ACTIVE must also pass the gate.)
+        if (to == ProjectStatus.ACTIVE && project.getBaselinedAt() == null) {
             checkKickoff(project, startDate, endDate);
         }
         if (to == ProjectStatus.COMPLETED) {
@@ -344,27 +360,97 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     // -------------------------------------------------------------- helpers
+
     @Override
     @Transactional
     public ProjectResponse saveBaseline(Long id, Long currentUserId) {
+        return saveBaseline(id, currentUserId, null);
+    }
+
+    /** First capture: no reason needed. Already baselined: reason required, history row written. */
+    @Override
+    @Transactional
+    public ProjectResponse saveBaseline(Long id, Long currentUserId, String reason) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+        if (project.getBaselinedAt() != null) {
+            return rebaseline(id, reason, currentUserId);
+        }
+        return doSaveBaseline(project, currentUserId, null);
+    }
+
+    @Override
+    @Transactional
+    public ProjectResponse rebaseline(Long id, String reason, Long currentUserId) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
+        if (project.getBaselinedAt() == null) {
+            return doSaveBaseline(project, currentUserId, null);
+        }
+        String why = reason == null ? "" : reason.trim();
+        if (why.length() < 10)
+            throw new BusinessRuleException("Please say why you are re-baselining (at least 10 characters).");
+        if (why.length() > 1000) why = why.substring(0, 1000);
+        assertBaselineEditable(project);
+        archiveCurrentBaseline(project, why, null);          // writes ProjectBaselineHistory version N+1
+        return doSaveBaseline(project, currentUserId, why);
+    }
+
+    private void assertBaselineEditable(Project project) {
+        if (project.getStatus() == ProjectStatus.COMPLETED || project.getStatus() == ProjectStatus.ARCHIVED)
+            throw new BusinessRuleException("This project is completed or archived, so its baseline is locked.");
         if (project.getStartDate() == null || project.getEndDate() == null)
             throw new IllegalArgumentException("Set the start and end dates before saving a baseline.");
-        applyBaseline(project, currentUserId);
+    }
+
+    /** Single place that writes the baseline and ONE activity row. */
+    private ProjectResponse doSaveBaseline(Project project, Long userId, String reason) {
+        assertBaselineEditable(project);
+        boolean replacing = project.getBaselinedAt() != null;
+        // 2a: applyBaseline now returns the number of task baselines written, so we can
+        // report it in the activity log.
+        int n = applyBaseline(project, userId, true);
         Project saved = projectRepository.save(project);
-        logActivity(id, "BASELINED", currentUserId, null, null,
-                "saved a baseline for " + saved.getName() + " (" + saved.getStartDate() + " → "
-                        + saved.getEndDate() + ", budget " + saved.getBudgetTotal() + ")");
+        logActivity(saved.getId(), replacing ? "REBASELINED" : "BASELINED", userId, null, null,
+                (replacing ? "re-baselined " : "saved a baseline for ") + saved.getName()
+                        + " (" + saved.getStartDate() + " → " + saved.getEndDate()
+                        + ", budget " + saved.getBudgetTotal() + ", " + n + " task(s))"
+                        + (reason == null ? "" : ": " + reason));
         return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
     }
 
-    private void applyBaseline(Project p, Long userId) {
+    /**
+     * Project dates/budget snapshot, then task snapshot via {@link ProjectVarianceService#captureBaseline}.
+     * First capture never overwrites existing task baselines (tasks added later stay "added after baseline").
+     * Re-baseline archives the previous snapshot into {@link ProjectBaselineHistory}.
+     *
+     * Note: history rows are written by callers that need them (e.g. {@code rebaseline},
+     * {@code ChangeRequestService}) — not here — to avoid duplicate rows.
+     *
+     * 2a: returns the number of task baselines written.
+     */
+    private int applyBaseline(Project p, Long userId, boolean overwriteTasks) {
         p.setBaselineStart(p.getStartDate());
         p.setBaselineEnd(p.getEndDate());
         p.setBaselineBudget(p.getBudgetTotal());
         p.setBaselinedAt(LocalDateTime.now());
         p.setBaselinedBy(userId);
+        return varianceService.captureBaseline(p.getId(), overwriteTasks, userId);
+    }
+
+    private void archiveCurrentBaseline(Project p, String reason, Long changeRequestId) {
+        baselineHistoryRepository.save(ProjectBaselineHistory.builder()
+                .projectId(p.getId())
+                .versionNo((int) baselineHistoryRepository.countByProjectId(p.getId()) + 1)
+                .baselineStart(p.getBaselineStart())
+                .baselineEnd(p.getBaselineEnd())
+                .baselineBudget(p.getBaselineBudget())
+                .baselinedAt(p.getBaselinedAt())
+                .baselinedBy(p.getBaselinedBy())
+                .supersededAt(LocalDateTime.now())
+                .changeRequestId(changeRequestId)
+                .reason(reason)
+                .build());
     }
 
     private void logActivity(Long projectId, String action, Long actorId, String oldV, String newV, String msg) {

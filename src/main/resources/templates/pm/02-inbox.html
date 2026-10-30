@@ -1,103 +1,587 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>PM · Inbox</title>
+    <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+    <title>Project Management · Inbox</title>
+
+    <!-- Shared CDN set -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ============ SHARED THEME (single source of truth) ============ -->
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
     <style>
-        :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pur:#a855f7;--suc:#10b981;--dng:#ef4444;--wrn:#f59e0b;--pri-soft:rgba(99,102,241,.12);--suc-soft:rgba(16,185,129,.14);--wrn-soft:rgba(245,158,11,.14);--dng-soft:rgba(239,68,68,.14);--sb:232px;--hh:46px;--r:6px}
-        .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
-        *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:Inter,sans-serif;font-size:12.5px;background:var(--bg);color:var(--tx)}
-        a{text-decoration:none;color:var(--pri)}
-        .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh}
-        .pm-shell.collapsed{grid-template-columns:56px 1fr}
-        .pm-shell.collapsed .pm-nav-label,.pm-shell.collapsed .pm-nav-section,.pm-shell.collapsed .pm-brand-name{display:none}
-        .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column}
-        .pm-brand{display:flex;align-items:center;gap:8px;padding:10px 12px;height:var(--hh);border-bottom:1px solid var(--bd)}
-        .pm-brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--pri),var(--pur));display:grid;place-content:center;color:#fff;font-weight:700}
-        .pm-sidebar-scroll{flex:1;overflow-y:auto;padding:6px}
-        .pm-nav-section{padding:12px 10px 4px;font-size:10.5px;font-weight:700;text-transform:uppercase;color:var(--tx3)}
-        .pm-nav-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);color:var(--tx2);font-weight:500}
-        .pm-nav-link:hover{background:var(--card2);color:var(--tx)}
-        .pm-nav-link.active{background:var(--pri-soft);color:var(--pri)}
-        .pm-nav-link i{width:16px;text-align:center}.pm-nav-label{flex:1}
-        .pm-nav-badge{background:var(--pri);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
-        .pm-header{position:sticky;top:0;height:var(--hh);background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;z-index:50}
-        .pm-iconbtn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx2);cursor:pointer}
-        .pm-live{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx3);font-weight:600}
-        .pm-live .dot{width:6px;height:6px;border-radius:50%;background:var(--suc)}
-        .pm-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-weight:700;font-size:11px;display:grid;place-content:center;cursor:pointer}
-        .pm-content{padding:14px;max-width:960px}
-        .pm-title{font-size:18px;font-weight:600;margin:6px 0 12px}
-        .pm-tabs{display:flex;border-bottom:1px solid var(--bd);margin-bottom:12px}
-        .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent}
-        .pm-tabs button.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
-        .pm-tabs button:hover{color:var(--tx)}
-        .row{display:flex;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--bd);border-radius:8px;margin-bottom:6px}
-        .row:hover{background:var(--card2)}
-        .row .av{width:28px;height:28px;border-radius:50%;background:var(--pri-soft);color:var(--pri);display:grid;place-content:center;font-weight:700;font-size:11px;flex-shrink:0}
-        .row .msg{font-weight:500}.row .meta{font-size:11px;color:var(--tx3);margin-top:2px}
-        .badge{padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;background:var(--pri-soft);color:var(--pri);margin-left:6px;display:inline-block}
-        .empty{text-align:center;padding:40px;color:var(--tx3);background:var(--card);border:1px dashed var(--bd);border-radius:8px}
-        .pm-toasts{position:fixed;top:12px;right:12px;z-index:2000;display:flex;flex-direction:column;gap:6px}
-        .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:8px;padding:8px 12px;opacity:0;transition:opacity .3s}
-        .pm-toast.show{opacity:1}
+        /* ============ PAGE-SPECIFIC STYLES ONLY (PM inbox) ============ */
+
+        /* Breadcrumb */
+        .pm-breadcrumb {
+          font-size: .8125rem;
+          color: var(--dark-text-secondary);
+          margin-bottom: .75rem;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          flex-wrap: wrap;
+        }
+        .pm-breadcrumb a { color: var(--dark-text-secondary); }
+        .pm-breadcrumb a:hover { color: var(--primary); }
+
+        /* Filter chips */
+        .inbox-filters {
+          display: flex;
+          gap: .4rem;
+          flex-wrap: wrap;
+          margin-bottom: 1rem;
+          align-items: center;
+        }
+        .inbox-chip {
+          background: var(--dark-card);
+          border: 1px solid var(--dark-border);
+          border-radius: var(--radius-pill);
+          padding: .35rem .8rem;
+          font-size: var(--fs-sm);
+          font-weight: 500;
+          color: var(--dark-text-secondary);
+          cursor: pointer;
+          transition: var(--transition);
+          font-family: inherit;
+          white-space: nowrap;
+        }
+        .inbox-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .inbox-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+        .inbox-filters .spacer { flex: 1; }
+
+        /* Notification rows */
+        .inbox-row {
+          display: flex;
+          align-items: flex-start;
+          gap: .75rem;
+          padding: .75rem .9rem;
+          background: var(--dark-card);
+          border: 1px solid var(--dark-border);
+          border-left: 3px solid var(--primary);
+          border-radius: var(--radius-card);
+          margin-bottom: .5rem;
+          cursor: pointer;
+          transition: var(--transition);
+        }
+        .inbox-row:hover { background: var(--dark-bg); transform: translateY(-1px); }
+        .inbox-row.unread { background: rgba(99,102,241,.08); }
+        .inbox-row .unread-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: var(--primary); flex-shrink: 0; margin-top: .45rem;
+        }
+        .inbox-row .unread-dot.hidden { visibility: hidden; }
+        .inbox-row .inbox-av {
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(99,102,241,.15); color: var(--primary);
+          display: grid; place-content: center; flex-shrink: 0;
+          font-size: .75rem; font-weight: 700;
+        }
+        .inbox-row .inbox-body { flex: 1; min-width: 0; }
+        .inbox-row .inbox-msg { font-weight: 500; line-height: 1.4; }
+        .inbox-row .inbox-sub { font-size: var(--fs-sm); color: var(--dark-text-secondary); margin-top: 2px; line-height: 1.4; }
+        .inbox-row .inbox-meta { font-size: var(--fs-xs); color: var(--dark-text-secondary); opacity: .8; margin-top: 3px; }
+        .inbox-row .inbox-badge {
+          display: inline-flex; align-items: center; gap: 3px;
+          padding: 1px 6px; border-radius: 10px; font-size: var(--fs-xs);
+          font-weight: 600; background: rgba(99,102,241,.12);
+          color: #a5b4fc; margin-left: 6px;
+        }
+
+        /* Activity rows */
+        .activity-row {
+          display: flex; align-items: flex-start; gap: .75rem;
+          padding: .7rem .9rem;
+          background: var(--dark-card);
+          border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card);
+          margin-bottom: .5rem;
+        }
+        .activity-row .inbox-av {
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(99,102,241,.15); color: var(--primary);
+          display: grid; place-content: center; flex-shrink: 0;
+          font-size: .75rem; font-weight: 700;
+        }
+        .activity-row .inbox-body { flex: 1; min-width: 0; }
+        .activity-row .inbox-msg { font-weight: 500; line-height: 1.4; }
+        .activity-row .inbox-meta { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: 3px; }
+
+        /* Empty state */
+        .inbox-empty {
+          text-align: center;
+          padding: 3rem 1rem;
+          color: var(--dark-text-secondary);
+          background: var(--dark-card);
+          border: 1px dashed var(--dark-border);
+          border-radius: var(--radius-card);
+        }
+        .inbox-empty i { font-size: 28px; opacity: .4; display: block; margin-bottom: .6rem; }
+
+        @media (max-width: 768px) {
+          .inbox-filters .spacer { display: none; }
+        }
     </style>
 </head>
-<body>
-<div class="pm-shell" id="pmShell">
-    <aside class="pm-sidebar">
-        <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
-        <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
-    </aside>
-    <div class="pm-main">
-        <header class="pm-header">
-            <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
-            <div class="pm-live"><span class="dot"></span> Live</div>
-            <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
-            <div class="pm-avatar" id="pmUserAvatar">?</div>
-            <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'"><i class="fas fa-bell"></i><span class="dot" id="pmNotifBadge">0</span></button>
-        </header>
-        <div class="pm-content">
-            <div class="pm-title"><i class="fas fa-inbox" style="color:var(--pri)"></i> Inbox</div>
-            <div class="pm-tabs" id="tabs">
-                <button data-tab="notifications" class="active">Notifications</button>
-                <button data-tab="approvals">Approvals</button>
-                <button data-tab="activity">Activity Logs</button>
+<body th:attr="data-user-role=${isSuperAdmin != null && isSuperAdmin ? 'SUPER_ADMIN' : (isHR != null && isHR ? 'HR' : 'PM')}">
+
+<!-- Mobile burger -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+</button>
+
+<!-- Hidden employee id -->
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR — shared accordion component
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon" id="sidebarBrandIcon">
+            <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+            <i id="sidebarIcon" class="fas fa-building"></i>
+        </div>
+        <span id="sidebarCompanyName">Menti's IT Solutions</span>
+    </div>
+
+    <div class="sidebar-tools">
+        <div class="sidebar-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off"
+                   aria-label="Search sidebar menu">
+        </div>
+        <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle"
+                aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+            <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-content">
+        <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+
+            <!-- Workspace -->
+            <div class="side-group" data-group="workspace">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+                    <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+                    <span class="side-group-label">Workspace</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupWorkspace">
+                    <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+                    <li><a class="nav-link" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+                    <li>
+                        <a class="nav-link active" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+                            <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span>
+                        </a>
+                    </li>
+                </ul>
             </div>
-            <div id="list"></div>
+
+            <!-- Delivery -->
+            <div class="side-group" data-group="delivery">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+                    <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+                    <span class="side-group-label">Delivery</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupDelivery">
+                    <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+                    <li><a class="nav-link" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+                    <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+                    <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+                    <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Finance -->
+            <div class="side-group" data-group="finance">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+                    <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+                    <span class="side-group-label">Finance</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupFinance">
+                    <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+                </ul>
+            </div>
+
+            <!-- Insights -->
+            <div class="side-group" data-group="insights">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+                    <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="side-group-label">Insights</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupInsights">
+                    <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+                    <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+                    <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-empty" id="sideNavEmpty" hidden>
+                No menu items match your search
+            </div>
+        </nav>
+    </div>
+</aside>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+
+    <!-- ---------- TOP HEADER ---------- -->
+    <header class="top-header">
+        <div class="search-box" onclick="PM.openCmd()">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+            <kbd>⌘K</kbd>
+        </div>
+
+        <div class="top-header-actions">
+            <button class="icon-btn" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></button>
+            <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)">
+                <i class="fas fa-terminal"></i>
+            </button>
+            <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme">
+                <i class="fas fa-moon"></i>
+            </button>
+            <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+            </button>
+
+            <!-- PM AI Assistant trigger (shared component) -->
+            <div class="menti-ai-nav-wrapper">
+                <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()"
+                        aria-label="Open Menti PM Assistant">
+                    <span class="menti-ai-pulse"></span>
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </button>
+                <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+            </div>
+
+            <!-- User profile dropdown -->
+            <div class="user-profile-menu">
+                <div class="dropdown">
+                    <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar-sm" id="pmUserAvatar">?</div>
+                        <span id="pmUserName">Loading…</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+                        <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ---------- CONTENT AREA ---------- -->
+    <div class="content-area">
+
+        <div class="pm-breadcrumb">
+            <a href="javascript:void(0)" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></a>
+            <span>/</span><span>Project Management</span>
+            <span>/</span><span id="pmCrumb">Inbox</span>
+        </div>
+
+        <div class="pm-page-head">
+            <div>
+                <div class="pm-page-title"><i class="fas fa-inbox"></i> <span id="pmPageTitle">Inbox</span></div>
+                <div class="pm-page-sub" id="pmPageSub">Notifications · Approvals · Activity logs</div>
+            </div>
+            <div class="pm-page-actions">
+                <button class="pm-btn" onclick="pmRefresh()"><i class="fas fa-rotate"></i> Refresh</button>
+            </div>
+        </div>
+
+        <div class="pm-tabs" id="tabs">
+            <button data-tab="notifications" class="active" onclick="switchInboxTab('notifications', this)">Notifications</button>
+            <button data-tab="approvals" onclick="switchInboxTab('approvals', this)">Approvals</button>
+            <button data-tab="activity" onclick="switchInboxTab('activity', this)">Activity Logs</button>
+        </div>
+
+        <div id="list"></div>
+
+    </div><!-- /content-area -->
+</div><!-- /main-content -->
+
+<!-- Toasts container (shared .pm-toast) -->
+<div class="pm-toasts" id="pmToasts"></div>
+
+<!-- Command palette -->
+<div class="pm-cmd-backdrop" id="pmCmdBackdrop" onclick="if(event.target===this)PM.closeCmd()">
+    <div class="pm-cmd">
+        <div class="pm-cmd-input">
+            <i class="fas fa-search"></i>
+            <input id="pmCmdInput" placeholder="Search pages, projects, tasks…" autocomplete="off">
+            <kbd>Esc</kbd>
+        </div>
+        <div class="pm-cmd-list" id="pmCmdList"></div>
+        <div class="pm-cmd-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+            <span><kbd>↵</kbd> open</span>
+            <span><kbd>Esc</kbd> close</span>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
-<script src="/pm/pm-core.js"></script>
-<script src="/pm/pm-approvals.js"></script>
-<script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
-<script src="/webjars/stomp-websocket/2.3.4/lib/stomp.min.js"></script>
+<!-- ============ SHARED PM AI ASSISTANT PANEL ============ -->
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+    <span class="menti-ai-fab-dot"></span>
+    <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+    <div class="menti-ai-chat-header">
+        <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+            <div class="menti-ai-hdr-avatar">M</div>
+            <div class="menti-ai-hdr-info">
+                <div class="menti-ai-hdr-name">
+                    Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i>
+                </div>
+                <div class="menti-ai-hdr-status">
+                    <span class="menti-ai-status-dot"></span>
+                    <span id="mentiAiModeLabel">💾 New saved chat</span>
+                </div>
+            </div>
+        </div>
+        <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
+    <div class="menti-ai-body">
+        <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+        <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+            <div class="menti-ai-sessions-header">
+                <span>Saved Chats</span>
+                <span id="mentiAiSessionCount">0</span>
+            </div>
+            <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()">
+                <i class="fas fa-plus"></i> New Saved Chat
+            </button>
+            <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+                <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+            </div>
+        </div>
+
+        <div class="menti-ai-chat-col">
+            <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+            <div class="menti-ai-chips" id="mentiAiSuggestions">
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show me pending leave approvals')">
+                    <i class="fas fa-clock"></i> Pending Leaves
+                </button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('How many projects are at risk?')">
+                    <i class="fas fa-triangle-exclamation"></i> At-Risk Projects
+                </button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show me the budget vs actual for this quarter')">
+                    <i class="fas fa-wallet"></i> Budget Overview
+                </button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Generate the project status report')">
+                    <i class="fas fa-file-lines"></i> Status Report
+                </button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize this week\'s team progress')">
+                    <i class="fas fa-chart-simple"></i> Team Progress
+                </button>
+            </div>
+
+            <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about project management…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+                <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Shared sidebar controller (accordion + search + rail + mobile) -->
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+
+<!-- Shared AI assistant controller -->
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
+<script>
+    window.MENTI_AI_CONFIG = {
+      role: 'PM',
+      roleTag: 'PM',
+      assistantName: 'Menti PM',
+      userInitial: 'U',
+      sendUrl: '/api/chat/pm/send',
+      sessionsUrl: '/api/chat/pm/sessions',
+      historyUrl: '/api/chat/pm/session',
+      deleteUrl: '/api/chat/pm/session'
+    };
+</script>
+
+<!-- Role-aware home routing -->
+<script>
+    function goPMHome() {
+      var role = (document.body.getAttribute('data-user-role') || 'PM').toUpperCase();
+      if (role === 'SUPER_ADMIN' || role === 'HR') {
+        window.location.href = '/dashboard/hr';
+      } else {
+        window.location.href = '/pm/01-home';
+      }
+    }
+</script>
+
+<!-- PM core (server-provided). Inline shim below only fills gaps
+     when pm-core.js is not deployed, so the page stays runnable. -->
+<script src="/pm/pm-core.js" onerror="this.remove()"></script>
 <script>
     (function () {
-      var tab = (location.search.match(/tab=(\w+)/) || [])[1] || 'notifications';
-      var me = null;
+      if (window.PM && window.PM.bootstrap) return;
+
+      // ---- Minimal PM core shim (offline / preview fallback) ----
+      var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: null };
+      var rules = { creator: true, manage: true, clients: true, lead: false };
+
+      function toast(msg, type) {
+        var box = document.getElementById('pmToasts');
+        if (!box) return;
+        var el = document.createElement('div');
+        el.className = 'pm-toast ' + (type || 'info');
+        var icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-info-circle' };
+        el.innerHTML =
+          '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i></div>' +
+          '<div class="pm-toast-msg">' + PM.esc(msg) + '</div>';
+        box.appendChild(el);
+        requestAnimationFrame(function () { el.classList.add('show'); });
+        setTimeout(function () {
+          el.classList.remove('show');
+          setTimeout(function () { el.remove(); }, 300);
+        }, 3500);
+        el.onclick = function () { el.remove(); };
+      }
+
+      window.PM = {
+        esc: function (s) {
+          var d = document.createElement('div');
+          d.textContent = String(s == null ? '' : s);
+          return d.innerHTML;
+        },
+        fmtDateTime: function (v) {
+          try { return new Date(v).toLocaleString(); } catch (e) { return String(v || ''); }
+        },
+        fmtDate: function (v) {
+          try { return new Date(v).toLocaleDateString(); } catch (e) { return String(v || ''); }
+        },
+        getInitials: function (name) {
+          return String(name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+        },
+        toast: toast,
+        can: function (r) { return !!rules[r]; },
+        me: function () { return Promise.resolve(me); },
+        bootstrap: function () { return Promise.resolve(me); },
+        meTasks: function () { return Promise.resolve([]); },
+        api: function (method, url, body) {
+          var opts = {
+            method: method,
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
+          };
+          if (body !== undefined) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+          }
+          return fetch(url, opts).then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.status === 204 ? null : r.json();
+          });
+        },
+        openCmd: window.__pmOpenCmd || function () {},
+        closeCmd: function () {},
+        openIntake: function () { toast('Project intake is not wired in this preview.', 'info'); },
+        toggleTheme: function () {
+          document.body.classList.toggle('pm-light');
+          try { localStorage.setItem('pm.theme', document.body.classList.contains('pm-light') ? 'light' : 'dark'); } catch (e) {}
+        }
+      };
+
+      // Basic command palette for the shim
+      window.PM.openCmd = function () {
+        var bd = document.getElementById('pmCmdBackdrop');
+        if (bd) bd.classList.add('open');
+      };
+      window.PM.closeCmd = function () {
+        var bd = document.getElementById('pmCmdBackdrop');
+        if (bd) bd.classList.remove('open');
+      };
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          window.PM.openCmd();
+        }
+        if (e.key === 'Escape') window.PM.closeCmd();
+      });
+
+      // Restore theme
+      try {
+        if (localStorage.getItem('pm.theme') === 'light') document.body.classList.add('pm-light');
+      } catch (e) {}
+    })();
+</script>
+
+<script>
+    /* ============================================================
+       PM INBOX PAGE LOGIC
+       ============================================================ */
+    PM.bootstrap().then(function (me) {
+      // Personalise header
+      var userNameEl = document.getElementById('pmUserName');
+      if (userNameEl) userNameEl.textContent = me.name || 'User';
+      var avatarEl = document.getElementById('pmUserAvatar');
+      if (avatarEl) {
+        avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+        avatarEl.title = me.name || 'User';
+      }
+
+      // Deep link ?tab=
+      var initialTab = (location.search.match(/tab=(\w+)/) || [])[1] || 'notifications';
+      var tab = initialTab;
 
       /* ══════════════════════════════════════════════════════════
          NOTIFICATIONS TAB
          ══════════════════════════════════════════════════════════ */
       var NOTIF_FILTERS = [
-        { k:'all',            label:'All' },
-        { k:'TASK_MENTIONED', label:'Mentions' },
-        { k:'TASK_ASSIGNED',  label:'Assigned' },
-        { k:'CARD_MOVED',     label:'Moves' },
-        { k:'COMMENT_ADDED',  label:'Comments' },
-        { k:'DUE_SOON',       label:'Due Soon' },
-              { k:'OVERDUE',      label:'Overdue' },
-        { k:'attention',    label:'Needs my attention', types:['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION','TASK_IN_REVIEW','TASK_SENT_BACK','TASK_MENTIONED','OVERDUE_DIGEST'], unreadOnly:true },
-        { k:'blocked',      label:'Blocked', types:['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION'] },
-        { k:'review',       label:'Review', types:['TASK_IN_REVIEW','TASK_SENT_BACK'] }
+        { k: 'all',            label: 'All' },
+        { k: 'TASK_MENTIONED', label: 'Mentions' },
+        { k: 'TASK_ASSIGNED',  label: 'Assigned' },
+        { k: 'CARD_MOVED',     label: 'Moves' },
+        { k: 'COMMENT_ADDED',  label: 'Comments' },
+        { k: 'DUE_SOON',       label: 'Due Soon' },
+        { k: 'OVERDUE',        label: 'Overdue' },
+        { k: 'attention',      label: 'Needs my attention', types: ['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION','TASK_IN_REVIEW','TASK_SENT_BACK','TASK_MENTIONED','OVERDUE_DIGEST'], unreadOnly: true },
+        { k: 'blocked',        label: 'Blocked', types: ['TASK_BLOCKED','TASK_BLOCKED_LONG','TASK_ESCALATION'] },
+        { k: 'review',         label: 'Review', types: ['TASK_IN_REVIEW','TASK_SENT_BACK'] }
       ];
       var activeNotifFilter = 'all';
 
@@ -107,42 +591,39 @@
           var d = new Date(iso);
           var diff = (Date.now() - d.getTime()) / 1000;
           if (diff < 60) return 'just now';
-          if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-          if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-          return Math.floor(diff/86400) + 'd ago';
+          if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+          if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+          return Math.floor(diff / 86400) + 'd ago';
         } catch (e) { return ''; }
       }
 
       function priorityColor(p) {
-        if (p === 'HIGH') return 'var(--dng)';
-        if (p === 'LOW')  return 'var(--tx3)';
-        return 'var(--pri)';
+        if (p === 'HIGH') return 'var(--danger)';
+        if (p === 'LOW')  return 'var(--dark-text-secondary)';
+        return 'var(--primary)';
       }
 
       var NOTIF_ICON = {
-    TASK_BLOCKED:'fa-ban', TASK_BLOCKED_LONG:'fa-hourglass-half', TASK_ESCALATION:'fa-triangle-exclamation',
-    TASK_IN_REVIEW:'fa-magnifying-glass', TASK_DONE:'fa-circle-check', TASK_SENT_BACK:'fa-rotate-left',
-    OVERDUE_DIGEST:'fa-calendar-xmark'
-  };
-  function notifAvatar(n) {
-    var ic = NOTIF_ICON[n.action || n.type];
-    return ic ? '<i class="fas ' + ic + '"></i>' : PM.esc(PM.getInitials(n.sender || 'System'));
-  }
+        TASK_BLOCKED: 'fa-ban', TASK_BLOCKED_LONG: 'fa-hourglass-half', TASK_ESCALATION: 'fa-triangle-exclamation',
+        TASK_IN_REVIEW: 'fa-magnifying-glass', TASK_DONE: 'fa-circle-check', TASK_SENT_BACK: 'fa-rotate-left',
+        OVERDUE_DIGEST: 'fa-calendar-xmark'
+      };
+      function notifAvatar(n) {
+        var ic = NOTIF_ICON[n.action || n.type];
+        return ic ? '<i class="fas ' + ic + '"></i>' : PM.esc(PM.getInitials(n.sender || 'System'));
+      }
 
-  function notifRow(n) {
-        var unreadDot = !n.read
-          ? '<span style="width:7px;height:7px;border-radius:50%;background:var(--pri);display:inline-block;margin-right:8px;"></span>'
-          : '<span style="width:7px;display:inline-block;margin-right:8px;"></span>';
-        return '<div class="row" style="cursor:pointer;border-left:3px solid ' + priorityColor(n.priority) + ';' +
-               (n.read ? '' : 'background:var(--pri-soft);') + '"' +
-               ' onclick="onClickNotif(' + n.id + ', \'' + (n.deepLink || '').replace(/'/g, '') + '\')">' +
-          unreadDot +
-               '<div class="av">' + notifAvatar(n) + '</div>' +
-          '<div style="flex:1;min-width:0">' +
-            '<div class="msg">' + PM.esc(n.title || '') +
-              '<span class="badge">' + PM.esc((n.action || '').replace(/_/g, ' ')) + '</span></div>' +
-            '<div class="meta">' + PM.esc(n.message || '') + '</div>' +
-            '<div class="meta" style="opacity:.7;">' + whenLabel(n.createdAt) +
+      function notifRow(n) {
+        return '<div class="inbox-row' + (n.read ? '' : ' unread') + '"' +
+          ' style="border-left-color:' + priorityColor(n.priority) + '"' +
+          ' onclick="onClickNotif(' + n.id + ', \'' + (n.deepLink || '').replace(/'/g, '') + '\')">' +
+          '<span class="unread-dot' + (n.read ? ' hidden' : '') + '"></span>' +
+          '<div class="inbox-av">' + notifAvatar(n) + '</div>' +
+          '<div class="inbox-body">' +
+            '<div class="inbox-msg">' + PM.esc(n.title || '') +
+              '<span class="inbox-badge">' + PM.esc((n.action || '').replace(/_/g, ' ')) + '</span></div>' +
+            '<div class="inbox-sub">' + PM.esc(n.message || '') + '</div>' +
+            '<div class="inbox-meta">' + whenLabel(n.createdAt) +
               (n.projectId ? ' · project #' + n.projectId : '') +
               (n.taskId ? ' · task #' + n.taskId : '') +
             '</div>' +
@@ -151,10 +632,10 @@
 
       window.onClickNotif = function (id, deepLink) {
         fetch('/api/pm/notifications/' + id + '/read', {
-          method:'POST', credentials:'same-origin',
-          headers:{'X-Requested-With':'XMLHttpRequest'}
-        }).then(function(){
-          window.Notifications && window.Notifications.refresh();
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).then(function () {
+          if (window.Notifications && window.Notifications.refresh) window.Notifications.refresh();
           if (deepLink) window.location.href = deepLink;
           else loadNotifications();
         });
@@ -163,34 +644,37 @@
       async function loadNotifications() {
         var box = document.getElementById('list');
         if (!box) return;
-        var chipsHtml = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">' +
+        var chipsHtml = '<div class="inbox-filters">' +
           NOTIF_FILTERS.map(function (f) {
-            return '<button class="pm-btn' + (activeNotifFilter === f.k ? ' pm-btn-primary' : '') +
-              '" style="height:24px;font-size:11.5px;" onclick="filterNotif(\'' + f.k + '\')">' + f.label + '</button>';
+            return '<button class="inbox-chip' + (activeNotifFilter === f.k ? ' active' : '') +
+              '" onclick="filterNotif(\'' + f.k + '\')">' + f.label + '</button>';
           }).join('') +
-          '<button class="pm-btn pm-btn-sm" style="margin-left:auto;" onclick="markAllNotifRead()">' +
+          '<span class="spacer"></span>' +
+          '<button class="pm-btn pm-btn-sm" onclick="markAllNotifRead()">' +
           '<i class="fas fa-check-double"></i> Mark all read</button></div>';
 
         try {
-               var f = NOTIF_FILTERS.filter(function (x) { return x.k === activeNotifFilter; })[0];
-        var grouped = f && f.types;
-        var url = '/api/pm/notifications?limit=' + (grouped ? 200 : 50) +
-                  (activeNotifFilter !== 'all' && !grouped ? '&filter=' + activeNotifFilter : '');
-        var list = await PM.api('GET', url) || [];
-        if (grouped) list = list.filter(function (n) {
-          return f.types.indexOf(n.action || n.type) >= 0 && (!f.unreadOnly || !n.read);
-        });
+          var f = NOTIF_FILTERS.filter(function (x) { return x.k === activeNotifFilter; })[0];
+          var grouped = f && f.types;
+          var url = '/api/pm/notifications?limit=' + (grouped ? 200 : 50) +
+                    (activeNotifFilter !== 'all' && !grouped ? '&filter=' + activeNotifFilter : '');
+          var list = await PM.api('GET', url) || [];
+          if (grouped) list = list.filter(function (n) {
+            return f.types.indexOf(n.action || n.type) >= 0 && (!f.unreadOnly || !n.read);
+          });
           box.innerHTML = chipsHtml + (list.length
             ? list.map(notifRow).join('')
-            : '<div class="empty"><i class="fas fa-bell-slash" style="font-size:22px"></i><div style="margin-top:8px">Nothing here yet.</div></div>');
+            : '<div class="inbox-empty"><i class="fas fa-bell-slash"></i><div>Nothing here yet.</div></div>');
         } catch (e) {
-          box.innerHTML = chipsHtml + '<div class="empty">Failed: ' + PM.esc(e.message) + '</div>';
+          box.innerHTML = chipsHtml + '<div class="inbox-empty">Failed: ' + PM.esc(e.message) + '</div>';
         }
       }
 
       window.filterNotif = function (k) { activeNotifFilter = k; loadNotifications(); };
       window.markAllNotifRead = function () {
-        if (window.Notifications) window.Notifications.markAllRead().then(loadNotifications);
+        if (window.Notifications && window.Notifications.markAllRead) {
+          window.Notifications.markAllRead().then(loadNotifications);
+        }
       };
 
       /* ══════════════════════════════════════════════════════════
@@ -198,39 +682,42 @@
          ══════════════════════════════════════════════════════════ */
       function activityRow(a) {
         var who = a.actorName || 'System';
-        return '<div class="row"><div class="av">' + PM.esc(PM.getInitials(who)) + '</div><div style="flex:1">' +
-          '<div class="msg">' + PM.esc(who) + ' — ' + PM.esc(a.message || a.action) +
-          '<span class="badge">' + PM.esc(a.action || '') + '</span></div>' +
-          '<div class="meta">' + PM.esc(a.entityType || '') + ' #' + PM.esc(a.entityId) + ' · ' + PM.fmtDateTime(a.createdAt) + '</div></div></div>';
+        return '<div class="activity-row">' +
+          '<div class="inbox-av">' + PM.esc(PM.getInitials(who)) + '</div>' +
+          '<div class="inbox-body">' +
+            '<div class="inbox-msg">' + PM.esc(who) + ' — ' + PM.esc(a.message || a.action) +
+              '<span class="inbox-badge">' + PM.esc(a.action || '') + '</span></div>' +
+            '<div class="inbox-meta">' + PM.esc(a.entityType || '') + ' #' + PM.esc(a.entityId) +
+              ' · ' + PM.fmtDateTime(a.createdAt) + '</div>' +
+          '</div></div>';
       }
 
       async function loadActivity() {
         var box = document.getElementById('list');
         if (!box) return;
-        box.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i></div>';
+        box.innerHTML = '<div class="inbox-empty"><i class="fas fa-spinner fa-spin"></i></div>';
         try {
           var items = await PM.api('GET', '/api/pm/dashboard/recent-activity?limit=20') || [];
           box.innerHTML = items.length
             ? items.map(activityRow).join('')
-            : '<div class="empty"><i class="fas fa-clock-rotate-left" style="font-size:22px"></i><div style="margin-top:8px">No activity yet.</div></div>';
+            : '<div class="inbox-empty"><i class="fas fa-clock-rotate-left"></i><div>No activity yet.</div></div>';
         } catch (e) {
-          box.innerHTML = '<div class="empty">Failed: ' + PM.esc(e.message) + '</div>';
+          box.innerHTML = '<div class="inbox-empty">Failed: ' + PM.esc(e.message) + '</div>';
         }
       }
 
       /* ══════════════════════════════════════════════════════════
-         APPROVALS TAB (Phase 7)
+         APPROVALS TAB
          ══════════════════════════════════════════════════════════ */
       function loadApprovals() {
         if (window.PMApprovals) {
           window.PMApprovals.load();
         } else {
           var box = document.getElementById('list');
-          if (box) box.innerHTML = '<div class="empty"><i class="fas fa-spinner fa-spin"></i> Loading approvals…</div>';
-          // retry once scripts finish loading
+          if (box) box.innerHTML = '<div class="inbox-empty"><i class="fas fa-spinner fa-spin"></i> Loading approvals…</div>';
           setTimeout(function () {
             if (window.PMApprovals) window.PMApprovals.load();
-            else if (box) box.innerHTML = '<div class="empty">Approvals module failed to load.</div>';
+            else if (box) box.innerHTML = '<div class="inbox-empty">Approvals module failed to load.</div>';
           }, 400);
         }
       }
@@ -242,11 +729,22 @@
         document.querySelectorAll('#tabs button').forEach(function (b) {
           b.classList.toggle('active', b.dataset.tab === tab);
         });
+        var crumb = document.getElementById('pmCrumb');
+        var title = document.getElementById('pmPageTitle');
+        var labels = { notifications: 'Notifications', approvals: 'Approvals', activity: 'Activity Logs' };
+        if (crumb) crumb.textContent = labels[tab] || 'Inbox';
+        if (title) title.textContent = labels[tab] || 'Inbox';
 
         if (tab === 'approvals') { loadApprovals(); return; }
         if (tab === 'activity')  { loadActivity();  return; }
         loadNotifications();
       }
+
+      window.switchInboxTab = function (t, el) {
+        tab = t;
+        history.replaceState(null, '', '?tab=' + tab);
+        load();
+      };
 
       window.pmRefresh = load;
 
@@ -258,12 +756,13 @@
         }
       });
 
-      PM.bootstrap().then(function (u) {
-        me = u;
-        setTimeout(function () { window.Notifications && window.Notifications.boot(); }, 200);
-        load();
-      });
-    })();
+      setTimeout(function () { if (window.Notifications && window.Notifications.boot) window.Notifications.boot(); }, 200);
+      load();
+    }).catch(function (e) {
+      console.error('PM.bootstrap failed:', e);
+      var sub = document.getElementById('pmPageSub');
+      if (sub) sub.textContent = 'Unable to load user context.';
+    });
 </script>
 </body>
 </html>

@@ -5,14 +5,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;                    // ✅ PHASE 4 (F-P4)
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
+import com.mentis.hrms.pm.security.PmPageGuard;
+import org.springframework.beans.factory.annotation.Autowired;
 @Component
 public class RoleInterceptor implements HandlerInterceptor {
 
     private static final Logger logger = LoggerFactory.getLogger(RoleInterceptor.class);
 
+    /** ✅ PHASE 4 (F-P4): gate for opening PM to HR / HR_MANAGER / EMPLOYEE. Keep false until the audit is fully remediated. */
+    @Value("${pm.open-to-all-roles:false}")
+    private boolean pmOpenToAllRoles;
+    @Autowired
+    private PmPageGuard pmGuard;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         HttpSession session = request.getSession(false);
@@ -31,16 +38,18 @@ public class RoleInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // Allow data resources
-        if (uri.startsWith("/data/")) {
-            return true;
-        }
+        // ✅ PHASE 4 (F-P23): removed the unauthenticated "/data/" bypass.
+        // Static data lives under /static/ and is already allowed by the static-resource block below.
+        // Do not re-add a bare /data/ bypass here.
 
         // Allow resume endpoints
-        if (uri.contains("/download-resume") ||
-                uri.contains("/preview-resume") ||
-                uri.contains("/preview-image") ||
-                uri.contains("/public/")) {
+        // ✅ PHASE 4 (F-P5): a substring match on "/public/" would have bypassed every /api/pm/** endpoint.
+        // Restrict this fast path so it can never touch the PM module.
+        if (!uri.startsWith("/api/pm/") && !uri.startsWith("/pm/") &&
+                (uri.contains("/download-resume") ||
+                        uri.contains("/preview-resume") ||
+                        uri.contains("/preview-image") ||
+                        uri.contains("/public/"))) {
             logger.debug("Resume endpoint - allowing access without authentication: {}", uri);
             return true;
         }
@@ -60,7 +69,6 @@ public class RoleInterceptor implements HandlerInterceptor {
         if (session == null || session.getAttribute("userId") == null) {
             logger.warn("No active session or userId not found - redirecting to login. URI: {}", uri);
 
-            // CHANGED: also return JSON 401 for any /api/ call (PM pages use fetch without the XHR header)
             if ("XMLHttpRequest".equals(request.getHeader("X-Requested-With")) || uri.startsWith("/api/")) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
@@ -89,9 +97,16 @@ public class RoleInterceptor implements HandlerInterceptor {
         if (uri.equals("/pm") || uri.startsWith("/pm/") || uri.startsWith("/api/pm/")) {
             if (uri.startsWith("/api/pm/dev")) return deny(role, empId, uri, response); // dev triggers: SA only
 
-            boolean pmModuleRole = "PM".equals(role) || "HR".equals(role)
-                    || "HR_MANAGER".equals(role) || "EMPLOYEE".equals(role);
+            // ✅ PHASE 4 (F-P4): was always true for HR / HR_MANAGER / EMPLOYEE.
+            // Now gated behind pm.open-to-all-roles (default false) until every /api/pm method
+            // has an object-level check (Rule 7).
+            boolean pmModuleRole = "PM".equals(role)
+                    || (pmOpenToAllRoles && ("HR".equals(role)
+                    || "HR_MANAGER".equals(role) || "EMPLOYEE".equals(role)));
             if (pmModuleRole) return true;   // PmAccessService decides what each person may do
+
+// Team leads / project leads who are plain EMPLOYEEs (cached 60s per session)
+            if ("EMPLOYEE".equals(role) && employeeMayUsePm(session, empId)) return true;
 
             return deny(role, empId, uri, response);
         }
@@ -105,6 +120,15 @@ public class RoleInterceptor implements HandlerInterceptor {
             logger.debug("Admin access granted for URI: {}", uri);
             return true;
         }
+
+        boolean isHrRole = "HR".equals(role) || "HR_MANAGER".equals(role);
+
+        // whole recruitment and HR area, legacy /dashboard/* included
+        if (uri.startsWith("/dashboard") && !isHrRole) return deny(role, empId, uri, response);
+
+        // AI chat endpoints are role-specific
+        if (uri.startsWith("/api/chat/admin")) return deny(role, empId, uri, response);          // SA already returned
+        if (uri.startsWith("/api/chat/hr") && !isHrRole) return deny(role, empId, uri, response);
 
         // ============ EMPLOYEE/CANDIDATE DASHBOARD ACCESS ============
         if (uri.startsWith("/candidate/dashboard")) {
@@ -124,7 +148,7 @@ public class RoleInterceptor implements HandlerInterceptor {
                 return false;
             }
 
-            if (!"EMPLOYEE".equals(role)) {
+            if (!("EMPLOYEE".equals(role) || "PM".equals(role))) {
                 logger.warn("Non-employee attempting to access employee dashboard. Role: {}, URI: {}", role, uri);
                 return redirectToHomeBasedOnRole(role, empId, response);
             }
@@ -152,7 +176,16 @@ public class RoleInterceptor implements HandlerInterceptor {
         logger.debug("Default access granted for URI: {}", uri);
         return true;
     }
-
+    private boolean employeeMayUsePm(HttpSession session, String empId) {
+        long now = System.currentTimeMillis();
+        Long at = (Long) session.getAttribute("pmAccessCheckedAt");
+        Boolean ok = (Boolean) session.getAttribute("pmAccessOk");
+        if (at != null && ok != null && now - at < 60_000) return ok;
+        boolean result = pmGuard.canOpenPmByCode(empId);
+        session.setAttribute("pmAccessOk", result);
+        session.setAttribute("pmAccessCheckedAt", now);
+        return result;
+    }
     private boolean redirectToHomeBasedOnRole(String role, String empId, HttpServletResponse response) throws Exception {
         if ("SUPER_ADMIN".equals(role)) {
             logger.debug("Redirecting to Super Admin dashboard");
@@ -160,7 +193,7 @@ public class RoleInterceptor implements HandlerInterceptor {
         } else if ("HR".equals(role) || "HR_MANAGER".equals(role)) {
             logger.debug("Redirecting to HR dashboard");
             response.sendRedirect("/dashboard/hr");
-        } else if ("PM".equals(role)) {                       // NEW
+        } else if ("PM".equals(role)) {
             logger.debug("Redirecting to PM home");
             response.sendRedirect("/pm/01-home");
         } else if ("EMPLOYEE".equals(role)) {

@@ -1,0 +1,874 @@
+﻿
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectTemplateController.java =====
+package com.mentis.hrms.pm.controller;
+
+import com.mentis.hrms.pm.dto.request.CreateTemplateRequest;
+import com.mentis.hrms.pm.dto.request.FromTemplateRequest;
+import com.mentis.hrms.pm.dto.response.ApiResponse;
+import com.mentis.hrms.pm.dto.response.ProjectResponse;
+import com.mentis.hrms.pm.dto.response.ProjectTemplateResponse;
+import com.mentis.hrms.pm.security.CurrentUserId;
+import com.mentis.hrms.pm.security.PmAccessService;
+import com.mentis.hrms.pm.service.ProjectTemplateService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController("pmProjectTemplateController")
+@RequestMapping("/api/pm")
+@RequiredArgsConstructor
+public class ProjectTemplateController {
+
+    private final ProjectTemplateService service;
+    private final PmAccessService access;
+
+    @GetMapping("/project-templates")
+    public ResponseEntity<ApiResponse<List<ProjectTemplateResponse>>> list(@CurrentUserId Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(service.list()));
+    }
+
+    @GetMapping("/project-templates/{id}")
+    public ResponseEntity<ApiResponse<ProjectTemplateResponse>> get(
+            @PathVariable Long id, @CurrentUserId Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok(service.get(id)));
+    }
+
+    /** A Super Admin or HR Manager defines templates (same people who decide project requests). */
+    @PostMapping("/project-templates")
+    public ResponseEntity<ApiResponse<ProjectTemplateResponse>> create(
+            @Valid @RequestBody CreateTemplateRequest req, @CurrentUserId Long userId) {
+        access.requireIntakeReviewer(userId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Template saved", service.create(req, userId)));
+    }
+
+    /** Same permission as creating a project directly. */
+    @PostMapping("/projects/from-template/{templateId}")
+    public ResponseEntity<ApiResponse<ProjectResponse>> fromTemplate(
+            @PathVariable Long templateId, @RequestBody FromTemplateRequest req, @CurrentUserId Long userId) {
+        access.requireCanCreateProject(userId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok("Project created from template", service.instantiate(templateId, req, userId)));
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TemplateFromProjectController.java =====
+package com.mentis.hrms.pm.controller;
+
+import com.mentis.hrms.pm.dto.response.ApiResponse;
+import com.mentis.hrms.pm.security.CurrentUserId;
+import com.mentis.hrms.pm.service.TemplateFromProjectService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController("pmTemplateFromProjectController")
+@RequestMapping("/api/pm/templates")
+@RequiredArgsConstructor
+public class TemplateFromProjectController {
+
+    public record Body(String name, String description) {}
+
+    private final TemplateFromProjectService service;
+
+    @PostMapping("/from-project/{projectId}")
+    public ResponseEntity<ApiResponse<Object>> fromProject(
+            @PathVariable Long projectId, @RequestBody Body b, @CurrentUserId Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok("Template saved",
+                service.save(projectId, b == null ? null : b.name(), b == null ? null : b.description(), userId)));
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateProjectRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.mentis.hrms.pm.enums.ProjectPriority;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+import java.util.List;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CreateProjectRequest {
+
+    @NotBlank
+    @Size(max = 200)
+    private String name;
+
+    @Size(max = 40)
+    private String code;
+
+    private String description;
+
+    @NotNull
+    private Long ownerId;
+
+    private Long departmentId;
+    private Long clientId;
+
+    @NotNull
+    private ProjectPriority priority;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private Long teamId;
+    private BigDecimal budgetTotal;
+    /** Optional. Null means the default (ON). */
+    private Boolean reviewRequired;
+    /** People chosen in the "People" step of the create form (added as MEMBER). */
+    private List<Long> memberIds;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateTaskRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.mentis.hrms.pm.enums.TaskPriority;
+import com.mentis.hrms.pm.enums.TaskType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.util.List;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class CreateTaskRequest {
+
+    @NotNull
+    private Long projectId;
+
+    private Long parentTaskId;
+
+    private Long teamId;    // NEW — optional
+    private Long sprintId;
+    private Long milestoneId;
+    private Long keyResultId;
+    @NotBlank
+    @Size(max = 300)
+    private String title;
+
+    private String description;
+
+    @NotNull
+    private TaskPriority priority;
+
+    @NotNull
+    private TaskType type;
+
+    private LocalDate startDate;
+    private LocalDate dueDate;
+    private Integer estimateHours;
+    private Integer storyPoints;
+    private List<Long> assigneeIds;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateTemplateRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.mentis.hrms.pm.enums.TemplateType;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.*;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor
+public class CreateTemplateRequest {
+    @NotBlank @Size(max = 120) private String name;
+    @NotNull private TemplateType type;
+    @Size(max = 500) private String description;
+    /** A JSON object (not a string). */
+    @NotNull private JsonNode payload;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\FromTemplateRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.mentis.hrms.pm.enums.ProjectPriority;
+import lombok.*;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+/** Everything the person chooses when creating a project from a template. All optional except the name. */
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class FromTemplateRequest {
+    private String name;               // falls back to template.project.name
+    private String code;
+    private String description;
+    private Long ownerId;              // default: the caller
+    private Long departmentId;
+    private Long clientId;
+    private Long teamId;
+    private LocalDate startDate;       // anchor for every offset; default: today
+    private LocalDate endDate;         // default: the last milestone/sprint of the template
+    private ProjectPriority priority;  // default: template.project.priority, else MEDIUM
+    private BigDecimal budgetTotal;
+    private List<Long> memberIds;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ProjectTemplatePayload.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.mentis.hrms.pm.enums.ProjectPriority;
+import com.mentis.hrms.pm.enums.TaskPriority;
+import com.mentis.hrms.pm.enums.TaskType;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Typed shape of pm_project_templates.payload:
+ * { "project": {"name","priority"}, "milestones":[{"name","dueOffsetDays"}],
+ *   "sprints":[{"name","goal","startOffsetDays","durationDays"}],
+ *   "tasks":[{"title","priority","type","assignToRole","estimateHours","storyPoints",
+ *             "dueOffsetDays","sprintIndex","milestoneIndex"}] }
+ * Offsets are days from the project start date. Indexes are 0-based positions in the lists above.
+ */
+@Getter @Setter @NoArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class ProjectTemplatePayload {
+
+    public static final int MAX_MILESTONES = 30, MAX_SPRINTS = 10, MAX_TASKS = 100;
+
+    private ProjectPart project = new ProjectPart();
+    private List<MilestonePart> milestones = new ArrayList<>();
+    private List<SprintPart> sprints = new ArrayList<>();
+    private List<TaskPart> tasks = new ArrayList<>();
+    public static final int MAX_PHASES = 15;
+    private List<PhasePart> phases = new ArrayList<>();
+    @Getter @Setter @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class ProjectPart { private String name; private String priority; }
+
+    @Getter @Setter @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class MilestonePart { private String name; private Integer dueOffsetDays; }
+    @Getter @Setter @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class PhasePart { private String name; private Integer startOffsetDays; private Integer durationDays; }
+    @Getter @Setter @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class SprintPart {
+        private String name; private String goal; private Integer startOffsetDays; private Integer durationDays;
+    }
+
+    @Getter @Setter @NoArgsConstructor @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TaskPart {
+        private String title; private String priority; private String type; private String assignToRole;
+        private Integer estimateHours; private Integer storyPoints; private Integer dueOffsetDays;
+        private Integer sprintIndex; private Integer milestoneIndex;
+    }
+
+    /** Throws IllegalArgumentException (400) with a message that says exactly what is wrong. */
+    public void validate() {
+        if (project == null) project = new ProjectPart();
+        if (milestones == null) milestones = new ArrayList<>();
+        if (sprints == null) sprints = new ArrayList<>();
+        if (tasks == null) tasks = new ArrayList<>();
+        if (phases == null) phases = new ArrayList<>();
+        if (phases.size() > MAX_PHASES) bad("A template can have at most " + MAX_PHASES + " phases");
+        for (int i = 0; i < phases.size(); i++) {
+            PhasePart ph = phases.get(i);
+            String f = "phases[" + i + "]";
+            text(ph.getName(), f + ".name", 200);
+            range(ph.getStartOffsetDays(), 0, 3650, f + ".startOffsetDays", true);
+            range(ph.getDurationDays(), 1, 730, f + ".durationDays", true);
+        }
+        if (milestones.size() > MAX_MILESTONES) bad("A template can have at most " + MAX_MILESTONES + " milestones");
+        if (sprints.size() > MAX_SPRINTS) bad("A template can have at most " + MAX_SPRINTS + " sprints");
+        if (tasks.size() > MAX_TASKS) bad("A template can have at most " + MAX_TASKS + " tasks");
+
+        enumOk(project.getPriority(), ProjectPriority.class, "project.priority");
+
+        for (int i = 0; i < milestones.size(); i++) {
+            MilestonePart m = milestones.get(i);
+            String f = "milestones[" + i + "]";
+            text(m.getName(), f + ".name", 200);
+            range(m.getDueOffsetDays(), 0, 3650, f + ".dueOffsetDays", true);
+        }
+
+        int prevEndExclusive = 0; // next sprint may start on this offset or later (touching dates overlap)
+        for (int i = 0; i < sprints.size(); i++) {
+            SprintPart s = sprints.get(i);
+            String f = "sprints[" + i + "]";
+            text(s.getName(), f + ".name", 200);
+            range(s.getStartOffsetDays(), 0, 3650, f + ".startOffsetDays", true);
+            range(s.getDurationDays(), 1, 90, f + ".durationDays", true);
+            if (s.getStartOffsetDays() < prevEndExclusive)
+                bad(f + " overlaps the previous sprint (start at day " + prevEndExclusive + " or later)");
+            prevEndExclusive = s.getStartOffsetDays() + s.getDurationDays();
+        }
+
+        for (int i = 0; i < tasks.size(); i++) {
+            TaskPart t = tasks.get(i);
+            String f = "tasks[" + i + "]";
+            text(t.getTitle(), f + ".title", 300);
+            enumOk(t.getPriority(), TaskPriority.class, f + ".priority");
+            enumOk(t.getType(), TaskType.class, f + ".type");
+            if (t.getType() != null && "SUBTASK".equalsIgnoreCase(t.getType().trim()))
+                bad(f + ".type cannot be SUBTASK (subtasks need a parent task)");
+            if (t.getAssignToRole() != null && !t.getAssignToRole().isBlank()) {
+                String r = t.getAssignToRole().trim().toUpperCase();
+                if (!r.equals("MANAGER") && !r.equals("MEMBER"))
+                    bad(f + ".assignToRole must be MANAGER or MEMBER");
+            }
+            range(t.getEstimateHours(), 0, 1000, f + ".estimateHours", false);
+            range(t.getStoryPoints(), 0, 100, f + ".storyPoints", false);
+            range(t.getDueOffsetDays(), 0, 3650, f + ".dueOffsetDays", false);
+            if (t.getSprintIndex() != null && (t.getSprintIndex() < 0 || t.getSprintIndex() >= sprints.size()))
+                bad(f + ".sprintIndex points to a sprint that does not exist");
+            if (t.getMilestoneIndex() != null && (t.getMilestoneIndex() < 0 || t.getMilestoneIndex() >= milestones.size()))
+                bad(f + ".milestoneIndex points to a milestone that does not exist");
+        }
+    }
+
+    private static void bad(String m) { throw new IllegalArgumentException(m); }
+
+    private static void text(String v, String field, int max) {
+        if (v == null || v.isBlank()) bad(field + " is required");
+        if (v.trim().length() > max) bad(field + " is too long (max " + max + " characters)");
+    }
+
+    private static void range(Integer v, int min, int max, String field, boolean required) {
+        if (v == null) { if (required) bad(field + " is required"); return; }
+        if (v < min || v > max) bad(field + " must be between " + min + " and " + max);
+    }
+
+    private static <E extends Enum<E>> void enumOk(String v, Class<E> type, String field) {
+        if (v == null || v.isBlank()) return;
+        try { Enum.valueOf(type, v.trim().toUpperCase()); }
+        catch (IllegalArgumentException e) { bad(field + " has an unknown value: " + v); }
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectTemplate.java =====
+package com.mentis.hrms.pm.entity;
+
+import com.mentis.hrms.pm.enums.TemplateType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pm_project_templates", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_pm_template_name", columnNames = "name")
+})
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class ProjectTemplate {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false, length = 120)
+    private String name;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    private TemplateType type;
+
+    @Column(name = "description", length = 500)
+    private String description;
+
+    /** JSON text; shape = ProjectTemplatePayload. Validated on save. */
+    @Column(name = "payload", columnDefinition = "TEXT", nullable = false)
+    private String payload;
+
+    @Column(name = "created_by")
+    private Long createdBy;   // null for seeded templates
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\mapper\TaskMapper.java =====
+package com.mentis.hrms.pm.mapper;
+
+import com.mentis.hrms.pm.dto.request.CreateTaskRequest;
+import com.mentis.hrms.pm.dto.response.TaskResponse;
+import com.mentis.hrms.pm.dto.response.TaskSummaryResponse;
+import com.mentis.hrms.pm.entity.Task;
+import com.mentis.hrms.pm.enums.TaskStatus;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class TaskMapper {
+
+    public Task toEntity(CreateTaskRequest req, Long createdBy) {
+        return Task.builder()
+                .projectId(req.getProjectId())
+                .parentTaskId(req.getParentTaskId())
+                .teamId(req.getTeamId())
+                .title(req.getTitle())
+                .description(req.getDescription())
+                .priority(req.getPriority())
+                .type(req.getType())
+                .startDate(req.getStartDate())
+                .dueDate(req.getDueDate())
+                .estimateHours(req.getEstimateHours())
+                .storyPoints(req.getStoryPoints())
+                .status(TaskStatus.TODO)
+                .progressPct(0)
+                .loggedHours(0)
+                .loggedMinutes(0)
+                .createdBy(createdBy)
+                .build();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toResponse — 11 args (Phase 5 full signature)
+    // ═══════════════════════════════════════════════════════════
+    public TaskResponse toResponse(Task t,
+                                   Long teamId,
+                                   String teamName,
+                                   Long projectId,
+                                   String projectName,
+                                   List<Long> assigneeIds,
+                                   List<String> assigneeNames,
+                                   Long sprintId,
+                                   String sprintName,
+                                   Long milestoneId,
+                                   String milestoneName) {
+        return TaskResponse.builder()
+                .id(t.getId())
+                .projectId(projectId != null ? projectId : t.getProjectId())
+                .projectName(projectName)
+                .parentTaskId(t.getParentTaskId())
+                .teamId(teamId)
+                .teamName(teamName)
+                .sprintId(sprintId)
+                .sprintName(sprintName)
+                .milestoneId(milestoneId)
+                .milestoneName(milestoneName)
+                .title(t.getTitle())
+                .description(t.getDescription())
+                .status(t.getStatus())
+                .priority(t.getPriority())
+                .type(t.getType())
+                .startDate(t.getStartDate())
+                .dueDate(t.getDueDate())
+                .estimateHours(t.getEstimateHours())
+                .loggedHours(t.getLoggedHours())
+                .loggedMinutes(t.getLoggedMinutes())
+                .storyPoints(t.getStoryPoints())
+                .progressPct(t.getProgressPct())
+                .assigneeIds(assigneeIds)
+                .assigneeNames(assigneeNames)
+                .createdAt(t.getCreatedAt())
+                .updatedAt(t.getUpdatedAt())
+                .build();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toResponse — 7 args (back-compat — this is the one at
+    // TaskMapper.java:62 that was missing)
+    // ═══════════════════════════════════════════════════════════
+    public TaskResponse toResponse(Task t,
+                                   Long teamId,
+                                   String teamName,
+                                   Long projectId,
+                                   String projectName,
+                                   List<Long> assigneeIds,
+                                   List<String> assigneeNames) {
+        return toResponse(t, teamId, teamName, projectId, projectName,
+                assigneeIds, assigneeNames,
+                null, null, null, null);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toResponse — 2 args (legacy — some old code may still use)
+    // ═══════════════════════════════════════════════════════════
+    public TaskResponse toResponse(Task t, List<Long> assigneeIds) {
+        return toResponse(t, t.getTeamId(), null, t.getProjectId(), null,
+                assigneeIds, null,
+                null, null, null, null);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toSummary — 9 args (Phase 5 full signature — this is what
+    // TaskServiceImpl:780 calls)
+    // ═══════════════════════════════════════════════════════════
+    public TaskSummaryResponse toSummary(Task t,
+                                         String projectName,
+                                         String teamName,
+                                         List<Long> assigneeIds,
+                                         List<String> assigneeNames,
+                                         Long sprintId,
+                                         String sprintName,
+                                         Long milestoneId,
+                                         String milestoneName) {
+        return TaskSummaryResponse.builder()
+                .id(t.getId())
+                .title(t.getTitle())
+                .status(t.getStatus())
+                .priority(t.getPriority())
+                .dueDate(t.getDueDate())
+                .progressPct(t.getProgressPct())
+                .projectId(t.getProjectId())
+                .projectName(projectName)
+                .teamId(t.getTeamId())
+                .teamName(teamName)
+                .parentTaskId(t.getParentTaskId())
+                .assigneeIds(assigneeIds)
+                .assigneeNames(assigneeNames)
+                .build();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toSummary — 5 args (back-compat)
+    // ═══════════════════════════════════════════════════════════
+    public TaskSummaryResponse toSummary(Task t,
+                                         String projectName,
+                                         String teamName,
+                                         List<Long> assigneeIds,
+                                         List<String> assigneeNames) {
+        return toSummary(t, projectName, teamName, assigneeIds, assigneeNames,
+                null, null, null, null);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // toSummary — 1 arg (legacy)
+    // ═══════════════════════════════════════════════════════════
+    public TaskSummaryResponse toSummary(Task t) {
+        return toSummary(t, null, null, null, null,
+                null, null, null, null);
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectTemplateRepository.java =====
+package com.mentis.hrms.pm.repository;
+
+import com.mentis.hrms.pm.entity.ProjectTemplate;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface ProjectTemplateRepository extends JpaRepository<ProjectTemplate, Long> {
+    List<ProjectTemplate> findAllByOrderByNameAsc();
+    boolean existsByNameIgnoreCase(String name);
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectTemplateService.java =====
+package com.mentis.hrms.pm.service;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mentis.hrms.pm.dto.request.*;
+import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.MilestonePart;
+import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.SprintPart;
+import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.TaskPart;
+import com.mentis.hrms.pm.dto.response.ProjectResponse;
+import com.mentis.hrms.pm.dto.response.ProjectTemplateResponse;
+import com.mentis.hrms.pm.entity.ProjectMember;
+import com.mentis.hrms.pm.entity.ProjectTemplate;
+import com.mentis.hrms.pm.enums.ProjectPriority;
+import com.mentis.hrms.pm.enums.ProjectRole;
+import com.mentis.hrms.pm.enums.TaskPriority;
+import com.mentis.hrms.pm.enums.TaskType;
+import com.mentis.hrms.pm.exception.DuplicateResourceException;
+import com.mentis.hrms.pm.exception.ResourceNotFoundException;
+import com.mentis.hrms.pm.repository.ProjectMemberRepository;
+import com.mentis.hrms.pm.repository.ProjectTemplateRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.PhasePart;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Templates + "create a project from a template".
+ * Never calls PmAccessService (controllers check). All creation goes through the normal services,
+ * so every existing rule (sprint overlap, membership, notifications, realtime) still applies.
+ * One transaction: if anything fails, no half-built project is left behind.
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ProjectTemplateService {
+
+    private static final int MAX_PAYLOAD_CHARS = 60000; // TEXT column = 65,535 bytes
+
+    private final ProjectTemplateRepository repository;
+    private final ObjectMapper objectMapper;
+    private final ProjectService projectService;
+    private final MilestoneService milestoneService;
+    private final SprintService sprintService;
+    private final TaskService taskService;
+    private final ProjectMemberRepository projectMemberRepository;
+    private final ProjectPhaseService projectPhaseService;
+    // ───────────────────────── templates ─────────────────────────
+
+    @Transactional(readOnly = true)
+    public List<ProjectTemplateResponse> list() {
+        return repository.findAllByOrderByNameAsc().stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectTemplateResponse get(Long id) {
+        return toResponse(find(id));
+    }
+
+    @Transactional
+    public ProjectTemplateResponse create(CreateTemplateRequest req, Long userId) {
+        String name = req.getName() == null ? "" : req.getName().trim();
+        if (name.isEmpty()) throw new IllegalArgumentException("Name is required");
+        if (req.getType() == null) throw new IllegalArgumentException("Type is required");
+        if (req.getPayload() == null || !req.getPayload().isObject())
+            throw new IllegalArgumentException("payload must be a JSON object");
+        if (repository.existsByNameIgnoreCase(name))
+            throw new DuplicateResourceException("A template named \"" + name + "\" already exists");
+
+        String json = req.getPayload().toString();
+        if (json.length() > MAX_PAYLOAD_CHARS) throw new IllegalArgumentException("payload is too large");
+        parse(json).validate();
+
+        ProjectTemplate saved = repository.save(ProjectTemplate.builder()
+                .name(name).type(req.getType()).description(req.getDescription())
+                .payload(json).createdBy(userId).build());
+        return toResponse(saved);
+    }
+
+    // ───────────────────────── create a project from a template ─────────────────────────
+
+    @Transactional
+    public ProjectResponse instantiate(Long templateId, FromTemplateRequest req, Long userId) {
+        ProjectTemplate t = find(templateId);
+        ProjectTemplatePayload p = parse(t.getPayload());
+        p.validate(); // a template edited by hand in SQL is checked again here
+
+        String name = notBlank(req.getName()) ? req.getName().trim() : p.getProject().getName();
+        if (!notBlank(name)) throw new IllegalArgumentException("Project name is required");
+
+        LocalDate start = req.getStartDate() != null ? req.getStartDate() : LocalDate.now();
+        ProjectPriority priority = req.getPriority() != null ? req.getPriority()
+                : notBlank(p.getProject().getPriority())
+                ? ProjectPriority.valueOf(p.getProject().getPriority().trim().toUpperCase())
+                : ProjectPriority.MEDIUM;
+        Long ownerId = req.getOwnerId() != null ? req.getOwnerId() : userId;
+
+        // project end = last milestone / sprint of the plan, unless the caller set one
+        LocalDate planEnd = null;
+        for (MilestonePart m : p.getMilestones()) planEnd = later(planEnd, start.plusDays(m.getDueOffsetDays()));
+        for (SprintPart s : p.getSprints())
+            planEnd = later(planEnd, start.plusDays(s.getStartOffsetDays() + s.getDurationDays() - 1L));
+        for (PhasePart ph : p.getPhases())
+            planEnd = later(planEnd, start.plusDays(ph.getStartOffsetDays() + ph.getDurationDays() - 1L));
+        LocalDate end = req.getEndDate() != null ? req.getEndDate() : planEnd;
+
+        ProjectResponse project = projectService.createProject(CreateProjectRequest.builder()
+                .name(name).code(req.getCode()).description(req.getDescription())
+                .ownerId(ownerId).departmentId(req.getDepartmentId()).clientId(req.getClientId())
+                .teamId(req.getTeamId()).priority(priority)
+                .startDate(start).endDate(end).budgetTotal(req.getBudgetTotal())
+                .memberIds(req.getMemberIds()).build(), userId);
+        Long pid = project.getId();
+
+        List<Long> milestoneIds = new ArrayList<>();
+        List<LocalDate> milestoneDue = new ArrayList<>();
+        for (MilestonePart m : p.getMilestones()) {
+            LocalDate due = start.plusDays(m.getDueOffsetDays());
+            milestoneIds.add(milestoneService.create(pid, CreateMilestoneRequest.builder()
+                    .name(m.getName().trim()).dueDate(due).ownerId(ownerId).build(), userId).getId());
+            milestoneDue.add(due);
+        }
+
+        List<Long> sprintIds = new ArrayList<>();
+        List<LocalDate> sprintEnd = new ArrayList<>();
+        for (SprintPart s : p.getSprints()) {
+            LocalDate sStart = start.plusDays(s.getStartOffsetDays());
+            LocalDate sEnd = sStart.plusDays(s.getDurationDays() - 1L);
+            sprintIds.add(sprintService.create(pid, CreateSprintRequest.builder()
+                    .name(s.getName().trim()).goal(s.getGoal()).startDate(sStart).endDate(sEnd).build(), userId).getId());
+            sprintEnd.add(sEnd);
+        }
+        for (PhasePart ph : p.getPhases()) {
+            LocalDate phStart = start.plusDays(ph.getStartOffsetDays());
+            projectPhaseService.create(pid, CreatePhaseRequest.builder()
+                    .name(ph.getName().trim())
+                    .startDate(phStart)
+                    .endDate(phStart.plusDays(ph.getDurationDays() - 1L))
+                    .build(), userId);
+        }
+        // people: MANAGER -> the owner; MEMBER -> round-robin over the project's MEMBER-role members
+        List<Long> memberPool = projectMemberRepository.findByProjectId(pid).stream()
+                .filter(m -> m.getRole() == ProjectRole.MEMBER)
+                .map(ProjectMember::getEmployeeId)
+                .sorted(Comparator.naturalOrder())
+                .collect(Collectors.toList());
+        int[] rr = {0};
+
+        for (TaskPart tp : p.getTasks()) {
+            Long assignee = assignee(tp.getAssignToRole(), ownerId, memberPool, rr);
+            LocalDate due = tp.getDueOffsetDays() != null ? start.plusDays(tp.getDueOffsetDays())
+                    : tp.getSprintIndex() != null ? sprintEnd.get(tp.getSprintIndex())
+                    : tp.getMilestoneIndex() != null ? milestoneDue.get(tp.getMilestoneIndex())
+                    : null;
+            taskService.createTask(CreateTaskRequest.builder()
+                    .projectId(pid).title(tp.getTitle().trim())
+                    .priority(notBlank(tp.getPriority()) ? TaskPriority.valueOf(tp.getPriority().trim().toUpperCase()) : TaskPriority.MEDIUM)
+                    .type(notBlank(tp.getType()) ? TaskType.valueOf(tp.getType().trim().toUpperCase()) : TaskType.TASK)
+                    .estimateHours(tp.getEstimateHours()).storyPoints(tp.getStoryPoints()).dueDate(due)
+                    .sprintId(tp.getSprintIndex() != null ? sprintIds.get(tp.getSprintIndex()) : null)
+                    .milestoneId(tp.getMilestoneIndex() != null ? milestoneIds.get(tp.getMilestoneIndex()) : null)
+                    .assigneeIds(assignee == null ? null : List.of(assignee))
+                    .build(), userId);
+        }
+
+        log.info("Project {} created from template {} ({} milestones, {} sprints, {} tasks)",
+                pid, templateId, milestoneIds.size(), sprintIds.size(), p.getTasks().size());
+        // Templates create PLANNING projects. Task baselines are captured on first
+        // activation in ProjectServiceImpl. If a future path instantiates as ACTIVE, capture now.
+        ProjectResponse created = projectService.getProject(pid);
+        if (created.getStatus() == com.mentis.hrms.pm.enums.ProjectStatus.ACTIVE
+                && created.getBaselinedAt() == null
+                && created.getStartDate() != null && created.getEndDate() != null) {
+            created = projectService.saveBaseline(pid, userId);
+        }
+        return created;
+    }
+
+    // ───────────────────────── helpers ─────────────────────────
+
+    private Long assignee(String role, Long ownerId, List<Long> pool, int[] rr) {
+        if (!notBlank(role)) return null;
+        return switch (role.trim().toUpperCase()) {
+            case "MANAGER" -> ownerId;
+            case "MEMBER" -> pool.isEmpty() ? null : pool.get(rr[0]++ % pool.size());
+            default -> null;
+        };
+    }
+
+    private ProjectTemplatePayload parse(String json) {
+        try {
+            return objectMapper.readValue(json, ProjectTemplatePayload.class);
+        } catch (JsonProcessingException e) {
+            throw new IllegalArgumentException("payload is not a valid template: " + e.getOriginalMessage());
+        }
+    }
+
+    private ProjectTemplate find(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Template not found: " + id));
+    }
+
+    private ProjectTemplateResponse toResponse(ProjectTemplate t) {
+        int ms = 0, sp = 0, tk = 0;
+        com.fasterxml.jackson.databind.JsonNode node = null;
+        try {
+            node = objectMapper.readTree(t.getPayload());
+            ProjectTemplatePayload p = objectMapper.treeToValue(node, ProjectTemplatePayload.class);
+            ms = p.getMilestones() == null ? 0 : p.getMilestones().size();
+            sp = p.getSprints() == null ? 0 : p.getSprints().size();
+            tk = p.getTasks() == null ? 0 : p.getTasks().size();
+        } catch (Exception e) {
+            log.warn("template {} has an unreadable payload: {}", t.getId(), e.getMessage());
+        }
+        return ProjectTemplateResponse.builder()
+                .id(t.getId()).name(t.getName()).type(t.getType().name()).description(t.getDescription())
+                .milestoneCount(ms).sprintCount(sp).taskCount(tk).payload(node)
+                .createdBy(t.getCreatedBy()).createdAt(t.getCreatedAt()).build();
+    }
+
+    private static boolean notBlank(String s) { return s != null && !s.isBlank(); }
+
+    private static LocalDate later(LocalDate a, LocalDate b) {
+        return a == null || b.isAfter(a) ? b : a;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TemplateGraphValidator.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.dto.request.TaskPart;
+import com.mentis.hrms.pm.exception.BusinessRuleException;
+import java.util.*;
+
+public final class TemplateGraphValidator {
+
+    static final int MAX_TASKS = 500, MAX_CHECKLIST = 50, MAX_ITEM_LEN = 300, MAX_DEPS = 20, MAX_KEY_LEN = 40;
+
+    private TemplateGraphValidator() {}
+
+    private static <T> List<T> nz(List<T> l) { return l == null ? List.of() : l; }
+
+    /** Cleans checklists in place and throws BusinessRuleException on the first problem. */
+    public static void validate(List<TaskPart> parts) {
+        if (parts.size() > MAX_TASKS)
+            throw new BusinessRuleException("A template can hold at most " + MAX_TASKS + " tasks.");
+
+        Set<String> keys = new HashSet<>();
+        for (TaskPart t : parts) {
+            if (t.getKey() != null) {
+                String k = t.getKey().trim();
+                if (k.isEmpty() || k.length() > MAX_KEY_LEN)
+                    throw new BusinessRuleException("A task key must be 1-" + MAX_KEY_LEN + " characters.");
+                if (!keys.add(k)) throw new BusinessRuleException("Duplicate task key: " + k);
+                t.setKey(k);
+            }
+            List<String> clean = new ArrayList<>();
+            for (String item : nz(t.getChecklist())) {
+                String s = item == null ? "" : item.trim();
+                if (s.isEmpty()) continue;
+                if (s.length() > MAX_ITEM_LEN)
+                    throw new BusinessRuleException("A checklist item is longer than " + MAX_ITEM_LEN + " characters.");
+                clean.add(s);
+            }
+            if (clean.size() > MAX_CHECKLIST)
+                throw new BusinessRuleException("A task can have at most " + MAX_CHECKLIST + " checklist items.");
+            t.setChecklist(clean);
+        }
+
+        Map<String, List<String>> graph = new HashMap<>();
+        for (TaskPart t : parts) {
+            List<String> deps = nz(t.getDependsOn());
+            if (deps.isEmpty()) { if (t.getKey() != null) graph.put(t.getKey(), List.of()); continue; }
+            if (t.getKey() == null) throw new BusinessRuleException("A task with dependencies needs a key.");
+            if (deps.size() > MAX_DEPS) throw new BusinessRuleException("A task can depend on at most " + MAX_DEPS + " others.");
+            Set<String> seen = new LinkedHashSet<>();
+            for (String d : deps) {
+                if (d == null || !keys.contains(d.trim())) throw new BusinessRuleException("Unknown dependency: " + d);
+                if (d.trim().equals(t.getKey())) throw new BusinessRuleException("A task cannot depend on itself: " + d);
+                seen.add(d.trim());
+            }
+            t.setDependsOn(new ArrayList<>(seen));
+            graph.put(t.getKey(), t.getDependsOn());
+        }
+
+        // cycle check: DFS, state 0 = new, 1 = on the current path, 2 = finished
+        Map<String, Integer> state = new HashMap<>();
+        for (String k : graph.keySet()) visit(k, graph, state);
+    }
+
+    private static void visit(String k, Map<String, List<String>> g, Map<String, Integer> state) {
+        int s = state.getOrDefault(k, 0);
+        if (s == 2) return;
+        if (s == 1) throw new BusinessRuleException("Dependency cycle through task " + k);
+        state.put(k, 1);
+        for (String d : g.getOrDefault(k, List.of())) visit(d, g, state);
+        state.put(k, 2);
+    }
+}

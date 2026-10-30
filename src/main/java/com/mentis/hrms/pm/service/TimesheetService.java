@@ -16,4 +16,7 @@ public interface TimesheetService {
 
     /** Admin reopens an APPROVED / REJECTED week so it can be corrected. */
     TimesheetResponse reopen(Long employeePk, LocalDate weekStart, Long actorPk);
+
+    TimesheetResponse lock(Long weekId, Long actorPk);
+    TimesheetResponse unlock(Long weekId, Long actorPk);
 }

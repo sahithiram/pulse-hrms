@@ -77,6 +77,22 @@ public class TimesheetController {
         return ResponseEntity.ok(ApiResponse.ok("Timesheet submitted", service.submit(userId, normWeek(week))));
     }
 
+    @PostMapping("/{weekId}/lock")
+    public ResponseEntity<ApiResponse<TimesheetResponse>> lock(
+            @PathVariable Long weekId,
+            @CurrentUserId Long userId) {
+        access.requireSuperAdmin(userId);
+        return ResponseEntity.ok(ApiResponse.ok("Timesheet locked", service.lock(weekId, userId)));
+    }
+
+    @PostMapping("/{weekId}/unlock")
+    public ResponseEntity<ApiResponse<TimesheetResponse>> unlock(
+            @PathVariable Long weekId,
+            @CurrentUserId Long userId) {
+        access.requireSuperAdmin(userId);
+        return ResponseEntity.ok(ApiResponse.ok("Timesheet unlocked", service.unlock(weekId, userId)));
+    }
+
     /** Admin: reopen an APPROVED / REJECTED week so it can be corrected. */
     @PostMapping("/reopen")
     public ResponseEntity<ApiResponse<TimesheetResponse>> reopen(

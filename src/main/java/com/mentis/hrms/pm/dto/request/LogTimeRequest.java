@@ -14,6 +14,7 @@ public class LogTimeRequest {
 
     @NotNull @Min(1)
     private Integer minutes;
-
+    private Boolean billable;
     private String note;
+
 }

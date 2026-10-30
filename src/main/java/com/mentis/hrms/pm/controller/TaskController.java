@@ -164,13 +164,14 @@ public class TaskController {
     // ══════════════════════════════════════════════════════════
     // COMMENTS
     // ══════════════════════════════════════════════════════════
-
     @PostMapping("/{taskId}/comments")
     public ResponseEntity<ApiResponse<CommentResponse>> addComment(
             @PathVariable Long taskId,
             @Valid @RequestBody CreateCommentRequest req,
             @CurrentUserId Long userId) {
-        pmAccessService.requireCanView(userId, taskId);
+        // ✅ PHASE 4 (F-P21): VIEWER is read-only, including comments.
+        // Was requireCanView (bug); now requireCanEdit.
+        pmAccessService.requireCanEdit(userId, taskId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Comment added", taskService.addComment(taskId, req, userId)));
     }

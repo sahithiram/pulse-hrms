@@ -363,15 +363,15 @@
             We believe your skills and expertise will be valuable assets to our organization, and we look forward to a long and mutually rewarding association. Welcome to the Mentis IT Solutions family!
         </div>
 
-        <!-- In the signature section of appointment-letter-template.html -->
+        <!-- Signature section -->
         <div class="closing">Best regards,</div>
 
-        <!-- Signature Image -->
         <div th:if="${showSignature}" class="signature-image">
             <img th:src="${signature}" alt="HR Signature" style="max-width: 200px; height: auto; margin: 10px 0;">
         </div>
 
         <div class="sender-name">Srikanth<br>Head of Human Resources<br>Mentis IT Solutions</div>
+
         <div class="acceptance-section">
             <div class="acceptance-title">ACCEPTANCE OF APPOINTMENT</div>
             <div class="letter-body">
@@ -390,7 +390,7 @@
         </div>
 
         <div class="footer-links">
-            <strong>Confidential & Proprietary - Mentis IT Solutions © <span th:text="${currentYear}">2025</span></strong>
+            <strong>Confidential &amp; Proprietary - Mentis IT Solutions © <span th:text="${currentYear}">2025</span></strong>
         </div>
     </div>
 </div>

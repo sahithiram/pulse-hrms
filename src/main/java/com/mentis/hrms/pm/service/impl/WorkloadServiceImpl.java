@@ -11,6 +11,7 @@ import com.mentis.hrms.pm.entity.TeamMember;
 import com.mentis.hrms.pm.enums.TaskStatus;
 import com.mentis.hrms.pm.repository.*;
 import com.mentis.hrms.pm.service.WorkloadService;
+import com.mentis.hrms.pm.util.WorkCalendar;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.repository.HolidayRepository;
 import com.mentis.hrms.repository.LeaveRequestRepository;
@@ -19,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,8 +29,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WorkloadServiceImpl implements WorkloadService {
 
-    private static final double HOURS_PER_DAY = 8.0;
-
     private final TaskRepository taskRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final TaskTimeLogRepository taskTimeLogRepository;
@@ -39,6 +37,7 @@ public class WorkloadServiceImpl implements WorkloadService {
     private final EmployeeRepository employeeRepository;
     private final LeaveRequestRepository leaveRequestRepository;
     private final HolidayRepository holidayRepository;
+    private final WorkCalendar workCalendar;
 
     @Override
     @Transactional(readOnly = true)
@@ -105,7 +104,7 @@ public class WorkloadServiceImpl implements WorkloadService {
     // ── core ──
 
     private WorkloadResponse compute(Employee e, LocalDate from, LocalDate to) {
-        if (from == null) from = LocalDate.now().with(DayOfWeek.MONDAY);
+        if (from == null) from = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
         if (to == null)   to   = from.plusDays(6);
 
         // Holidays in range
@@ -113,10 +112,7 @@ public class WorkloadServiceImpl implements WorkloadService {
                 .map(Holiday::getHolidayDate).collect(Collectors.toSet());
 
         // Working days
-        int workingDays = 0;
-        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
-            if (d.getDayOfWeek() != DayOfWeek.SUNDAY && !holidays.contains(d)) workingDays++;
-        }
+        int workingDays = workCalendar.workingDays(from, to, holidays);
 
         // Approved leaves
         List<LeaveRequest> leaves = leaveRequestRepository
@@ -127,13 +123,11 @@ public class WorkloadServiceImpl implements WorkloadService {
         for (LeaveRequest lr : leaves) {
             LocalDate s = lr.getStartDate().isBefore(from) ? from : lr.getStartDate();
             LocalDate t = lr.getEndDate().isAfter(to) ? to : lr.getEndDate();
-            double days = 0.0;
+            double days;
             if ("half_day".equalsIgnoreCase(lr.getLeaveDuration())) {
                 days = 0.5;
             } else {
-                for (LocalDate d = s; !d.isAfter(t); d = d.plusDays(1)) {
-                    if (d.getDayOfWeek() != DayOfWeek.SUNDAY && !holidays.contains(d)) days++;
-                }
+                days = workCalendar.workingDays(s, t, holidays);
             }
             leaveDays += days;
             leaveDtos.add(WorkloadResponse.LeaveBreakdown.builder()
@@ -145,10 +139,12 @@ public class WorkloadServiceImpl implements WorkloadService {
                     .build());
         }
 
-        double capacity = (workingDays * HOURS_PER_DAY - (leaveDays * HOURS_PER_DAY))
-                * allocationFactor(e.getId());
-        double leaveHours = leaveDays * HOURS_PER_DAY;
-        double holidayHours = holidays.size() * HOURS_PER_DAY;
+        double capacity = capacityHours(e.getId(), from, to);
+        double leaveHours = leaveDays * workCalendar.hoursPerDay();
+
+        // Edit D: count only holidays that fall on working days (exclude weekly offs)
+        long workingHolidays = holidays.stream().filter(d -> !workCalendar.isWeeklyOff(d)).count();
+        double holidayHours = workingHolidays * workCalendar.hoursPerDay();
 
         // Open tasks in window
         Set<Long> taskIds = new LinkedHashSet<>();
@@ -165,9 +161,9 @@ public class WorkloadServiceImpl implements WorkloadService {
         for (Long tid : taskIds) {
             Task t = taskRepository.findById(tid).orElse(null);
             if (t == null) continue;
-            double h = t.getEstimateHours() != null
-                    ? t.getEstimateHours()
+            double h = t.getEstimateHours() != null ? t.getEstimateHours()
                     : (t.getStoryPoints() != null ? t.getStoryPoints() * 4.0 : 0.0);
+            h = prorate(h, t.getStartDate(), t.getDueDate(), from, to);
             allocated += h;
             taskDtos.add(WorkloadResponse.TaskBreakdown.builder()
                     .taskId(t.getId()).title(t.getTitle())
@@ -211,6 +207,55 @@ public class WorkloadServiceImpl implements WorkloadService {
                 .leaves(leaveDtos).tasks(taskDtos)
                 .build();
     }
+
+    private double prorate(double hours, LocalDate ts, LocalDate te, LocalDate from, LocalDate to) {
+        if (ts == null && te == null) return hours;            // undated: count fully
+        LocalDate s = ts != null ? ts : te;
+        LocalDate e = te != null ? te : ts;
+        if (e.isBefore(from)) return hours;                    // overdue: lands on the current window
+        Set<LocalDate> hol = workCalendar.holidays(s.isBefore(from) ? s : from, e.isAfter(to) ? e : to);
+        int total = workCalendar.workingDays(s, e, hol);
+        if (total == 0) return hours;
+        LocalDate os = s.isAfter(from) ? s : from;
+        LocalDate oe = e.isBefore(to) ? e : to;
+        int overlap = workCalendar.workingDays(os, oe, hol);
+        return hours * overlap / total;
+    }
+
+    private double capacityHours(Long employeePk, LocalDate from, LocalDate to) {
+        if (employeePk == null) return 0;
+        if (from == null) from = LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        if (to == null) to = from.plusDays(6);
+        Employee e = employeeRepository.findById(employeePk).orElse(null);
+        if (e == null) return 0;
+
+        Set<LocalDate> holidays = holidayRepository.findByHolidayDateBetween(from, to).stream()
+                .map(Holiday::getHolidayDate).collect(Collectors.toSet());
+
+        int workingDays = overlapWorkingDays(from, to, from, to, holidays);
+        List<LeaveRequest> leaves = leaveRequestRepository
+                .findApprovedLeavesForEmployeeInRange(e.getEmployeeId(), from, to);
+        double leaveDays = 0.0;
+        for (LeaveRequest lr : leaves) {
+            if ("half_day".equalsIgnoreCase(lr.getLeaveDuration())) {
+                leaveDays += 0.5;
+            } else {
+                leaveDays += overlapWorkingDays(from, to, lr.getStartDate(), lr.getEndDate(), holidays);
+            }
+        }
+        double hours = (workingDays * workCalendar.hoursPerDay() - (leaveDays * workCalendar.hoursPerDay())) * allocationFactor(employeePk);
+        return round1(Math.max(0, hours));
+    }
+
+    private int overlapWorkingDays(LocalDate aStart, LocalDate aEnd, LocalDate bStart, LocalDate bEnd,
+                                   Set<LocalDate> holidays) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return 0;
+        LocalDate s = aStart.isAfter(bStart) ? aStart : bStart;
+        LocalDate t = aEnd.isBefore(bEnd) ? aEnd : bEnd;
+        if (t.isBefore(s)) return 0;
+        return workCalendar.workingDays(s, t, holidays);
+    }
+
     /** Share (0..1) of the person's time available to teams, from team-member allocation %. 1.0 if unset. */
     private double allocationFactor(Long employeePk) {
         List<TeamMember> ms = teamMemberRepository.findByEmployeeId(employeePk);

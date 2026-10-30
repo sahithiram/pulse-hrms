@@ -23,7 +23,9 @@ public class EmployeeFormDTO {
     private String workType;
     private LocalDate startDate;
     private String manager;
-
+    private String userRole;
+    public String getUserRole() { return userRole; }
+    public void setUserRole(String userRole) { this.userRole = userRole; }
     // Compensation
     private String salary;
     private String payFrequency;

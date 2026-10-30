@@ -1,670 +1,1201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>PM · My Work</title>
+  <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+  <title>Project Management · My Work</title>
+
+  <!-- Shared CDN set -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- ============ SHARED THEME (single source of truth) ============ -->
+  <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+  <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
   <style>
-    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-ts:1600;--z-cmd:1700}
-    .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{font-family:'Inter',sans-serif;font-size:var(--fs);line-height:1.45;background:var(--bg);color:var(--tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
-    ::-webkit-scrollbar{width:6px;height:6px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
-    a{color:var(--pri);text-decoration:none}
-    button{font-family:inherit}
-    .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
-    .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
-    .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
-    .pm-brand{display:flex;align-items:center;gap:8px;padding:10px 12px;height:var(--hh);border-bottom:1px solid var(--bd);flex-shrink:0}
-    .pm-brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--pri),var(--pur));display:grid;place-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
-    .pm-brand-name{font-weight:600;font-size:var(--fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-    .pm-shell.collapsed .pm-brand-name,.pm-shell.collapsed .pm-nav-section,.pm-shell.collapsed .pm-nav-label,.pm-shell.collapsed .pm-nav-badge{display:none}
-    .pm-sidebar-scroll{flex:1;overflow-y:auto;padding:6px 6px 20px}
-    .pm-nav-section{padding:12px 10px 4px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px}
-    .pm-nav-section i{font-size:9px;color:var(--pri)}
-    .pm-nav-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);color:var(--tx2);text-decoration:none;font-size:var(--fs);font-weight:500;transition:background var(--t-fast),color var(--t-fast);cursor:pointer;white-space:nowrap;margin:1px 0}
-    .pm-nav-link:hover{background:var(--card2);color:var(--tx)}
-    .pm-nav-link.active{background:var(--pri-soft);color:var(--pri)}
-    .pm-nav-link i{width:16px;text-align:center;font-size:12.5px;flex-shrink:0}
-    .pm-nav-label{flex:1;overflow:hidden;text-overflow:ellipsis}
-    .pm-nav-badge{background:var(--pri);color:#fff;font-size:var(--fs-xs);font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
-    .pm-nav-badge.warn{background:var(--wrn)}
-    .pm-main{min-width:0;display:flex;flex-direction:column}
-    .pm-header{position:sticky;top:0;z-index:var(--z-h);height:var(--hh);background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0}
-    .pm-iconbtn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx2);display:grid;place-content:center;cursor:pointer;font-size:12px;transition:var(--t-fast);position:relative;flex-shrink:0}
-    .pm-iconbtn:hover{color:var(--tx);border-color:var(--pri)}
-    .pm-iconbtn .dot{position:absolute;top:-3px;right:-3px;background:var(--dng);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:15px;text-align:center;line-height:1.2}
-    .pm-search{position:relative;flex:1;max-width:380px}
-    .pm-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--tx3)}
-    .pm-search input{width:100%;height:30px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 10px 0 30px;font-size:var(--fs);font-family:inherit;outline:none}
-    .pm-search input:focus{border-color:var(--pri)}
-    .pm-search kbd{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--card2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:var(--fs-xs);color:var(--tx3)}
-    .pm-header-right{display:flex;align-items:center;gap:6px;margin-left:auto}
-    .pm-live{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--tx3);font-weight:600;padding:0 6px}
-    .pm-live .dot{width:6px;height:6px;border-radius:50%;background:var(--suc);position:relative}
-    .pm-live .dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid var(--suc);animation:pm-pulse 1.8s ease-out infinite}
-    @keyframes pm-pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.8);opacity:0}}
-    .pm-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-weight:700;font-size:11px;display:grid;place-content:center;cursor:pointer;flex-shrink:0}
-    .pm-content{padding:12px 14px;flex:1;min-width:0}
-    .pm-breadcrumb{font-size:var(--fs-sm);color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-    .pm-breadcrumb a{color:var(--tx3)}
-    .pm-breadcrumb a:hover{color:var(--pri)}
-    .pm-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-    .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
-    .pm-page-title i{color:var(--pri);font-size:15px}
-    .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
-    .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
-    .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
-    .pm-btn i{font-size:11px}
-    .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
-    .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
-    .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
-    .pm-btn-icon{width:26px;height:26px;padding:0;justify-content:center}
-    .pm-input,.pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
-    .pm-input:focus,.pm-select:focus{border-color:var(--pri)}
-    .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
-    .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
-    .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
-    .pm-badge.success{background:var(--suc-soft);color:var(--suc)}
-    .pm-badge.danger{background:var(--dng-soft);color:var(--dng)}
-    .pm-badge.warning{background:var(--wrn-soft);color:var(--wrn)}
-    .pm-badge.info{background:var(--inf-soft);color:var(--inf)}
-    .pm-badge.purple{background:var(--pur-soft);color:var(--pur)}
-    .pm-progress{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;width:100%}
-    .pm-progress-bar{height:100%;background:var(--pri);border-radius:10px;transition:width 300ms ease}
-    .pm-progress-bar.success{background:var(--suc)}
-    .pm-progress-bar.warning{background:var(--wrn)}
-    .pm-progress-bar.danger{background:var(--dng)}
-    .pm-kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-    .pm-kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;cursor:pointer;transition:var(--t-fast)}
-    .pm-kpi:hover{border-color:var(--pri);transform:translateY(-1px)}
-    .pm-kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
-    .pm-kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px}
-    .pm-kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}
-    .pm-kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
-    .pm-kpi-icon.red{background:var(--dng-soft);color:var(--dng)}
-    .pm-kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
-    .pm-kpi-icon.cyan{background:var(--inf-soft);color:var(--inf)}
-    .pm-kpi-icon.purple{background:var(--pur-soft);color:var(--pur)}
-    .pm-kpi-value{font-size:var(--fs-2xl);font-weight:700;line-height:1}
-    .pm-kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .pm-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:12px;overflow-x:auto;padding:0 2px}
-    .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:var(--fs-md);font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--t-fast);position:relative;margin-bottom:-1px}
-    .pm-tabs button:hover{color:var(--tx)}
-    .pm-tabs button.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
-    .pm-pane{display:none}
-    .pm-pane.active{display:block;animation:pmFade .18s ease}
-    @keyframes pmFade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-    .pm-toasts{position:fixed;top:12px;right:12px;z-index:var(--z-ts);display:flex;flex-direction:column;gap:6px;max-width:340px;pointer-events:none}
-    .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:var(--rl);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);transform:translateX(120%);transition:transform 280ms cubic-bezier(.4,0,.2,1);pointer-events:auto;cursor:pointer}
-    .pm-toast.show{transform:translateX(0)}
-    .pm-toast.success{border-left-color:var(--suc)}
-    .pm-toast.error{border-left-color:var(--dng)}
-    .pm-toast.warning{border-left-color:var(--wrn)}
-    .pm-toast-icon{width:22px;height:22px;border-radius:50%;display:grid;place-content:center;color:#fff;font-size:10px;flex-shrink:0}
-    .pm-toast.success .pm-toast-icon{background:var(--suc)}
-    .pm-toast.error .pm-toast-icon{background:var(--dng)}
-    .pm-toast.warning .pm-toast-icon{background:var(--wrn)}
-    .pm-toast.info .pm-toast-icon{background:var(--inf)}
-    .pm-toast-msg{flex:1;font-size:var(--fs);font-weight:500}
-    .pm-cmd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:var(--z-cmd);display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
-    .pm-cmd-backdrop.open{display:flex}
-    .pm-cmd{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:560px;box-shadow:var(--sh-lg);overflow:hidden}
-    .pm-cmd-input{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd)}
-    .pm-cmd-input input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:var(--fs-md);font-family:inherit}
-    .pm-cmd-list{max-height:340px;overflow-y:auto;padding:4px}
-    .pm-cmd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:var(--fs-md)}
-    .pm-cmd-item:hover,.pm-cmd-item.active{background:var(--pri-soft)}
-    .pm-cmd-item i{color:var(--pri);width:16px;text-align:center}
-    .pm-cmd-foot{padding:6px 12px;border-top:1px solid var(--bd);font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:14px;background:var(--bg)}
-    .mw-task-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--bd);transition:var(--t-fast);cursor:pointer;font-size:var(--fs)}
-    .mw-task-row:hover{background:var(--card2)}
-    .mw-task-row:last-child{border-bottom:none}
-    .mw-checkbox{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--bd2);display:grid;place-content:center;flex-shrink:0;cursor:pointer;transition:var(--t-fast)}
-    .mw-checkbox:hover{border-color:var(--pri)}
-    .mw-checkbox.checked{background:var(--suc);border-color:var(--suc);color:#fff}
-    .mw-task-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .mw-task-title.done{text-decoration:line-through;color:var(--tx3)}
-    .mw-task-meta{display:flex;gap:6px;align-items:center;font-size:var(--fs-xs);color:var(--tx3);flex-shrink:0}
-    .mw-group-title{display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:6px;padding:6px 10px;background:var(--card2);border-radius:var(--r)}
-    .mw-group-title .count{background:var(--card);padding:0 6px;border-radius:10px;font-size:var(--fs-xs)}
-    .timer-card{background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(168,85,247,.08));border:1px solid var(--pri);border-radius:var(--rl);padding:12px;display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
-    .timer-display{font-family:'SF Mono',Consolas,monospace;font-size:24px;font-weight:700;color:var(--pri);letter-spacing:2px;min-width:130px}
-    .timer-controls{display:flex;gap:8px}
-    .timer-controls button{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;font-size:13px;display:grid;place-content:center;transition:var(--t-fast)}
-    .timer-controls .play{background:var(--suc);color:#fff}
-    .timer-controls .pause{background:var(--wrn);color:#fff}
-    .timer-controls .stop{background:var(--dng);color:#fff}
-    .timer-controls .reset{background:var(--card2);color:var(--tx2);border:1px solid var(--bd)}
-    .timer-info{flex:1;min-width:140px}
-    .timer-info div{font-size:var(--fs-xs);color:var(--tx2)}
-    .timer-task-select{background:var(--card);border:1px solid var(--bd);color:var(--tx);border-radius:var(--r);padding:6px 10px;font-size:var(--fs);font-family:inherit}
-    .prod-bar-chart{display:flex;align-items:flex-end;gap:6px;height:100px;padding:4px 0}
-    .prod-bar{flex:1;background:var(--pri);border-radius:4px 4px 0 0;transition:var(--t-fast);cursor:pointer;position:relative}
-    .prod-bar:hover{opacity:.8}
-    .prod-bar.weekend{opacity:.5}
-    .streak-flame{font-size:32px;line-height:1}
-    .priority-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;display:inline-block;margin-right:4px}
-    .p-h{background:var(--dng)}
-    .p-m{background:var(--wrn)}
-    .p-l{background:var(--suc)}
-    .p-c{background:#dc2626;box-shadow:0 0 0 2px rgba(220,38,38,.3)}
-    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
-    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.pm-kpi-grid{grid-template-columns:1fr 1fr}}
+    /* ============ PAGE-SPECIFIC STYLES ONLY (PM My Work) ============ */
+
+    /* Breadcrumb */
+    .pm-breadcrumb {
+      font-size: .8125rem;
+      color: var(--dark-text-secondary);
+      margin-bottom: .75rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .pm-breadcrumb a { color: var(--dark-text-secondary); }
+    .pm-breadcrumb a:hover { color: var(--primary); }
+
+    /* Timer card */
+    .timer-card {
+      background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(168,85,247,.08));
+      border: 1px solid var(--primary);
+      border-radius: var(--radius-card);
+      padding: 1rem 1.15rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+    .timer-display {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--primary);
+      letter-spacing: 2px;
+      min-width: 130px;
+    }
+    .timer-info { flex: 1; min-width: 160px; }
+    .timer-info > div { font-size: var(--fs-xs); color: var(--dark-text-secondary); }
+    .timer-info #timerTaskLabel { font-weight: 600; color: var(--dark-text); font-size: var(--fs-base); margin-bottom: 2px; }
+    .timer-task-select {
+      background: var(--dark-card);
+      border: 1px solid var(--dark-border);
+      color: var(--dark-text);
+      border-radius: var(--radius-btn);
+      padding: .45rem .75rem;
+      font-size: var(--fs-base);
+      font-family: inherit;
+      min-width: 200px;
+    }
+    .timer-controls { display: flex; gap: .5rem; }
+    .timer-controls button {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-size: .8rem;
+      display: grid;
+      place-content: center;
+      transition: var(--transition);
+    }
+    .timer-controls .play  { background: var(--success); color: #fff; }
+    .timer-controls .pause { background: var(--warning); color: #000; }
+    .timer-controls .stop  { background: var(--danger);  color: #fff; }
+    .timer-controls .reset { background: var(--dark-card); color: var(--dark-text-secondary); border: 1px solid var(--dark-border); }
+
+    /* Task row (also reused for review rows) */
+    .mw-task-row {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .55rem .75rem;
+      border-bottom: 1px solid var(--dark-border);
+      transition: var(--transition);
+      cursor: pointer;
+      font-size: var(--fs-base);
+    }
+    .mw-task-row:hover { background: rgba(255,255,255,.03); }
+    .mw-task-row:last-child { border-bottom: none; }
+
+    .mw-checkbox {
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid var(--dark-border);
+      display: grid;
+      place-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .mw-checkbox:hover { border-color: var(--primary); }
+    .mw-checkbox.checked { background: var(--success); border-color: var(--success); color: #fff; }
+
+    .mw-task-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mw-task-title.done { text-decoration: line-through; color: var(--dark-text-secondary); }
+    .mw-task-meta { display: flex; gap: .5rem; align-items: center; font-size: var(--fs-xs); color: var(--dark-text-secondary); flex-shrink: 0; }
+
+    .mw-group-title {
+      display: flex; align-items: center; gap: .4rem;
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      color: var(--dark-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: .3px;
+      margin-bottom: .5rem;
+      padding: .4rem .7rem;
+      background: rgba(255,255,255,.03);
+      border-radius: var(--radius-btn);
+    }
+    .mw-group-title .count {
+      background: var(--dark-card);
+      padding: 0 .4rem;
+      border-radius: 10px;
+      font-size: var(--fs-xs);
+    }
+
+    /* Priority dots (shared palette with tasks page) */
+    .priority-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; display: inline-block; }
+    .p-h { background: var(--danger); }
+    .p-m { background: var(--warning); }
+    .p-l { background: var(--success); }
+    .p-c { background: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,.3); }
+
+    /* Empty state */
+    .mw-empty {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: var(--dark-text-secondary);
+    }
+    .mw-empty i { font-size: 28px; opacity: .35; display: block; margin-bottom: .5rem; }
+
+    /* Productivity card */
+    .prod-bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 100px; padding: 4px 0; }
+    .prod-bar { flex: 1; background: var(--primary); border-radius: 4px 4px 0 0; transition: var(--transition); cursor: pointer; }
+    .prod-bar:hover { opacity: .8; }
+    .prod-bar.weekend { opacity: .5; }
+    .streak-flame { font-size: 32px; line-height: 1; }
+
+    @media (max-width: 768px) {
+      .timer-controls { width: 100%; justify-content: flex-end; }
+      .timer-task-select { flex: 1; }
+    }
   </style>
 </head>
-<body>
-<button class="mob-toggle" id="mobToggle"><i class="fas fa-bars"></i></button>
+<body th:attr="data-user-role=${isSuperAdmin != null && isSuperAdmin ? 'SUPER_ADMIN' : (isHR != null && isHR ? 'HR' : 'PM')}">
 
-<div class="pm-shell" id="pmShell">
-  <aside class="pm-sidebar" id="pmSidebar">
-    <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
-    <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
-  </aside>
+<!-- Mobile burger -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+  <i class="fas fa-bars"></i>
+</button>
 
-  <div class="pm-main">
-    <header class="pm-header">
-      <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search my tasks..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
-      <div class="pm-header-right">
-        <div class="pm-live"><span class="dot"></span> Live · <span id="pmLiveAgo">just now</span></div>
-        <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
-        <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
-          <i class="fas fa-bell"></i>
-          <span class="notif-bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:15px;height:15px;border-radius:8px;padding:0 4px;place-content:center;line-height:1;"></span>
+<!-- Hidden employee id -->
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR — shared accordion component
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon" id="sidebarBrandIcon">
+      <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+      <i id="sidebarIcon" class="fas fa-building"></i>
+    </div>
+    <span id="sidebarCompanyName">Menti's IT Solutions</span>
+  </div>
+
+  <div class="sidebar-tools">
+    <div class="sidebar-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off"
+             aria-label="Search sidebar menu">
+    </div>
+    <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle"
+            aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+      <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-content">
+    <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+
+      <!-- Workspace -->
+      <div class="side-group" data-group="workspace">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+          <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+          <span class="side-group-label">Workspace</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
-        <div class="pm-avatar" id="pmUserAvatar" title="Loading...">?</div>
-      </div>
-    </header>
-
-    <div class="pm-content">
-      <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / <span id="pmCrumb">My Work</span></div>
-
-      <div class="pm-page-head">
-        <div>
-          <div class="pm-page-title"><i class="fas fa-inbox" id="pmPageIcon"></i> <span id="pmPageTitle">My Work</span></div>
-          <div class="pm-page-sub" id="pmPageSub">Your personal workspace — tasks, deadlines, productivity</div>
-        </div>
-        <div class="pm-page-actions">
-          <button class="pm-btn" onclick="reloadMyWork()"><i class="fas fa-rotate"></i> Refresh</button>
-          <button class="pm-btn pm-btn-primary" data-rule="lead" onclick="newTask()"><i class="fas fa-plus"></i> New Task</button>
-        </div>
+        <ul class="side-submenu" id="sideGroupWorkspace">
+          <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+          <li><a class="nav-link active" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+          <li>
+            <a class="nav-link" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+              <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span>
+            </a>
+          </li>
+        </ul>
       </div>
 
-      <div class="pm-kpi-grid">
-        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-tasks"></i></div></div><div class="pm-kpi-value" id="kAssigned">—</div><div class="pm-kpi-label">Assigned to You</div></div>
-        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-fire"></i></div></div><div class="pm-kpi-value" id="kOverdue">—</div><div class="pm-kpi-label">Overdue</div></div>
-        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-calendar-day"></i></div></div><div class="pm-kpi-value" id="kToday">—</div><div class="pm-kpi-label">Due Today</div></div>
-        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-check-circle"></i></div></div><div class="pm-kpi-value" id="kCompletedWeek">—</div><div class="pm-kpi-label">Completed</div></div>
-        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon cyan"><i class="fas fa-clock"></i></div></div><div class="pm-kpi-value" id="kHours">—</div><div class="pm-kpi-label">Hours Logged</div></div>
+      <!-- Delivery -->
+      <div class="side-group" data-group="delivery">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+          <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+          <span class="side-group-label">Delivery</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupDelivery">
+          <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+          <li><a class="nav-link" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+          <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+          <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+          <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+        </ul>
       </div>
 
-      <div class="timer-card">
-        <div class="timer-display" id="timerDisplay">00:00:00</div>
-        <div class="timer-info">
-          <div id="timerTaskLabel">No task selected</div>
-          <div id="timerStatus">Idle — press play to start</div>
+      <!-- Finance -->
+      <div class="side-group" data-group="finance">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+          <span class="side-group-label">Finance</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupFinance">
+          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+        </ul>
+      </div>
+
+      <!-- Insights -->
+      <div class="side-group" data-group="insights">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+          <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+          <span class="side-group-label">Insights</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupInsights">
+          <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+        </ul>
+      </div>
+
+      <div class="side-empty" id="sideNavEmpty" hidden>
+        No menu items match your search
+      </div>
+    </nav>
+  </div>
+</aside>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+
+  <!-- ---------- TOP HEADER ---------- -->
+  <header class="top-header">
+    <div class="search-box" onclick="PM.openCmd()">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+      <kbd>⌘K</kbd>
+    </div>
+
+    <div class="top-header-actions">
+      <button class="icon-btn" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></button>
+      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)">
+        <i class="fas fa-terminal"></i>
+      </button>
+      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme">
+        <i class="fas fa-moon"></i>
+      </button>
+      <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+      </button>
+
+      <div class="menti-ai-nav-wrapper">
+        <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()"
+                aria-label="Open Menti PM Assistant">
+          <span class="menti-ai-pulse"></span>
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </button>
+        <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+      </div>
+
+      <div class="user-profile-menu">
+        <div class="dropdown">
+          <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="avatar-sm" id="pmUserAvatar">?</div>
+            <span id="pmUserName">Loading…</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+            <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
         </div>
-        <select class="timer-task-select" id="timerTaskSelect">
-          <option value="">Select task...</option>
+      </div>
+    </div>
+  </header>
+
+  <!-- ---------- CONTENT AREA ---------- -->
+  <div class="content-area">
+
+    <div class="pm-breadcrumb">
+      <a href="javascript:void(0)" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></a>
+      <span>/</span><span>Project Management</span>
+      <span>/</span><span id="pmCrumb">My Work</span>
+    </div>
+
+    <div class="pm-page-head">
+      <div>
+        <div class="pm-page-title"><i class="fas fa-inbox" id="pmPageIcon"></i> <span id="pmPageTitle">My Work</span></div>
+        <div class="pm-page-sub" id="pmPageSub">Your personal workspace — tasks, deadlines, productivity</div>
+      </div>
+      <div class="pm-page-actions">
+        <button class="pm-btn" onclick="reloadMyWork()"><i class="fas fa-rotate"></i> Refresh</button>
+        <button class="pm-btn pm-btn-primary" data-rule="lead" id="btnNewTask" onclick="newTask()"><i class="fas fa-plus"></i> New Task</button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="pm-kpi-grid">
+      <div class="pm-kpi">
+        <div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-tasks"></i></div></div>
+        <div class="pm-kpi-value" id="kAssigned">—</div>
+        <div class="pm-kpi-label">Assigned to You</div>
+      </div>
+      <div class="pm-kpi">
+        <div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-fire"></i></div></div>
+        <div class="pm-kpi-value" id="kOverdue">—</div>
+        <div class="pm-kpi-label">Overdue</div>
+      </div>
+      <div class="pm-kpi">
+        <div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-calendar-day"></i></div></div>
+        <div class="pm-kpi-value" id="kToday">—</div>
+        <div class="pm-kpi-label">Due Today</div>
+      </div>
+      <div class="pm-kpi">
+        <div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-check-circle"></i></div></div>
+        <div class="pm-kpi-value" id="kCompletedWeek">—</div>
+        <div class="pm-kpi-label">Completed</div>
+      </div>
+      <div class="pm-kpi">
+        <div class="pm-kpi-top"><div class="pm-kpi-icon cyan"><i class="fas fa-clock"></i></div></div>
+        <div class="pm-kpi-value" id="kHours">—</div>
+        <div class="pm-kpi-label">Hours Logged</div>
+      </div>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-card">
+      <div class="timer-display" id="timerDisplay">00:00:00</div>
+      <div class="timer-info">
+        <div id="timerTaskLabel">No task selected</div>
+        <div id="timerStatus">Idle — press play to start</div>
+      </div>
+      <select class="timer-task-select" id="timerTaskSelect">
+        <option value="">Select task...</option>
+      </select>
+      <div class="timer-controls">
+        <button class="play" id="btnPlay" onclick="timerPlay()" title="Start"><i class="fas fa-play"></i></button>
+        <button class="pause" id="btnPause" onclick="timerPause()" style="display:none" title="Pause"><i class="fas fa-pause"></i></button>
+        <button class="stop" id="btnStop" onclick="timerStop()" title="Stop &amp; Log"><i class="fas fa-stop"></i></button>
+        <button class="reset" onclick="timerReset()" title="Reset"><i class="fas fa-rotate-left"></i></button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="pm-tabs" id="pmTabs">
+      <button class="active" data-tab="tasks" onclick="switchTab('tasks',this)">My Tasks</button>
+      <button data-tab="review" id="tabReview" style="display:none" onclick="switchTab('review',this)">
+        <i class="fas fa-magnifying-glass"></i> To review
+        <span class="pm-badge info" id="reviewCount" style="display:none;margin-left:4px">0</span>
+      </button>
+      <button data-tab="productivity" onclick="switchTab('productivity',this)">Productivity</button>
+      <button data-tab="timesheet" onclick="switchTab('timesheet',this)">Timesheet</button>
+    </div>
+
+    <!-- Tasks tab -->
+    <div class="pm-pane active" id="pane-tasks">
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+        <select class="pm-btn" style="max-width:160px;height:32px;padding:.35rem .75rem;font-size:var(--fs-sm)" id="mwFilter" onchange="renderTasks()">
+          <option value="all">All Tasks</option>
+          <option value="overdue">Overdue</option>
+          <option value="today">Due Today</option>
+          <option value="week">This Week</option>
+          <option value="later">Later</option>
+          <option value="review">Waiting for review</option>
+          <option value="blocked">Blocked</option>
+          <option value="done">Completed</option>
         </select>
-        <div class="timer-controls">
-          <button class="play" id="btnPlay" onclick="timerPlay()" title="Start"><i class="fas fa-play"></i></button>
-          <button class="pause" id="btnPause" onclick="timerPause()" style="display:none" title="Pause"><i class="fas fa-pause"></i></button>
-          <button class="stop" id="btnStop" onclick="timerStop()" title="Stop & Log"><i class="fas fa-stop"></i></button>
-          <button class="reset" onclick="timerReset()" title="Reset"><i class="fas fa-rotate-left"></i></button>
-        </div>
+        <select class="pm-btn" style="max-width:180px;height:32px;padding:.35rem .75rem;font-size:var(--fs-sm)" id="mwGroup" onchange="renderTasks()">
+          <option value="due">Group by Due Date</option>
+          <option value="project">Group by Project</option>
+          <option value="priority">Group by Priority</option>
+          <option value="status">Group by Status</option>
+        </select>
+        <input class="pm-btn" style="max-width:220px;height:32px;padding:.35rem .75rem;font-size:var(--fs-sm);text-align:left"
+               placeholder="Filter tasks..." id="mwSearch" oninput="renderTasks()">
       </div>
-
-      <div class="pm-tabs" id="pmTabs">
-        <button class="active" data-tab="tasks" onclick="switchTab('tasks',this)">My Tasks</button>
-        <button data-tab="review" id="tabReview" style="display:none" onclick="switchTab('review',this)"><i class="fas fa-magnifying-glass"></i> To review <span class="pm-badge info" id="reviewCount" style="display:none;margin-left:4px">0</span></button>
-        <button data-tab="productivity" onclick="switchTab('productivity',this)">Productivity</button>
-        <button data-tab="timesheet" onclick="switchTab('timesheet',this)">Timesheet</button>
+      <div class="pm-widget" style="padding:0;overflow:hidden" id="taskList">
+        <div class="mw-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading…</div></div>
       </div>
+    </div>
 
-      <div class="pm-pane active" id="pane-tasks">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-          <select class="pm-select" style="max-width:160px" id="mwFilter" onchange="renderTasks()">
-            <option value="all">All Tasks</option>
-            <option value="overdue">Overdue</option>
-            <option value="today">Due Today</option>
-            <option value="week">This Week</option>
-            <option value="later">Later</option>
-            <option value="review">Waiting for review</option>
-            <option value="blocked">Blocked</option>
-            <option value="done">Completed</option>
-          </select>
-          <select class="pm-select" style="max-width:180px" id="mwGroup" onchange="renderTasks()">
-            <option value="due">Group by Due Date</option>
-            <option value="project">Group by Project</option>
-            <option value="priority">Group by Priority</option>
-            <option value="status">Group by Status</option>
-          </select>
-          <input class="pm-input" style="max-width:220px" placeholder="Filter tasks..." id="mwSearch" oninput="renderTasks()">
+    <!-- Review tab -->
+    <div class="pm-pane" id="pane-review">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem;gap:.5rem;flex-wrap:wrap">
+        <div style="font-size:var(--fs-sm);color:var(--dark-text-secondary)">
+          Tasks waiting for your review, oldest first. Approve marks the task Done. Send back returns it to In Progress with your note.
         </div>
-        <div class="pm-card" style="padding:0;overflow:hidden" id="taskList">
-          <div style="text-align:center;padding:40px;color:var(--tx3)">Loading…</div>
-        </div>
+        <button class="pm-btn pm-btn-sm" onclick="loadReviewQueue()"><i class="fas fa-rotate"></i> Refresh</button>
       </div>
-
-      <div class="pm-pane" id="pane-review">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px;flex-wrap:wrap">
-          <div style="font-size:var(--fs-sm);color:var(--tx2)">Tasks waiting for your review, oldest first. Approve marks the task Done. Send back returns it to In Progress with your note.</div>
-          <button class="pm-btn pm-btn-sm" onclick="loadReviewQueue()"><i class="fas fa-rotate"></i> Refresh</button>
-        </div>
-        <div class="pm-card" style="padding:0;overflow:hidden" id="reviewList">
-          <div style="text-align:center;padding:40px;color:var(--tx3)">Loading…</div>
-        </div>
+      <div class="pm-widget" style="padding:0;overflow:hidden" id="reviewList">
+        <div class="mw-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading…</div></div>
       </div>
-      <div class="pm-pane" id="pane-timesheet"><div id="pmtsRoot"></div></div>
+    </div>
 
-      <div class="pm-pane" id="pane-productivity">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
-          <div class="pm-card">
-            <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-chart-line" style="color:var(--pri)"></i> Completed This Week</div>
-            <div class="prod-bar-chart" id="prodChart"></div>
-            <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--tx3);margin-top:4px"><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span></div>
+    <!-- Productivity tab -->
+    <div class="pm-pane" id="pane-productivity">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem">
+        <div class="pm-widget">
+          <div class="pm-widget-head">
+            <div class="pm-widget-title"><i class="fas fa-chart-line"></i> Completed This Week</div>
           </div>
-          <div class="pm-card">
-            <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-bolt" style="color:var(--wrn)"></i> Focus Streak</div>
-            <div style="display:flex;align-items:center;gap:12px">
-              <div class="streak-flame">🔥</div>
-              <div><div style="font-size:var(--fs-2xl);font-weight:700;color:var(--wrn)" id="kStreak">0</div><div style="font-size:var(--fs-xs);color:var(--tx2)">days in a row</div></div>
+          <div class="pm-widget-body">
+            <div class="prod-bar-chart" id="prodChart"></div>
+            <div style="display:flex;justify-content:space-between;font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-top:.35rem">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
             </div>
           </div>
-          <div class="pm-card">
-            <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-clock" style="color:var(--inf)"></i> Time Distribution</div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:var(--fs-sm)"><span>Open</span><span style="font-weight:600" id="tdOpen">—</span></div>
-            <div class="pm-progress" style="margin-bottom:8px"><div class="pm-progress-bar" id="tdOpenBar" style="width:0%"></div></div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:var(--fs-sm)"><span>In Progress</span><span style="font-weight:600" id="tdProgress">—</span></div>
-            <div class="pm-progress" style="margin-bottom:8px"><div class="pm-progress-bar success" id="tdProgressBar" style="width:0%"></div></div>
-            <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:var(--fs-sm)"><span>Done</span><span style="font-weight:600" id="tdDone">—</span></div>
+        </div>
+        <div class="pm-widget">
+          <div class="pm-widget-head">
+            <div class="pm-widget-title"><i class="fas fa-bolt"></i> Focus Streak</div>
+          </div>
+          <div class="pm-widget-body">
+            <div style="display:flex;align-items:center;gap:.75rem">
+              <div class="streak-flame">🔥</div>
+              <div>
+                <div style="font-size:1.6rem;font-weight:700;color:var(--warning)" id="kStreak">0</div>
+                <div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">days in a row</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="pm-widget">
+          <div class="pm-widget-head">
+            <div class="pm-widget-title"><i class="fas fa-clock"></i> Time Distribution</div>
+          </div>
+          <div class="pm-widget-body">
+            <div style="display:flex;justify-content:space-between;margin-bottom:.35rem;font-size:var(--fs-sm)"><span>Open</span><span style="font-weight:600" id="tdOpen">—</span></div>
+            <div class="pm-progress" style="margin-bottom:.6rem"><div class="pm-progress-bar" id="tdOpenBar" style="width:0%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.35rem;font-size:var(--fs-sm)"><span>In Progress</span><span style="font-weight:600" id="tdProgress">—</span></div>
+            <div class="pm-progress" style="margin-bottom:.6rem"><div class="pm-progress-bar success" id="tdProgressBar" style="width:0%"></div></div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.35rem;font-size:var(--fs-sm)"><span>Done</span><span style="font-weight:600" id="tdDone">—</span></div>
             <div class="pm-progress"><div class="pm-progress-bar warning" id="tdDoneBar" style="width:0%"></div></div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Timesheet tab -->
+    <div class="pm-pane" id="pane-timesheet">
+      <div id="pmtsRoot"></div>
+    </div>
+
+  </div><!-- /content-area -->
+</div><!-- /main-content -->
+
+<!-- Toasts container (shared .pm-toast) -->
+<div class="pm-toasts" id="pmToasts"></div>
+
+<!-- Command palette -->
+<div class="pm-cmd-backdrop" id="pmCmdBackdrop" onclick="if(event.target===this)PM.closeCmd()">
+  <div class="pm-cmd">
+    <div class="pm-cmd-input">
+      <i class="fas fa-search"></i>
+      <input id="pmCmdInput" placeholder="Search pages, projects, tasks…" autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="pm-cmd-list" id="pmCmdList"></div>
+    <div class="pm-cmd-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> open</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
   </div>
 </div>
 
+<!-- ============ SHARED PM AI ASSISTANT PANEL ============ -->
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+  <span class="menti-ai-fab-dot"></span>
+  <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+  <div class="menti-ai-chat-header">
+    <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+      <div class="menti-ai-hdr-avatar">M</div>
+      <div class="menti-ai-hdr-info">
+        <div class="menti-ai-hdr-name">
+          Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i>
+        </div>
+        <div class="menti-ai-hdr-status">
+          <span class="menti-ai-status-dot"></span>
+          <span id="mentiAiModeLabel">💾 New saved chat</span>
+        </div>
+      </div>
+    </div>
+    <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+
+  <div class="menti-ai-body">
+    <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+    <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+      <div class="menti-ai-sessions-header">
+        <span>Saved Chats</span>
+        <span id="mentiAiSessionCount">0</span>
+      </div>
+      <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()">
+        <i class="fas fa-plus"></i> New Saved Chat
+      </button>
+      <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+        <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+      </div>
+    </div>
+
+    <div class="menti-ai-chat-col">
+      <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+      <div class="menti-ai-chips" id="mentiAiSuggestions">
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show me my overdue tasks')">
+          <i class="fas fa-fire"></i> Overdue
+        </button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('What is in my review queue?')">
+          <i class="fas fa-magnifying-glass"></i> Review Queue
+        </button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('How many hours did I log this week?')">
+          <i class="fas fa-clock"></i> My Hours
+        </button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize my productivity this week')">
+          <i class="fas fa-chart-simple"></i> Productivity
+        </button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('What are my top 3 priorities?')">
+          <i class="fas fa-bullseye"></i> Priorities
+        </button>
+      </div>
+
+      <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about your work…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+        <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
-<script src="/pm/pm-core.js"></script>
-<script src="/pm/pm-task-drawer.js"></script>
-<script src="/pm/pm-timesheet.js"></script>
-<script>
-  PM.bootstrap().then(function(me){
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    const tabMeta={
-      tasks:{t:'My Work',i:'fa-inbox',s:'Your personal workspace'},
-     productivity:{t:'Productivity',i:'fa-chart-line',s:'Your personal productivity insights'},
-  review:{t:'To review',i:'fa-magnifying-glass',s:'Tasks waiting for your sign-off'},
-timesheet:{t:'Timesheet',i:'fa-clock',s:'Log, submit and track your weekly hours'}
-    };
-    function switchTab(tab,el){
-      document.querySelectorAll('#pmTabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-      document.querySelectorAll('.pm-pane').forEach(p=>p.classList.remove('active'));
-      document.getElementById('pane-'+tab).classList.add('active');
-      var m=tabMeta[tab]; if(m){
-        document.getElementById('pmPageTitle').textContent=m.t;
-        document.getElementById('pmPageIcon').className='fas '+m.i;
-        document.getElementById('pmPageSub').textContent=m.s;
-        document.getElementById('pmCrumb').textContent=m.t;
+<!-- Shared sidebar controller -->
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+
+<!-- Shared AI assistant controller -->
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
+<script>
+  window.MENTI_AI_CONFIG = {
+    role: 'PM',
+    roleTag: 'PM',
+    assistantName: 'Menti PM',
+    userInitial: 'U',
+    sendUrl: '/api/chat/pm/send',
+    sessionsUrl: '/api/chat/pm/sessions',
+    historyUrl: '/api/chat/pm/session',
+    deleteUrl: '/api/chat/pm/session'
+  };
+</script>
+
+<!-- Role-aware home routing -->
+<script>
+  function goPMHome() {
+    var role = (document.body.getAttribute('data-user-role') || 'PM').toUpperCase();
+    if (role === 'SUPER_ADMIN' || role === 'HR') {
+      window.location.href = '/dashboard/hr';
+    } else {
+      window.location.href = '/pm/01-home';
+    }
+  }
+</script>
+
+<!-- PM core + task drawer + timesheet module -->
+<script src="/pm/pm-core.js" onerror="this.remove()"></script>
+<script src="/pm/pm-task-drawer.js" onerror="this.remove()"></script>
+<script src="/pm/pm-timesheet.js" onerror="this.remove()"></script>
+
+<!-- PM core shim (only used if /pm/pm-core.js is not deployed) -->
+<script>
+  (function () {
+    if (window.PM && window.PM.bootstrap) return;
+
+    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD' };
+    var rules = { creator: true, manage: true, clients: true, lead: true };
+
+    function toast(msg, type) {
+      var box = document.getElementById('pmToasts');
+      if (!box) return;
+      var el = document.createElement('div');
+      el.className = 'pm-toast ' + (type || 'info');
+      var icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-info-circle' };
+      el.innerHTML =
+        '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i></div>' +
+        '<div class="pm-toast-msg">' + PM.esc(msg) + '</div>';
+      box.appendChild(el);
+      requestAnimationFrame(function () { el.classList.add('show'); });
+      setTimeout(function () {
+        el.classList.remove('show');
+        setTimeout(function () { el.remove(); }, 300);
+      }, 3500);
+      el.onclick = function () { el.remove(); };
+    }
+
+    window.PM = {
+      esc: function (s) {
+        var d = document.createElement('div');
+        d.textContent = String(s == null ? '' : s);
+        return d.innerHTML;
+      },
+      fmtDateTime: function (v) {
+        try { return new Date(v).toLocaleString(); } catch (e) { return String(v || ''); }
+      },
+      fmtDate: function (v) {
+        try { return new Date(v).toLocaleDateString(); } catch (e) { return String(v || ''); }
+      },
+      getInitials: function (name) {
+        return String(name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
+      },
+      toast: toast,
+      can: function (r) { return !!rules[r]; },
+      me: function () { return Promise.resolve(me); },
+      bootstrap: function () { return Promise.resolve(me); },
+      meTasks: function () { return Promise.resolve([]); },
+      api: function (method, url, body) {
+        var opts = {
+          method: method,
+          headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+          credentials: 'same-origin'
+        };
+        if (body !== undefined) {
+          opts.headers['Content-Type'] = 'application/json';
+          opts.body = JSON.stringify(body);
+        }
+        return fetch(url, opts).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.status === 204 ? null : r.json();
+        });
+      },
+      openCmd: window.__pmOpenCmd || function () {},
+      closeCmd: function () {},
+      openIntake: function () { toast('Project intake is not wired in this preview.', 'info'); },
+      toggleTheme: function () {
+        document.body.classList.toggle('pm-light');
+        try { localStorage.setItem('pm.theme', document.body.classList.contains('pm-light') ? 'light' : 'dark'); } catch (e) {}
       }
-     if(tab==='productivity') renderProductivity();
-if(tab==='review') loadReviewQueue();
-    if(tab==='timesheet' && window.PMTimesheetMe) PMTimesheetMe.load();
+    };
+
+    window.PM.openCmd = function () {
+      var bd = document.getElementById('pmCmdBackdrop');
+      if (bd) bd.classList.add('open');
+    };
+    window.PM.closeCmd = function () {
+      var bd = document.getElementById('pmCmdBackdrop');
+      if (bd) bd.classList.remove('open');
+    };
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        window.PM.openCmd();
+      }
+      if (e.key === 'Escape') window.PM.closeCmd();
+    });
+
+    try {
+      if (localStorage.getItem('pm.theme') === 'light') document.body.classList.add('pm-light');
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  /* ============================================================
+     PM MY WORK PAGE LOGIC
+     ============================================================ */
+  PM.bootstrap().then(function (me) {
+
+    // Personalise header
+    var userNameEl = document.getElementById('pmUserName');
+    if (userNameEl) userNameEl.textContent = me.name || 'User';
+    var avatarEl = document.getElementById('pmUserAvatar');
+    if (avatarEl) {
+      avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+      avatarEl.title = me.name || 'User';
+    }
+
+    /* ===== Tabs ===== */
+    const tabMeta = {
+      tasks:        { t: 'My Work',       i: 'fa-inbox',             s: 'Your personal workspace' },
+      review:       { t: 'To review',     i: 'fa-magnifying-glass',  s: 'Tasks waiting for your sign-off' },
+      productivity: { t: 'Productivity',  i: 'fa-chart-line',        s: 'Your personal productivity insights' },
+      timesheet:    { t: 'Timesheet',     i: 'fa-clock',             s: 'Log, submit and track your weekly hours' }
+    };
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('#pmTabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      document.querySelectorAll('.pm-pane').forEach(p => p.classList.remove('active'));
+      var pane = document.getElementById('pane-' + tab);
+      if (pane) pane.classList.add('active');
+
+      var m = tabMeta[tab];
+      if (m) {
+        document.getElementById('pmPageTitle').textContent = m.t;
+        document.getElementById('pmPageIcon').className = 'fas ' + m.i;
+        document.getElementById('pmPageSub').textContent = m.s;
+        document.getElementById('pmCrumb').textContent = m.t;
+      }
+      if (tab === 'productivity') renderProductivity();
+      if (tab === 'review') loadReviewQueue();
+      if (tab === 'timesheet' && window.PMTimesheetMe) PMTimesheetMe.load();
     }
     window.switchTab = switchTab;
 
-    var tasks=[];
-    var today=new Date();
-    var statusBadge={todo:['primary','To Do'],'in-progress':['warning','In Progress'],blocked:['danger','Blocked'],review:['info','In Review'],done:['success','Done']};
-    var priorityClass={critical:'c',high:'h',medium:'m',low:'l'};
+    /* ===== Tasks ===== */
+    var tasks = [];
+    var today = new Date();
+    var statusBadge = {
+      todo: ['primary', 'To Do'],
+      'in-progress': ['warning', 'In Progress'],
+      blocked: ['danger', 'Blocked'],
+      review: ['info', 'In Review'],
+      done: ['success', 'Done']
+    };
+    var priorityClass = { critical: 'c', high: 'h', medium: 'm', low: 'l' };
 
-    function loadMyTasks(){
-      var tbody=document.getElementById('taskList');
-      tbody.innerHTML='<div style="text-align:center;padding:40px;color:var(--tx3)">Loading tasks…</div>';
-        PM.api('GET','/api/pm/me/tasks').then(function(list){
-        var raw=list||[];
-        tasks=raw.map(function(t){
+    function loadMyTasks() {
+      var box = document.getElementById('taskList');
+      box.innerHTML = '<div class="mw-empty"><i class="fas fa-spinner fa-spin"></i><div>Loading tasks…</div></div>';
+
+      PM.api('GET', '/api/pm/me/tasks').then(function (list) {
+        var raw = list || [];
+        tasks = raw.map(function (t) {
           return {
-            id:t.id, title:t.title,
-            projectId:t.projectId,
-            project:t.projectName||('Project #'+t.projectId),
-            priority:(t.priority||'MEDIUM').toLowerCase(),
-            status:(t.status||'TODO').toLowerCase().replace(/_/g,'-'),
-            due:t.dueDate||new Date().toISOString().split('T')[0],
-            progress:t.progressPct||0,
-            subtaskCount:t.subtaskCount||0,
-            subtaskDone:t.subtaskDone||0,
-            openBlockerCount:t.openBlockerCount||0
+            id: t.id,
+            title: t.title,
+            projectId: t.projectId,
+            project: t.projectName || ('Project #' + t.projectId),
+            priority: (t.priority || 'MEDIUM').toLowerCase(),
+            status: (t.status || 'TODO').toLowerCase().replace(/_/g, '-'),
+            due: t.dueDate || new Date().toISOString().split('T')[0],
+            progress: t.progressPct || 0,
+            subtaskCount: t.subtaskCount || 0,
+            subtaskDone: t.subtaskDone || 0,
+            openBlockerCount: t.openBlockerCount || 0
           };
         });
 
         updateKpis();
         updateTimerSelect();
         renderTasks();
-      }).catch(function(e){
-        console.error('Load tasks failed',e);
-        tbody.innerHTML='<div style="text-align:center;padding:40px;color:var(--dng)">Failed to load tasks</div>';
+      }).catch(function (e) {
+        console.error('Load tasks failed', e);
+        box.innerHTML = '<div class="mw-empty" style="color:var(--danger)"><i class="fas fa-triangle-exclamation"></i><div>Failed to load tasks</div></div>';
       });
     }
 
-    function updateKpis(){
-          // ask the server for exact KPI numbers, fall back to local computation
-      PM.api('GET','/api/pm/me/kpi').then(function(k){
-        if(!k) return;
-        document.getElementById('kAssigned').textContent = k.openTasks;
-        document.getElementById('kOverdue').textContent  = k.overdue;
-        document.getElementById('kToday').textContent    = k.dueToday;
+    function updateKpis() {
+      // Ask the server for exact KPI numbers, fall back to local computation
+      PM.api('GET', '/api/pm/me/kpi').then(function (k) {
+        if (!k) return;
+        document.getElementById('kAssigned').textContent      = k.openTasks;
+        document.getElementById('kOverdue').textContent       = k.overdue;
+        document.getElementById('kToday').textContent         = k.dueToday;
         document.getElementById('kCompletedWeek').textContent = k.doneThisWeek;
-        document.getElementById('kHours').textContent    = k.hoursLogged + 'h';
-        var nb=document.getElementById('pmNavBadge_myWork');
-        if(nb){ nb.textContent=k.openTasks; nb.style.display=k.openTasks?'':'none'; }
-      }).catch(function(){});
-      var open=tasks.filter(t=>t.status!=='done');
-      var overdue=tasks.filter(t=>t.status!=='done'&&new Date(t.due)<today).length;
-      var todayCount=tasks.filter(t=>t.status!=='done'&&new Date(t.due).toDateString()===today.toDateString()).length;
-      var done=tasks.filter(t=>t.status==='done').length;
-      document.getElementById('kAssigned').textContent=open.length;
-      document.getElementById('kOverdue').textContent=overdue;
-      document.getElementById('kToday').textContent=todayCount;
-      document.getElementById('kCompletedWeek').textContent=done;
-      document.getElementById('kHours').textContent=(done*4)+'h';
-      var nb=document.getElementById('pmNavBadge_myWork');
-      if(nb){ nb.textContent=open.length; nb.style.display=open.length?'':'none'; }
+        document.getElementById('kHours').textContent         = (k.hoursLogged || 0) + 'h';
+      }).catch(function () {});
+
+      var open = tasks.filter(t => t.status !== 'done');
+      var overdue = tasks.filter(t => t.status !== 'done' && new Date(t.due) < today).length;
+      var todayCount = tasks.filter(t => t.status !== 'done' && new Date(t.due).toDateString() === today.toDateString()).length;
+      var done = tasks.filter(t => t.status === 'done').length;
+      document.getElementById('kAssigned').textContent      = open.length;
+      document.getElementById('kOverdue').textContent       = overdue;
+      document.getElementById('kToday').textContent         = todayCount;
+      document.getElementById('kCompletedWeek').textContent = done;
+      document.getElementById('kHours').textContent         = (done * 4) + 'h';
     }
 
-    function updateTimerSelect(){
-      var sel=document.getElementById('timerTaskSelect'); if(!sel) return;
-      var html='<option value="">Select task...</option>';
-      tasks.filter(t=>t.status!=='done').forEach(function(t){
-        html+='<option value="'+t.id+'">'+PM.esc(t.title)+'</option>';
+    function updateTimerSelect() {
+      var sel = document.getElementById('timerTaskSelect');
+      if (!sel) return;
+      var html = '<option value="">Select task...</option>';
+      tasks.filter(t => t.status !== 'done').forEach(function (t) {
+        html += '<option value="' + t.id + '">' + PM.esc(t.title) + '</option>';
       });
-      sel.innerHTML=html;
+      sel.innerHTML = html;
     }
 
-    function renderTasks(){
-      var filter=document.getElementById('mwFilter').value;
-      var groupBy=document.getElementById('mwGroup').value;
-      var q=(document.getElementById('mwSearch').value||'').toLowerCase();
-      var filtered=tasks.filter(function(t){
-        var mQ=!q||t.title.toLowerCase().includes(q)||t.project.toLowerCase().includes(q);
-        if(!mQ)return false;
-        var due=new Date(t.due);
-        var diff=Math.round((due-today)/86400000);
-        if(filter==='overdue')return diff<0&&t.status!=='done';
-        if(filter==='today')return diff===0&&t.status!=='done';
-        if(filter==='week')return diff>=0&&diff<=7&&t.status!=='done';
-        if(filter==='later')return diff>7&&t.status!=='done';
-       if(filter==='review')return t.status==='review';
-if(filter==='blocked')return t.status==='blocked';
-if(filter==='done')return t.status==='done';
+    function renderTasks() {
+      var filter  = document.getElementById('mwFilter').value;
+      var groupBy = document.getElementById('mwGroup').value;
+      var q = (document.getElementById('mwSearch').value || '').toLowerCase();
+
+      var filtered = tasks.filter(function (t) {
+        var mQ = !q || t.title.toLowerCase().includes(q) || t.project.toLowerCase().includes(q);
+        if (!mQ) return false;
+        var due = new Date(t.due);
+        var diff = Math.round((due - today) / 86400000);
+        if (filter === 'overdue') return diff < 0 && t.status !== 'done';
+        if (filter === 'today')   return diff === 0 && t.status !== 'done';
+        if (filter === 'week')    return diff >= 0 && diff <= 7 && t.status !== 'done';
+        if (filter === 'later')   return diff > 7 && t.status !== 'done';
+        if (filter === 'review')  return t.status === 'review';
+        if (filter === 'blocked') return t.status === 'blocked';
+        if (filter === 'done')    return t.status === 'done';
         return true;
       });
-      var groups={};
-      filtered.forEach(function(t){
+
+      var groups = {};
+      filtered.forEach(function (t) {
         var key;
-        if(groupBy==='project') key=t.project;
-        else if(groupBy==='priority') key=t.priority.charAt(0).toUpperCase()+t.priority.slice(1)+' Priority';
-        else if(groupBy==='status') key=(statusBadge[t.status]||['primary',t.status])[1];
+        if (groupBy === 'project') key = t.project;
+        else if (groupBy === 'priority') key = t.priority.charAt(0).toUpperCase() + t.priority.slice(1) + ' Priority';
+        else if (groupBy === 'status') key = (statusBadge[t.status] || ['primary', t.status])[1];
         else {
-          var due=new Date(t.due);
-          var diff=Math.round((due-today)/86400000);
-          if(diff<0)key='Overdue'; else if(diff===0)key='Due Today';
-          else if(diff<=7)key='This Week'; else key='Later';
+          var due = new Date(t.due);
+          var diff = Math.round((due - today) / 86400000);
+          if (diff < 0) key = 'Overdue';
+          else if (diff === 0) key = 'Due Today';
+          else if (diff <= 7) key = 'This Week';
+          else key = 'Later';
         }
-        if(!groups[key])groups[key]=[];
+        if (!groups[key]) groups[key] = [];
         groups[key].push(t);
       });
-      var order=groupBy==='due'?['Overdue','Due Today','This Week','Later']:Object.keys(groups).sort();
-      var orderUsed=order.filter(k=>groups[k]);
-      var html='';
-      if(!orderUsed.length){
-        html='<div style="text-align:center;padding:40px 20px;color:var(--tx3)"><i class="fas fa-mug-hot" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px"></i><div>Nothing here — you\'re all caught up!</div></div>';
+
+      var order = groupBy === 'due'
+        ? ['Overdue', 'Due Today', 'This Week', 'Later']
+        : Object.keys(groups).sort();
+      var orderUsed = order.filter(k => groups[k]);
+
+      var html = '';
+      if (!orderUsed.length) {
+        html = '<div class="mw-empty"><i class="fas fa-mug-hot"></i><div>Nothing here — you\'re all caught up!</div></div>';
       } else {
-        orderUsed.forEach(function(key){
-          html+='<div style="padding:10px 12px"><div class="mw-group-title"><i class="fas fa-folder"></i> '+PM.esc(key)+' <span class="count">'+groups[key].length+'</span></div>';
-          groups[key].forEach(function(t){
-            var sb=statusBadge[t.status]||['primary',t.status];
-            var due=new Date(t.due);
-            var diff=Math.round((due-today)/86400000);
-            var dueColor=diff<0?'var(--dng)':diff===0?'var(--wrn)':'var(--tx3)';
-            var dueLabel=diff<0?Math.abs(diff)+'d overdue':diff===0?'Today':diff+'d';
-            html+='<div class="mw-task-row" onclick="openTaskInBoard('+t.id+')">'+
-              '<div class="mw-checkbox'+(t.status==='done'?' checked':'')+'" onclick="event.stopPropagation();toggleTask('+t.id+')">'+(t.status==='done'?'<i class="fas fa-check" style="font-size:9px"></i>':'')+'</div>'+
-              '<div class="priority-dot p-'+(priorityClass[t.priority]||'m')+'"></div>'+
-              '<div class="mw-task-title'+(t.status==='done'?' done':'')+'">'+PM.esc(t.title)+'</div>'+
-              '<div class="mw-task-meta"><span class="pm-badge '+sb[0]+'">'+sb[1]+'</span><span style="color:'+dueColor+'"><i class="fas fa-calendar"></i> '+dueLabel+'</span></div>'+
+        orderUsed.forEach(function (key) {
+          html += '<div style="padding:.5rem .75rem .25rem">';
+          html += '<div class="mw-group-title"><i class="fas fa-folder"></i> ' + PM.esc(key) +
+                  ' <span class="count">' + groups[key].length + '</span></div>';
+          groups[key].forEach(function (t) {
+            var sb = statusBadge[t.status] || ['primary', t.status];
+            var due = new Date(t.due);
+            var diff = Math.round((due - today) / 86400000);
+            var dueColor = diff < 0 ? 'var(--danger)' : diff === 0 ? 'var(--warning)' : 'var(--dark-text-secondary)';
+            var dueLabel = diff < 0 ? Math.abs(diff) + 'd overdue' : diff === 0 ? 'Today' : diff + 'd';
+            html += '<div class="mw-task-row" onclick="openTaskInBoard(' + t.id + ')">' +
+              '<div class="mw-checkbox' + (t.status === 'done' ? ' checked' : '') + '"' +
+                   ' onclick="event.stopPropagation();toggleTask(' + t.id + ')">' +
+                   (t.status === 'done' ? '<i class="fas fa-check" style="font-size:9px"></i>' : '') +
+              '</div>' +
+              '<div class="priority-dot p-' + (priorityClass[t.priority] || 'm') + '"></div>' +
+              '<div class="mw-task-title' + (t.status === 'done' ? ' done' : '') + '">' + PM.esc(t.title) + '</div>' +
+              '<div class="mw-task-meta">' +
+                '<span class="pm-badge ' + sb[0] + '">' + sb[1] + '</span>' +
+                '<span style="color:' + dueColor + '"><i class="fas fa-calendar"></i> ' + dueLabel + '</span>' +
+              '</div>' +
             '</div>';
           });
-          html+='</div>';
+          html += '</div>';
         });
       }
-      document.getElementById('taskList').innerHTML=html;
+      document.getElementById('taskList').innerHTML = html;
     }
     window.renderTasks = renderTasks;
 
-    function toggleTask(id){
-      var t=tasks.find(x=>x.id===id); if(!t)return;
-     var newStatus=t.status==='done'?'in-progress':'done';
-      var backendStatus=newStatus.toUpperCase().replace('-','_');
-    var steps=(newStatus==='done' && (t.status==='todo'||t.status==='blocked'))?['IN_PROGRESS','DONE']:[backendStatus];
-  steps.reduce(function(p,s){ return p.then(function(){ return PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:s}); }); }, Promise.resolve()).then(function(){
-        t.status=newStatus;
+    /* ===== Toggle task done ===== */
+    function toggleTask(id) {
+      var t = tasks.find(x => x.id === id);
+      if (!t) return;
+      var newStatus = t.status === 'done' ? 'in-progress' : 'done';
+      var backendStatus = newStatus.toUpperCase().replace('-', '_');
+      var steps = (newStatus === 'done' && (t.status === 'todo' || t.status === 'blocked'))
+        ? ['IN_PROGRESS', 'DONE']
+        : [backendStatus];
+
+      steps.reduce(function (p, s) {
+        return p.then(function () { return PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: s }); });
+      }, Promise.resolve()).then(function () {
+        t.status = newStatus;
         updateKpis();
         renderTasks();
-        PM.toast(t.status==='done'?'✓ Marked complete':'Marked incomplete','success');
-      }).catch(function(e){ PM.toast(e.message||'Failed','error'); });
+        PM.toast(t.status === 'done' ? '✓ Marked complete' : 'Marked incomplete', 'success');
+      }).catch(function (e) { PM.toast(e.message || 'Failed', 'error'); });
     }
     window.toggleTask = toggleTask;
 
-   function openTaskInBoard(id){ PMTask.open(id); }
-    function newTask(){ location.href='/pm/06-tasks?action=create'; }
-    function reloadMyWork(){ PM.toast('Refreshing…','info'); loadMyTasks(); }
+    /* ===== Review-aware toggle ===== */
+    var isLead = PM.can('lead');
+    var people = {};
+    var reviewItems = [];
+
+    document.querySelectorAll('[data-rule]').forEach(function (el) {
+      if (!PM.can(el.getAttribute('data-rule'))) el.style.display = 'none';
+    });
+
+    window.toggleTask = function (id) {
+      var t = tasks.find(function (x) { return x.id === id; });
+      if (!t) return;
+      if (t.status === 'review' && !isLead) {
+        PM.toast('Waiting for a reviewer to sign this off', 'info');
+        return;
+      }
+      var reopening = t.status === 'done';
+      var steps = reopening ? ['IN_PROGRESS']
+        : ((t.status === 'todo' || t.status === 'blocked') ? ['IN_PROGRESS', 'DONE'] : ['DONE']);
+
+      steps.reduce(function (p, s) {
+        return p.then(function () { return PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: s }); });
+      }, Promise.resolve()).then(function () {
+        t.status = reopening ? 'in-progress' : 'done';
+        updateKpis();
+        renderTasks();
+        PM.toast(reopening ? 'Reopened' : '✓ Marked complete', 'success');
+        if (isLead) loadReviewQueue();
+      }).catch(function (e) {
+        if (!reopening && /requires review/i.test((e && e.message) || '')) {
+          PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: 'IN_REVIEW' }).then(function () {
+            PM.toast('This project needs a review, so the task was sent for review', 'success');
+            loadMyTasks();
+          }).catch(function (e2) {
+            PM.toast(e2.message || 'Failed', 'error');
+            loadMyTasks();
+          });
+          return;
+        }
+        PM.toast(e.message || 'Failed', 'error');
+        loadMyTasks();
+      });
+    };
+
+    /* ===== Review queue ===== */
+    function loadPeople() {
+      if (Object.keys(people).length) return Promise.resolve();
+      return PM.api('GET', '/api/pm/employees/dropdown').then(function (l) {
+        (l || []).forEach(function (e) { people[e.id] = e.name; });
+      }).catch(function () {});
+    }
+
+    function renderReviewQueue() {
+      var box = document.getElementById('reviewList');
+      if (!box) return;
+      var cnt = document.getElementById('reviewCount');
+      if (cnt) {
+        cnt.textContent = reviewItems.length;
+        cnt.style.display = reviewItems.length ? 'inline-flex' : 'none';
+      }
+      if (!reviewItems.length) {
+        box.innerHTML = '<div class="mw-empty"><i class="fas fa-circle-check"></i><div>Nothing is waiting for your review.</div></div>';
+        return;
+      }
+      box.innerHTML = reviewItems.map(function (t) {
+        var who = (t.assigneeIds || []).map(function (i) { return people[i] || ('#' + i); }).join(', ');
+        var pr = (t.priority || 'MEDIUM').toLowerCase();
+        var due = t.dueDate ? '<span style="color:var(--dark-text-secondary)"><i class="fas fa-calendar"></i> ' + PM.esc(t.dueDate) + '</span>' : '';
+        return '<div class="mw-task-row" onclick="openTaskInBoard(' + t.id + ')">' +
+          '<div class="priority-dot p-' + (priorityClass[pr] || 'm') + '"></div>' +
+          '<div class="mw-task-title" style="white-space:normal;line-height:1.35">' + PM.esc(t.title) +
+            '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);font-weight:400">' +
+              PM.esc(t.projectName || '') + (who ? ' · ' + PM.esc(who) : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="mw-task-meta" style="gap:.4rem">' + due +
+            '<button class="pm-btn pm-btn-sm pm-btn-primary" onclick="event.stopPropagation();reviewApprove(' + t.id + ')">' +
+              '<i class="fas fa-check"></i> Approve</button>' +
+            '<button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();reviewSendBack(' + t.id + ')">' +
+              '<i class="fas fa-rotate-left"></i> Send back</button>' +
+          '</div></div>';
+      }).join('');
+    }
+
+    function loadReviewQueue() {
+      var box = document.getElementById('reviewList');
+      if (!box || !isLead) return;
+      Promise.all([PM.api('GET', '/api/pm/me/review-queue'), loadPeople()]).then(function (r) {
+        reviewItems = r[0] || [];
+        renderReviewQueue();
+      }).catch(function (e) {
+        console.error('Review queue failed', e);
+        box.innerHTML = '<div class="mw-empty" style="color:var(--danger)"><i class="fas fa-triangle-exclamation"></i><div>Could not load the review queue</div></div>';
+      });
+    }
+    window.loadReviewQueue = loadReviewQueue;
+
+    window.reviewApprove = function (id) {
+      PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: 'DONE' }).then(function () {
+        PM.toast('Approved. The task is marked Done', 'success');
+        loadReviewQueue();
+        loadMyTasks();
+      }).catch(function (e) {
+        PM.toast(e.message || 'Could not approve', 'error');
+        loadReviewQueue();
+      });
+    };
+
+    window.reviewSendBack = function (id) {
+      var note = window.prompt('What needs to change? The assignee will see this as a comment.');
+      if (note === null) return;
+      note = note.trim();
+      if (!note) { PM.toast('Please say what needs to change', 'warning'); return; }
+      PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: 'IN_PROGRESS' }).then(function () {
+        return PM.api('POST', '/api/pm/tasks/' + id + '/comments', { body: '↩ Sent back for changes: ' + note })
+          .catch(function () { PM.toast('Sent back, but the note could not be saved', 'warning'); });
+      }).then(function () {
+        PM.toast('Sent back to the assignee', 'success');
+        loadReviewQueue();
+        loadMyTasks();
+      }).catch(function (e) {
+        PM.toast(e.message || 'Could not send back', 'error');
+        loadReviewQueue();
+      });
+    };
+
+    /* ===== Deep links ===== */
+    var mwQs = new URLSearchParams(location.search);
+    if (mwQs.get('tab') === 'review' && isLead) switchTab('review', document.getElementById('tabReview'));
+    if (mwQs.get('task')) {
+      setTimeout(function () {
+        if (window.PMTask && window.PMTask.open) window.PMTask.open(Number(mwQs.get('task')));
+      }, 400);
+    }
+
+    /* ===== Task drawer / new task / refresh ===== */
+    function openTaskInBoard(id) {
+      if (window.PMTask && window.PMTask.open) window.PMTask.open(id);
+      else location.href = '/pm/06-tasks?open=' + id;
+    }
+    function newTask() { location.href = '/pm/06-tasks?action=create'; }
+    function reloadMyWork() { PM.toast('Refreshing…', 'info'); loadMyTasks(); if (isLead) loadReviewQueue(); }
+
     window.openTaskInBoard = openTaskInBoard;
     window.newTask = newTask;
     window.reloadMyWork = reloadMyWork;
-    window.pmRefresh = function(){ loadMyTasks(); };
-    var timerInterval=null,timerSeconds=0,timerRunning=false;
-    function timerPlay(){
-      if(timerRunning)return;
-      var sel=document.getElementById('timerTaskSelect');
-      var taskId=sel?sel.value:'';
-      if(!taskId){ PM.toast('Please select a task first','warning'); return; }
-      timerRunning=true;
-      document.getElementById('btnPlay').style.display='none';
-      document.getElementById('btnPause').style.display='grid';
-      document.getElementById('timerStatus').textContent='Running...';
-      var label=sel.options[sel.selectedIndex].text;
-      document.getElementById('timerTaskLabel').textContent='Working on: '+label;
-      timerInterval=setInterval(()=>{timerSeconds++;document.getElementById('timerDisplay').textContent=fmtT(timerSeconds);},1000);
-      PM.toast('Timer started','success');
+
+    window.pmRefresh = function () {
+      loadMyTasks();
+      if (isLead) loadReviewQueue();
+    };
+
+    /* ===== Timer ===== */
+    var timerInterval = null, timerSeconds = 0, timerRunning = false;
+
+    function fmtT(s) {
+      return String(Math.floor(s / 3600)).padStart(2, '0') + ':' +
+             String(Math.floor((s % 3600) / 60)).padStart(2, '0') + ':' +
+             String(s % 60).padStart(2, '0');
     }
-    function timerPause(){
-      timerRunning=false; clearInterval(timerInterval);
-      document.getElementById('btnPlay').style.display='grid';
-      document.getElementById('btnPause').style.display='none';
-      document.getElementById('timerStatus').textContent='Paused at '+fmtT(timerSeconds);
-      PM.toast('Timer paused','info');
+
+    function timerPlay() {
+      if (timerRunning) return;
+      var sel = document.getElementById('timerTaskSelect');
+      var taskId = sel ? sel.value : '';
+      if (!taskId) { PM.toast('Please select a task first', 'warning'); return; }
+      timerRunning = true;
+      document.getElementById('btnPlay').style.display = 'none';
+      document.getElementById('btnPause').style.display = 'grid';
+      document.getElementById('timerStatus').textContent = 'Running...';
+      var label = sel.options[sel.selectedIndex].text;
+      document.getElementById('timerTaskLabel').textContent = 'Working on: ' + label;
+      timerInterval = setInterval(function () {
+        timerSeconds++;
+        document.getElementById('timerDisplay').textContent = fmtT(timerSeconds);
+      }, 1000);
+      PM.toast('Timer started', 'success');
     }
-    function timerStop(){
-      timerRunning=false; clearInterval(timerInterval);
-      document.getElementById('btnPlay').style.display='grid';
-      document.getElementById('btnPause').style.display='none';
-     if(timerSeconds>0){
-      var _tsel=document.getElementById('timerTaskSelect');
-      var _tid=_tsel?_tsel.value:'';
-      var _mins=Math.max(1,Math.round(timerSeconds/60));
-      var _d=new Date();
-      var _date=_d.getFullYear()+'-'+String(_d.getMonth()+1).padStart(2,'0')+'-'+String(_d.getDate()).padStart(2,'0');
-      if(_tid){
-        PM.api('POST','/api/pm/tasks/'+_tid+'/time',{logDate:_date,minutes:_mins,note:'Timer'})
-          .then(function(){ PM.toast('Logged '+_mins+' min to your timesheet','success'); })
-          .catch(function(e){ PM.toast(e.message||'Could not log time','error'); });
-      } else { PM.toast('Pick a task before stopping the timer to log time','warning'); }
+    function timerPause() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      document.getElementById('btnPlay').style.display = 'grid';
+      document.getElementById('btnPause').style.display = 'none';
+      document.getElementById('timerStatus').textContent = 'Paused at ' + fmtT(timerSeconds);
+      PM.toast('Timer paused', 'info');
     }
-      timerSeconds=0;
-      document.getElementById('timerDisplay').textContent='00:00:00';
-      document.getElementById('timerStatus').textContent='Idle — press play to start';
-      document.getElementById('timerTaskLabel').textContent='No task selected';
+    function timerStop() {
+      timerRunning = false;
+      clearInterval(timerInterval);
+      document.getElementById('btnPlay').style.display = 'grid';
+      document.getElementById('btnPause').style.display = 'none';
+      if (timerSeconds > 0) {
+        var tsel = document.getElementById('timerTaskSelect');
+        var tid = tsel ? tsel.value : '';
+        var mins = Math.max(1, Math.round(timerSeconds / 60));
+        var d = new Date();
+        var date = d.getFullYear() + '-' +
+          String(d.getMonth() + 1).padStart(2, '0') + '-' +
+          String(d.getDate()).padStart(2, '0');
+        if (tid) {
+          PM.api('POST', '/api/pm/tasks/' + tid + '/time', { logDate: date, minutes: mins, note: 'Timer' })
+            .then(function () { PM.toast('Logged ' + mins + ' min to your timesheet', 'success'); })
+            .catch(function (e) { PM.toast(e.message || 'Could not log time', 'error'); });
+        } else {
+          PM.toast('Pick a task before stopping the timer to log time', 'warning');
+        }
+      }
+      timerSeconds = 0;
+      document.getElementById('timerDisplay').textContent = '00:00:00';
+      document.getElementById('timerStatus').textContent = 'Idle — press play to start';
+      document.getElementById('timerTaskLabel').textContent = 'No task selected';
     }
-  function timerReset(){ timerSeconds=0; timerStop(); PM.toast('Timer reset','info'); }
-    function fmtT(s){ return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+    function timerReset() {
+      timerSeconds = 0;
+      timerStop();
+      PM.toast('Timer reset', 'info');
+    }
+
     window.timerPlay = timerPlay;
     window.timerPause = timerPause;
     window.timerStop = timerStop;
     window.timerReset = timerReset;
 
-    function renderProductivity(){
-      var done=tasks.filter(t=>t.status==='done');
-      var open=tasks.filter(t=>t.status==='todo'||t.status==='blocked');
-      var prog=tasks.filter(t=>t.status==='in-progress'||t.status==='review');
-      var total=tasks.length||1;
-      document.getElementById('tdOpen').textContent=open.length;
-      document.getElementById('tdProgress').textContent=prog.length;
-      document.getElementById('tdDone').textContent=done.length;
-      document.getElementById('tdOpenBar').style.width=Math.round((open.length/total)*100)+'%';
-      document.getElementById('tdProgressBar').style.width=Math.round((prog.length/total)*100)+'%';
-      document.getElementById('tdDoneBar').style.width=Math.round((done.length/total)*100)+'%';
-      document.getElementById('kStreak').textContent=done.length>0?done.length:0;
-      var vals=[0,0,0,0,0,0,0];
-      done.slice(0,7).forEach(function(t,i){ vals[i]=(vals[i]||0)+1; });
-      var maxV=Math.max.apply(null,vals)||1;
-      document.getElementById('prodChart').innerHTML=vals.map(function(v,i){
-        var h=Math.max(8,(v/maxV)*100);
-        return '<div class="prod-bar'+(i>=5?' weekend':'')+'" style="height:'+h+'%" title="'+v+' tasks"></div>';
+    /* ===== Productivity ===== */
+    function renderProductivity() {
+      var done = tasks.filter(t => t.status === 'done');
+      var open = tasks.filter(t => t.status === 'todo' || t.status === 'blocked');
+      var prog = tasks.filter(t => t.status === 'in-progress' || t.status === 'review');
+      var total = tasks.length || 1;
+
+      document.getElementById('tdOpen').textContent = open.length;
+      document.getElementById('tdProgress').textContent = prog.length;
+      document.getElementById('tdDone').textContent = done.length;
+      document.getElementById('tdOpenBar').style.width = Math.round((open.length / total) * 100) + '%';
+      document.getElementById('tdProgressBar').style.width = Math.round((prog.length / total) * 100) + '%';
+      document.getElementById('tdDoneBar').style.width = Math.round((done.length / total) * 100) + '%';
+
+      document.getElementById('kStreak').textContent = done.length > 0 ? done.length : 0;
+
+      var vals = [0, 0, 0, 0, 0, 0, 0];
+      done.slice(0, 7).forEach(function (t, i) { vals[i] = (vals[i] || 0) + 1; });
+      var maxV = Math.max.apply(null, vals) || 1;
+      document.getElementById('prodChart').innerHTML = vals.map(function (v, i) {
+        var h = Math.max(8, (v / maxV) * 100);
+        return '<div class="prod-bar' + (i >= 5 ? ' weekend' : '') + '"' +
+               ' style="height:' + h + '%" title="' + v + ' tasks"></div>';
       }).join('');
     }
+    window.renderProductivity = renderProductivity;
 
-  /* ===== STEP 7.3: review-aware My Work ===== */
-var isLead = PM.can('lead');
-var people = {}; // employee id -> name, for the review list
-var reviewItems = [];
-
-// hide things this person may not use (New Task)
-document.querySelectorAll('[data-rule]').forEach(function(el){
-  if(!PM.can(el.getAttribute('data-rule'))) el.style.display='none';
-});
-
-// The Done checkbox, now aware of the project's review rule.
-// Review project: In Progress -> Done is refused, so the task is sent to In Review instead.
-window.toggleTask = function(id){
-  var t = tasks.find(function(x){ return x.id===id; }); if(!t) return;
-  if(t.status==='review' && !isLead){ PM.toast('Waiting for a reviewer to sign this off','info'); return; }
-  var reopening = t.status==='done';
-  var steps = reopening ? ['IN_PROGRESS']
-    : ((t.status==='todo'||t.status==='blocked') ? ['IN_PROGRESS','DONE'] : ['DONE']);
-  steps.reduce(function(p,s){
-    return p.then(function(){ return PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:s}); });
-  }, Promise.resolve()).then(function(){
-    t.status = reopening ? 'in-progress' : 'done';
-    updateKpis(); renderTasks();
-    PM.toast(reopening ? 'Reopened' : '✓ Marked complete','success');
-    if(isLead) loadReviewQueue();
-  }).catch(function(e){
-    if(!reopening && /requires review/i.test((e && e.message) || '')){
-      PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'IN_REVIEW'}).then(function(){
-        PM.toast('This project needs a review, so the task was sent for review','success');
-        loadMyTasks();
-      }).catch(function(e2){ PM.toast(e2.message||'Failed','error'); loadMyTasks(); });
-      return;
+    /* ===== Boot ===== */
+    if (isLead) {
+      var tabBtn = document.getElementById('tabReview');
+      if (tabBtn) tabBtn.style.display = '';
+      loadReviewQueue();
     }
-    PM.toast(e.message||'Failed','error');
-    loadMyTasks(); // re-sync in case the first step went through
-  });
-};
 
-function loadPeople(){
-  if(Object.keys(people).length) return Promise.resolve();
-  return PM.api('GET','/api/pm/employees/dropdown').then(function(l){
-    (l||[]).forEach(function(e){ people[e.id]=e.name; });
-  }).catch(function(){});
-}
-
-function renderReviewQueue(){
-  var box=document.getElementById('reviewList'); if(!box) return;
-  var cnt=document.getElementById('reviewCount');
-  if(cnt){ cnt.textContent=reviewItems.length; cnt.style.display=reviewItems.length?'':'none'; }
-  if(!reviewItems.length){
-    box.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--tx3)"><i class="fas fa-circle-check" style="font-size:32px;opacity:.4;display:block;margin-bottom:8px"></i>Nothing is waiting for your review.</div>';
-    return;
-  }
-  box.innerHTML=reviewItems.map(function(t){
-    var who=(t.assigneeIds||[]).map(function(i){ return people[i]||('#'+i); }).join(', ');
-    var pr=(t.priority||'MEDIUM').toLowerCase();
-    var due=t.dueDate?'<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> '+PM.esc(t.dueDate)+'</span>':'';
-    return '<div class="mw-task-row" onclick="openTaskInBoard('+t.id+')">'+
-      '<div class="priority-dot p-'+(priorityClass[pr]||'m')+'"></div>'+
-      '<div class="mw-task-title">'+PM.esc(t.title)+
-        '<div style="font-size:var(--fs-xs);color:var(--tx3);font-weight:400">'+PM.esc(t.projectName||'')+(who?' · '+PM.esc(who):'')+'</div></div>'+
-      '<div class="mw-task-meta">'+due+
-        '<button class="pm-btn pm-btn-sm pm-btn-primary" onclick="event.stopPropagation();reviewApprove('+t.id+')"><i class="fas fa-check"></i> Approve</button>'+
-        '<button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();reviewSendBack('+t.id+')"><i class="fas fa-rotate-left"></i> Send back</button>'+
-      '</div></div>';
-  }).join('');
-}
-
-function loadReviewQueue(){
-  var box=document.getElementById('reviewList'); if(!box||!isLead) return;
-  Promise.all([PM.api('GET','/api/pm/me/review-queue'), loadPeople()]).then(function(r){
-    reviewItems=r[0]||[];
-    renderReviewQueue();
-  }).catch(function(e){
-    console.error('Review queue failed',e);
-    box.innerHTML='<div style="text-align:center;padding:40px;color:var(--dng)">Could not load the review queue</div>';
-  });
-}
-window.loadReviewQueue = loadReviewQueue;
-
-window.reviewApprove = function(id){
-  PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'DONE'}).then(function(){
-    PM.toast('Approved. The task is marked Done','success');
-    loadReviewQueue(); loadMyTasks();
-  }).catch(function(e){ PM.toast(e.message||'Could not approve','error'); loadReviewQueue(); });
-};
-
-window.reviewSendBack = function(id){
-  var note=window.prompt('What needs to change? The assignee will see this as a comment.');
-  if(note===null) return;
-  note=note.trim();
-  if(!note){ PM.toast('Please say what needs to change','warning'); return; }
-  PM.api('PATCH','/api/pm/tasks/'+id+'/status',{status:'IN_PROGRESS'}).then(function(){
-    return PM.api('POST','/api/pm/tasks/'+id+'/comments',{body:'↩ Sent back for changes: '+note})
-      .catch(function(){ PM.toast('Sent back, but the note could not be saved','warning'); });
-  }).then(function(){
-    PM.toast('Sent back to the assignee','success');
-    loadReviewQueue(); loadMyTasks();
-  }).catch(function(e){ PM.toast(e.message||'Could not send back','error'); loadReviewQueue(); });
-};
-
-// keep the review queue live
-var prevRefresh = window.pmRefresh;
-window.pmRefresh = function(){ if(prevRefresh) prevRefresh(); if(isLead) loadReviewQueue(); };
-
-// lead tier: show the tab and load the count
-if(isLead){
-  var tabBtn=document.getElementById('tabReview');
-  if(tabBtn) tabBtn.style.display='';
-  loadReviewQueue();
-}
-
-// deep links: ?tab=review (lead tier only) and ?task=ID (opens the task drawer)
-var mwQs=new URLSearchParams(location.search);
-if(mwQs.get('tab')==='review' && isLead) switchTab('review', document.getElementById('tabReview'));
-if(mwQs.get('task')) setTimeout(function(){ if(window.PMTask) PMTask.open(Number(mwQs.get('task'))); },400);
-
-document.getElementById('mobToggle').addEventListener('click',()=>document.getElementById('pmSidebar').classList.toggle('open'));
     loadMyTasks();
+  }).catch(function (e) {
+    console.error('PM.bootstrap failed:', e);
+    var sub = document.getElementById('pmPageSub');
+    if (sub) sub.textContent = 'Unable to load user context.';
   });
 </script>
 </body>

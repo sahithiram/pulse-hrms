@@ -28,7 +28,7 @@ public class GoalController {
     public ResponseEntity<ApiResponse<GoalResponse>> create(
             @Valid @RequestBody CreateGoalRequest req,
             @CurrentUserId Long userId) {
-        access.requireSuperAdmin(userId); // STEP 1b (was requireAdmin: HR could write company goals)
+        access.requireSuperAdmin(userId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Goal created", service.create(req, userId)));
     }
@@ -48,10 +48,13 @@ public class GoalController {
         return ResponseEntity.ok(ApiResponse.ok(service.listByProject(projectId)));
     }
 
+    // ✅ PHASE 4 (F-P17): company / quarter goals are SA-only (matches create/update/delete).
     @GetMapping("/goals")
     public ResponseEntity<ApiResponse<List<GoalResponse>>> listByQuarter(
             @RequestParam(required = false) String quarter,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) Integer year,
+            @CurrentUserId Long userId) {
+        access.requireSuperAdmin(userId);
         return ResponseEntity.ok(ApiResponse.ok(
                 service.listByQuarter(quarter != null ? quarter : "Q3",
                         year != null ? year : 2026)));

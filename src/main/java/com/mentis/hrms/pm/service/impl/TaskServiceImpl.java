@@ -27,9 +27,8 @@ import com.mentis.hrms.pm.security.PmUserProvider;
 import com.mentis.hrms.pm.enums.ProjectRole;
 import com.mentis.hrms.pm.service.TaskWorkflow;
 import com.mentis.hrms.pm.security.PmAccessService;
-import com.mentis.hrms.pm.service.TaskWorkflow;
 import com.mentis.hrms.pm.service.TaskEventNotifier;
-
+import com.mentis.hrms.model.Employee;
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -48,29 +47,18 @@ public class TaskServiceImpl implements TaskService {
     private final TaskMapper taskMapper;
     private final TaskTimeLogRepository taskTimeLogRepository;
     private final TaskAttachmentRepository taskAttachmentRepository;
-    private final com.mentis.hrms.pm.realtime.PmEventPublisher publisher;
+    private final PmEventPublisher publisher;
     private final NotificationEmitter notificationEmitter;
 
-    // ─── Phase 5 additions ───────────────────────────────────
     private final SprintRepository sprintRepository;
     private final MilestoneRepository milestoneRepository;
-
-    // ─── Step 2.5 addition — block direct DONE while sign-off pending
     private final ApprovalRequestRepository approvalRequestRepository;
 
-    // ─── Step 3.1 additions ──────────────────────────────────
     private final WorkloadService workloadService;
     private final TeamMemberRepository teamMemberRepository;
     private final ProjectMemberRepository projectMemberRepository;
-
-    // ─── Step 5 ───
     private final TaskEventNotifier taskEventNotifier;
-    // ─── Step 4 ───
     private final PmAccessService pmAccessService;
-
-    // ══════════════════════════════════════════════════════════
-    // CORE CRUD
-    // ══════════════════════════════════════════════════════════
 
     @Override
     @Transactional
@@ -86,6 +74,9 @@ public class TaskServiceImpl implements TaskService {
         if (teamId != null && !teamRepository.existsById(teamId)) {
             throw new ResourceNotFoundException("Team not found: " + teamId);
         }
+
+        pmAccessService.requireCanCreate(currentUserId, req.getProjectId(), teamId);
+        pmAccessService.requireAssigneesAllowed(currentUserId, req.getProjectId(), teamId, req.getAssigneeIds());
 
         Task task = taskMapper.toEntity(req, currentUserId);
         task.setTeamId(teamId);
@@ -155,7 +146,6 @@ public class TaskServiceImpl implements TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + id));
 
-        // ─── Step 3.2E — snapshot before edits ───
         Map<String, String> before = snapshot(task);
 
         if (req.getTitle() != null && !req.getTitle().equals(task.getTitle())) task.setTitle(req.getTitle());
@@ -180,7 +170,6 @@ public class TaskServiceImpl implements TaskService {
         if (req.getPriority() != null) task.setPriority(req.getPriority());
         if (req.getType() != null) task.setType(req.getType());
 
-        // ─── Step 3.2C — clearable dates ───
         if (Boolean.TRUE.equals(req.getClearStartDate())) task.setStartDate(null);
         else if (req.getStartDate() != null) task.setStartDate(req.getStartDate());
 
@@ -219,7 +208,13 @@ public class TaskServiceImpl implements TaskService {
         Task saved = taskRepository.save(task);
         rollUp(saved);
 
-        // ─── Step 3.2E — field-level activity log ───
+        String oldSt = before.get("status");
+        String newSt = String.valueOf(saved.getStatus());
+        if (!Objects.equals(oldSt, newSt)) {
+            logActivity(id, "STATUS_CHANGED", currentUserId, oldSt, newSt, "Status: " + oldSt + " → " + newSt);
+            if (saved.getStatus() == TaskStatus.DONE) notifyUnblocked(saved, currentUserId);
+        }
+
         notifyViaUpdate(before, saved, currentUserId);
         String msg = describeChanges(before, snapshot(saved));
         logActivity(id, "UPDATED", currentUserId, null, null,
@@ -237,7 +232,6 @@ public class TaskServiceImpl implements TaskService {
         TaskStatus oldStatus = task.getStatus();
         TaskStatus newStatus = req.getStatus();
 
-        // ─── Step 3.2D — BLOCKED requires a reason ───
         if (newStatus == TaskStatus.BLOCKED) {
             String reason = req.getReason();
             if (reason == null || reason.isBlank())
@@ -252,7 +246,6 @@ public class TaskServiceImpl implements TaskService {
         assertTransition(task, newStatus, currentUserId);
         assertCanMoveTo(task, newStatus);
 
-        // Step 4: a reviewer sending a task back must say what to change
         if (oldStatus == TaskStatus.IN_REVIEW && newStatus == TaskStatus.IN_PROGRESS
                 && pmAccessService.isReviewRequired(task.getProjectId())
                 && pmAccessService.canReviewTask(currentUserId, id)
@@ -279,17 +272,18 @@ public class TaskServiceImpl implements TaskService {
                 newStatus.name(),
                 "Status: " + oldStatus + " → " + newStatus);
         rollUp(saved);
+        if (newStatus == TaskStatus.DONE) notifyUnblocked(saved, currentUserId);
         publisher.publish("PATCH", "/api/pm/tasks/" + saved.getId(), String.valueOf(currentUserId));
 
         try {
             String actorName = resolveEmployeeName(currentUserId);
-            java.util.Set<Long> audience = new java.util.LinkedHashSet<>();
+            Set<Long> audience = new LinkedHashSet<>();
             TaskEventNotifier.Plan plan =
                     taskEventNotifier.plan(saved, oldStatus, newStatus, currentUserId, req.getReason());
             taskAssignmentRepository.findByTaskId(id).forEach(a -> audience.add(a.getEmployeeId()));
             taskWatcherRepository.findByTaskId(id).forEach(w -> audience.add(w.getEmployeeId()));
             audience.remove(currentUserId);
-            audience.removeAll(plan.covered());   // they already get a specific Step 5 bell
+            audience.removeAll(plan.covered());
             plan.sendAfterCommit();
 
             for (Long empPk : audience) {
@@ -301,8 +295,7 @@ public class TaskServiceImpl implements TaskService {
                         .type("CARD_MOVED")
                         .action("CARD_MOVED")
                         .title("Task moved to " + (newStatus != null ? newStatus.name() : ""))
-                        .message(actorName + " moved " + task.getTitle()
-                                + " from " + oldStatus + " to " + newStatus)
+                        .message(actorName + " moved " + task.getTitle() + " from " + oldStatus + " to " + newStatus)
                         .taskId(id)
                         .projectId(task.getProjectId())
                         .actorId(currentUserId)
@@ -317,7 +310,6 @@ public class TaskServiceImpl implements TaskService {
         return toFullResponse(saved);
     }
 
-    // ─── Step 5 helpers ───
     private void trackBlocked(Task task, TaskStatus from, TaskStatus to) {
         if (to == TaskStatus.BLOCKED && from != TaskStatus.BLOCKED) {
             task.setBlockedSince(java.time.LocalDateTime.now());
@@ -328,7 +320,49 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    /** Status can also change through PUT /tasks/{id}; send the same bells there. */
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<TaskSummaryResponse> filterTasks(TaskFilterRequest f) {
+        if (f.getProjectId() == null) throw new BusinessRuleException("projectId is required");
+        LocalDate today = LocalDate.now();
+        String q = f.getSearch() == null ? "" : f.getSearch().trim().toLowerCase();
+
+        List<Task> hits = new ArrayList<>();
+        for (Task t : taskRepository.findByProjectId(f.getProjectId())) {
+            if (f.getStatuses() != null && !f.getStatuses().isEmpty() && !f.getStatuses().contains(t.getStatus())) continue;
+            if (f.getPriorities() != null && !f.getPriorities().isEmpty() && !f.getPriorities().contains(t.getPriority())) continue;
+            if (f.getDueFrom() != null && (t.getDueDate() == null || t.getDueDate().isBefore(f.getDueFrom()))) continue;
+            if (f.getSprintId() != null && !Objects.equals(f.getSprintId(), t.getSprintId())) continue;
+            if (f.getMilestoneId() != null && !Objects.equals(f.getMilestoneId(), t.getMilestoneId())) continue;
+            if (f.getDueTo() != null && (t.getDueDate() == null || t.getDueDate().isAfter(f.getDueTo()))) continue;
+            if (f.isOverdueOnly() && (t.getDueDate() == null || !t.getDueDate().isBefore(today)
+                    || t.getStatus() == TaskStatus.DONE)) continue;
+            if (!q.isEmpty()) {
+                String title = t.getTitle() == null ? "" : t.getTitle().toLowerCase();
+                String desc = t.getDescription() == null ? "" : t.getDescription().toLowerCase();
+                if (!title.contains(q) && !desc.contains(q)) continue;
+            }
+            if (f.getAssigneeId() != null || f.isUnassignedOnly()) {
+                List<TaskAssignment> as = taskAssignmentRepository.findByTaskId(t.getId());
+                if (f.isUnassignedOnly() && !as.isEmpty()) continue;
+                if (f.getAssigneeId() != null
+                        && as.stream().noneMatch(a -> f.getAssigneeId().equals(a.getEmployeeId()))) continue;
+            }
+            hits.add(t);
+        }
+        hits.sort(Comparator.comparing(Task::getDueDate,
+                        Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
+                .thenComparing(Task::getId));
+
+        int size = Math.min(Math.max(f.getSize(), 1), 200);
+        int page = Math.max(f.getPage(), 0);
+        int from = Math.min(page * size, hits.size());
+        List<TaskSummaryResponse> slice = hits.subList(from, Math.min(from + size, hits.size()))
+                .stream().map(this::toSummaryWithNames).collect(Collectors.toList());
+        return PageResponse.of(new org.springframework.data.domain.PageImpl<>(
+                slice, org.springframework.data.domain.PageRequest.of(page, size), hits.size()));
+    }
+
     private void notifyViaUpdate(Map<String, String> before, Task saved, Long actorId) {
         try {
             String b = before.get("status");
@@ -351,12 +385,46 @@ public class TaskServiceImpl implements TaskService {
         };
     }
 
-    // ─── Step 3.1 — assignTask rewrite with capacity warnings ──
+    private void notifyUnblocked(Task done, Long actorId) {
+        try {
+            String actorName = resolveEmployeeName(actorId);
+            for (Task t : taskRepository.findBlocked(done.getId())) {
+                if (t.getStatus() == TaskStatus.DONE) continue;
+                if (taskRepository.countOpenBlockers(t.getId(), TaskStatus.DONE) > 0) continue;
+
+                Set<Long> who = new LinkedHashSet<>();
+                taskAssignmentRepository.findByTaskId(t.getId()).forEach(a -> who.add(a.getEmployeeId()));
+                who.remove(actorId);
+                for (Long pk : who) {
+                    String code = resolveEmployeeCode(pk);
+                    if (code == null) continue;
+                    notificationEmitter.emit(NotificationRequest.builder()
+                            .recipientId(code).recipientType("EMPLOYEE")
+                            .type("TASK_UNBLOCKED").action("TASK_UNBLOCKED")
+                            .title("Task unblocked: " + t.getTitle())
+                            .message(actorName + " finished \"" + done.getTitle() + "\". You can continue.")
+                            .taskId(t.getId()).projectId(t.getProjectId())
+                            .actorId(actorId).actorName(actorName)
+                            .priority("NORMAL")
+                            .deepLink("/pm/06-tasks?view=board&open=" + t.getId())
+                            .build());
+                }
+                logActivity(t.getId(), "UNBLOCKED", actorId, null, null,
+                        "All blockers done (last: " + done.getTitle() + ")");
+            }
+        } catch (Exception e) {
+            log.warn("notifyUnblocked failed for task {}: {}", done.getId(), e.getMessage());
+        }
+    }
+
     @Override
     @Transactional
     public TaskResponse assignTask(Long id, AssignTaskRequest req, Long currentUserId) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + id));
+
+        pmAccessService.requireCanAssign(currentUserId, id);
+        pmAccessService.requireAssigneesAllowed(currentUserId, task.getProjectId(), task.getTeamId(), req.getEmployeeIds());
 
         Set<Long> oldIds = taskAssignmentRepository.findByTaskId(id).stream()
                 .map(TaskAssignment::getEmployeeId)
@@ -420,10 +488,8 @@ public class TaskServiceImpl implements TaskService {
             }
         }
 
-        // capacity warnings (never blocks), counted AFTER the assignment is saved
         List<String> warnings = new ArrayList<>();
 
-        // PHASE 2 — membership warnings (never block)
         Long checkTeamId = task.getTeamId() != null ? task.getTeamId()
                 : projectRepository.findById(task.getProjectId()).map(Project::getTeamId).orElse(null);
         for (Long empId : added) {
@@ -452,9 +518,11 @@ public class TaskServiceImpl implements TaskService {
                 log.warn("capacityWarning failed for {}: {}", empId, ex.getMessage());
             }
         }
-
-        logActivity(id, "ASSIGNED", currentUserId, null,
-                String.valueOf(newIds.size()), "Assignees updated: " + newIds.size());
+        String oldNames = trimPreview(String.join(", ", resolveEmployeeNames(new ArrayList<>(oldIds))), 450);
+        String newNames = trimPreview(String.join(", ", resolveEmployeeNames(new ArrayList<>(newIds))), 450);
+        logActivity(id, "ASSIGNED", currentUserId, oldNames, newNames,
+                "Assignees: " + (oldNames.isEmpty() ? "none" : oldNames) + " → "
+                        + (newNames.isEmpty() ? "none" : newNames));
         publisher.publish("PATCH", "/api/pm/tasks/" + id, String.valueOf(currentUserId));
 
         TaskResponse res = toFullResponse(task);
@@ -486,7 +554,6 @@ public class TaskServiceImpl implements TaskService {
         return PageResponse.of(page.map(this::toSummaryWithNames));
     }
 
-    // ─── Step 3.2A — block delete when subtasks exist ───
     @Override
     @Transactional
     public void deleteTask(Long id, Long currentUserId) {
@@ -519,10 +586,6 @@ public class TaskServiceImpl implements TaskService {
         }
         log.info("Task deleted id={}", id);
     }
-
-    // ══════════════════════════════════════════════════════════
-    // SUBTASKS
-    // ══════════════════════════════════════════════════════════
 
     @Override
     @Transactional(readOnly = true)
@@ -567,10 +630,6 @@ public class TaskServiceImpl implements TaskService {
                 .build();
     }
 
-    // ══════════════════════════════════════════════════════════
-    // DEPENDENCY GRAPH
-    // ══════════════════════════════════════════════════════════
-
     @Override
     @Transactional(readOnly = true)
     public DependencyGraph getDependencyGraph(Long taskId) {
@@ -603,10 +662,6 @@ public class TaskServiceImpl implements TaskService {
     public void addDependencyRich(Long taskId, AddDependencyRequest req) {
         addDependency(taskId, req);
     }
-
-    // ══════════════════════════════════════════════════════════
-    // COMMENTS
-    // ══════════════════════════════════════════════════════════
 
     @Override
     @Transactional
@@ -667,12 +722,11 @@ public class TaskServiceImpl implements TaskService {
         return toCommentResponse(saved);
     }
 
-    // ─── Step 3.2B — include project owner + team members in mention pool ───
     private String parseMentions(Long taskId, String body) {
         if (body == null || body.isBlank()) return "";
         java.util.regex.Matcher m = java.util.regex.Pattern
                 .compile("@([A-Za-z0-9._]+)").matcher(body);
-        java.util.Set<String> handles = new java.util.LinkedHashSet<>();
+        Set<String> handles = new LinkedHashSet<>();
         while (m.find()) handles.add(m.group(1).toLowerCase());
         if (handles.isEmpty()) return "";
 
@@ -680,10 +734,12 @@ public class TaskServiceImpl implements TaskService {
                 .map(Task::getProjectId).orElse(null);
         if (projectId == null) return "";
 
-        java.util.Set<Long> memberIds = new java.util.HashSet<>();
+        Set<Long> memberIds = new HashSet<>();
         taskRepository.findByProjectId(projectId).forEach(t ->
                 taskAssignmentRepository.findByTaskId(t.getId())
                         .forEach(a -> memberIds.add(a.getEmployeeId())));
+        projectMemberRepository.findByProjectId(projectId)
+                .forEach(pm -> memberIds.add(pm.getEmployeeId()));
         projectRepository.findById(projectId).ifPresent(p -> {
             if (p.getOwnerId() != null) memberIds.add(p.getOwnerId());
             if (p.getTeamId() != null)
@@ -691,7 +747,7 @@ public class TaskServiceImpl implements TaskService {
                         .forEach(tm -> memberIds.add(tm.getEmployeeId()));
         });
 
-        java.util.List<String> matched = new java.util.ArrayList<>();
+        List<String> matched = new ArrayList<>();
         for (Long empId : memberIds) {
             String name = resolveEmployeeName(empId);
             if (name == null) continue;
@@ -730,20 +786,13 @@ public class TaskServiceImpl implements TaskService {
                 .build();
     }
 
-    // ══════════════════════════════════════════════════════════
-    // CHECKLIST
-    // ══════════════════════════════════════════════════════════
-
     @Override
     @Transactional(readOnly = true)
     public List<ChecklistItemResponse> listChecklist(Long taskId) {
         List<TaskChecklistItem> all = checklistItemRepository.findByTaskIdOrderBySortOrderAsc(taskId);
-        log.info("listChecklist taskId={} found {} rows", taskId, all.size());
-
         Map<Long, List<TaskChecklistItem>> byParent = new HashMap<>();
         for (TaskChecklistItem item : all) {
-            Long key = item.getParentId();
-            byParent.computeIfAbsent(key, k -> new ArrayList<>()).add(item);
+            byParent.computeIfAbsent(item.getParentId(), k -> new ArrayList<>()).add(item);
         }
 
         List<ChecklistItemResponse> roots = byParent.getOrDefault(null, List.of()).stream()
@@ -751,11 +800,10 @@ public class TaskServiceImpl implements TaskService {
                 .collect(Collectors.toList());
 
         for (TaskChecklistItem item : all) {
-            if (item.getParentId() != null && !all.stream().anyMatch(x -> x.getId().equals(item.getParentId()))) {
+            if (item.getParentId() != null && all.stream().noneMatch(x -> x.getId().equals(item.getParentId()))) {
                 roots.add(buildTree(item, byParent));
             }
         }
-
         return roots;
     }
 
@@ -784,7 +832,6 @@ public class TaskServiceImpl implements TaskService {
                 .assigneeId(req.getAssigneeId())
                 .sortOrder(0)
                 .build());
-        log.info("Checklist item added id={} taskId={} title={}", saved.getId(), taskId, req.getTitle());
         logActivity(taskId, "CHECKLIST_ADDED", userId, null, null, "Checklist: " + req.getTitle());
 
         return ChecklistItemResponse.builder()
@@ -818,10 +865,6 @@ public class TaskServiceImpl implements TaskService {
         logActivity(item.getTaskId(), "CHECKLIST_DELETED", userId, null, null, "Checklist deleted");
     }
 
-    // ══════════════════════════════════════════════════════════
-    // WATCHERS / DEPENDENCIES / HISTORY
-    // ══════════════════════════════════════════════════════════
-
     @Override
     @Transactional
     public void addWatcher(Long taskId, Long employeeId) {
@@ -845,7 +888,6 @@ public class TaskServiceImpl implements TaskService {
                 .stream().map(TaskWatcher::getEmployeeId).collect(Collectors.toList());
     }
 
-    // ─── Step 1.4 — addDependency with cycle guard ───
     @Override
     @Transactional
     public void addDependency(Long taskId, AddDependencyRequest req) {
@@ -872,16 +914,10 @@ public class TaskServiceImpl implements TaskService {
                 .dependsOnTaskId(dependsOnId)
                 .type(req.getType() != null ? req.getType() : "BLOCKED_BY")
                 .build());
-        log.info("Dependency added id={} task={} dependsOn={} type={}",
-                dep.getId(), taskId, dependsOnId, dep.getType());
         logActivity(taskId, "DEPENDENCY_ADDED", null, null,
                 String.valueOf(dependsOnId), "Dependency added");
     }
 
-    /**
-     * Edge direction in your tables: row(taskId = X, dependsOnTaskId = Y) means
-     * "X is blocked by Y". Adding X -> Y is a cycle if Y can already reach X.
-     */
     private boolean wouldCreateCycle(Long taskId, Long dependsOnId) {
         Deque<Long> stack = new ArrayDeque<>();
         stack.push(dependsOnId);
@@ -928,10 +964,6 @@ public class TaskServiceImpl implements TaskService {
                 .message(a.getMessage()).createdAt(a.getCreatedAt()).build();
     }
 
-    // ══════════════════════════════════════════════════════════
-    // HELPERS
-    // ══════════════════════════════════════════════════════════
-
     private void logActivity(Long taskId, String action, Long actorId,
                              String oldVal, String newVal, String message) {
         try {
@@ -949,7 +981,6 @@ public class TaskServiceImpl implements TaskService {
         }
     }
 
-    // ─── Step 3.2E — snapshot + describeChanges ───
     private Map<String, String> snapshot(Task t) {
         Map<String, String> m = new LinkedHashMap<>();
         m.put("title", String.valueOf(t.getTitle()));
@@ -1075,7 +1106,6 @@ public class TaskServiceImpl implements TaskService {
         return out;
     }
 
-    // ─── Step 2.5 — block direct DONE when a sign-off is pending ───
     private void assertCanMoveTo(Task task, TaskStatus target) {
         if (target != TaskStatus.DONE) return;
 
@@ -1095,8 +1125,7 @@ public class TaskServiceImpl implements TaskService {
         if (openChecklist > 0)
             throw new BusinessRuleException("Can't mark DONE: " + openChecklist + " checklist item(s) still open");
     }
-    /** Allowed-moves rule + "don't walk away from a pending sign-off". */
-    /** Allowed-moves rule (incl. Step 4 review gate) + "don't walk away from a pending sign-off". */
+
     private void assertTransition(Task task, TaskStatus to, Long userId) {
         TaskStatus from = task.getStatus();
         if (from == to) return;
@@ -1109,7 +1138,6 @@ public class TaskServiceImpl implements TaskService {
             throw new BusinessRuleException(
                     "This task is waiting for sign-off. Cancel the approval request first.");
     }
-
 
     private void rollUp(Task t) {
         if (t.getParentTaskId() != null) {
@@ -1126,7 +1154,6 @@ public class TaskServiceImpl implements TaskService {
         });
     }
 
-    // ─── Step 2.6 — weighted progress ───
     private double weightOf(Task t) {
         Integer est = t.getEstimateHours();
         if (est != null && est > 0) return est;
@@ -1174,7 +1201,7 @@ public class TaskServiceImpl implements TaskService {
         if (employeePk == null) return null;
         try {
             return employeeRepository.findById(employeePk)
-                    .map(e -> e.getEmployeeId())
+                    .map(Employee::getEmployeeId)
                     .orElse(null);
         } catch (Exception ex) {
             log.warn("resolveEmployeeCode failed for pk={}: {}", employeePk, ex.getMessage());

@@ -2,10 +2,7 @@ package com.mentis.hrms.pm.controller;
 
 import com.mentis.hrms.pm.dto.request.CreateProjectRequest;
 import com.mentis.hrms.pm.dto.request.UpdateProjectRequest;
-import com.mentis.hrms.pm.dto.response.ApiResponse;
-import com.mentis.hrms.pm.dto.response.PageResponse;
-import com.mentis.hrms.pm.dto.response.ProjectResponse;
-import com.mentis.hrms.pm.dto.response.ProjectSummaryResponse;
+import com.mentis.hrms.pm.dto.response.*;
 import com.mentis.hrms.pm.enums.ProjectStatus;
 import com.mentis.hrms.pm.exception.BusinessRuleException;
 import com.mentis.hrms.pm.exception.PmAccessDeniedException;
@@ -22,7 +19,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.mentis.hrms.pm.dto.response.ProjectFinanceResponse;
 import com.mentis.hrms.pm.service.ProjectFinanceService;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -136,18 +132,21 @@ public class ProjectController {
 
     @PostMapping("/{id}/baseline")
     public ResponseEntity<ApiResponse<ProjectResponse>> baseline(
-            @PathVariable Long id, @CurrentUserId Long userId) {
+            @PathVariable Long id,
+            @RequestParam(required = false) String reason,
+            @CurrentUserId Long userId) {
         access.requireCanAdminister(userId, id);
 
-        // Step 3a: don't let a re-baseline silently overwrite a project that is already running.
+        // Step 3a (revised): a baseline is locked ONLY once the project is COMPLETED or
+        // ARCHIVED. AT_RISK, DELAYED, ON_HOLD and ACTIVE projects need re-baselining the
+        // most, so they are allowed. The service already blocks writes to locked projects.
         ProjectResponse current = projectService.getProject(id);
         ProjectStatus st = current.getStatus();
-        if (st != null && st != ProjectStatus.PLANNING && st != ProjectStatus.ACTIVE) {
-            throw new BusinessRuleException(
-                    "A baseline can only be set while a project is Planning or Active. Current status: " + st + ".");
+        if (st == ProjectStatus.COMPLETED || st == ProjectStatus.ARCHIVED) {
+            throw new BusinessRuleException("This project is completed or archived, so its baseline is locked.");
         }
 
-        return ResponseEntity.ok(ApiResponse.ok("Baseline saved", projectService.saveBaseline(id, userId)));
+        return ResponseEntity.ok(ApiResponse.ok("Baseline saved", projectService.saveBaseline(id, userId, reason)));
     }
 
     /** Money data: owner, managers and Super Admin only. */
@@ -191,12 +190,21 @@ public class ProjectController {
         out.put("notified", financeService.sendStatusReport(id, true));
         return ResponseEntity.ok(ApiResponse.ok("Status update sent", out));
     }
+    @GetMapping("/{id}/baselines")
+    public ResponseEntity<ApiResponse<List<com.mentis.hrms.pm.dto.response.BaselineHistoryResponse>>> baselines(
+            @PathVariable Long id, @CurrentUserId Long userId) {
+        access.requireCanViewFinance(userId, id);
+        return ResponseEntity.ok(ApiResponse.ok(projectService.baselineHistory(id)));
+    }
 
     // ────────────────────────────────────────────────────────────
     // Step 3a: baseline guard.
     // Refuse budget / date changes on a project that already has
-    // a baseline AND is past PLANNING, so the baseline table stays
-    // meaningful. A re-baseline is the explicit way to move it.
+    // a baseline AND is in a state where the baseline is meant to be
+    // authoritative (ON_HOLD, AT_RISK, DELAYED). PLANNING has no
+    // baseline yet; COMPLETED and ARCHIVED are already read-only;
+    // ACTIVE is explicitly the window in which the plan can still
+    // be adjusted before it hardens.
     // (Uses the UNMASKED service response on purpose.)
     // ────────────────────────────────────────────────────────────
     private void guardBaselinedChanges(Long projectId, UpdateProjectRequest req) {
@@ -204,7 +212,11 @@ public class ProjectController {
         if (current == null) return;
 
         ProjectStatus st = current.getStatus();
-        if (st == null || st == ProjectStatus.PLANNING || st == ProjectStatus.COMPLETED || st == ProjectStatus.ARCHIVED) {
+        if (st == null
+                || st == ProjectStatus.PLANNING
+                || st == ProjectStatus.ACTIVE
+                || st == ProjectStatus.COMPLETED
+                || st == ProjectStatus.ARCHIVED) {
             return;
         }
 

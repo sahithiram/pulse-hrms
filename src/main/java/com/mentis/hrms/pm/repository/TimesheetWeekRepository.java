@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface TimesheetWeekRepository extends JpaRepository<TimesheetWeek, Long> {
     Optional<TimesheetWeek> findByEmployeeIdAndWeekStart(Long employeeId, LocalDate weekStart);
+    boolean existsByEmployeeIdAndApproverId(Long employeeId, Long approverId);
 }

@@ -1,6 +1,7 @@
 /**
  * pm-timesheet.js — PHASE 3
  * "My Timesheet" tab on /pm/03-my-work: log time, review the week, submit / withdraw.
+ * Gap 13: billable checkbox, billable / overtime badges, billable toggle, week totals.
  * Needs pm-core.js. Exposes window.PMTimesheetMe.
  */
 (function () {
@@ -31,8 +32,29 @@
     DRAFT: ['info', 'Draft'],
     SUBMITTED: ['warning', 'Submitted · awaiting approval'],
     APPROVED: ['success', 'Approved · locked'],
-    REJECTED: ['danger', 'Rejected · please fix and resubmit']
+    REJECTED: ['danger', 'Rejected · please fix and resubmit'],
+    LOCKED: ['info', 'Locked · cannot edit']
   };
+
+  /* ───────── billable / overtime helpers ───────── */
+  // a missing flag counts as billable (DB default is 1)
+  function isBillable(e) { return e.billable !== false; }
+  function isOvertime(e) { return e.overtime === true; }
+
+  // use the server totals when present, otherwise add the entries up here
+  function weekTotals(d) {
+    var bill = 0, ot = 0;
+    (d.days || []).forEach(function (day) {
+      (day.entries || []).forEach(function (e) {
+        if (isBillable(e)) bill += e.minutes || 0;
+        if (isOvertime(e)) ot += e.minutes || 0;
+      });
+    });
+    return {
+      billable: typeof d.billableMinutes === 'number' ? d.billableMinutes : bill,
+      overtime: typeof d.overtimeMinutes === 'number' ? d.overtimeMinutes : ot
+    };
+  }
 
   /* ───────── load ───────── */
   function load() {
@@ -56,8 +78,10 @@
     var d = S.data;
     if (!d) return;
     var st = STATUS[d.status] || ['info', d.status];
-    var editable = !!d.editable;
+    var editable = !!d.editable && d.status !== 'LOCKED';
     var weekEnd = d.weekEnd;
+    var tot = weekTotals(d);
+    var nonBill = Math.max(0, (d.totalMinutes || 0) - tot.billable);
     var h = '';
 
     // toolbar
@@ -67,7 +91,7 @@
       '<button class="pm-btn pm-btn-sm" onclick="PMTimesheetMe.shift(1)"><i class="fas fa-chevron-right"></i></button>' +
       '<button class="pm-btn pm-btn-sm" onclick="PMTimesheetMe.thisWeek()">This week</button>' +
       '<span class="pm-badge ' + st[0] + '" style="margin-left:6px">' + PM.esc(st[1]) + '</span>' +
-      '<div style="margin-left:auto;display:flex;gap:6px;align-items:center">' +
+      '<div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap">' +
       '<span style="font-size:var(--fs-sm);color:var(--tx2)">Total <b style="color:var(--tx)">' + fmtMin(d.totalMinutes) + '</b></span>' +
       (editable
         ? '<button class="pm-btn pm-btn-primary" onclick="PMTimesheetMe.submit()"' + (d.totalMinutes > 0 ? '' : ' disabled style="opacity:.5;cursor:not-allowed"') + '><i class="fas fa-paper-plane"></i> Submit week</button>'
@@ -76,6 +100,15 @@
         ? '<button class="pm-btn" onclick="PMTimesheetMe.withdraw()"><i class="fas fa-rotate-left"></i> Withdraw</button>'
         : '') +
       '</div></div>';
+
+    // billable / overtime summary
+    if (d.totalMinutes > 0) {
+      h += '<div class="pm-card" style="display:flex;gap:16px;flex-wrap:wrap;font-size:var(--fs-sm);color:var(--tx2)">' +
+        '<span><i class="fas fa-dollar-sign"></i> Billable <b style="color:var(--tx)">' + fmtMin(tot.billable) + '</b></span>' +
+        '<span>Non-billable <b style="color:var(--tx)">' + fmtMin(nonBill) + '</b></span>' +
+        '<span><i class="fas fa-moon"></i> Overtime <b style="color:' + (tot.overtime ? 'var(--wrn)' : 'var(--tx)') + '">' + fmtMin(tot.overtime) + '</b></span>' +
+        '</div>';
+    }
 
     // status banners
     if (d.status === 'REJECTED') {
@@ -111,7 +144,7 @@
   function logForm(d) {
     var today = iso(new Date());
     var min = d.weekStart;
-    var max = d.weekEnd < today ? d.weekEnd : today;          // can't log in the future
+    var max = d.weekEnd < today ? d.weekEnd : today; // can't log in the future
     var dflt = (today >= min && today <= max) ? today : (max >= min ? max : min);
     var tasks = myOpenTasks();
     var opts = tasks.map(function (t) {
@@ -121,8 +154,9 @@
       return '<div class="pm-card" style="color:var(--tx3)">This week hasn\'t started yet — nothing to log.</div>';
     }
     return '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:8px"><i class="fas fa-plus"></i> Log time</div>' +
-      '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px">' +
-      '<select class="pm-select" id="pmtsTask"><option value="">Select a task…</option>' + opts + '</select>' +
+      // auto-fit grid: 3 columns on desktop, stacks on phones
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px">' +
+      '<select class="pm-select" id="pmtsTask" style="grid-column:1/-1"><option value="">Select a task…</option>' + opts + '</select>' +
       '<input class="pm-input" type="date" id="pmtsDate" min="' + min + '" max="' + max + '" value="' + dflt + '">' +
       '<input class="pm-input" type="number" id="pmtsMin" min="1" max="960" value="60" placeholder="Minutes">' +
       '</div><div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">' +
@@ -130,25 +164,44 @@
       [15, 30, 60, 120, 240].map(function (m) {
         return '<button class="pm-btn pm-btn-sm" onclick="document.getElementById(\'pmtsMin\').value=' + m + '">' + fmtMin(m) + '</button>';
       }).join('') +
-      '<button class="pm-btn pm-btn-primary" onclick="PMTimesheetMe.logTime()"><i class="fas fa-check"></i> Add</button></div>' +
+      '</div><div style="display:flex;gap:10px;margin-top:8px;align-items:center;flex-wrap:wrap">' +
+      '<label style="display:flex;gap:6px;align-items:center;cursor:pointer;font-size:var(--fs-sm)">' +
+      '<input type="checkbox" id="pmtsBill" checked> Billable</label>' +
+      '<button class="pm-btn pm-btn-primary" style="margin-left:auto" onclick="PMTimesheetMe.logTime()"><i class="fas fa-check"></i> Add</button></div>' +
       (tasks.length ? '' : '<div style="margin-top:8px;font-size:var(--fs-sm);color:var(--tx3)">You have no tasks assigned to you, so there is nothing to log time on yet.</div>') +
       '</div>';
   }
 
+  function badges(e) {
+    var b = '';
+    if (!isBillable(e)) b += ' <span class="pm-badge info" title="Not billable to the client">Non-billable</span>';
+    if (isOvertime(e)) b += ' <span class="pm-badge warning" title="Over 8h that day or 40h that week">OT</span>';
+    return b;
+  }
+
   function dayRow(day, editable) {
     var entries = (day.entries || []).map(function (e) {
-      return '<div style="display:flex;gap:8px;align-items:center;padding:3px 0">' +
+      var bill = isBillable(e);
+      return '<div style="display:flex;gap:8px;align-items:center;padding:3px 0;flex-wrap:wrap">' +
         '<span style="flex:1;min-width:0"><b>' + PM.esc(e.taskTitle || 'Task') + '</b>' +
         (e.projectName ? ' <span style="color:var(--tx3)">· ' + PM.esc(e.projectName) + '</span>' : '') +
-        (e.note ? ' <span style="color:var(--tx2)">— ' + PM.esc(e.note) + '</span>' : '') + '</span>' +
+        (e.note ? ' <span style="color:var(--tx2)">— ' + PM.esc(e.note) + '</span>' : '') +
+        badges(e) + '</span>' +
         '<span style="font-weight:600">' + fmtMin(e.minutes) + '</span>' +
-        (editable ? '<button class="pm-btn pm-btn-sm pm-btn-icon" title="Delete" onclick="PMTimesheetMe.del(' + e.timeLogId + ')"><i class="fas fa-trash"></i></button>' : '') +
+        (editable
+          ? '<button class="pm-btn pm-btn-sm pm-btn-icon" title="' + (bill ? 'Mark as non-billable' : 'Mark as billable') + '" ' +
+            'style="' + (bill ? '' : 'opacity:.5') + '" onclick="PMTimesheetMe.toggleBillable(' + e.timeLogId + ',' + (bill ? 'false' : 'true') + ')">' +
+            '<i class="fas fa-dollar-sign"></i></button>' +
+            '<button class="pm-btn pm-btn-sm pm-btn-icon" title="Delete" onclick="PMTimesheetMe.del(' + e.timeLogId + ')"><i class="fas fa-trash"></i></button>'
+          : '') +
         '</div>';
     }).join('') || '<span style="color:var(--tx3)">—</span>';
-    return '<div style="display:grid;grid-template-columns:96px 1fr 70px;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bd)">' +
+    return '<div style="display:grid;grid-template-columns:minmax(64px,96px) 1fr auto;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bd)">' +
       '<div><b>' + PM.esc(day.weekday) + '</b><div style="font-size:var(--fs-xs);color:var(--tx3)">' + fmtDay(day.date) + '</div></div>' +
       '<div>' + entries + '</div>' +
-      '<div style="text-align:right;font-weight:700">' + (day.minutes ? fmtMin(day.minutes) : '') + '</div></div>';
+      '<div style="text-align:right;font-weight:700">' + (day.minutes ? fmtMin(day.minutes) : '') +
+      (day.overtimeMinutes ? '<div style="font-size:var(--fs-xs);color:var(--wrn);font-weight:600">OT ' + fmtMin(day.overtimeMinutes) + '</div>' : '') +
+      '</div></div>';
   }
 
   /* ───────── actions ───────── */
@@ -156,11 +209,23 @@
 
   function logTime() {
     var tid = parseInt(val('pmtsTask'), 10), date = val('pmtsDate'), mins = parseInt(val('pmtsMin'), 10);
+    var billEl = document.getElementById('pmtsBill');
     if (!tid) { PM.toast('Pick a task first', 'warning'); return; }
     if (!date) { PM.toast('Pick a date', 'warning'); return; }
     if (!mins || mins < 1 || mins > 960) { PM.toast('Minutes must be between 1 and 960', 'warning'); return; }
-    PM.api('POST', '/api/pm/tasks/' + tid + '/time', { logDate: date, minutes: mins, note: val('pmtsNote') || null })
+    PM.api('POST', '/api/pm/tasks/' + tid + '/time', {
+      logDate: date,
+      minutes: mins,
+      note: val('pmtsNote') || null,
+      billable: billEl ? billEl.checked : true
+    })
       .then(function () { PM.toast('Time logged', 'success'); return load(); })
+      .catch(fail);
+  }
+
+  function toggleBillable(id, billable) {
+    PM.api('PUT', '/api/pm/tasks/time/' + id, { billable: billable })
+      .then(function () { PM.toast(billable ? 'Marked as billable' : 'Marked as non-billable', 'success'); return load(); })
       .catch(fail);
   }
 
@@ -193,7 +258,10 @@
   }
   function thisWeek() { S.week = iso(mondayOf(new Date())); load(); }
 
-  window.PMTimesheetMe = { load: load, logTime: logTime, del: del, submit: submit, withdraw: withdraw, shift: shift, thisWeek: thisWeek };
+  window.PMTimesheetMe = {
+    load: load, logTime: logTime, del: del, toggleBillable: toggleBillable,
+    submit: submit, withdraw: withdraw, shift: shift, thisWeek: thisWeek
+  };
   // keep the tab fresh when another user's action fires a realtime event
   window.addEventListener('pm:event', function () {
     var pane = document.getElementById('pane-timesheet');

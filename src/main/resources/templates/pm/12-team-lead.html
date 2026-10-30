@@ -1,0 +1,2550 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+    <title>PM · Team Lead</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- ============ SHARED THEME (single source of truth) ============ -->
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+    <style>
+        :root{--bg:var(--dark-bg);--card:var(--dark-card);--bd:var(--dark-border);--tx:var(--dark-text);--tx2:var(--dark-text-secondary);--tx3:var(--dark-text-secondary);--pri:var(--primary);--suc:var(--success);--dng:var(--danger);--wrn:var(--warning);--inf:var(--info);--pur:var(--purple,#a855f7);--pri-soft:rgba(99,102,241,.12);--suc-soft:rgba(16,185,129,.14);--dng-soft:rgba(239,68,68,.14);--wrn-soft:rgba(245,158,11,.14);--inf-soft:rgba(14,165,233,.14);--pur-soft:rgba(168,85,247,.14);--r:6px;--rl:8px;--fs:12.5px;--fs-xs:10.5px;--fs-sm:11.5px;--fs-md:13.5px;--fs-2xl:22px}
+        .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;min-width:0}
+        .pm-select{background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;height:28px;min-width:0}
+        .pm-select:focus{border-color:var(--pri)}
+        .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+        .kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px}
+        .kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px;margin-bottom:4px}
+        .kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}.kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
+        .kpi-icon.red{background:var(--dng-soft);color:var(--dng)}.kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
+        .kpi-icon.cyan{background:var(--inf-soft);color:var(--inf)}.kpi-icon.purple{background:var(--pur-soft);color:var(--pur)}
+        .kpi-value{font-size:var(--fs-2xl);font-weight:700;line-height:1}
+        .kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
+        .priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+        .p-h{background:var(--dng)}.p-m{background:var(--wrn)}.p-l{background:var(--suc)}.p-c{background:#dc2626;box-shadow:0 0 0 2px rgba(220,38,38,.3)}
+        .tl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:10px}
+        .tl-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px}
+        .tl-card-title{font-weight:600;font-size:var(--fs-md);display:flex;align-items:center;gap:6px}
+        .tl-card-title i{color:var(--pri)}
+        .tl-body{max-height:360px;overflow-y:auto}
+        .tl-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--bd);background:var(--bg);border-radius:var(--r);margin-bottom:6px}
+        .tl-row-body{flex:1;min-width:0}
+        .tl-row-title{display:block;font-size:var(--fs);font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .tl-row-title:hover{color:var(--pri)}
+        .tl-row-meta{font-size:var(--fs-xs);color:var(--tx3);margin-top:1px;display:flex;gap:10px;flex-wrap:wrap}
+        .tl-od{color:var(--dng);font-weight:600}
+        .tl-actions{display:flex;gap:5px;align-items:center;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+        .tl-empty{text-align:center;padding:22px 10px;color:var(--tx3);font-size:var(--fs-sm)}
+        .tl-empty i{display:block;font-size:22px;opacity:.35;margin-bottom:6px}
+        .tl-wl{display:grid;grid-template-columns:1.4fr 1fr 70px;gap:10px;align-items:center;padding:6px 2px;border-bottom:1px solid var(--bd)}
+        .tl-wl:last-child{border-bottom:none}
+        .tl-wl-name{font-weight:600;display:flex;align-items:center;gap:8px;min-width:0}
+        .tl-wl-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .av-md{width:26px;height:26px;border-radius:50%;background:var(--pri);color:#fff;font-size:10px;font-weight:700;display:grid;place-content:center;flex-shrink:0}
+        .tl-sub{font-size:var(--fs-xs);color:var(--tx3)}
+        @media(max-width:900px){.tl-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+</button>
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR — shared accordion component
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon" id="sidebarBrandIcon">
+            <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+            <i id="sidebarIcon" class="fas fa-building"></i>
+        </div>
+        <span id="sidebarCompanyName">Menti's IT Solutions</span>
+    </div>
+
+    <div class="sidebar-tools">
+        <div class="sidebar-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off" aria-label="Search sidebar menu">
+        </div>
+        <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle" aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+            <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-content">
+        <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+
+            <div class="side-group" data-group="workspace">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+                    <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+                    <span class="side-group-label">Workspace</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupWorkspace">
+                    <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+                    <li><a class="nav-link" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+                    <li>
+                        <a class="nav-link" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+                            <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="delivery">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+                    <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+                    <span class="side-group-label">Delivery</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupDelivery">
+                    <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+                    <li><a class="nav-link" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+                    <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+                    <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+                    <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="finance">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+                    <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+                    <span class="side-group-label">Finance</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupFinance">
+                    <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="insights">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+                    <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="side-group-label">Insights</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupInsights">
+                    <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+                    <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+                    <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-empty" id="sideNavEmpty" hidden>No menu items match your search</div>
+        </nav>
+    </div>
+</aside>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+    <header class="top-header">
+        <div class="search-box" onclick="PM.openCmd()">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+            <kbd>⌘K</kbd>
+        </div>
+
+        <div class="top-header-actions">
+            <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
+            <button class="icon-btn" onclick="location.href='/pm/01-home'" title="Home"><i class="fas fa-house"></i></button>
+            <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+            <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+            </button>
+
+            <div class="menti-ai-nav-wrapper">
+                <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()" aria-label="Open Menti PM Assistant">
+                    <span class="menti-ai-pulse"></span>
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </button>
+                <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+            </div>
+
+            <div class="user-profile-menu">
+                <div class="dropdown">
+                    <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar-sm" id="pmUserAvatar">?</div>
+                        <span id="pmUserName">Loading…</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+                        <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-area">
+        <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / <span>My Team</span></div>
+
+        <div class="pm-page-head">
+            <div>
+                <div class="pm-page-title"><i class="fas fa-user-tie"></i> Team Lead Dashboard</div>
+                <div class="pm-page-sub" id="pageSub">Loading your team…</div>
+            </div>
+            <div class="pm-page-actions">
+                <a class="pm-btn" href="/pm/03-my-work"><i class="fas fa-inbox"></i> My Work</a>
+                <select class="pm-select" id="teamSel" style="display:none;max-width:220px"></select>
+                <button class="pm-btn" id="btnRefresh"><i class="fas fa-rotate"></i> Refresh</button>
+                <a class="pm-btn pm-btn-primary" id="btnBoard" href="/pm/06-tasks"><i class="fas fa-table-columns"></i> Team task board</a>
+            </div>
+        </div>
+
+        <div class="kpi-grid" id="kpis"></div>
+
+        <div class="tl-grid">
+            <section class="pm-card">
+                <div class="tl-card-head"><div class="tl-card-title"><i class="fas fa-magnifying-glass-chart"></i> Review queue</div><span class="pm-badge info" id="cntReview">0</span></div>
+                <div class="tl-body" id="bodyReview"></div>
+            </section>
+
+            <section class="pm-card">
+                <div class="tl-card-head"><div class="tl-card-title"><i class="fas fa-square-check"></i> Waiting for my decision</div><span class="pm-badge warning" id="cntApprovals">0</span></div>
+                <div class="tl-body" id="bodyApprovals"></div>
+            </section>
+
+            <section class="pm-card">
+                <div class="tl-card-head"><div class="tl-card-title"><i class="fas fa-user-plus"></i> Unassigned team tasks</div><span class="pm-badge primary" id="cntUnassigned">0</span></div>
+                <div class="tl-body" id="bodyUnassigned"></div>
+            </section>
+
+            <section class="pm-card">
+                <div class="tl-card-head"><div class="tl-card-title"><i class="fas fa-users-gear"></i> Team workload</div><span class="pm-badge purple" id="cntMembers">0</span></div>
+                <div class="tl-body" id="bodyWorkload"></div>
+            </section>
+
+            <section class="pm-card">
+                <div class="tl-card-head"><div class="tl-card-title"><i class="fas fa-clock"></i> Overdue and due in 3 days</div><span class="pm-badge danger" id="cntDue">0</span></div>
+                <div class="tl-body" id="bodyDue"></div>
+            </section>
+        </div>
+    </div>
+</div>
+
+<!-- ============ SHARED PM AI ASSISTANT PANEL ============ -->
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+    <span class="menti-ai-fab-dot"></span>
+    <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+    <div class="menti-ai-chat-header">
+        <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+            <div class="menti-ai-hdr-avatar">M</div>
+            <div class="menti-ai-hdr-info">
+                <div class="menti-ai-hdr-name">Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i></div>
+                <div class="menti-ai-hdr-status">
+                    <span class="menti-ai-status-dot"></span>
+                    <span id="mentiAiModeLabel">💾 New saved chat</span>
+                </div>
+            </div>
+        </div>
+        <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="menti-ai-body">
+        <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+        <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+            <div class="menti-ai-sessions-header">
+                <span>Saved Chats</span>
+                <span id="mentiAiSessionCount">0</span>
+            </div>
+            <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()"><i class="fas fa-plus"></i> New Saved Chat</button>
+            <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+                <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+            </div>
+        </div>
+
+        <div class="menti-ai-chat-col">
+            <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+            <div class="menti-ai-chips" id="mentiAiSuggestions">
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which tasks are blocked?')"><i class="fas fa-ban"></i> Blocked</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show my overdue tasks')"><i class="fas fa-fire"></i> Overdue</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize this sprint board')"><i class="fas fa-table-columns"></i> Sprint Board</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which tasks are in review?')"><i class="fas fa-magnifying-glass"></i> In Review</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('What should I prioritize today?')"><i class="fas fa-bullseye"></i> Priorities</button>
+            </div>
+
+            <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about tasks…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+                <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
+<script>
+    window.MENTI_AI_CONFIG = {
+      role: 'PM',
+      roleTag: 'PM',
+      assistantName: 'Menti PM',
+      userInitial: 'U',
+      sendUrl: '/api/chat/pm/send',
+      sessionsUrl: '/api/chat/pm/sessions',
+      historyUrl: '/api/chat/pm/session',
+      deleteUrl: '/api/chat/pm/session'
+    };
+</script>
+<script src="/pm/pm-core.js"></script>
+<script src="/pm/js/pm-lead-change.js"></script>
+<script>
+    PMLead.onDone = function () { if (window.pmRefresh) window.pmRefresh(); };
+</script>
+<script>
+    PM.bootstrap().then(function (me) {
+      var myId = me.id;
+      var leadIds = me.leadOfTeamIds || [];
+      var S = { teamId: null, teamName: '', members: [], tasks: [], approvals: [], hours: [] };
+      var $ = function (id) { return document.getElementById(id); };
+      var today = new Date(); today.setHours(0, 0, 0, 0);
+
+      // Personalise header
+      var userNameEl = document.getElementById('pmUserName');
+      if (userNameEl) userNameEl.textContent = me.name || 'User';
+      var avatarEl = document.getElementById('pmUserAvatar');
+      if (avatarEl) {
+        avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+        avatarEl.title = me.name || 'User';
+      }
+
+      function isOpen(t) { return t.status !== 'DONE'; }
+      function isOverdue(t) { return !!t.dueDate && isOpen(t) && new Date(t.dueDate) < today; }
+      function isSoon(t) {
+        if (!t.dueDate || !isOpen(t)) return false;
+        var d = (new Date(t.dueDate) - today) / 86400000;
+        return d >= 0 && d <= 3;
+      }
+      function hasAssignee(t) { return (t.assigneeIds || []).length > 0; }
+      function empty(msg, icon) { return '<div class="tl-empty"><i class="fas ' + (icon || 'fa-circle-check') + '"></i>' + PM.esc(msg) + '</div>'; }
+
+      function taskRow(t, actions) {
+        var p = String(t.priority || 'MEDIUM').toUpperCase();
+        var dot = p === 'CRITICAL' ? 'p-c' : p === 'HIGH' ? 'p-h' : p === 'MEDIUM' ? 'p-m' : 'p-l';
+        var od = isOverdue(t);
+        var names = (t.assigneeNames || []).join(', ');
+        return '<div class="tl-row"><span class="priority-dot ' + dot + '"></span><div class="tl-row-body">' +
+               (t.projectId
+        ? '<a class="tl-row-title" href="/pm/06-tasks?open=' + t.id + '">' + PM.esc(t.title) + '</a>'
+        : '<span class="tl-row-title" style="cursor:default;color:var(--tx3)" title="You do not have access to this project">' + PM.esc(t.title) + '</span>') +
+          '<div class="tl-row-meta"><span>' + PM.esc(t.projectName || '—') + '</span>' +
+          '<span class="' + (od ? 'tl-od' : '') + '"><i class="fas fa-calendar"></i> ' + (t.dueDate ? PM.fmtDate(t.dueDate) : 'No due date') + (od ? ' · overdue' : '') + '</span>' +
+          (names ? '<span><i class="fas fa-user"></i> ' + PM.esc(names) + '</span>' : '') +
+          '</div></div>' + (actions ? '<div class="tl-actions">' + actions + '</div>' : '') + '</div>';
+      }
+
+      async function loadApprovals() {
+        var lists = await Promise.allSettled([
+          PM.apiList('GET', '/api/pm/approvals/mine'),
+          PM.apiList('GET', '/api/pm/approvals/requested')
+        ]);
+        var byId = {};
+        lists.forEach(function (r) { if (r.status === 'fulfilled') r.value.forEach(function (a) { byId[a.id] = a; }); });
+        var closed = ['APPROVED', 'REJECTED', 'CANCELLED', 'CANCELED', 'WITHDRAWN'];
+        return Object.keys(byId).map(function (k) { return byId[k]; }).filter(function (a) {
+          return a.approverId === myId && closed.indexOf(String(a.status || '').toUpperCase()) < 0;
+        });
+      }
+
+      async function load() {
+        if (!S.teamId) return;
+        var tid = S.teamId;
+        var r = await Promise.allSettled([
+          PM.api('GET', '/api/pm/teams/' + tid + '/tasks?limit=300'),
+          PM.api('GET', '/api/pm/teams/' + tid + '/members/details'),
+          loadApprovals(),
+          PM.api('GET', '/api/pm/timesheets/team/' + tid)
+        ]);
+        if (tid !== S.teamId) return;
+        if (r[0].status === 'rejected') PM.toast('Could not load team tasks: ' + r[0].reason.message, 'error');
+        var td = r[0].status === 'fulfilled' ? r[0].value : null;
+        S.tasks = td && td.tasks ? td.tasks : [];
+        if (td && td.team && td.team.name) S.teamName = td.team.name;
+        S.members = r[1].status === 'fulfilled' ? (r[1].value || []) : [];
+        S.approvals = r[2].status === 'fulfilled' ? r[2].value : [];
+        S.hours = r[3].status === 'fulfilled' ? (r[3].value || []) : [];
+        render();
+      }
+
+      function render() {
+        var open = S.tasks.filter(isOpen);
+        var review = S.tasks.filter(function (t) { return t.status === 'IN_REVIEW'; });
+        var unassigned = open.filter(function (t) { return !hasAssignee(t); });
+        var overdue = S.tasks.filter(isOverdue);
+        var due = S.tasks.filter(function (t) { return isOverdue(t) || isSoon(t); })
+          .sort(function (a, b) { return new Date(a.dueDate) - new Date(b.dueDate); });
+
+        $('pageSub').textContent = (S.teamName || 'Your team') + ' · ' + S.members.length + ' members · ' + open.length + ' open tasks';
+        $('btnBoard').href = '/pm/06-tasks?teamId=' + S.teamId;
+
+        function kpi(icon, color, value, label) {
+          return '<div class="kpi"><div class="kpi-icon ' + color + '"><i class="fas ' + icon + '"></i></div><div class="kpi-value">' + value + '</div><div class="kpi-label">' + label + '</div></div>';
+        }
+        $('kpis').innerHTML =
+          kpi('fa-users', 'blue', S.members.length, 'Team members') +
+          kpi('fa-list-check', 'cyan', open.length, 'Open tasks') +
+          kpi('fa-user-plus', 'purple', unassigned.length, 'Unassigned') +
+          kpi('fa-magnifying-glass-chart', 'green', review.length, 'In review (mine)') +
+          kpi('fa-triangle-exclamation', 'red', overdue.length, 'Overdue') +
+          kpi('fa-square-check', 'orange', S.approvals.length, 'Approvals waiting');
+
+        // Review queue
+        $('cntReview').textContent = review.length;
+        $('bodyReview').innerHTML = review.length ? review.map(function (t) {
+          return taskRow(t,
+            '<button class="pm-btn pm-btn-sm pm-btn-ok" data-act="approve" data-id="' + t.id + '"><i class="fas fa-check"></i> Approve</button>' +
+            '<button class="pm-btn pm-btn-sm pm-btn-danger" data-act="changes" data-id="' + t.id + '"><i class="fas fa-rotate-left"></i> Changes</button>');
+        }).join('') : empty('Nothing waiting for review');
+
+        // Approvals (extensions, sign-offs)
+        $('cntApprovals').textContent = S.approvals.length;
+        $('bodyApprovals').innerHTML = S.approvals.length ? S.approvals.map(function (a) {
+          return '<div class="tl-row"><span class="pm-badge warning">' + PM.esc(a.entityType || 'REQUEST') + '</span><div class="tl-row-body">' +
+            '<div class="tl-row-title" style="cursor:default">' + PM.esc(a.entityTitle || ('#' + a.entityId)) + '</div>' +
+            '<div class="tl-row-meta"><span><i class="fas fa-user"></i> ' + PM.esc(a.requestedByName || '—') + '</span>' +
+            (a.reason ? '<span>' + PM.esc(a.reason) + '</span>' : '') + '<span>' + PM.fmtDateTime(a.createdAt) + '</span></div></div>' +
+            '<div class="tl-actions"><button class="pm-btn pm-btn-sm pm-btn-ok" data-act="ok" data-id="' + a.id + '"><i class="fas fa-check"></i> Approve</button>' +
+            '<button class="pm-btn pm-btn-sm pm-btn-danger" data-act="no" data-id="' + a.id + '"><i class="fas fa-xmark"></i> Reject</button></div></div>';
+        }).join('') : empty('No approvals waiting for you');
+
+        // Unassigned
+        var opts = '<option value="">Assign to…</option>' + S.members.map(function (m) {
+          var n = open.filter(function (t) { return (t.assigneeIds || []).indexOf(m.employeeId) >= 0; }).length;
+          return '<option value="' + m.employeeId + '">' + PM.esc(m.employeeName) + ' (' + n + ' open)</option>';
+        }).join('');
+        $('cntUnassigned').textContent = unassigned.length;
+        $('bodyUnassigned').innerHTML = unassigned.length ? unassigned.map(function (t) {
+          return taskRow(t,
+            '<select class="pm-select" id="asg-' + t.id + '" style="max-width:160px">' + opts + '</select>' +
+            '<button class="pm-btn pm-btn-sm pm-btn-primary" data-act="assign" data-id="' + t.id + '">Assign</button>');
+        }).join('') : empty('Every open task has an owner');
+
+        // Workload
+        var hrsByCode = {}, hrsByName = {};
+        S.hours.forEach(function (h) { hrsByCode[h.employeeId] = h.totalHours || 0; hrsByName[String(h.employeeName || '').toLowerCase()] = h.totalHours || 0; });
+        var counts = S.members.map(function (m) { return open.filter(function (t) { return (t.assigneeIds || []).indexOf(m.employeeId) >= 0; }).length; });
+        var maxOpen = Math.max.apply(null, counts.concat([1]));
+        $('cntMembers').textContent = S.members.length;
+        $('bodyWorkload').innerHTML = S.members.length ? S.members.map(function (m, i) {
+          var mine = open.filter(function (t) { return (t.assigneeIds || []).indexOf(m.employeeId) >= 0; });
+          var od = mine.filter(isOverdue).length;
+          var hrs = hrsByCode[m.employeeCode];
+          if (hrs == null) hrs = hrsByName[String(m.employeeName || '').toLowerCase()];
+          var pct = Math.round((counts[i] / maxOpen) * 100);
+          var cls = counts[i] > 6 ? 'danger' : counts[i] > 3 ? 'warning' : '';
+          return '<div class="tl-wl"><div class="tl-wl-name"><div class="av-md">' + PM.getInitials(m.employeeName) + '</div><div style="min-width:0"><span>' + PM.esc(m.employeeName) + (m.lead ? ' <i class="fas fa-star" style="color:var(--wrn);font-size:9px" title="Team lead"></i>' : '') + '</span>' +
+            '<div class="tl-sub">' + PM.esc(m.roleInTeam || '') + (m.allocationPct != null ? ' · ' + m.allocationPct + '%' : '') + '</div></div></div>' +
+            '<div><div class="pm-progress"><div class="pm-progress-bar ' + cls + '" style="width:' + pct + '%"></div></div>' +
+            '<div class="tl-sub" style="margin-top:3px">' + counts[i] + ' open' + (od ? ' · <span class="tl-od">' + od + ' overdue</span>' : '') + '</div></div>' +
+            '<div style="text-align:right;font-weight:700">' + (hrs != null ? Math.round(hrs) + 'h' : '—') + '<div class="tl-sub">this week</div></div></div>';
+        }).join('') : empty('No members yet. Ask a Super Admin or the team creator.', 'fa-users');
+
+        // Due soon / overdue
+        $('cntDue').textContent = due.length;
+        $('bodyDue').innerHTML = due.length ? due.map(function (t) { return taskRow(t, ''); }).join('') : empty('Nothing overdue or due soon');
+      }
+
+      // ── actions (event delegation) ──
+      document.addEventListener('click', async function (e) {
+        var b = e.target.closest('[data-act]'); if (!b) return;
+        var act = b.dataset.act, id = Number(b.dataset.id);
+        b.disabled = true;
+        try {
+          if (act === 'approve') {
+            await PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: 'DONE' });
+            PM.toast('Approved and moved to Done', 'success');
+          } else if (act === 'changes') {
+            await PM.api('PATCH', '/api/pm/tasks/' + id + '/status', { status: 'IN_PROGRESS' });
+            PM.toast('Sent back to In Progress. Open the task to leave a comment.', 'info');
+          } else if (act === 'assign') {
+            var sel = $('asg-' + id);
+            if (!sel || !sel.value) { PM.toast('Pick a person first', 'warning'); b.disabled = false; return; }
+            await PM.api('PATCH', '/api/pm/tasks/' + id + '/assign', { employeeIds: [Number(sel.value)] });
+            PM.toast('Task assigned', 'success');
+          } else if (act === 'ok' || act === 'no') {
+            var note = '';
+            if (act === 'no') { note = prompt('Reason for rejecting (optional):', ''); if (note === null) { b.disabled = false; return; } }
+            await PM.api('POST', '/api/pm/approvals/' + id + '/decide', { decision: act === 'ok' ? 'APPROVED' : 'REJECTED', note: note || null });
+            PM.toast(act === 'ok' ? 'Approved' : 'Rejected', act === 'ok' ? 'success' : 'info');
+          }
+          PM.invalidateMeCaches();
+          await load();
+        } catch (err) {
+          PM.toast(err.message || 'Action failed', 'error');
+          b.disabled = false;
+        }
+      });
+
+      // ── team picker ──
+      async function init() {
+        if (!leadIds.length) { $('pageSub').textContent = 'You do not lead a team.'; return; }
+        var names = {};
+        try { (await PM.api('GET', '/api/pm/teams/cards') || []).forEach(function (c) { names[c.id] = c.name; }); } catch (e) { /* names fall back to ids */ }
+        var sel = $('teamSel');
+        sel.innerHTML = leadIds.map(function (id) { return '<option value="' + id + '">' + PM.esc(names[id] || ('Team #' + id)) + '</option>'; }).join('');
+        var q = Number(new URLSearchParams(location.search).get('teamId'));
+        S.teamId = leadIds.indexOf(q) >= 0 ? q : leadIds[0];
+        S.teamName = names[S.teamId] || '';
+        sel.value = S.teamId;
+        sel.style.display = leadIds.length > 1 ? '' : 'none';
+        sel.addEventListener('change', function () { S.teamId = Number(sel.value); S.teamName = names[S.teamId] || ''; load(); });
+        await load();
+      }
+
+      $('btnRefresh').addEventListener('click', load);
+      window.pmRefresh = load;
+      init();
+    });
+</script>
+</body>
+</html>
+```
+
+---
+
+### File 2: `06-tasks.html`
+
+```html
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+    <title>Project Management · Tasks</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- ============ SHARED THEME ============ -->
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
+    <style>
+        /* ============ PAGE-SPECIFIC STYLES ONLY (PM Tasks) ============ */
+
+        .pm-breadcrumb {
+          font-size: .8125rem; color: var(--dark-text-secondary);
+          margin-bottom: .75rem; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+        }
+        .pm-breadcrumb a { color: var(--dark-text-secondary); }
+        .pm-breadcrumb a:hover { color: var(--primary); }
+
+        /* View toggle */
+        .tk-view-toggle {
+          display: inline-flex; background: var(--dark-bg);
+          border: 1px solid var(--dark-border); border-radius: var(--radius-btn);
+          padding: 2px; gap: 2px;
+        }
+        .tk-view-toggle button {
+          border: none; background: transparent; color: var(--dark-text-secondary);
+          padding: .35rem .75rem; border-radius: 4px; cursor: pointer;
+          font-size: var(--fs-sm); font-weight: 500;
+          display: inline-flex; align-items: center; gap: .35rem;
+          transition: var(--transition); white-space: nowrap;
+        }
+        .tk-view-toggle button.active { background: var(--primary); color: #fff; }
+        .tk-view-toggle button:hover:not(.active) { color: var(--dark-text); }
+
+        /* Kanban */
+        .kanban-wrap {
+          display: flex; gap: .75rem; overflow-x: auto;
+          padding-bottom: .5rem; align-items: flex-start;
+        }
+        .kanban-col {
+          background: var(--dark-card); border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card); min-width: 270px; flex: 1;
+          padding: .75rem; transition: var(--transition);
+          display: flex; flex-direction: column; max-height: calc(100vh - 260px);
+        }
+        .kanban-col.drag-over { background: rgba(99,102,241,.15); border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
+        .kanban-head {
+          display: flex; justify-content: space-between; align-items: center;
+          font-size: var(--fs-sm); font-weight: 700; text-transform: uppercase;
+          color: var(--dark-text-secondary); margin-bottom: .5rem;
+          padding-bottom: .4rem; border-bottom: 1px solid var(--dark-border);
+        }
+        .kanban-count { background: var(--dark-bg); border-radius: 10px; padding: 0 .4rem; font-size: var(--fs-xs); }
+        .kanban-body { flex: 1; overflow-y: auto; min-height: 80px; padding: 2px; }
+        .kanban-card {
+          background: var(--dark-bg); border: 1px solid var(--dark-border);
+          border-radius: 6px; padding: .5rem; margin-bottom: .4rem;
+          cursor: grab; transition: var(--transition); user-select: none; position: relative;
+        }
+        .kanban-card:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+        .kanban-card.dragging { opacity: .4; transform: rotate(2deg); }
+        .kanban-card.blocked {
+          border-color: var(--danger);
+          background: linear-gradient(180deg, rgba(239,68,68,.14) 0%, var(--dark-bg) 30%);
+        }
+        .kanban-card .kc-title { font-weight: 500; margin-bottom: .4rem; line-height: 1.3; font-size: var(--fs-base); }
+        .kanban-card .kc-meta { display: flex; justify-content: space-between; align-items: center; font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-bottom: .25rem; }
+        .kanban-card .kc-foot { display: flex; justify-content: space-between; align-items: center; margin-top: .4rem; padding-top: .4rem; border-top: 1px solid rgba(51,65,85,.4); }
+        .kanban-card .kc-team { position: absolute; top: .4rem; right: .4rem; font-size: .55rem; padding: 1px .35rem; border-radius: 8px; background: rgba(99,102,241,.15); color: var(--primary); font-weight: 700; }
+        .kanban-card .kc-badges { display: flex; gap: .5rem; font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: .35rem; flex-wrap: wrap; }
+        .kanban-card .kc-badges span { display: inline-flex; align-items: center; gap: .2rem; }
+        .kanban-card .kc-badges .blocked-red { color: var(--danger); font-weight: 600; }
+        .kanban-add {
+          width: 100%; background: none; border: 1px dashed var(--dark-border);
+          color: var(--dark-text-secondary); border-radius: 6px;
+          padding: .35rem; font-size: var(--fs-sm); cursor: pointer;
+          margin-top: .4rem; transition: var(--transition);
+        }
+        .kanban-add:hover { border-color: var(--primary); color: var(--primary); }
+        .kanban-empty { text-align: center; padding: .75rem; color: var(--dark-text-secondary); font-size: var(--fs-xs); opacity: .6; }
+
+        /* Avatars */
+        .av {
+          width: 22px; height: 22px; border-radius: 50%;
+          background: var(--primary); color: #fff;
+          font-size: .55rem; font-weight: 700;
+          display: grid; place-content: center; border: 2px solid var(--dark-card);
+        }
+        .av-stack { display: flex; }
+
+        /* Priority dots */
+        .priority-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: .25rem; }
+        .p-h { background: var(--danger); }
+        .p-m { background: var(--warning); }
+        .p-l { background: var(--success); }
+        .p-c { background: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,.3); }
+
+        /* Bulk bar */
+        .bulk-bar {
+          display: none; background: var(--primary); color: #fff;
+          border-radius: var(--radius-card); padding: .6rem .9rem;
+          margin-bottom: 1rem; align-items: center; gap: .5rem; flex-wrap: wrap;
+          animation: slideDown .25s ease;
+        }
+        .bulk-bar.show { display: flex; }
+        .bulk-bar button {
+          background: rgba(255,255,255,.15); color: #fff; border: none;
+          padding: .35rem .85rem; border-radius: 6px; font-size: var(--fs-sm);
+          cursor: pointer; display: inline-flex; align-items: center; gap: .35rem;
+        }
+        .bulk-bar button:hover { background: rgba(255,255,255,.25); }
+        @keyframes slideDown { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        /* Context menu */
+        .ctx-menu {
+          position: fixed; background: var(--dark-card); border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card); box-shadow: var(--shadow-md);
+          z-index: 2000; padding: .25rem; min-width: 200px; display: none;
+        }
+        .ctx-menu.open { display: block; animation: pmFade .12s ease; }
+        @keyframes pmFade { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+        .ctx-item {
+          display: flex; align-items: center; gap: .5rem;
+          padding: .45rem .7rem; border-radius: 6px; font-size: var(--fs-sm);
+          cursor: pointer; color: var(--dark-text-secondary); transition: var(--transition);
+        }
+        .ctx-item:hover { background: var(--dark-bg); color: var(--dark-text); }
+        .ctx-item.danger { color: var(--danger); }
+        .ctx-item.danger:hover { background: rgba(239,68,68,.1); }
+        .ctx-item i { width: 14px; text-align: center; font-size: .7rem; }
+        .ctx-sep { height: 1px; background: var(--dark-border); margin: .25rem 0; }
+        .ctx-shortcut { margin-left: auto; font-size: .65rem; color: var(--dark-text-secondary); }
+
+        /* Modal */
+        .modal-backdrop {
+          position: fixed; inset: 0;
+          background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+          z-index: 1300; display: none;
+          align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal {
+          background: var(--dark-card); border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card); width: 100%; max-width: 680px;
+          box-shadow: var(--shadow-md); display: flex; flex-direction: column; max-height: 90vh;
+        }
+        .modal-lg { max-width: 960px; }
+        .modal-sm { max-width: 440px; }
+        .modal-head { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1.1rem; border-bottom: 1px solid var(--dark-border); flex-shrink: 0; }
+        .modal-head h3 { font-size: var(--fs-lg); font-weight: 600; display: flex; align-items: center; gap: .5rem; margin: 0; }
+        .modal-head h3 i { color: var(--primary); }
+        .modal-body { flex: 1; overflow-y: auto; padding: 1.1rem; }
+        .modal-foot { display: flex; justify-content: flex-end; gap: .5rem; padding: .9rem 1.1rem; border-top: 1px solid var(--dark-border); flex-shrink: 0; flex-wrap: wrap; }
+
+        /* Create tabs */
+        .create-tabs {
+          display: grid; grid-template-columns: repeat(5,1fr); gap: .4rem;
+          margin-bottom: 1rem; padding: .4rem;
+          background: var(--dark-bg); border-radius: var(--radius-card); border: 1px solid var(--dark-border);
+        }
+        .create-tab {
+          background: transparent; border: none; padding: .6rem .4rem; border-radius: var(--radius-btn);
+          cursor: pointer; color: var(--dark-text-secondary); font-family: inherit;
+          font-size: var(--fs-sm); font-weight: 600;
+          display: flex; flex-direction: column; align-items: center; gap: .35rem;
+          transition: var(--transition); text-align: center;
+        }
+        .create-tab i { font-size: 1rem; color: var(--primary); }
+        .create-tab:hover { background: var(--dark-card); color: var(--dark-text); }
+        .create-tab.active { background: var(--primary); color: #fff; }
+        .create-tab.active i { color: #fff; }
+        .create-tab .hint { font-size: var(--fs-xs); opacity: .7; font-weight: 400; }
+
+        .create-pane { display: none; }
+        .create-pane.active { display: block; animation: pmFade .18s ease; }
+
+        /* Forms */
+        .form-group { margin-bottom: .75rem; }
+        .form-group label { display: block; font-size: var(--fs-sm); font-weight: 600; color: var(--dark-text-secondary); margin-bottom: .35rem; }
+        .form-group label .req { color: var(--danger); margin-left: 2px; }
+        .form-hint { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: .25rem; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: .75rem; }
+        .form-input {
+          background: var(--dark-bg); border: 1px solid var(--dark-border);
+          color: var(--dark-text); border-radius: var(--radius-btn);
+          width: 100%; height: 32px; padding: 0 .65rem;
+          font-family: inherit; font-size: var(--fs-base); outline: none;
+          transition: var(--transition);
+        }
+        .form-textarea {
+          height: auto; min-height: 70px; padding: .5rem .65rem;
+          resize: vertical; line-height: 1.5;
+        }
+        .form-input:focus, .form-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+
+        /* Templates grid */
+        .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(240px,1fr)); gap: .75rem; }
+        .tpl-card {
+          background: var(--dark-bg); border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card); padding: .85rem; cursor: pointer;
+          transition: var(--transition); position: relative; padding-bottom: 2.4rem;
+        }
+        .tpl-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+        .tpl-icon {
+          width: 40px; height: 40px; border-radius: 8px;
+          display: grid; place-content: center; font-size: 1rem;
+          background: rgba(99,102,241,.15); color: var(--primary); margin-bottom: .5rem;
+        }
+        .tpl-name { font-weight: 600; font-size: var(--fs-md); margin-bottom: .25rem; }
+        .tpl-desc { font-size: var(--fs-xs); color: var(--dark-text-secondary); line-height: 1.4; margin-bottom: .5rem; min-height: 2.1rem; }
+        .tpl-meta { display: flex; gap: .5rem; font-size: var(--fs-xs); color: var(--dark-text-secondary); flex-wrap: wrap; }
+        .tpl-badge { position: absolute; top: .5rem; right: .5rem; font-size: .55rem; padding: 2px .4rem; border-radius: 8px; font-weight: 700; background: var(--primary); color: #fff; }
+        .tpl-use-btn {
+          position: absolute; bottom: .5rem; right: .5rem;
+          background: var(--primary); color: #fff; border: none;
+          border-radius: 4px; padding: .2rem .6rem;
+          font-size: var(--fs-xs); font-weight: 600; cursor: pointer; font-family: inherit;
+        }
+
+        /* Clone list */
+        .clone-search { position: relative; margin-bottom: .5rem; }
+        .clone-search i { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); color: var(--dark-text-secondary); font-size: .7rem; }
+        .clone-search input { padding-left: 2rem; }
+        .clone-list {
+          max-height: 300px; overflow-y: auto;
+          border: 1px solid var(--dark-border); border-radius: var(--radius-btn);
+          background: var(--dark-bg);
+        }
+        .clone-row {
+          display: flex; align-items: center; gap: .6rem;
+          padding: .6rem .75rem; border-bottom: 1px solid var(--dark-border); cursor: pointer;
+        }
+        .clone-row:last-child { border-bottom: none; }
+        .clone-row:hover { background: var(--dark-card); }
+        .clone-row.selected { background: rgba(99,102,241,.15); border-left: 3px solid var(--primary); }
+        .clone-info { flex: 1; min-width: 0; }
+        .clone-name { font-weight: 600; font-size: var(--fs-base); }
+        .clone-meta { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: 2px; }
+        .clone-radio {
+          width: 18px; height: 18px; border-radius: 50%;
+          border: 2px solid var(--dark-border); display: grid; place-content: center;
+        }
+        .clone-row.selected .clone-radio { border-color: var(--primary); }
+        .clone-row.selected .clone-radio::after {
+          content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--primary);
+        }
+
+        /* Bulk paste */
+        .bulk-paste-area {
+          width: 100%; background: var(--dark-bg); border: 1px solid var(--dark-border);
+          border-radius: var(--radius-card); color: var(--dark-text); padding: .75rem;
+          font-family: 'SF Mono', Consolas, monospace; font-size: var(--fs-base);
+          outline: none; min-height: 180px; resize: vertical; line-height: 1.6;
+        }
+        .bulk-paste-area:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+        .bulk-preview {
+          margin-top: .5rem; padding: .5rem; background: var(--dark-bg);
+          border: 1px solid var(--dark-border); border-radius: var(--radius-card);
+          font-size: var(--fs-sm); max-height: 200px; overflow-y: auto; display: none;
+        }
+        .bulk-preview.show { display: block; }
+        .bulk-preview-item { padding: .25rem 0; border-bottom: 1px solid rgba(51,65,85,.4); }
+        .bulk-preview-item:last-child { border-bottom: none; }
+        .bulk-preview-item .num { color: var(--dark-text-secondary); display: inline-block; width: 24px; }
+
+        /* Empty state */
+        .tk-empty { text-align: center; padding: 2.5rem 1rem; color: var(--dark-text-secondary); }
+
+        /* ===== Gap 14 (Step 2): filter bar, bulk bar, per-card checkbox ===== */
+        .kc-sel { position: absolute; top: .4rem; left: .4rem; }
+        .kanban-card .kc-title { padding-left: 1.4rem; }
+        #pmFilterBar .pm-card, #pmBulkBar { background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: var(--radius-card); padding: .6rem; margin-bottom: .6rem; }
+        #pmFilterBar .pm-input, #pmFilterBar .pm-select, #pmBulkBar .pm-select { background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text); border-radius: var(--radius-btn); height: 32px; padding: 0 .5rem; font-family: inherit; width: 100%; }
+        #pmFilterBar select[multiple] { height: 32px; overflow: hidden; }
+        #pmBulkBar { position: fixed !important; left: 0; right: 0; bottom: 0; z-index: 1100; margin: 0; border-radius: 0; padding-bottom: calc(.6rem + env(safe-area-inset-bottom, 0px)); }
+        body.pm-has-timer #pmBulkBar { bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+
+        @media (max-width: 900px) {
+          .kanban-wrap { flex-direction: column; }
+          .kanban-col { min-width: 100%; max-height: none; }
+          .create-tabs { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body th:attr="data-user-role=${isSuperAdmin != null && isSuperAdmin ? 'SUPER_ADMIN' : (isHR != null && isHR ? 'HR' : 'PM')}">
+<!-- Mobile burger -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+    <i class="fas fa-bars"></i>
+</button>
+
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR — shared accordion component
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon" id="sidebarBrandIcon">
+            <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+            <i id="sidebarIcon" class="fas fa-building"></i>
+        </div>
+        <span id="sidebarCompanyName">Menti's IT Solutions</span>
+    </div>
+
+    <div class="sidebar-tools">
+        <div class="sidebar-search">
+            <i class="fas fa-magnifying-glass"></i>
+            <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off" aria-label="Search sidebar menu">
+        </div>
+        <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle" aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+            <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+        </button>
+    </div>
+
+    <div class="sidebar-content">
+        <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+
+            <div class="side-group" data-group="workspace">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+                    <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+                    <span class="side-group-label">Workspace</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupWorkspace">
+                    <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+                    <li><a class="nav-link" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+                    <li>
+                        <a class="nav-link" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+                            <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="delivery">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+                    <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+                    <span class="side-group-label">Delivery</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupDelivery">
+                    <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+                    <li><a class="nav-link active" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+                    <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+                    <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+                    <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="finance">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+                    <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+                    <span class="side-group-label">Finance</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupFinance">
+                    <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-group" data-group="insights">
+                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+                    <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="side-group-label">Insights</span>
+                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+                </button>
+                <ul class="side-submenu" id="sideGroupInsights">
+                    <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+                    <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+                    <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+                </ul>
+            </div>
+
+            <div class="side-empty" id="sideNavEmpty" hidden>No menu items match your search</div>
+        </nav>
+    </div>
+</aside>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+
+    <header class="top-header">
+        <div class="search-box" onclick="PM.openCmd()">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+            <kbd>⌘K</kbd>
+        </div>
+
+        <div class="top-header-actions">
+            <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
+            <button class="icon-btn" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></button>
+            <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+            <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+            </button>
+
+            <div class="menti-ai-nav-wrapper">
+                <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()" aria-label="Open Menti PM Assistant">
+                    <span class="menti-ai-pulse"></span>
+                    <i class="fas fa-wand-magic-sparkles"></i>
+                </button>
+                <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+            </div>
+
+            <div class="user-profile-menu">
+                <div class="dropdown">
+                    <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <div class="avatar-sm" id="pmUserAvatar">?</div>
+                        <span id="pmUserName">Loading…</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+                        <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="content-area">
+
+        <div class="pm-breadcrumb">
+            <a href="javascript:void(0)" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></a>
+            <span>/</span><span>Project Management</span>
+            <span>/</span><span>Tasks</span>
+            <span>/</span><span id="pmCrumb">Board</span>
+        </div>
+
+        <div class="pm-page-head">
+            <div>
+                <div class="pm-page-title"><i class="fas fa-list-check"></i> <span id="pmPageTitle">Task Board</span></div>
+                <div class="pm-page-sub" id="pmPageSub">Subtasks · Checklist · Dependencies · Drag to move</div>
+            </div>
+            <div class="pm-page-actions">
+                <button class="pm-btn" onclick="location.href='/pm/06b-graph'"><i class="fas fa-diagram-project"></i> Graph</button>
+                <button class="pm-btn" onclick="openTemplates()"><i class="fas fa-layer-group"></i> Templates</button>
+                <button class="pm-btn" onclick="openCreate('clone')"><i class="fas fa-copy"></i> Clone</button>
+                <button class="pm-btn" onclick="openCreate('bulk')"><i class="fas fa-paste"></i> Bulk Add</button>
+                <button class="pm-btn pm-btn-primary" onclick="openCreate('blank')"><i class="fas fa-plus"></i> New Task</button>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center">
+            <!-- Gap 14 (Step 3): project picker + select-all (before the team filter) -->
+            <select class="form-input" style="max-width:220px;height:32px" id="tkProject" onchange="setProject(this.value)"><option value="">All projects</option></select>
+            <label style="display:inline-flex;gap:.35rem;align-items:center;font-size:var(--fs-sm);cursor:pointer">
+                <input type="checkbox" id="pmSelAll" onchange="tkSelectAll(this.checked)" style="accent-color:var(--primary)"> Select all</label>
+
+            <select class="form-input" style="max-width:200px;height:32px" id="tkTeamFilter" onchange="setTeamFilter(this.value)">
+                <option value="all">All Teams</option>
+            </select>
+
+            <div class="tk-view-toggle" id="tkViewToggle">
+                <button data-view="board" class="active" onclick="switchView('board',this)"><i class="fas fa-table-columns"></i> Board</button>
+                <button data-view="list" onclick="switchView('list',this)"><i class="fas fa-list"></i> List</button>
+                <button data-view="calendar" onclick="switchView('calendar',this)"><i class="fas fa-calendar"></i> Calendar</button>
+            </div>
+
+            <input class="form-input" style="max-width:240px;height:32px" placeholder="Search tasks..." id="tkSearch" oninput="renderCurrentView()">
+            <select class="form-input" style="max-width:150px;height:32px" id="tkPriority" onchange="renderCurrentView()">
+                <option value="">All Priority</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+            <span style="margin-left:auto;font-size:var(--fs-xs);color:var(--dark-text-secondary)">
+        <i class="fas fa-circle" style="color:var(--primary);font-size:6px"></i> <span id="tkTotal">0</span> tasks
+      </span>
+        </div>
+
+        <!-- Gap 14 (Step 3): filter bar host, right after the controls row -->
+        <div id="pmFilterBar"></div>
+
+        <div class="bulk-bar" id="tkBulk">
+            <span><span id="tkBulkCount">0</span> selected</span>
+            <button onclick="bulkStatus()"><i class="fas fa-sync"></i> Status</button>
+            <button onclick="bulkPriority()"><i class="fas fa-flag"></i> Priority</button>
+            <!-- Gap 14 (Step 3): Add assignee dropdown before Delete -->
+            <select class="form-input" id="tkBulkAssignee" style="max-width:180px;height:30px" onchange="bulkAssign(this)"><option value="">Add assignee…</option></select>
+            <button onclick="bulkDelete()" style="background:rgba(255,255,255,.25)"><i class="fas fa-trash"></i> Delete</button>
+            <button onclick="clearTkSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
+        </div>
+
+        <div id="tkBoard" class="kanban-wrap"></div>
+        <div id="tkList" style="display:none">
+            <div class="pm-widget" style="padding:0;overflow:hidden">
+                <div style="overflow-x:auto">
+                    <table class="pm-table">
+                        <thead><tr><th style="width:32px"></th><th>Task</th><th>Project</th><th>Team</th><th>Priority</th><th>Status</th><th>Due</th><th>Progress</th><th></th></tr></thead>
+                        <tbody id="tkListBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div id="tkCalendar" style="display:none">
+            <div class="pm-widget">
+                <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-calendar"></i> Calendar</div></div>
+                <div class="pm-widget-body">
+                    <div id="tkCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px"></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Context menu -->
+<div class="ctx-menu" id="ctxMenu">
+    <div class="ctx-item" onclick="ctxAction('open')"><i class="fas fa-folder-open"></i> Open</div>
+    <div class="ctx-item" onclick="ctxAction('duplicate')"><i class="fas fa-copy"></i> Duplicate</div>
+    <div class="ctx-item" onclick="ctxAction('addsub')"><i class="fas fa-sitemap"></i> Add subtask</div>
+    <div class="ctx-item" onclick="ctxAction('adddep')"><i class="fas fa-diagram-project"></i> Add dependency</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="ctxAction('status-todo')"><i class="fas fa-circle"></i> Mark To Do</div>
+    <div class="ctx-item" onclick="ctxAction('status-progress')"><i class="fas fa-spinner"></i> Mark In Progress</div>
+    <div class="ctx-item" onclick="ctxAction('status-done')"><i class="fas fa-check-circle"></i> Mark Done</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item danger" onclick="ctxAction('delete')"><i class="fas fa-trash"></i> Delete</div>
+</div>
+
+<!-- Create modal -->
+<div class="modal-backdrop" id="createModal" onclick="if(event.target===this)closeCreate()">
+    <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <div class="modal-head">
+            <h3><i class="fas fa-plus-circle"></i> <span id="createTitle">Create New Task</span></h3>
+            <button class="pm-btn" style="width:30px;height:30px;padding:0;justify-content:center" onclick="closeCreate()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="create-tabs" id="createTabs">
+                <button class="create-tab active" data-mode="blank" onclick="setCreateMode('blank',this)"><i class="fas fa-file-circle-plus"></i> Single Task</button>
+                <button class="create-tab" data-mode="template" onclick="setCreateMode('template',this)"><i class="fas fa-layer-group"></i> Template</button>
+                <button class="create-tab" data-mode="clone" onclick="setCreateMode('clone',this)"><i class="fas fa-copy"></i> Clone</button>
+                <button class="create-tab" data-mode="bulk" onclick="setCreateMode('bulk',this)"><i class="fas fa-paste"></i> Bulk Paste</button>
+                <button class="create-tab" data-mode="import" onclick="setCreateMode('import',this)"><i class="fas fa-file-import"></i> CSV Import</button>
+            </div>
+
+            <div class="create-pane active" id="cp-blank">
+                <div class="form-row">
+                    <div class="form-group" style="grid-column:1/-1">
+                        <label>Task Title <span class="req">*</span></label>
+                        <input class="form-input" id="fldTitle" placeholder="e.g. Fix SSO token refresh bug">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-input form-textarea" id="fldDesc" placeholder="Acceptance criteria, links..."></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Project <span class="req">*</span></label>
+                        <select class="form-input" id="fldProject" onchange="onProjectChange()"><option value="">Loading...</option></select>
+                    </div>
+                    <div class="form-group"><label>Team <span style="color:var(--dark-text-secondary);font-weight:400">(optional)</span></label>
+                        <select class="form-input" id="fldTeam" onchange="onTeamChange()"><option value="">No team</option></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Priority</label>
+                        <select class="form-input" id="fldPriority">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                            <option value="CRITICAL">Critical</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Type</label>
+                        <select class="form-input" id="fldType">
+                            <option value="TASK">Task</option>
+                            <option value="STORY">Story</option>
+                            <option value="BUG">Bug</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Story Points</label>
+                        <select class="form-input" id="fldPoints">
+                            <option>1</option><option>2</option><option selected>3</option>
+                            <option>5</option><option>8</option><option>13</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Assignees <span id="assigneeScope" style="font-weight:400;color:var(--dark-text-secondary);font-size:var(--fs-xs)">— all employees</span></label>
+                    <div id="assigneePicker"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Due Date</label><input type="date" class="form-input" id="fldDue"></div>
+                    <div class="form-group"><label>Estimated Hours</label><input type="number" class="form-input" id="fldHours" placeholder="8"></div>
+                </div>
+            </div>
+
+            <div class="create-pane" id="cp-template">
+                <div class="tpl-grid" id="tplGrid"></div>
+            </div>
+
+            <div class="create-pane" id="cp-clone">
+                <div class="clone-search"><i class="fas fa-search"></i><input class="form-input" id="cloneSearch" placeholder="Search tasks..." oninput="renderCloneList()"></div>
+                <div class="clone-list" id="cloneList"></div>
+            </div>
+
+            <div class="create-pane" id="cp-bulk">
+                <textarea class="bulk-paste-area" id="bulkPaste" placeholder="- Task one&#10;[P1] Critical task" oninput="previewBulk()"></textarea>
+                <div class="form-row" style="margin-top:.5rem">
+                    <div class="form-group"><label>Project</label><select class="form-input" id="bulkProject"><option value="">Loading...</option></select></div>
+                    <div class="form-group"><label>Team</label><select class="form-input" id="bulkTeam"><option value="">No team</option></select></div>
+                </div>
+                <div class="bulk-preview" id="bulkPreview"></div>
+            </div>
+
+            <div class="create-pane" id="cp-import">
+                <textarea class="bulk-paste-area" id="csvPaste" placeholder="Title,Description,Priority,Due" oninput="previewCsv()"></textarea>
+                <div class="bulk-preview" id="csvPreview"></div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="pm-btn" onclick="closeCreate()">Cancel</button>
+            <button class="pm-btn pm-btn-primary" id="createSubmitBtn" onclick="submitCreate()"><i class="fas fa-check"></i> <span id="submitLabel">Create Task</span></button>
+        </div>
+    </div>
+</div>
+
+<!-- Subtask modal -->
+<div class="modal-backdrop" id="subtaskModal" onclick="if(event.target===this)closeSubtaskModal()">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+        <div class="modal-head">
+            <h3><i class="fas fa-sitemap"></i> Add Subtask</h3>
+            <button class="pm-btn" style="width:30px;height:30px;padding:0;justify-content:center" onclick="closeSubtaskModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group"><label>Subtask Title <span class="req">*</span></label><input class="form-input" id="stTitle" placeholder="e.g. Write unit tests"></div>
+            <div class="form-row">
+                <div class="form-group"><label>Priority</label>
+                    <select class="form-input" id="stPriority"><option value="LOW">Low</option><option value="MEDIUM" selected>Medium</option><option value="HIGH">High</option><option value="CRITICAL">Critical</option></select>
+                </div>
+                <div class="form-group"><label>Due</label><input type="date" class="form-input" id="stDue"></div>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="pm-btn" onclick="closeSubtaskModal()">Cancel</button>
+            <button class="pm-btn pm-btn-primary" onclick="submitSubtask()"><i class="fas fa-check"></i> Add Subtask</button>
+        </div>
+    </div>
+</div>
+
+<!-- Dependency modal -->
+<div class="modal-backdrop" id="depModal" onclick="if(event.target===this)closeDepModal()">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+        <div class="modal-head">
+            <h3><i class="fas fa-diagram-project"></i> Add Dependency</h3>
+            <button class="pm-btn" style="width:30px;height:30px;padding:0;justify-content:center" onclick="closeDepModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label>Type</label>
+                <select class="form-input" id="depType">
+                    <option value="BLOCKED_BY">This task is BLOCKED BY another</option>
+                    <option value="BLOCKS">This task BLOCKS another</option>
+                    <option value="RELATES_TO">Relates to</option>
+                    <option value="DUPLICATES">Duplicates</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Task <span class="req">*</span></label>
+                <select class="form-input" id="depTarget"><option value="">Loading tasks...</option></select>
+            </div>
+        </div>
+        <div class="modal-foot">
+            <button class="pm-btn" onclick="closeDepModal()">Cancel</button>
+            <button class="pm-btn pm-btn-primary" onclick="submitDependency()"><i class="fas fa-check"></i> Add Dependency</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toasts container -->
+<div class="pm-toasts" id="pmToasts"></div>
+
+<!-- Command palette -->
+<div class="pm-cmd-backdrop" id="pmCmdBackdrop" onclick="if(event.target===this)PM.closeCmd()">
+    <div class="pm-cmd">
+        <div class="pm-cmd-input">
+            <i class="fas fa-search"></i>
+            <input id="pmCmdInput" placeholder="Search pages, projects, tasks…" autocomplete="off">
+            <kbd>Esc</kbd>
+        </div>
+        <div class="pm-cmd-list" id="pmCmdList"></div>
+        <div class="pm-cmd-foot">
+            <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+            <span><kbd>↵</kbd> open</span>
+            <span><kbd>Esc</kbd> close</span>
+        </div>
+    </div>
+</div>
+
+<!-- ============ SHARED PM AI ASSISTANT PANEL ============ -->
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+    <span class="menti-ai-fab-dot"></span>
+    <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+    <div class="menti-ai-chat-header">
+        <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+            <div class="menti-ai-hdr-avatar">M</div>
+            <div class="menti-ai-hdr-info">
+                <div class="menti-ai-hdr-name">Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i></div>
+                <div class="menti-ai-hdr-status">
+                    <span class="menti-ai-status-dot"></span>
+                    <span id="mentiAiModeLabel">💾 New saved chat</span>
+                </div>
+            </div>
+        </div>
+        <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="menti-ai-body">
+        <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+        <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+            <div class="menti-ai-sessions-header">
+                <span>Saved Chats</span>
+                <span id="mentiAiSessionCount">0</span>
+            </div>
+            <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()"><i class="fas fa-plus"></i> New Saved Chat</button>
+            <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+                <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+            </div>
+        </div>
+
+        <div class="menti-ai-chat-col">
+            <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+            <div class="menti-ai-chips" id="mentiAiSuggestions">
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which tasks are blocked?')"><i class="fas fa-ban"></i> Blocked</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show my overdue tasks')"><i class="fas fa-fire"></i> Overdue</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize this sprint board')"><i class="fas fa-table-columns"></i> Sprint Board</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which tasks are in review?')"><i class="fas fa-magnifying-glass"></i> In Review</button>
+                <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('What should I prioritize today?')"><i class="fas fa-bullseye"></i> Priorities</button>
+            </div>
+
+            <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about tasks…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+                <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
+
+<script>
+    window.MENTI_AI_CONFIG = {
+      role: 'PM',
+      roleTag: 'PM',
+      assistantName: 'Menti PM',
+      userInitial: 'U',
+      sendUrl: '/api/chat/pm/send',
+      sessionsUrl: '/api/chat/pm/sessions',
+      historyUrl: '/api/chat/pm/session',
+      deleteUrl: '/api/chat/pm/session'
+    };
+</script>
+
+<script src="/pm/pm-core.js" onerror="this.remove()"></script>
+<script src="/pm/pm-task-drawer.js" onerror="this.remove()"></script>
+<!-- Gap 14 (Step 3): filter module, loaded after the drawer -->
+<script src="/pm/js/pm-task-filter.js" onerror="this.remove()"></script>
+
+<!-- PM core shim (fallback if pm-core.js not deployed) -->
+<script>
+    (function () {
+      if (window.PM && window.PM.bootstrap) return;
+      var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD' };
+      var rules = { creator: true, manage: true, clients: true, lead: true, admin: true, super: true };
+      function toast(msg, type) {
+        var box = document.getElementById('pmToasts'); if (!box) return;
+        var el = document.createElement('div');
+        el.className = 'pm-toast ' + (type || 'info');
+        var icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-info-circle' };
+        el.innerHTML = '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i></div><div class="pm-toast-msg">' + PM.esc(msg) + '</div>';
+        box.appendChild(el);
+        requestAnimationFrame(function () { el.classList.add('show'); });
+        setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 300); }, 3500);
+        el.onclick = function () { el.remove(); };
+      }
+      window.PM = {
+        esc: function (s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; },
+        fmtDateTime: function (v) { try { return new Date(v).toLocaleString(); } catch (e) { return String(v || ''); } },
+        fmtDate: function (v) { try { return new Date(v).toLocaleDateString(); } catch (e) { return String(v || ''); } },
+        getInitials: function (name) { return String(name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(); },
+        toast: toast,
+        can: function (r) { return !!rules[r]; },
+        me: function () { return Promise.resolve(me); },
+        bootstrap: function () { return Promise.resolve(me); },
+        meTasks: function () { return Promise.resolve([]); },
+        api: function (method, url, body) {
+          var opts = { method: method, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' };
+          if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+          return fetch(url, opts).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.status === 204 ? null : r.json(); });
+        },
+        apiList: function (method, url) { return window.PM.api(method, url).then(function (d) { if (Array.isArray(d)) return d; if (d && Array.isArray(d.content)) return d.content; return []; }); },
+        openCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.add('open'); },
+        closeCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.remove('open'); },
+        openIntake: function () { toast('Project intake is not wired in this preview.', 'info'); },
+        openDrawer: function (html, title) { PM.toast(title || 'Preview only', 'info'); },
+        closeDrawer: function () {},
+        toggleTheme: function () {
+          document.body.classList.toggle('pm-light');
+          try { localStorage.setItem('pm.theme', document.body.classList.contains('pm-light') ? 'light' : 'dark'); } catch (e) {}
+        },
+        confirm: function (opts) { return Promise.resolve(window.confirm((opts && opts.message) || 'Are you sure?')); },
+        Form: { open: function () { PM.toast('Form open is not wired in this preview.', 'info'); } }
+      };
+      document.addEventListener('keydown', function (e) {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); window.PM.openCmd(); }
+        if (e.key === 'Escape') window.PM.closeCmd();
+      });
+      try { if (localStorage.getItem('pm.theme') === 'light') document.body.classList.add('pm-light'); } catch (e) {}
+    })();
+</script>
+
+<script>
+    /* ============================================================
+       PM TASKS PAGE LOGIC
+       ============================================================ */
+    PM.bootstrap().then(function (me) {
+
+      // Personalise header
+      var userNameEl = document.getElementById('pmUserName');
+      if (userNameEl) userNameEl.textContent = me.name || 'User';
+      var avatarEl = document.getElementById('pmUserAvatar');
+      if (avatarEl) {
+        avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+        avatarEl.title = me.name || 'User';
+      }
+
+      var TL = PM.isTeamLeadOnly();
+      var leadIds = me.leadOfTeamIds || [];
+      var metaCache = {};
+      if (TL) { var pk = document.getElementById('tkProject'); if (pk) pk.style.display = 'none'; }
+
+      /* ===== State ===== */
+      var tasks = [];
+      var allEmployees = [];
+      var allTeams = [];
+      var formProjects = [];
+      var teamMembersCache = {};
+      var assigneeMs = null;
+      var currentTeamFilter = 'all';
+      var currentView = 'board';
+      var selected = new Set();
+      var ctxId = null;
+      var currentDrawerTaskId = null;
+
+      /* ===== Gap 14 (Step 4): project mode (server filters + saved filters + bulk toolbar) ===== */
+      var projectMode = false, currentProjectId = null;
+
+      function safeList(url) { return PM.apiList('GET', url).catch(function () { return []; }); }
+      function toggleLocalFilters(show) {
+        ['tkSearch', 'tkPriority'].forEach(function (id) { var e = document.getElementById(id); if (e) e.style.display = show ? '' : 'none'; });
+      }
+      function loadProjectPicker() {
+        var sel = document.getElementById('tkProject'); if (!sel) return Promise.resolve();
+        return PM.apiList('GET', '/api/pm/projects?page=0&size=100').then(function (items) {
+          sel.innerHTML = '<option value="">All projects</option>' + items.map(function (p) {
+            return '<option value="' + p.id + '">' + PM.esc(p.name) + '</option>'; }).join('');
+          sel.value = currentProjectId ? String(currentProjectId) : '';
+        }).catch(function () {});
+      }
+      function enterProject(pid) {
+        projectMode = true; currentProjectId = pid; selected.clear();
+        toggleLocalFilters(false);
+        Promise.all([
+          safeList('/api/pm/projects/' + pid + '/members'),
+          safeList('/api/pm/projects/' + pid + '/sprints'),
+          safeList('/api/pm/projects/' + pid + '/milestones')
+        ]).then(function (r) {
+          var members = r[0].map(function (m) {
+            var id = m.employeeId || m.id;
+            return { employeeId: id, name: m.name || m.employeeName || m.fullName || ('Employee #' + id) };
+          });
+          return PMTaskFilter.init({
+            projectId: pid, members: members, sprints: r[1], milestones: r[2],
+            render: function (rows) { tasks = rows.map(mapBackendTask); renderCurrentView(); }
+          });
+        }).catch(function (e) { PM.toast(e.message || 'Could not load project filters', 'error'); });
+      }
+      function goPMHome() {
+        var role = (document.body.getAttribute('data-user-role') || 'PM').toUpperCase();
+        if (role === 'SUPER_ADMIN' || role === 'HR') {
+            window.location.href = '/dashboard/hr';
+        } else {
+            window.location.href = '/pm/01-home';
+        }
+      }
+      function leaveProject() {
+        projectMode = false; currentProjectId = null; selected.clear();
+        toggleLocalFilters(true);
+        document.getElementById('pmFilterBar').innerHTML = '';
+        var tb = document.getElementById('pmBulkBar'); if (tb) tb.style.display = 'none';
+        loadTasks().then(renderCurrentView);
+      }
+      function setProject(v) {
+        var url = new URL(window.location.href);
+        url.hash = '';
+        if (v) url.searchParams.set('projectId', v); else url.searchParams.delete('projectId');
+        window.history.replaceState({}, '', url.toString());
+        if (v) enterProject(parseInt(v, 10)); else leaveProject();
+      }
+      window.setProject = setProject;
+
+      function chk(id) {
+        var common = ' class="pm-sel" data-id="' + id + '" onclick="event.stopPropagation()" style="accent-color:var(--primary)"';
+        return projectMode
+          ? '<input type="checkbox"' + common + ' onchange="PMTaskFilter.toggle(' + id + ',this.checked)">'
+          : '<input type="checkbox"' + common + (selected.has(id) ? ' checked' : '') + ' onchange="toggleTk(' + id + ',this)">';
+      }
+      function updateBulkBar() {
+        var bar = document.getElementById('tkBulk'); if (!bar) return;
+        document.getElementById('tkBulkCount').textContent = selected.size;
+        bar.classList.toggle('show', selected.size > 0 && !projectMode);
+      }
+      function repaintSelection() {
+        var ids = projectMode ? PMTaskFilter.selected() : Array.from(selected);
+        document.querySelectorAll('.pm-sel').forEach(function (c) { c.checked = ids.indexOf(parseInt(c.dataset.id, 10)) > -1; });
+        var all = document.getElementById('pmSelAll');
+        if (all) { var n = getFiltered().length; all.checked = n > 0 && ids.length >= n; }
+        if (!projectMode) updateBulkBar();
+      }
+      function tkSelectAll(on) {
+        if (projectMode) { PMTaskFilter.toggleAll(on); return; }
+        getFiltered().forEach(function (t) { if (on) selected.add(t.id); else selected.delete(t.id); });
+        repaintSelection();
+      }
+      window.tkSelectAll = tkSelectAll;
+
+      var statusLabel = {
+        'todo': ['primary', 'To Do'],
+        'in-progress': ['warning', 'In Progress'],
+        'blocked': ['danger', 'Blocked'],
+        'in-review': ['info', 'In Review'],
+        'done': ['success', 'Done']
+      };
+      var statusCols = [
+        { k: 'todo',        label: 'To Do',       dot: 'var(--dark-text-secondary)' },
+        { k: 'in-progress', label: 'In Progress', dot: 'var(--warning)' },
+        { k: 'in-review',   label: 'In Review',   dot: 'var(--purple)' },
+        { k: 'blocked',     label: 'Blocked',     dot: 'var(--danger)' },
+        { k: 'done',        label: 'Done',        dot: 'var(--success)' }
+      ];
+      var priorityClass = { 'Critical': 'p-c', 'High': 'p-h', 'Medium': 'p-m', 'Low': 'p-l' };
+      var priorityBadge = { 'Critical': 'danger', 'High': 'danger', 'Medium': 'warning', 'Low': 'success' };
+
+      function mapStatus(s) { return (s || 'TODO').toLowerCase().replace(/_/g, '-'); }
+      function mapBackendTask(t) {
+        return {
+          id: t.id, title: t.title,
+          projectId: t.projectId, project: t.projectName || ('Project #' + t.projectId),
+          teamId: t.teamId || null, teamName: t.teamName || null,
+          parentTaskId: t.parentTaskId || null,
+          priority: (t.priority || 'MEDIUM').charAt(0) + (t.priority || 'MEDIUM').slice(1).toLowerCase(),
+          status: mapStatus(t.status),
+          assignees: t.assigneeNames || (t.assigneeIds || []).map(function (id) { return 'User #' + id; }),
+          assigneeIds: t.assigneeIds || [],
+          due: t.dueDate || '',
+          points: t.storyPoints || 0,
+          progress: t.progressPct || 0,
+          desc: t.description || '',
+          subtaskCount: t.subtaskCount || 0,
+          subtaskDone: t.subtaskDone || 0,
+          openBlockerCount: t.openBlockerCount || 0,
+          checklistDone: 0, checklistTotal: 0
+        };
+      }
+
+      /* ===== Load tasks ===== */
+      function teamNameOf(id) { var t = allTeams.find(function (x) { return x.id === id; }); return t ? t.name : null; }
+      function fetchRawTasks() {
+        if (!TL) return PM.apiList('GET', '/api/pm/tasks?page=0&size=200');
+        return Promise.all(leadIds.map(function (id) {
+          return PM.api('GET', '/api/pm/teams/' + id + '/tasks?limit=300').then(function (d) {
+            return ((d && d.tasks) || []).map(function (t) {
+              if (t.teamId == null) t.teamId = id;
+              if (!t.teamName) t.teamName = teamNameOf(id);
+              return t;
+            });
+          }).catch(function () { return []; });
+        })).then(function (a) { return [].concat.apply([], a); });
+      }
+      function applyMeta(t, m) {
+        if (!m) return;
+        t.checklistTotal = m.checklistTotal || 0; t.checklistDone = m.checklistDone || 0;
+        t.subtaskCount = m.subtaskCount || 0;     t.subtaskDone = m.subtaskDone || 0;
+        t.openBlockerCount = m.openBlockerCount || 0;
+      }
+      function loadTasks() {
+        if (projectMode) return PMTaskFilter.run();
+        return fetchRawTasks().then(function (raw) {
+          tasks = raw.map(mapBackendTask);
+          var jobs = [];
+          tasks.forEach(function (t, i) {
+            var r = raw[i];
+            var sig = [r.status, r.progressPct, r.subtaskCount, r.subtaskDone, r.updatedAt, (r.assigneeIds || []).join(',')].join('|');
+            var c = metaCache[t.id];
+            if (c && c.sig === sig && Date.now() - c.at < 60000) { applyMeta(t, c.meta); return; }
+            jobs.push(PM.api('GET', '/api/pm/tasks/' + t.id + '/board-meta').then(function (m) {
+              metaCache[t.id] = { sig: sig, meta: m || {}, at: Date.now() }; applyMeta(t, m);
+            }).catch(function () {}));
+          });
+          return Promise.all(jobs);
+        }).catch(function (e) { console.warn('loadTasks', e); PM.toast('Failed to load tasks', 'error'); });
+      }
+
+      /* ===== Load employees ===== */
+      function loadEmployees() {
+        if (TL) {
+          return Promise.all(leadIds.map(function (id) {
+            return PM.api('GET', '/api/pm/teams/' + id + '/members/details').catch(function () { return []; });
+          })).then(function (arrs) {
+            var seen = {}; allEmployees = [];
+            arrs.forEach(function (a) { (a || []).forEach(function (m) {
+              if (!seen[m.employeeId]) { seen[m.employeeId] = 1; allEmployees.push({ id: m.employeeId, name: m.employeeName, role: m.roleInTeam || '', department: '' }); }
+            }); });
+            return allEmployees;
+          });
+        }
+        return PM.api('GET', '/api/pm/employees/dropdown').then(function (list) {
+          allEmployees = (list || []).map(function (e) {
+            return { id: e.id, name: e.name || ('Employee #' + e.id), role: e.role || '', department: e.department || '' };
+          });
+          return allEmployees;
+        }).catch(function (err) {
+          console.error('[loadEmployees] FAILED:', err);
+          PM.toast('Could not load employees: ' + (err.message || err), 'error');
+          allEmployees = [];
+          throw err;
+        });
+      }
+
+      /* ===== Load teams ===== */
+      function loadTeams() {
+        return PM.api('GET', '/api/pm/teams/dropdown').then(function (list) {
+          allTeams = (list || []).map(function (t) {
+            return { id: t.id, name: t.name || ('Team #' + t.id), icon: t.icon || 'fa-users', department: t.department || '', memberCount: t.memberCount || 0 };
+          });
+          if (TL) allTeams = allTeams.filter(function (t) { return leadIds.indexOf(t.id) >= 0; });
+          return allTeams;
+        }).catch(function (err) {
+          console.error('[loadTeams] FAILED:', err);
+          PM.toast('Could not load teams: ' + (err.message || err), 'error');
+          allTeams = [];
+          throw err;
+        });
+      }
+
+      function loadTeamMembers(teamId) {
+        if (teamMembersCache[teamId]) return Promise.resolve(teamMembersCache[teamId]);
+        return PM.api('GET', '/api/pm/teams/' + teamId + '/members').then(function (ids) {
+          teamMembersCache[teamId] = ids || [];
+          return teamMembersCache[teamId];
+        }).catch(function () { teamMembersCache[teamId] = []; return []; });
+      }
+
+      /* ===== Team chips ===== */
+      function renderTeamChips() {
+        var host = document.getElementById('tkTeamFilter'); if (!host) return;
+        var opts = TL ? '' : '<option value="all">All Teams (' + tasks.length + ')</option>';
+        allTeams.forEach(function (t) {
+          var count = tasks.filter(function (x) { return x.teamId === t.id; }).length;
+          opts += '<option value="' + t.id + '"' + (currentTeamFilter === t.id ? ' selected' : '') + '>' + PM.esc(t.name) + ' (' + count + ')</option>';
+        });
+        host.innerHTML = opts;
+        host.value = currentTeamFilter;
+      }
+      function setTeamFilter(teamId) {
+        currentTeamFilter = (teamId === 'all') ? 'all' : parseInt(teamId, 10);
+        var url = new URL(window.location.href);
+        if (teamId === 'all') url.searchParams.delete('teamId');
+        else url.searchParams.set('teamId', teamId);
+        window.history.replaceState({}, '', url.toString());
+        renderCurrentView();
+      }
+      window.setTeamFilter = setTeamFilter;
+
+      /* ===== View switching ===== */
+      function switchView(view, el) {
+        currentView = view;
+        document.querySelectorAll('#tkViewToggle button').forEach(function (b) { b.classList.toggle('active', b.dataset.view === view); });
+        document.getElementById('tkBoard').style.display = view === 'board' ? 'flex' : 'none';
+        document.getElementById('tkList').style.display = view === 'list' ? 'block' : 'none';
+        document.getElementById('tkCalendar').style.display = view === 'calendar' ? 'block' : 'none';
+        var titles = { board: 'Task Board', list: 'Task List', calendar: 'Calendar' };
+        document.getElementById('pmPageTitle').textContent = titles[view];
+        document.getElementById('pmCrumb').textContent = titles[view];
+        renderCurrentView();
+      }
+      window.switchView = switchView;
+
+      function getFiltered() {
+        var q = projectMode ? '' : (document.getElementById('tkSearch').value || '').toLowerCase();
+        var pr = projectMode ? '' : document.getElementById('tkPriority').value;
+        return tasks.filter(function (t) {
+          if (currentTeamFilter !== 'all' && t.teamId !== currentTeamFilter) return false;
+          if (q && !t.title.toLowerCase().includes(q)) return false;
+          if (pr && t.priority !== pr) return false;
+          return true;
+        });
+      }
+
+      function renderCurrentView() {
+        renderTeamChips();
+        var list = getFiltered();
+        document.getElementById('tkTotal').textContent = list.length;
+        if (currentView === 'board') renderBoard(list);
+        else if (currentView === 'list') renderList(list);
+        else if (currentView === 'calendar') renderCalendar(list);
+        repaintSelection();
+      }
+      window.renderCurrentView = renderCurrentView;
+
+      /* ===== Board ===== */
+      function renderBoard(list) {
+        document.getElementById('tkBoard').innerHTML = statusCols.map(function (col) {
+          var items = list.filter(function (t) { return t.status === col.k; });
+          return '<div class="kanban-col" data-status="' + col.k + '" ondragover="handleBoardOver(event,this)" ondragleave="handleBoardLeave(this)" ondrop="handleBoardDrop(event,this)">' +
+            '<div class="kanban-head"><span><i class="fas fa-circle" style="color:' + col.dot + ';font-size:8px"></i> ' + col.label + '</span><span class="kanban-count">' + items.length + '</span></div>' +
+            '<div class="kanban-body">' +
+              (items.length ? items.map(renderKanbanCard).join('') : '<div class="kanban-empty">Drop tasks here</div>') +
+            '</div>' +
+            '<button class="kanban-add" onclick="openCreate(\'blank\')"><i class="fas fa-plus"></i> Add task</button>' +
+          '</div>';
+        }).join('');
+      }
+
+      function renderKanbanCard(t) {
+        var blockedCls = t.openBlockerCount > 0 ? ' blocked' : '';
+        var badges = '';
+        if (t.subtaskCount > 0 || t.checklistTotal > 0) {
+          var st = t.subtaskCount > 0 ? '☑ ' + t.subtaskDone + '/' + t.subtaskCount : ('✓ ' + t.checklistDone + '/' + t.checklistTotal);
+          badges += '<span><i class="fas fa-list-check"></i> ' + st + '</span>';
+        }
+        if (t.openBlockerCount > 0) badges += '<span class="blocked-red"><i class="fas fa-ban"></i> ' + t.openBlockerCount + ' blocker' + (t.openBlockerCount > 1 ? 's' : '') + '</span>';
+        return '<div class="kanban-card' + blockedCls + '" draggable="true" data-id="' + t.id + '" ondragstart="handleCardDragStart(event)" ondragend="handleCardDragEnd(event)" onclick="openTask(' + t.id + ')" oncontextmenu="openCtx(event,' + t.id + ')">' +
+          '<span class="kc-sel">' + chk(t.id) + '</span>' +
+          (t.teamName ? '<span class="kc-team">' + PM.esc(t.teamName) + '</span>' : '') +
+          '<div class="kc-title">' + PM.esc(t.title) + '</div>' +
+          '<div class="kc-meta"><span><span class="priority-dot ' + priorityClass[t.priority] + '"></span>' + t.priority + '</span><span><i class="fas fa-layer-group"></i> ' + t.points + '</span></div>' +
+          (badges ? '<div class="kc-badges">' + badges + '</div>' : '') +
+          '<div class="kc-foot">' +
+            '<div class="av-stack">' + t.assignees.slice(0, 3).map(function (a) { return '<div class="av" title="' + PM.esc(a) + '">' + PM.getInitials(a) + '</div>'; }).join('') +
+              (t.assignees.length > 3 ? '<div class="av">+' + (t.assignees.length - 3) + '</div>' : '') +
+            '</div>' +
+            '<span style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">' + (t.due ? PM.fmtDate(t.due) : '—') + '</span>' +
+          '</div>' +
+        '</div>';
+      }
+
+      /* ===== List ===== */
+      function renderList(list) {
+        var tb = document.getElementById('tkListBody');
+        if (!list.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--dark-text-secondary)">No tasks</td></tr>'; return; }
+        tb.innerHTML = list.map(function (t) {
+          var sb = statusLabel[t.status] || ['primary', t.status];
+          return '<tr style="cursor:pointer" onclick="openTask(' + t.id + ')">' +
+            '<td>' + chk(t.id) + '</td>' +
+            '<td><div style="font-weight:500">' + PM.esc(t.title) + '</div>' +
+              (t.openBlockerCount > 0 ? '<div style="font-size:var(--fs-xs);color:var(--danger)"><i class="fas fa-ban"></i> ' + t.openBlockerCount + ' blockers</div>' : '') + '</td>' +
+            '<td>' + PM.esc(t.project || '—') + '</td>' +
+            '<td>' + (t.teamName ? '<span class="pm-badge purple">' + PM.esc(t.teamName) + '</span>' : '—') + '</td>' +
+            '<td><span class="pm-badge ' + priorityBadge[t.priority] + '">' + t.priority + '</span></td>' +
+            '<td><span class="pm-badge ' + sb[0] + '">' + sb[1] + '</span></td>' +
+            '<td style="font-size:var(--fs-xs)">' + (t.due ? PM.fmtDate(t.due) : '—') + '</td>' +
+            '<td><div style="display:flex;align-items:center;gap:.25rem"><div class="pm-progress" style="width:60px"><div class="pm-progress-bar" style="width:' + t.progress + '%"></div></div>' + t.progress + '%</div></td>' +
+            '<td><button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();openTask(' + t.id + ')">Open</button></td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      /* ===== Calendar ===== */
+      function renderCalendar(list) {
+        var _n = new Date(), year = _n.getFullYear(), month = _n.getMonth();
+        var first = new Date(year, month, 1).getDay();
+        var days = new Date(year, month + 1, 0).getDate();
+        var prevDays = new Date(year, month, 0).getDate();
+        var html = '';
+        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function (d) {
+          html += '<div style="background:var(--dark-bg);padding:.5rem .25rem;text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--dark-text-secondary)">' + d + '</div>';
+        });
+        var cells = [];
+        for (var i = first - 1; i >= 0; i--) cells.push({ d: prevDays - i, other: true });
+        for (var d = 1; d <= days; d++) cells.push({ d: d, other: false, date: new Date(year, month, d) });
+        while (cells.length < 42) cells.push({ d: cells.length - (days + first) + 1, other: true });
+        var today = new Date();
+        html += cells.map(function (c) {
+          var events = [];
+          if (!c.other && c.date) {
+            events = list.filter(function (t) { return t.due && new Date(t.due).toDateString() === c.date.toDateString(); });
+          }
+          var isToday = c.date && c.date.toDateString() === today.toDateString();
+          return '<div style="background:var(--dark-card);min-height:80px;padding:.35rem;' + (isToday ? 'background:rgba(99,102,241,.15);' : '') + '">' +
+            '<div style="font-size:var(--fs-sm);color:var(--dark-text-secondary);font-weight:600;margin-bottom:.25rem">' + c.d + '</div>' +
+            events.slice(0, 3).map(function (t) {
+              return '<div style="font-size:.55rem;padding:2px 5px;border-radius:3px;background:var(--primary);color:#fff;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;font-weight:600" onclick="openTask(' + t.id + ')">' + PM.esc(t.title.substring(0, 18)) + '</div>';
+            }).join('') +
+          '</div>';
+        }).join('');
+        document.getElementById('tkCalGrid').innerHTML = html;
+      }
+
+      /* ===== Drag & drop ===== */
+      var dragTaskId = null;
+      function handleCardDragStart(e) {
+        dragTaskId = parseInt(e.target.closest('.kanban-card').dataset.id, 10);
+        e.target.closest('.kanban-card').classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+      }
+      function handleCardDragEnd(e) {
+        var c = e.target.closest('.kanban-card');
+        if (c) c.classList.remove('dragging');
+      }
+      function handleBoardOver(e, el) { e.preventDefault(); el.classList.add('drag-over'); }
+      function handleBoardLeave(el) { el.classList.remove('drag-over'); }
+
+      function handleBoardDrop(e, el) {
+        e.preventDefault();
+        el.classList.remove('drag-over');
+        if (dragTaskId === null) return;
+        var newStatus = el.dataset.status;
+        var t = tasks.find(function (x) { return x.id === dragTaskId; });
+        if (!t || t.status === newStatus) { dragTaskId = null; return; }
+        var backendStatus = newStatus.toUpperCase().replace(/-/g, '_');
+        var body = { status: backendStatus };
+        if (backendStatus === 'BLOCKED') {
+          var reason = prompt('Why is this task blocked?');
+          if (!reason || !reason.trim()) { PM.toast('A reason is required to block a task', 'error'); dragTaskId = null; return; }
+          body.reason = reason.trim();
+        }
+        sendStatus(t.id, body).then(function () {
+          t.status = newStatus;
+          renderCurrentView();
+          PM.toast('✓ Moved to ' + newStatus, 'success');
+        }).catch(function (err) { PM.toast(err.message || 'Failed to change status', 'error'); });
+        dragTaskId = null;
+      }
+      window.handleCardDragStart = handleCardDragStart;
+      window.handleCardDragEnd = handleCardDragEnd;
+      window.handleBoardOver = handleBoardOver;
+      window.handleBoardLeave = handleBoardLeave;
+      window.handleBoardDrop = handleBoardDrop;
+
+      window.pmRefresh = function () { loadTasks().then(renderCurrentView); };
+
+      /* ===== Task drawer ===== */
+      function openTask(id) {
+        currentDrawerTaskId = id;
+        if (window.PMTask && window.PMTask.open) window.PMTask.open(id);
+        else PM.toast('Task drawer module not loaded', 'warning');
+      }
+      window.openTask = openTask;
+
+      /* ===== Checklist ===== */
+      function toggleCheckItem(taskId, itemId) {
+        PM.api('PATCH', '/api/pm/tasks/checklist/' + itemId + '/toggle').then(function () {
+          setTimeout(function () { openTask(taskId); }, 150);
+        }).catch(function (e) { console.error('toggle failed:', e); PM.toast('Failed to toggle', 'error'); });
+      }
+      function addChecklistItemPrompt(taskId, parentId) {
+        var title = prompt(parentId ? 'Sub-item title:' : 'Checklist item:');
+        if (!title) return;
+        PM.toast('Adding...', 'info');
+        PM.api('POST', '/api/pm/tasks/' + taskId + '/checklist', { title: title, parentId: parentId }).then(function () {
+          PM.toast('✓ Added', 'success');
+          setTimeout(function () { openTask(taskId); }, 250);
+        }).catch(function (e) { console.error('addChecklistItem failed:', e); PM.toast('Failed to add', 'error'); });
+      }
+      function deleteCheckItem(taskId, itemId) {
+        if (!confirm('Remove this item?')) return;
+        PM.api('DELETE', '/api/pm/tasks/checklist/' + itemId).then(function () {
+          setTimeout(function () { openTask(taskId); }, 250);
+        }).catch(function (e) { console.error('delete failed:', e); });
+      }
+
+      function sendStatus(id, body) {
+        return PM.api('PATCH', '/api/pm/tasks/' + id + '/status', body).catch(function (err) {
+          var m = (err && err.message) || '';
+          if (!body.reason && /what needs to change/i.test(m)) {
+            var r = prompt('What needs to change before this goes back to In Progress?');
+            if (r && r.trim()) {
+              body.reason = r.trim();
+              return PM.api('PATCH', '/api/pm/tasks/' + id + '/status', body);
+            }
+          }
+          throw err;
+        });
+      }
+
+      function changeTaskStatus(id, newStatus) {
+        var t = tasks.find(function (x) { return x.id === id; }); if (!t) return;
+        if (newStatus === 'in-progress' && t.openBlockerCount > 0) {
+          PM.toast('🚫 Blocked: resolve ' + t.openBlockerCount + ' blocker(s) first', 'error');
+          return;
+        }
+        var backendStatus = newStatus.toUpperCase().replace(/-/g, '_');
+        var body = { status: backendStatus };
+        if (backendStatus === 'BLOCKED') {
+          var reason = prompt('Why is this task blocked?');
+          if (!reason || !reason.trim()) { PM.toast('A reason is required to block a task', 'error'); return; }
+          body.reason = reason.trim();
+        }
+        sendStatus(id, body).then(function () {
+          t.status = newStatus;
+          openTask(id);
+          renderCurrentView();
+          PM.toast('✓ Status updated', 'success');
+        }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+      }
+
+      function deleteTask(id) {
+        if (!confirm('Delete this task?')) return;
+        PM.api('DELETE', '/api/pm/tasks/' + id).then(function () {
+          tasks = tasks.filter(function (x) { return x.id !== id; });
+          PM.closeDrawer();
+          renderCurrentView();
+          PM.toast('Deleted', 'success');
+        }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+      }
+
+      function removeWatcher(taskId, employeeId) {
+        PM.api('DELETE', '/api/pm/tasks/' + taskId + '/watchers/' + employeeId).then(function () { openTask(taskId); })
+          .catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+      }
+
+      function removeDependencyByTask(taskId, otherTaskId) {
+        PM.api('GET', '/api/pm/tasks/' + taskId + '/dependencies').then(function (list) {
+          var dep = (list || []).find(function (d) { return d.dependsOnTaskId === otherTaskId || d.taskId === otherTaskId; });
+          if (!dep) { PM.toast('Dependency not found', 'warning'); return; }
+          PM.api('DELETE', '/api/pm/tasks/dependencies/' + dep.id).then(function () {
+            PM.toast('✓ Removed', 'success');
+            openTask(taskId);
+          });
+        });
+      }
+
+      window.toggleCheckItem = toggleCheckItem;
+      window.addChecklistItemPrompt = addChecklistItemPrompt;
+      window.deleteCheckItem = deleteCheckItem;
+      window.changeTaskStatus = changeTaskStatus;
+      window.deleteTask = deleteTask;
+      window.removeWatcher = removeWatcher;
+      window.removeDependencyByTask = removeDependencyByTask;
+
+      /* ===== Subtask modal ===== */
+      var subtaskParentId = null;
+      function openSubtaskModal(parentId) {
+        subtaskParentId = parentId;
+        document.getElementById('stTitle').value = '';
+        document.getElementById('stPriority').value = 'MEDIUM';
+        document.getElementById('stDue').value = '';
+        document.getElementById('subtaskModal').classList.add('open');
+        setTimeout(function () { document.getElementById('stTitle').focus(); }, 80);
+      }
+      function closeSubtaskModal() { document.getElementById('subtaskModal').classList.remove('open'); }
+      function submitSubtask() {
+        var title = document.getElementById('stTitle').value.trim();
+        if (!title) { PM.toast('Title required', 'error'); return; }
+        var parent = tasks.find(function (x) { return x.id === subtaskParentId; });
+        if (!parent) { PM.toast('Parent not found', 'error'); return; }
+        var payload = {
+          projectId: parent.projectId, teamId: parent.teamId,
+          parentTaskId: subtaskParentId, title: title, description: '',
+          priority: document.getElementById('stPriority').value, type: 'TASK',
+          dueDate: document.getElementById('stDue').value || null, storyPoints: 2,
+          assigneeIds: parent.assigneeIds || []
+        };
+        PM.api('POST', '/api/pm/tasks/' + subtaskParentId + '/subtasks', payload).then(function () {
+          PM.toast('✓ Subtask created', 'success');
+          closeSubtaskModal();
+          openTask(subtaskParentId);
+          loadTasks().then(renderCurrentView);
+        }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+      }
+      window.openSubtaskModal = openSubtaskModal;
+      window.closeSubtaskModal = closeSubtaskModal;
+      window.submitSubtask = submitSubtask;
+
+      /* ===== Dependency modal ===== */
+      var depSourceTaskId = null;
+      function openDepModal(taskId) {
+        depSourceTaskId = taskId;
+        var sel = document.getElementById('depTarget');
+        sel.innerHTML = '<option value="">Select a task...</option>' +
+          tasks.filter(function (t) { return t.id !== taskId; })
+            .map(function (t) { return '<option value="' + t.id + '">' + PM.esc(t.title) + '</option>'; }).join('');
+        document.getElementById('depType').value = 'BLOCKED_BY';
+        document.getElementById('depModal').classList.add('open');
+      }
+      function closeDepModal() { document.getElementById('depModal').classList.remove('open'); }
+      function submitDependency() {
+        var targetId = parseInt(document.getElementById('depTarget').value || '0', 10);
+        var type = document.getElementById('depType').value;
+        if (!targetId) { PM.toast('Select a task', 'error'); return; }
+        var payload;
+        if (type === 'BLOCKS') { payload = { taskId: targetId, dependsOnTaskId: depSourceTaskId, type: 'BLOCKED_BY' }; }
+        else { payload = { taskId: depSourceTaskId, dependsOnTaskId: targetId, type: type }; }
+        PM.toast('Adding dependency...', 'info');
+        PM.api('POST', '/api/pm/tasks/' + payload.taskId + '/dependencies', { dependsOnTaskId: payload.dependsOnTaskId, type: payload.type }).then(function () {
+          PM.toast('✓ Dependency added', 'success');
+          closeDepModal();
+          setTimeout(function () { openTask(depSourceTaskId); }, 250);
+        }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+      }
+      window.openDepModal = openDepModal;
+      window.closeDepModal = closeDepModal;
+      window.submitDependency = submitDependency;
+
+      /* ===== Context menu ===== */
+      function openCtx(e, id) {
+        e.preventDefault(); e.stopPropagation(); ctxId = id;
+        var m = document.getElementById('ctxMenu');
+        m.classList.add('open');
+        m.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+        m.style.top = Math.min(e.clientY, window.innerHeight - 360) + 'px';
+      }
+      function closeCtx() { document.getElementById('ctxMenu').classList.remove('open'); }
+      document.addEventListener('click', function (e) { if (!e.target.closest('#ctxMenu')) closeCtx(); });
+      function ctxAction(a) {
+        var t = tasks.find(function (x) { return x.id === ctxId; }); if (!t) return;
+        closeCtx();
+        if (a === 'open') openTask(t.id);
+        else if (a === 'duplicate') { PM.toast('Duplicate (A4 will wire this)', 'info'); }
+        else if (a === 'addsub') openSubtaskModal(t.id);
+        else if (a === 'adddep') openDepModal(t.id);
+        else if (a === 'status-todo') changeTaskStatus(t.id, 'todo');
+        else if (a === 'status-progress') changeTaskStatus(t.id, 'in-progress');
+        else if (a === 'status-done') changeTaskStatus(t.id, 'done');
+        else if (a === 'delete') deleteTask(t.id);
+      }
+      window.openCtx = openCtx;
+      window.ctxAction = ctxAction;
+
+      /* ===== Create modal ===== */
+      var createMode = 'blank';
+      var selectedCloneId = null;
+
+      function openCreate(mode) {
+        document.getElementById('createModal').classList.add('open');
+        document.getElementById('createTitle').textContent = 'Create New Task';
+        Promise.all([
+          loadFormProjects(),
+          loadTeams().catch(function () { return allTeams; }),
+          loadEmployees().catch(function () { return allEmployees; })
+        ]).then(function () {
+          renderTeamChips();
+          initAssigneePicker();
+          populateSingleTeam();
+          resetBlankForm();
+          if (mode) setCreateMode(mode, document.querySelector('.create-tab[data-mode="' + mode + '"]'));
+          else setCreateMode('blank', document.querySelector('.create-tab[data-mode="blank"]'));
+        });
+      }
+      function closeCreate() { document.getElementById('createModal').classList.remove('open'); }
+      function setCreateMode(mode, btn) {
+        createMode = mode;
+        document.querySelectorAll('.create-tab').forEach(function (b) { b.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+        document.querySelectorAll('.create-pane').forEach(function (p) { p.classList.remove('active'); });
+        var pane = document.getElementById('cp-' + mode); if (pane) pane.classList.add('active');
+        document.getElementById('submitLabel').textContent = mode === 'bulk' ? 'Create All Tasks' : mode === 'import' ? 'Import Tasks' : 'Create Task';
+        if (mode === 'template') renderTemplates();
+        else if (mode === 'clone') renderCloneList();
+        else if (mode === 'bulk') populateBulkTeam();
+      }
+      function resetBlankForm() {
+        ['fldTitle','fldDesc','fldHours'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+        var due = document.getElementById('fldDue'); if (due) { var d = new Date(); d.setDate(d.getDate() + 7); due.value = d.toISOString().split('T')[0]; }
+        var pri = document.getElementById('fldPriority'); if (pri) pri.value = 'MEDIUM';
+        if (assigneeMs) assigneeMs.setSelected([]);
+        var team = document.getElementById('fldTeam');
+        if (team) team.value = (TL && currentTeamFilter !== 'all') ? String(currentTeamFilter) : (TL && leadIds[0] ? String(leadIds[0]) : '');
+        updateAssigneeScope();
+      }
+      function populateBulkTeam() {
+        var sel = document.getElementById('bulkTeam');
+        if (sel) {
+          var prefix = TL ? '' : '<option value="">No team</option>';
+          sel.innerHTML = prefix + allTeams.map(function (t) { return '<option value="' + t.id + '">' + PM.esc(t.name) + '</option>'; }).join('');
+        }
+      }
+      function populateSingleTeam() {
+        var sel = document.getElementById('fldTeam'); if (!sel) return;
+        var keep = sel.value;
+        var prefix = TL ? '' : '<option value="">No team</option>';
+        sel.innerHTML = prefix + allTeams.map(function (t) { return '<option value="' + t.id + '">' + PM.esc(t.name) + '</option>'; }).join('');
+        if (keep && allTeams.some(function (t) { return String(t.id) === String(keep); })) {
+          sel.value = keep;
+        } else if (TL && currentTeamFilter !== 'all') {
+          sel.value = String(currentTeamFilter);
+        } else if (TL && leadIds[0]) {
+          sel.value = String(leadIds[0]);
+        } else {
+          sel.value = TL && allTeams[0] ? String(allTeams[0].id) : '';
+        }
+        onTeamChange();
+      }
+      function onProjectChange() {
+        var pid = parseInt((document.getElementById('fldProject') || {}).value || '0', 10);
+        if (!pid) return;
+        PM.api('GET', '/api/pm/projects/' + pid).then(function (data) {
+          if (data && data.teamId) {
+            var teamSel = document.getElementById('fldTeam');
+            if (teamSel && !teamSel.value) { teamSel.value = data.teamId; onTeamChange(); }
+          }
+        }).catch(function () {});
+      }
+      function onTeamChange() {
+        var tid = parseInt((document.getElementById('fldTeam') || {}).value || '0', 10);
+        var projSel = document.getElementById('fldProject');
+        if (projSel && formProjects && formProjects.length) {
+          var currPid = projSel.value;
+          var filteredProjects = formProjects.filter(function (p) {
+            return !tid || p.teamId === undefined || String(p.teamId) === String(tid);
+          });
+          projSel.innerHTML = '<option value="">Select project...</option>' +
+            filteredProjects.map(function (p) { return '<option value="' + p.id + '">' + PM.esc(p.name) + '</option>'; }).join('');
+          if (currPid && filteredProjects.some(function (p) { return String(p.id) === String(currPid); })) {
+            projSel.value = currPid;
+          }
+        }
+
+        if (!tid) {
+          if (assigneeMs) assigneeMs.setItems(TL ? [] : allEmployees);
+          updateAssigneeScope();
+          return;
+        }
+        loadTeamMembers(tid).then(function (memberIds) {
+          var teamMembers = allEmployees.filter(function (e) { return memberIds.indexOf(e.id) >= 0; });
+          if (assigneeMs) assigneeMs.setItems(teamMembers);
+          updateAssigneeScope();
+        });
+      }
+      function updateAssigneeScope() {
+        var tid = (document.getElementById('fldTeam') || {}).value;
+        var label = document.getElementById('assigneeScope'); if (!label) return;
+        if (!tid) label.textContent = '— all employees';
+        else {
+          var t = allTeams.find(function (x) { return String(x.id) === String(tid); });
+          label.textContent = '— restricted to ' + (t ? t.name : 'team');
+        }
+      }
+      window.onProjectChange = onProjectChange;
+      window.onTeamChange = onTeamChange;
+
+      /* ===== MsSelect (multi-select with search) ===== */
+      function MsSelect(opts) {
+        this.el = opts.el;
+        this.items = opts.items || [];
+        this.selected = new Set(opts.selected || []);
+        this.placeholder = opts.placeholder || 'Select...';
+        this.onChange = opts.onChange || function () {};
+        this.searchPlaceholder = opts.searchPlaceholder || 'Search...';
+        this.allowClear = opts.allowClear !== false;
+        this.highlight = 0;
+        this._bound = false;
+        this.render();
+      }
+      MsSelect.prototype.render = function () {
+        var self = this;
+        var chips = '';
+        if (this.selected.size === 0) {
+          chips = '<span style="color:var(--dark-text-secondary);font-size:var(--fs-base);user-select:none">' + PM.esc(this.placeholder) + '</span>';
+        } else {
+          this.selected.forEach(function (id) {
+            var it = self.items.find(function (x) { return x.id === id; });
+            if (!it) return;
+            chips += '<span style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(99,102,241,.15);color:var(--primary);padding:2px 6px 2px 2px;border-radius:14px;font-size:var(--fs-sm);font-weight:600">' +
+              '<span style="width:18px;height:18px;border-radius:50%;background:var(--primary);color:#fff;font-size:.5rem;font-weight:700;display:grid;place-content:center">' + PM.getInitials(it.name) + '</span>' +
+              PM.esc(it.name) + ' <span data-remove="' + id + '" style="cursor:pointer;opacity:.7;font-size:.65rem;padding:0 2px">✕</span></span>';
+          });
+        }
+        this.el.innerHTML =
+          '<div style="position:relative">' +
+            '<div class="ms-control" tabindex="0" style="display:flex;flex-wrap:wrap;gap:.35rem;padding:.35rem .5rem;background:var(--dark-bg);border:1px solid var(--dark-border);border-radius:var(--radius-btn);min-height:36px;align-items:center;cursor:pointer">' +
+              chips + '<i class="fas fa-chevron-down" style="margin-left:auto;color:var(--dark-text-secondary);font-size:.6rem"></i>' +
+            '</div>' +
+            '<div class="ms-menu" style="position:absolute;left:0;right:0;top:calc(100% + 4px);background:var(--dark-card);border:1px solid var(--dark-border);border-radius:var(--radius-btn);box-shadow:var(--shadow-md);z-index:20;display:none;flex-direction:column;max-height:260px;overflow:hidden">' +
+              '<div style="padding:.4rem;border-bottom:1px solid var(--dark-border)"><input class="form-input" style="height:28px;font-size:var(--fs-sm)" placeholder="' + PM.esc(this.searchPlaceholder) + '"></div>' +
+              (this.allowClear ? '<div style="display:flex;gap:.25rem;padding:.25rem .4rem;border-bottom:1px solid var(--dark-border)"><button type="button" data-action="all" style="background:transparent;border:none;color:var(--primary);font-size:var(--fs-xs);font-weight:600;cursor:pointer;padding:.2rem .4rem;border-radius:4px;font-family:inherit">Select all</button><button type="button" data-action="clear" style="background:transparent;border:none;color:var(--primary);font-size:var(--fs-xs);font-weight:600;cursor:pointer;padding:.2rem .4rem;border-radius:4px;font-family:inherit">Clear</button></div>' : '') +
+              '<div class="ms-list" style="overflow-y:auto;flex:1;padding:.25rem"></div>' +
+            '</div>' +
+          '</div>';
+        this.$control = this.el.querySelector('.ms-control');
+        this.$menu = this.el.querySelector('.ms-menu');
+        this.$list = this.el.querySelector('.ms-list');
+        this.$search = this.el.querySelector('.ms-search input') || this.el.querySelector('.ms-menu input');
+        this.highlight = 0;
+        this.renderOptions();
+        this.bind();
+      };
+      MsSelect.prototype.renderOptions = function () {
+        var self = this;
+        var q = (this.$search.value || '').toLowerCase();
+        var filtered = this.items.filter(function (it) {
+          if (!q) return true;
+          return (it.name || '').toLowerCase().includes(q)
+              || (it.role || '').toLowerCase().includes(q)
+              || (it.department || '').toLowerCase().includes(q);
+        });
+        if (!filtered.length) {
+          this.$list.innerHTML = '<div style="padding:1rem;text-align:center;color:var(--dark-text-secondary);font-size:var(--fs-sm)">No people</div>';
+          return;
+        }
+        this.$list.innerHTML = filtered.map(function (it) {
+          var sel = self.selected.has(it.id);
+          var sub = it.role || it.department || '';
+          return '<div class="ms-option" data-id="' + it.id + '" style="display:flex;align-items:center;gap:.5rem;padding:.4rem .5rem;border-radius:6px;cursor:pointer;font-size:var(--fs-base);' + (sel ? 'background:rgba(99,102,241,.15);' : '') + '">' +
+            '<span style="width:16px;height:16px;border-radius:4px;border:1.5px solid var(--dark-border);display:grid;place-content:center;flex-shrink:0;background:' + (sel ? 'var(--primary);border-color:var(--primary);color:#fff' : 'var(--dark-bg)') + '">' + (sel ? '<i class="fas fa-check" style="font-size:.55rem"></i>' : '') + '</span>' +
+            '<span style="width:26px;height:26px;border-radius:50%;background:var(--primary);color:#fff;font-size:.6rem;font-weight:700;display:grid;place-content:center;flex-shrink:0">' + PM.getInitials(it.name) + '</span>' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + PM.esc(it.name) + '</div>' +
+              (sub ? '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-top:1px">' + PM.esc(sub) + '</div>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      };
+      MsSelect.prototype.bind = function () {
+        var self = this;
+        if (this._bound) return;
+        this._bound = true;
+        this.$control.addEventListener('click', function (e) {
+          if (e.target.closest('[data-remove]')) {
+            var id = parseInt(e.target.closest('[data-remove]').dataset.remove, 10);
+            self.selected.delete(id);
+            self.rerender();
+            self.onChange(Array.from(self.selected));
+            return;
+          }
+          self.toggle();
+        });
+        this.$search.addEventListener('input', function () { self.highlight = 0; self.renderOptions(); });
+        this.$list.addEventListener('click', function (e) {
+          var opt = e.target.closest('.ms-option');
+          if (opt) self.toggleItem(parseInt(opt.dataset.id, 10));
+        });
+        this.el.querySelectorAll('[data-action]').forEach(function (b) {
+          b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (b.dataset.action === 'all') self.items.forEach(function (it) { self.selected.add(it.id); });
+            else self.selected.clear();
+            self.rerender();
+            self.onChange(Array.from(self.selected));
+          });
+        });
+        this._outsideHandler = function (e) { if (!self.el.contains(e.target)) self.close(); };
+        document.addEventListener('click', this._outsideHandler);
+      };
+      MsSelect.prototype.rerender = function () { this.unbind(); this.render(); };
+      MsSelect.prototype.unbind = function () {
+        if (this._outsideHandler) { document.removeEventListener('click', this._outsideHandler); this._outsideHandler = null; }
+        this._bound = false;
+      };
+      MsSelect.prototype.toggle = function () { if (this.$menu.style.display === 'flex') this.close(); else this.open(); };
+      MsSelect.prototype.open = function () {
+        this.$menu.style.display = 'flex';
+        this.$control.style.borderColor = 'var(--primary)';
+        this.$control.style.boxShadow = '0 0 0 3px rgba(99,102,241,.15)';
+        this.$search.focus();
+      };
+      MsSelect.prototype.close = function () {
+        this.$menu.style.display = 'none';
+        this.$control.style.borderColor = '';
+        this.$control.style.boxShadow = '';
+      };
+      MsSelect.prototype.toggleItem = function (id) {
+        if (this.selected.has(id)) this.selected.delete(id);
+        else this.selected.add(id);
+        this.rerender();
+        this.onChange(Array.from(this.selected));
+      };
+      MsSelect.prototype.getSelected = function () { return Array.from(this.selected); };
+      MsSelect.prototype.setSelected = function (ids) { this.selected = new Set(ids || []); this.rerender(); };
+      MsSelect.prototype.setItems = function (items) {
+        this.items = items;
+        var keep = this.getSelected().filter(function (id) { return items.some(function (e) { return e.id === id; }); });
+        this.selected = new Set(keep);
+        this.rerender();
+      };
+
+      function initAssigneePicker() {
+        var host = document.getElementById('assigneePicker');
+        if (!host) return;
+        if (assigneeMs) {
+          assigneeMs.setItems(allEmployees);
+          var keep = assigneeMs.getSelected().filter(function (id) { return allEmployees.some(function (e) { return e.id === id; }); });
+          assigneeMs.setSelected(keep);
+          return;
+        }
+        assigneeMs = new MsSelect({
+          el: host,
+          items: allEmployees,
+          placeholder: '+ Add assignees...'
+        });
+      }
+
+      function loadFormProjects() {
+        var sel = document.getElementById('fldProject'); if (!sel) return Promise.resolve();
+        var bulkSel = document.getElementById('bulkProject');
+        return PM.apiList('GET', '/api/pm/projects?page=0&size=100').then(function (items) {
+          formProjects = items || [];
+          var opts = '<option value="">Select project...</option>' + formProjects.map(function (p) { return '<option value="' + p.id + '">' + PM.esc(p.name) + '</option>'; }).join('');
+          sel.innerHTML = opts;
+          if (bulkSel) bulkSel.innerHTML = opts;
+        }).catch(function () { sel.innerHTML = '<option value="">Failed</option>'; });
+      }
+
+      /* ===== Templates ===== */
+      var taskTemplates = [
+        { id: 1, name: 'Bug Report', icon: 'fa-bug', cat: 'Bug', priority: 'High', points: 3, desc: 'Reproduce → fix → verify.' },
+        { id: 2, name: 'User Story', icon: 'fa-user', cat: 'Feature', priority: 'Medium', points: 5, desc: 'As a user I want...' },
+        { id: 3, name: 'Code Review', icon: 'fa-code', cat: 'Feature', priority: 'Medium', points: 2, desc: 'Review PR.' },
+        { id: 4, name: 'Deployment', icon: 'fa-rocket', cat: 'Feature', priority: 'Critical', points: 5, desc: 'Deploy to prod.' },
+        { id: 5, name: 'Retrospective', icon: 'fa-comments', cat: 'Meeting', priority: 'Low', points: 2, desc: 'Team retro.' },
+        { id: 6, name: 'Documentation', icon: 'fa-book', cat: 'Admin', priority: 'Low', points: 3, desc: 'Write docs.' }
+      ];
+      function renderTemplates() {
+        document.getElementById('tplGrid').innerHTML = taskTemplates.map(function (t) {
+          return '<div class="tpl-card" data-tpl="' + t.id + '">' +
+            '<span class="tpl-badge">' + t.cat + '</span>' +
+            '<div class="tpl-icon"><i class="fas ' + t.icon + '"></i></div>' +
+            '<div class="tpl-name">' + PM.esc(t.name) + '</div>' +
+            '<div class="tpl-desc">' + PM.esc(t.desc) + '</div>' +
+            '<div class="tpl-meta"><span class="pm-badge ' + priorityBadge[t.priority] + '">' + t.priority + '</span><span>' + t.points + ' pts</span></div>' +
+            '<button class="tpl-use-btn">Use →</button>' +
+          '</div>';
+        }).join('');
+        document.querySelectorAll('#tplGrid .tpl-card').forEach(function (card) {
+          card.addEventListener('click', function () { useTemplate(parseInt(card.dataset.tpl, 10)); });
+        });
+      }
+      function useTemplate(tplId) {
+        var tpl = taskTemplates.find(function (x) { return x.id === tplId; });
+        if (!tpl) return;
+        document.getElementById('fldTitle').value = tpl.name;
+        document.getElementById('fldDesc').value = tpl.desc;
+        document.getElementById('fldPriority').value = tpl.priority.toUpperCase();
+        document.getElementById('fldPoints').value = String(tpl.points);
+        setCreateMode('blank', document.querySelector('.create-tab[data-mode="blank"]'));
+        PM.toast('✓ Template applied', 'success');
+      }
+
+      /* ===== Clone list ===== */
+      function renderCloneList() {
+        var q = (document.getElementById('cloneSearch').value || '').toLowerCase();
+        var list = tasks.filter(function (t) { return !q || t.title.toLowerCase().includes(q); });
+        document.getElementById('cloneList').innerHTML = list.length
+          ? list.map(function (t) {
+              return '<div class="clone-row" data-id="' + t.id + '">' +
+                '<div class="clone-radio"></div>' +
+                '<div class="clone-info"><div class="clone-name">' + PM.esc(t.title) + '</div>' +
+                '<div class="clone-meta">' + PM.esc(t.project || '') + '</div></div>' +
+              '</div>';
+            }).join('')
+          : '<div style="padding:1.5rem;text-align:center;color:var(--dark-text-secondary)">No tasks</div>';
+        document.querySelectorAll('#cloneList .clone-row').forEach(function (row) {
+          row.addEventListener('click', function () { selectClone(parseInt(row.dataset.id, 10)); });
+        });
+      }
+      function selectClone(id) {
+        var t = tasks.find(function (x) { return x.id === id; }); if (!t) return;
+        document.getElementById('fldTitle').value = t.title + ' (Copy)';
+        document.getElementById('fldDesc').value = t.desc || '';
+        document.getElementById('fldPriority').value = t.priority.toUpperCase();
+        if (assigneeMs) { assigneeMs.setItems(allEmployees); assigneeMs.setSelected(t.assigneeIds || []); }
+        setCreateMode('blank', document.querySelector('.create-tab[data-mode="blank"]'));
+      }
+
+      /* ===== Bulk paste ===== */
+      function previewBulk() {
+        var lines = parseBulk(document.getElementById('bulkPaste').value);
+        var pv = document.getElementById('bulkPreview');
+        if (!lines.length) { pv.classList.remove('show'); return; }
+        pv.innerHTML = '<div style="font-weight:600;margin-bottom:.35rem">' + lines.length + ' task(s) detected</div>' +
+          lines.map(function (l, i) { return '<div class="bulk-preview-item"><span class="num">' + (i + 1) + '.</span> ' + PM.esc(l.title) + '</div>'; }).join('');
+        pv.classList.add('show');
+      }
+      function parseBulk(txt) {
+        return txt.split('\n').map(function (line) {
+          line = line.trim(); if (!line) return null;
+          var priority = 'Medium';
+          var m = line.match(/^\[P([123])\]\s*/i);
+          if (m) { priority = m[1] === '1' ? 'Critical' : m[1] === '2' ? 'High' : 'Medium'; line = line.replace(/^\[P[123]\]\s*/i, ''); }
+          line = line.replace(/^[-*•]\s*/, '').replace(/^\d+\.\s*/, '').trim();
+          if (!line) return null;
+          return { title: line, priority: priority };
+        }).filter(Boolean);
+      }
+
+      /* ===== CSV import ===== */
+      function previewCsv() {
+        var pv = document.getElementById('csvPreview');
+        var lines = document.getElementById('csvPaste').value.split('\n').slice(1).filter(Boolean);
+        if (!lines.length) { pv.classList.remove('show'); return; }
+        pv.innerHTML = '<div style="font-weight:600;margin-bottom:.35rem">' + lines.length + ' row(s)</div>';
+        pv.classList.add('show');
+      }
+
+      /* ===== Submit ===== */
+      function submitCreate() {
+        if (createMode === 'blank') return submitSingle();
+        if (createMode === 'bulk') return submitBulk();
+        if (createMode === 'import') return submitCsv();
+        PM.toast('Pick a template first', 'warning');
+      }
+      function submitSingle() {
+        var title = document.getElementById('fldTitle').value.trim();
+        if (!title) { PM.toast('Title required', 'error'); return; }
+        var pid = document.getElementById('fldProject').value;
+        if (!pid) { PM.toast('Select a project', 'error'); return; }
+        var teamVal = document.getElementById('fldTeam').value;
+        if (TL && !teamVal) { PM.toast('Select a team', 'error'); return; }
+        var assigneeIds = assigneeMs ? assigneeMs.getSelected() : [];
+        var payload = {
+          projectId: parseInt(pid, 10), teamId: teamVal ? parseInt(teamVal, 10) : null,
+          title: title, description: document.getElementById('fldDesc').value || '',
+          priority: document.getElementById('fldPriority').value,
+          type: document.getElementById('fldType').value,
+          dueDate: document.getElementById('fldDue').value || null,
+          storyPoints: parseInt(document.getElementById('fldPoints').value, 10) || 3,
+          assigneeIds: assigneeIds
+        };
+        var btn = document.getElementById('createSubmitBtn');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...'; }
+        PM.api('POST', '/api/pm/tasks', payload).then(function () {
+          finishCreate('✓ Task created');
+        }).catch(function (e) {
+          console.error('create task failed', e);
+          PM.toast(e.message || 'Failed to create task', 'error');
+        }).finally(function () {
+          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> <span id="submitLabel">Create Task</span>'; }
+        });
+      }
+      function submitBulk() {
+        var lines = parseBulk(document.getElementById('bulkPaste').value);
+        if (!lines.length) { PM.toast('Paste at least one task', 'error'); return; }
+        var pid = document.getElementById('bulkProject').value;
+        var teamVal = document.getElementById('bulkTeam') ? document.getElementById('bulkTeam').value : '';
+        if (TL && !teamVal) { PM.toast('Select a team', 'error'); return; }
+        var teamId = teamVal ? parseInt(teamVal, 10) : null;
+        if (!pid) { PM.toast('Select a project', 'error'); return; }
+        var created = 0;
+        Promise.all(lines.map(function (l) {
+          return PM.api('POST', '/api/pm/tasks', {
+            projectId: parseInt(pid, 10), teamId: teamId,
+            title: l.title, description: '', priority: l.priority.toUpperCase(),
+            type: 'TASK', storyPoints: 3, assigneeIds: []
+          }).then(function () { created++; }).catch(function () { created++; });
+        })).then(function () { finishCreate('✓ Created ' + created); });
+      }
+      function submitCsv() {
+        var rows = document.getElementById('csvPaste').value.split('\n').slice(1).filter(Boolean).map(function (line) {
+          var cols = line.split(',').map(function (s) { return s.trim(); });
+          return { title: cols[0], priority: (cols[2] || 'Medium') };
+        }).filter(function (r) { return r.title; });
+        if (!rows.length) { PM.toast('No rows', 'error'); return; }
+        var pid = document.getElementById('fldProject').value;
+        if (!pid) { PM.toast('Select project first', 'error'); return; }
+        var created = 0;
+        Promise.all(rows.map(function (row) {
+          return PM.api('POST', '/api/pm/tasks', {
+            projectId: parseInt(pid, 10), title: row.title,
+            priority: row.priority.toUpperCase(), type: 'TASK', storyPoints: 3, assigneeIds: []
+          }).then(function () { created++; }).catch(function () { created++; });
+        })).then(function () { finishCreate('✓ Imported ' + created); });
+      }
+      function finishCreate(msg) {
+        closeCreate();
+        loadTasks().then(renderCurrentView);
+        PM.toast(msg, 'success');
+      }
+      function openTemplates() { openCreate('template'); }
+
+      window.openCreate = openCreate;
+      window.closeCreate = closeCreate;
+      window.setCreateMode = setCreateMode;
+      window.renderCloneList = renderCloneList;
+      window.selectClone = selectClone;
+      window.previewBulk = previewBulk;
+      window.previewCsv = previewCsv;
+      window.submitCreate = submitCreate;
+      window.useTemplate = useTemplate;
+      window.openTemplates = openTemplates;
+
+      /* ===== Bulk select (Gap 14 Step 6) ===== */
+      function toggleTk(id, cb) { if (cb.checked) selected.add(id); else selected.delete(id); updateBulkBar(); }
+      function clearTkSelection() { selected.clear(); renderCurrentView(); }
+
+      function showBulkResult(r) {
+        var failed = (r && r.failed) || [], warns = (r && r.warnings) || [];
+        if (!failed.length) { PM.toast((r.ok || 0) + ' task(s) updated', warns.length ? 'warning' : 'success'); if (!warns.length) return; }
+        else PM.toast((r.ok || 0) + ' updated, ' + failed.length + ' failed', 'warning');
+        PM.openDrawer('<div class="pm-card"><b>' + (r.ok || 0) + ' updated, ' + failed.length + ' failed</b>' +
+          (failed.length ? '<ul style="margin:8px 0 0 16px">' + failed.map(function (m) { return '<li style="font-size:var(--fs-xs)">' + PM.esc(m) + '</li>'; }).join('') + '</ul>' : '') +
+          (warns.length ? '<div style="margin-top:8px;font-size:var(--fs-xs)"><b>Warnings</b><ul style="margin:4px 0 0 16px">' + warns.map(function (m) { return '<li>' + PM.esc(m) + '</li>'; }).join('') + '</ul></div>' : '') +
+          '</div>', 'Bulk result');
+      }
+      function bulkCall(extra) {
+        var ids = Array.from(selected); if (!ids.length) return;
+        var total = { ok: 0, failed: [], warnings: [] }, parts = [];
+        for (var i = 0; i < ids.length; i += 100) parts.push(ids.slice(i, i + 100));
+        parts.reduce(function (p, part) {
+          return p.then(function () {
+            return PM.api('POST', '/api/pm/tasks/bulk', Object.assign({ taskIds: part }, extra)).then(function (r) {
+              total.ok += (r && r.ok) || 0;
+              total.failed = total.failed.concat((r && r.failed) || []);
+              total.warnings = total.warnings.concat((r && r.warnings) || []);
+            });
+          });
+        }, Promise.resolve()).then(function () {
+          showBulkResult(total); selected.clear(); return loadTasks();
+        }).then(renderCurrentView).catch(function (e) { PM.toast(e.message || 'Bulk action failed', 'error'); });
+      }
+      function bulkStatus() {
+        if (!selected.size) return;
+        var s = prompt('New status: todo, in-progress, in-review or done'); if (!s) return;
+        var key = s.trim().toLowerCase().replace(/\s+/g, '-');
+        if (['todo','in-progress','in-review','done'].indexOf(key) < 0) { PM.toast('Use todo, in-progress, in-review or done', 'warning'); return; }
+        bulkCall({ action: 'STATUS', status: key.toUpperCase().replace(/-/g, '_') });
+      }
+      function bulkPriority() {
+        if (!selected.size) return;
+        var p = prompt('Priority: LOW, MEDIUM, HIGH or CRITICAL'); if (!p) return;
+        p = p.trim().toUpperCase();
+        if (['LOW','MEDIUM','HIGH','CRITICAL'].indexOf(p) < 0) { PM.toast('Use LOW, MEDIUM, HIGH or CRITICAL', 'warning'); return; }
+        bulkCall({ action: 'PRIORITY', priority: p });
+      }
+      function bulkAssign(sel) {
+        if (!sel.value || !selected.size) return;
+        var id = parseInt(sel.value, 10); sel.value = '';
+        bulkCall({ action: 'ADD_ASSIGNEE', employeeIds: [id] });
+      }
+      function bulkDelete() {
+        if (!selected.size) return;
+        if (!confirm('Delete ' + selected.size + ' task(s)? This cannot be undone.')) return;
+        bulkCall({ action: 'DELETE' });
+      }
+      function fillBulkAssignee() {
+        var s = document.getElementById('tkBulkAssignee'); if (!s) return;
+        s.innerHTML = '<option value="">Add assignee…</option>' + allEmployees.map(function (e) {
+          return '<option value="' + e.id + '">' + PM.esc(e.name) + '</option>'; }).join('');
+      }
+      window.toggleTk = toggleTk;
+      window.clearTkSelection = clearTkSelection;
+      window.bulkStatus = bulkStatus;
+      window.bulkPriority = bulkPriority;
+      window.bulkAssign = bulkAssign;
+      window.bulkDelete = bulkDelete;
+
+      /* ===== Boot (Gap 14 Step 7) ===== */
+      Promise.all([loadEmployees(), loadTeams()]).then(function () {
+        fillBulkAssignee();
+        var qp = new URLSearchParams(location.search).get('projectId');
+        if (qp) currentProjectId = parseInt(qp, 10);
+        return loadProjectPicker();
+      }).then(function () {
+        var first = currentProjectId ? Promise.resolve() : loadTasks();
+        return first.then(function () {
+          var q = (location.search || '').match(/teamId=(\d+)/);
+          if (q) currentTeamFilter = parseInt(q[1], 10);
+          if (TL && leadIds.indexOf(currentTeamFilter) < 0) currentTeamFilter = leadIds[0];
+          var v = (location.search || '').match(/view=(\w+)/);
+          var view = v && ['board','list','calendar'].indexOf(v[1]) > -1 ? v[1] : 'board';
+          switchView(view, document.querySelector('#tkViewToggle [data-view="' + view + '"]'));
+          if (currentProjectId) enterProject(currentProjectId);
+          var o = (location.search || '').match(/open=(\d+)/);
+          if (o) setTimeout(function () { openTask(parseInt(o[1], 10)); }, 300);
+          var a = (location.search || '').match(/action=create/);
+          if (a) setTimeout(function () { openCreate('blank'); }, 200);
+        });
+      });
+    }).catch(function (e) {
+      console.error('PM.bootstrap failed:', e);
+      var sub = document.getElementById('pmPageSub');
+      if (sub) sub.textContent = 'Unable to load user context.';
+    });
+</script>
+
+</body>
+</html>

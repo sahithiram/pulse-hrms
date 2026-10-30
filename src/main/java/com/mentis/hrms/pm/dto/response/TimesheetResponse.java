@@ -16,12 +16,20 @@ public class TimesheetResponse {
     private LocalDate weekEnd;
     private double totalHours;
     private int totalMinutes;
+    // on Entry:
+    private Boolean billable;
+    private Boolean overtime;
+    // week totals
+    private double billableHours;
+    private double overtimeHours;
+    private int billableMinutes;    // NEW
+    private int overtimeMinutes;    // NEW
     private List<Day> days;
 
     // ── Phase 3: approval cycle ──
-    private String status;            // DRAFT | SUBMITTED | APPROVED | REJECTED
-    private boolean editable;         // true only for DRAFT / REJECTED
-    private String statusNote;        // approver's note (REJECTED) or reopen reason
+    private String status;          // DRAFT | SUBMITTED | APPROVED | REJECTED
+    private boolean editable;       // true only for DRAFT / REJECTED
+    private String statusNote;      // approver's note (REJECTED) or reopen reason
     private LocalDateTime submittedAt;
     private LocalDateTime decidedAt;
     private String decidedByName;
@@ -35,6 +43,10 @@ public class TimesheetResponse {
         private String weekday;
         private double hours;
         private int minutes;
+        private double billableHours;
+        private double overtimeHours;
+        private int billableMinutes;    // NEW
+        private int overtimeMinutes;    // NEW
         private List<Entry> entries;
     }
 
@@ -47,5 +59,7 @@ public class TimesheetResponse {
         private String projectName;
         private int minutes;
         private String note;
+        private Boolean billable;
+        private Boolean overtime;
     }
 }

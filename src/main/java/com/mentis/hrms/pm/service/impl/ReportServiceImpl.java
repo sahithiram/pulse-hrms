@@ -90,10 +90,22 @@ public class ReportServiceImpl implements ReportService {
     @Override
     @Transactional(readOnly = true)
     public QualityReport quality(Long projectId) {
-        List<Issue> issues = (projectId == null)
-                ? issueRepository.findAll()
-                : issueRepository.findByProjectIdOrderByCreatedAtDesc(projectId);
+        return projectId == null
+                ? buildQuality(issueRepository.findAll(), null)
+                : buildQuality(issueRepository.findByProjectIdOrderByCreatedAtDesc(projectId), List.of(projectId));
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public QualityReport qualityForProjects(Collection<Long> projectIds) {
+        List<Issue> issues = new ArrayList<>();
+        for (Long id : projectIds) {
+            issues.addAll(issueRepository.findByProjectIdOrderByCreatedAtDesc(id));
+        }
+        return buildQuality(issues, projectIds);
+    }
+
+    private QualityReport buildQuality(List<Issue> issues, Collection<Long> scope) {
         long open = issues.stream().filter(i ->
                 !"RESOLVED".equalsIgnoreCase(i.getStatus()) && !"CLOSED".equalsIgnoreCase(i.getStatus())).count();
         long critical = issues.stream()
@@ -102,7 +114,9 @@ public class ReportServiceImpl implements ReportService {
                 .count();
 
         LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
-        List<Issue> resolvedLast30 = issueRepository.findResolvedSince(cutoff);
+        List<Issue> resolvedLast30 = issueRepository.findResolvedSince(cutoff).stream()
+                .filter(i -> scope == null || scope.contains(i.getProjectId()))
+                .collect(Collectors.toList());
 
         long totalResolutionMinutes = 0;
         long countResolved = 0;
@@ -139,6 +153,20 @@ public class ReportServiceImpl implements ReportService {
         List<Risk> risks = (projectId == null)
                 ? riskRepository.findAll()
                 : riskRepository.findByProjectIdOrderByScoreDesc(projectId);
+        return buildRisk(risks);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RiskReport riskForProjects(Collection<Long> projectIds) {
+        List<Risk> risks = new ArrayList<>();
+        for (Long id : projectIds) {
+            risks.addAll(riskRepository.findByProjectIdOrderByScoreDesc(id));
+        }
+        return buildRisk(risks);
+    }
+
+    private RiskReport buildRisk(List<Risk> risks) {
         long high = risks.stream().filter(r -> r.getScore() != null && r.getScore() >= 15).count();
         long open = risks.stream().filter(r -> "OPEN".equalsIgnoreCase(r.getStatus())).count();
         long mitigating = risks.stream().filter(r -> "MITIGATING".equalsIgnoreCase(r.getStatus())).count();

@@ -57,23 +57,7 @@ public class ChangeRequestService {
         ChangeRequestPayload p = ChangeRequestPayload.from(payload);
         check(pr, p); // re-check: the project may have changed since the request was filed
 
-        // 1) keep the baseline that is about to be replaced
-        if (pr.getBaselinedAt() != null) {
-            historyRepository.save(ProjectBaselineHistory.builder()
-                    .projectId(projectId)
-                    .versionNo((int) historyRepository.countByProjectId(projectId) + 1)
-                    .baselineStart(pr.getBaselineStart())
-                    .baselineEnd(pr.getBaselineEnd())
-                    .baselineBudget(pr.getBaselineBudget())
-                    .baselinedAt(pr.getBaselinedAt())
-                    .baselinedBy(pr.getBaselinedBy())
-                    .supersededAt(LocalDateTime.now())
-                    .changeRequestId(approvalId)
-                    .reason(p.getReason())
-                    .build());
-        }
-
-        // 2) change the live plan
+        // 1) change the live plan; saveBaseline archives the previous snapshot if one exists.
         LocalDate oldEnd = pr.getEndDate();
         BigDecimal oldBudget = pr.getBudgetTotal();
         StringBuilder summary = new StringBuilder();
@@ -89,9 +73,9 @@ public class ChangeRequestService {
         }
         projectRepository.save(pr);
 
-        // 3) record the new baseline (same method as the "Save baseline" button)
+        // 2) record the new baseline (same method as the "Save baseline" button; writes history)
         if (pr.getStartDate() != null && pr.getEndDate() != null) {
-            projectService.saveBaseline(projectId, actorId);
+            projectService.saveBaseline(projectId, actorId, p.getReason());
         } else {
             log.warn("Change request {} applied but project {} has no start/end date: baseline not re-saved",
                     approvalId, projectId);

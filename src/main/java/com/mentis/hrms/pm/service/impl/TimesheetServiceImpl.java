@@ -97,11 +97,22 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         List<TimesheetResponse.Day> days = new ArrayList<>();
         int weekMinutes = 0;
+        int weekBillable = 0;
+        int weekOvertime = 0;
         for (Map.Entry<LocalDate, List<TaskTimeLog>> entry : byDay.entrySet()) {
             LocalDate date = entry.getKey();
             List<TaskTimeLog> entries = entry.getValue();
             int dayMinutes = entries.stream().mapToInt(TaskTimeLog::getMinutes).sum();
+            // null / missing flag counts as billable (column default is 1)
+            int dayBillable = entries.stream()
+                    .filter(x -> !Boolean.FALSE.equals(x.getBillable()))
+                    .mapToInt(TaskTimeLog::getMinutes).sum();
+            int dayOvertime = entries.stream()
+                    .filter(x -> Boolean.TRUE.equals(x.getOvertime()))
+                    .mapToInt(TaskTimeLog::getMinutes).sum();
             weekMinutes += dayMinutes;
+            weekBillable += dayBillable;
+            weekOvertime += dayOvertime;
 
             List<TimesheetResponse.Entry> entryDtos = new ArrayList<>();
             for (TaskTimeLog l : entries) {
@@ -116,6 +127,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                         .projectName(p != null ? p.getName() : null)
                         .minutes(l.getMinutes())
                         .note(l.getNote())
+                        .billable(l.getBillable())
+                        .overtime(l.getOvertime())
                         .build());
             }
             days.add(TimesheetResponse.Day.builder()
@@ -123,6 +136,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                     .weekday(date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
                     .minutes(dayMinutes)
                     .hours(round1(dayMinutes / 60.0))
+                    .billableMinutes(dayBillable)
+                    .billableHours(round1(dayBillable / 60.0))
+                    .overtimeMinutes(dayOvertime)
+                    .overtimeHours(round1(dayOvertime / 60.0))
                     .entries(entryDtos)
                     .build());
         }
@@ -138,6 +155,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .weekStart(weekStart).weekEnd(weekEnd)
                 .totalMinutes(weekMinutes)
                 .totalHours(round1(weekMinutes / 60.0))
+                .billableMinutes(weekBillable)
+                .billableHours(round1(weekBillable / 60.0))
+                .overtimeMinutes(weekOvertime)
+                .overtimeHours(round1(weekOvertime / 60.0))
                 .days(days)
                 .status(st.name())
                 // a project-scoped view is never editable
@@ -175,18 +196,29 @@ public class TimesheetServiceImpl implements TimesheetService {
     }
 
     /** STEP 6: a copy of one person's week that keeps ONLY the hours logged on this project. */
+    /** STEP 6: a copy of one person's week that keeps ONLY the hours logged on this project. */
     private TimesheetResponse onlyThisProject(TimesheetResponse r, Long projectId) {
         List<TimesheetResponse.Day> days = new ArrayList<>();
         int total = 0;
+        int totalBillable = 0;
+        int totalOvertime = 0;
         for (TimesheetResponse.Day d : r.getDays()) {
             List<TimesheetResponse.Entry> kept = d.getEntries().stream()
-                    .filter(e -> Objects.equals(e.getProjectId(), projectId))
+                    .filter(en -> Objects.equals(en.getProjectId(), projectId))
                     .collect(Collectors.toList());
             int mins = kept.stream().mapToInt(TimesheetResponse.Entry::getMinutes).sum();
+            int bill = kept.stream().filter(en -> !Boolean.FALSE.equals(en.getBillable()))
+                    .mapToInt(TimesheetResponse.Entry::getMinutes).sum();
+            int ot = kept.stream().filter(en -> Boolean.TRUE.equals(en.getOvertime()))
+                    .mapToInt(TimesheetResponse.Entry::getMinutes).sum();
             total += mins;
+            totalBillable += bill;
+            totalOvertime += ot;
             days.add(TimesheetResponse.Day.builder()
                     .date(d.getDate()).weekday(d.getWeekday())
                     .minutes(mins).hours(round1(mins / 60.0))
+                    .billableMinutes(bill).billableHours(round1(bill / 60.0))
+                    .overtimeMinutes(ot).overtimeHours(round1(ot / 60.0))
                     .entries(kept).build());
         }
         return TimesheetResponse.builder()
@@ -194,9 +226,11 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .employeeName(r.getEmployeeName()).department(r.getDepartment())
                 .weekStart(r.getWeekStart()).weekEnd(r.getWeekEnd())
                 .totalMinutes(total).totalHours(round1(total / 60.0))
+                .billableMinutes(totalBillable).billableHours(round1(totalBillable / 60.0))
+                .overtimeMinutes(totalOvertime).overtimeHours(round1(totalOvertime / 60.0))
                 .days(days)
                 .status(r.getStatus())
-                .editable(false)            // read-only in the project view; no notes or approver details
+                .editable(false) // read-only in the project view; no notes or approver details
                 .build();
     }
 
@@ -205,7 +239,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     public String exportCsv(Long teamId, LocalDate weekStart) {
         List<TimesheetResponse> rows = forTeam(teamId, weekStart);
         StringBuilder sb = new StringBuilder();
-        sb.append("Employee ID,Employee Name,Weekday,Date,Hours,Task,Project,Note\n");
+        sb.append("Employee ID,Employee Name,Weekday,Date,Hours,Task,Project,Note,Billable,Overtime\n");
         for (TimesheetResponse r : rows) {
             for (TimesheetResponse.Day d : r.getDays()) {
                 for (TimesheetResponse.Entry en : d.getEntries()) {
@@ -216,7 +250,9 @@ public class TimesheetServiceImpl implements TimesheetService {
                             .append(round1(en.getMinutes() / 60.0)).append(',')
                             .append(csv(en.getTaskTitle())).append(',')
                             .append(csv(en.getProjectName())).append(',')
-                            .append(csv(en.getNote())).append('\n');
+                            .append(csv(en.getNote())).append(',')
+                            .append(Boolean.FALSE.equals(en.getBillable()) ? "No" : "Yes").append(',')
+                            .append(Boolean.TRUE.equals(en.getOvertime()) ? "Yes" : "No").append('\n');
                 }
             }
         }
@@ -240,6 +276,8 @@ public class TimesheetServiceImpl implements TimesheetService {
             throw new BusinessRuleException("This week is already submitted and waiting for approval");
         if (w.getStatus() == TimesheetStatus.APPROVED)
             throw new BusinessRuleException("This week is already approved");
+        if (w.getStatus() == TimesheetStatus.LOCKED)
+            throw new BusinessRuleException("This week is locked and can't be submitted");
 
         List<TaskTimeLog> logs = timeLogRepository
                 .findByEmployeeIdAndLogDateBetweenOrderByLogDateAsc(userId, ws, ws.plusDays(6));
@@ -296,6 +334,35 @@ public class TimesheetServiceImpl implements TimesheetService {
             weekRepository.save(w);
         }
         return forEmployee(employeePk, ws);
+    }
+
+    @Override
+    @Transactional
+    public TimesheetResponse lock(Long weekId, Long actorPk) {
+        TimesheetWeek w = weekRepository.findById(weekId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timesheet not found: " + weekId));
+        if (w.getStatus() == TimesheetStatus.LOCKED)
+            throw new BusinessRuleException("This week is already locked");
+        w.setStatus(TimesheetStatus.LOCKED);
+        w.setDecidedBy(actorPk);
+        w.setDecidedAt(LocalDateTime.now());
+        weekRepository.save(w);
+        return forEmployee(w.getEmployeeId(), w.getWeekStart());
+    }
+
+    @Override
+    @Transactional
+    public TimesheetResponse unlock(Long weekId, Long actorPk) {
+        TimesheetWeek w = weekRepository.findById(weekId)
+                .orElseThrow(() -> new ResourceNotFoundException("Timesheet not found: " + weekId));
+        if (w.getStatus() != TimesheetStatus.LOCKED)
+            throw new BusinessRuleException("This week is not locked");
+        w.setStatus(TimesheetStatus.DRAFT);
+        w.setDecidedBy(actorPk);
+        w.setDecidedAt(LocalDateTime.now());
+        w.setNote("Unlocked by " + nameOf(actorPk));
+        weekRepository.save(w);
+        return forEmployee(w.getEmployeeId(), w.getWeekStart());
     }
 
     // ═══════════════════════════ approver choice ═══════════════════════════

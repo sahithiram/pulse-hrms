@@ -4,10 +4,12 @@ import com.mentis.hrms.dto.NotificationRequest;
 import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.pm.dto.request.CreateRiskRequest;
 import com.mentis.hrms.pm.dto.response.RiskResponse;
+import com.mentis.hrms.pm.entity.ActivityLog;
 import com.mentis.hrms.pm.entity.Project;
 import com.mentis.hrms.pm.entity.Risk;
 import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.realtime.PmEventPublisher;
+import com.mentis.hrms.pm.repository.ActivityLogRepository;
 import com.mentis.hrms.pm.repository.ProjectRepository;
 import com.mentis.hrms.pm.repository.RiskRepository;
 import com.mentis.hrms.pm.service.RiskService;
@@ -31,6 +33,7 @@ public class RiskServiceImpl implements RiskService {
     private final EmployeeRepository employeeRepository;
     private final PmEventPublisher publisher;
     private final NotificationEmitter notificationEmitter;
+    private final ActivityLogRepository activityLogRepository;
 
     @Override
     @Transactional
@@ -77,6 +80,7 @@ public class RiskServiceImpl implements RiskService {
             });
         }
 
+        logRisk(saved.getId(), "CREATED", userId, null, saved.getStatus(), "Risk created: " + saved.getTitle());
         publisher.publish("POST", "/api/pm/risks/" + saved.getId(), String.valueOf(userId));
         return toResponse(saved);
     }
@@ -100,8 +104,11 @@ public class RiskServiceImpl implements RiskService {
     public RiskResponse updateStatus(Long id, String status, Long userId) {
         Risk r = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Risk not found: " + id));
+        String old = r.getStatus();
         r.setStatus(status);
         Risk saved = repo.save(r);
+        logRisk(saved.getId(), "STATUS_CHANGED", userId, old, saved.getStatus(),
+                "Risk status: " + old + " → " + saved.getStatus());
         publisher.publish("PATCH", "/api/pm/risks/" + id, String.valueOf(userId));
         return toResponse(saved);
     }
@@ -111,8 +118,10 @@ public class RiskServiceImpl implements RiskService {
     public RiskResponse updateMitigation(Long id, String mitigation, Long userId) {
         Risk r = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Risk not found: " + id));
+        String old = r.getMitigation();
         r.setMitigation(mitigation);
         Risk saved = repo.save(r);
+        logRisk(saved.getId(), "UPDATED", userId, old, saved.getMitigation(), "Mitigation plan updated");
         publisher.publish("PATCH", "/api/pm/risks/" + id, String.valueOf(userId));
         return toResponse(saved);
     }
@@ -122,8 +131,22 @@ public class RiskServiceImpl implements RiskService {
     public void delete(Long id, Long userId) {
         Risk r = repo.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Risk not found: " + id));
+        logRisk(r.getId(), "DELETED", userId, r.getTitle(), null, "Risk deleted: " + r.getTitle());
         repo.delete(r);
         publisher.publish("DELETE", "/api/pm/risks/" + id, String.valueOf(userId));
+    }
+
+    private void logRisk(Long riskId, String action, Long actorId,
+                         String oldV, String newV, String msg) {
+        if (riskId == null) return;
+        try {
+            activityLogRepository.save(ActivityLog.builder()
+                    .entityType("RISK").entityId(riskId).action(action)
+                    .actorId(actorId).actorName(nameOf(actorId))
+                    .oldValue(oldV).newValue(newV).message(msg).build());
+        } catch (Exception e) {
+            log.warn("risk activity log failed: {}", e.getMessage());
+        }
     }
 
     // ── helpers ──

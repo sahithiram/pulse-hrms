@@ -256,10 +256,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
 <script>
-    /* ==================  FIXED APPLY-FORM LOGIC ================== */
+    /* ==================  APPLY-FORM LOGIC  ================== */
 
     document.addEventListener('DOMContentLoaded', function () {
         console.log('Job Description page loaded');
@@ -287,7 +285,7 @@
             });
         }
 
-        /* auto-open form on success message?  – NO, keep closed */
+        /* auto-open form on success message? – NO, keep closed */
         if (document.querySelector('.alert-success') && applicationSection) {
             applicationSection.classList.remove('active');
         }
@@ -421,15 +419,15 @@
         if (el) { el.textContent = msg; el.className = 'real-time-validation validation-valid'; }
     }
     function validateForm() {
-console.log('Validating form...');
+        console.log('Validating form...');
 
-      // Check jobId
-    const jobId = document.getElementById('hiddenJobId')?.value;
-    console.log('Job ID:', jobId);
-    if (!jobId) {
-        alert('Job ID is missing. Please refresh the page and try again.');
-        return false;
-    }
+        // Check jobId
+        const jobId = document.getElementById('hiddenJobId')?.value;
+        console.log('Job ID:', jobId);
+        if (!jobId) {
+            alert('Job ID is missing. Please refresh the page and try again.');
+            return false;
+        }
 
         let ok = true;
         const required = [
@@ -452,10 +450,9 @@ console.log('Validating form...');
             showValidationError('Resume required', 'resumeValidation'); ok = false;
         }
 
-         // Add more detailed logging
-    const formData = new FormData(document.getElementById('jobApplicationForm'));
-    console.log('Form data:', Object.fromEntries(formData.entries()));
-
+        // Add more detailed logging
+        const formData = new FormData(document.getElementById('jobApplicationForm'));
+        console.log('Form data:', Object.fromEntries(formData.entries()));
 
         return ok;
     }

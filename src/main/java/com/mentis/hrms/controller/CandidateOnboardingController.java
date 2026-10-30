@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.mentis.hrms.service.NotificationService;
+import com.mentis.hrms.pm.repository.TeamRepository;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -70,6 +71,7 @@ public class CandidateOnboardingController {
     @Autowired private PasswordUtil passwordUtil;
     @Autowired
     private NotificationService notificationService;
+    @Autowired private TeamRepository teamRepository;
     @Value("${app.upload.base-path:C:/hrms/uploads}")
     private String basePath;
 
@@ -303,9 +305,9 @@ public class CandidateOnboardingController {
             return "redirect:/candidate/login?error=Please+login+first";
         }
 
-        // Also verify role
+        // Also verify role (D1: PM may open their own employee dashboard for self-service)
         String userRole = (String) session.getAttribute("userRole");
-        if (!"EMPLOYEE".equals(userRole) && !"HR".equals(userRole)) {
+        if (!"EMPLOYEE".equals(userRole) && !"HR".equals(userRole) && !"PM".equals(userRole)) {
             return "redirect:/candidate/login?error=Unauthorized";
         }
 
@@ -334,6 +336,7 @@ public class CandidateOnboardingController {
         // Add user info for header
         model.addAttribute("userRole", session.getAttribute("userRole"));
         model.addAttribute("userName", session.getAttribute("userName"));
+        model.addAttribute("isTeamLead", teamRepository.existsByLeadEmployeeId(employee.getId()));
 
         // FIXED: Use getUnreadCount for backward compatibility
         model.addAttribute("unreadCount", notificationService.getUnreadCount(employeeId, "EMPLOYEE"));
@@ -392,7 +395,13 @@ public class CandidateOnboardingController {
             return "redirect:/candidate/onboarding/" + employeeId + "/upload/" + documentType;
         }
     }
-
+    @GetMapping("/dashboard")
+    public String dashboardHome(HttpSession session) {
+        String id = (String) session.getAttribute("userId");
+        return id == null
+                ? "redirect:/candidate/login?error=Please+login+first"
+                : "redirect:/candidate/dashboard/" + id;
+    }
     /*  ==================== 7. PROFILE PICTURE ====================  */
     @PostMapping("/profile-picture/upload/{employeeId}")
     @ResponseBody

@@ -14,7 +14,9 @@
             --dark-card: #1a2235;
             --dark-border: #2a3655;
             --dark-text: #e2e8f0;
+            --dark-text-secondary: #94a3b8;
             --primary: #6366f1;
+            --primary-hover: #4f46e5;
             --success: #10b981;
         }
 
@@ -105,7 +107,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary), #4f46e5);
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
             color: white;
         }
 
@@ -114,9 +116,16 @@
             color: white;
         }
 
+        .btn-secondary {
+            background: transparent;
+            color: var(--dark-text-secondary);
+            border: 1px solid var(--dark-border);
+        }
+
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            color: white;
         }
 
         .countdown {

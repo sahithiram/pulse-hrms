@@ -40,7 +40,8 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
     private final NotificationEmitter notificationEmitter;
     private final ProjectFinanceService projectFinanceService;
     private final WorkloadService workloadService;
-
+    private final com.mentis.hrms.pm.repository.TaskAssignmentRepository taskAssignmentRepository;
+    private final com.mentis.hrms.pm.repository.TaskRepository taskRepository;
     // ───────────────────────── list ─────────────────────────
 
     @Override
@@ -136,6 +137,19 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         ProjectMember m = findMember(projectId, memberId);
         if (m.getEmployeeId().equals(p.getOwnerId()))
             throw new BusinessRuleException("The project owner can't be removed. Change the owner first.");
+
+        long open = taskAssignmentRepository.findByEmployeeId(m.getEmployeeId()).stream()
+                .map(a -> taskRepository.findById(a.getTaskId()).orElse(null))
+                .filter(t -> t != null
+                        && projectId.equals(t.getProjectId())
+                        && t.getStatus() != null
+                        && t.getStatus() != com.mentis.hrms.pm.enums.TaskStatus.DONE
+                        && !"CANCELLED".equals(t.getStatus().name()))
+                .count();
+        if (open > 0)
+            throw new BusinessRuleException(open + " open task(s) are still assigned to this member. "
+                    + "Use Handover to reassign them first.");
+
         repo.delete(m);
         projectFinanceService.recalculateCost(projectId);
     }

@@ -12,11 +12,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     boolean existsByEmployeeId(String employeeId);
     boolean existsByPersonalEmail(String personalEmail);
 
+    // STEP F1: look a reset token up directly instead of scanning every employee
+    Optional<Employee> findByResetToken(String resetToken);
 
     // Existing methods
     List<Employee> findByDocumentDeadlineIsNotNull();
     List<Employee> findByDocumentDeadlineIsNotNullAndOnboardingStatusIn(List<String> statuses);
-
+    List<Employee> findByStatusIn(List<String> statuses);
     // NEW: Find all employees sorted by createdDate descending (newest first)
     List<Employee> findAllByOrderByCreatedDateDesc();
 }

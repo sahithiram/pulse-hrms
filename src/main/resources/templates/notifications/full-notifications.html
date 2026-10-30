@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+
     <style>
         :root {
             --dark-bg: #121826;
@@ -95,7 +97,7 @@
             margin-left: 280px;
             padding: 40px;
             max-width: 1200px;
-            margin: 0 auto;
+            margin-right: auto;
         }
 
         .page-header {
@@ -248,7 +250,7 @@
         }
 
         .btn-primary:hover {
-            background: var(--primary-hover);
+            background: var(--primary-hover, #4f46e5);
             transform: translateY(-1px);
         }
 
@@ -275,7 +277,7 @@
 </head>
 <body>
 <!-- Mobile Menu Toggle -->
-<button class="mobile-menu-toggle" id="mobileMenuToggle" style="display: none;">
+<button class="mobile-menu-toggle" id="mobileMenuToggle" style="display: none; background: var(--dark-card); border: 1px solid var(--dark-border); color: var(--dark-text); padding: 8px 12px; border-radius: 6px; cursor: pointer;">
     <i class="fas fa-bars"></i>
 </button>
 
@@ -350,8 +352,9 @@
              th:data-type="${notif.type}">
             <div class="notification-header">
                 <div class="notification-title">
-                    <div th:class="'notification-icon ' + ${notif.type == 'DOCUMENT_VERIFIED'} ? 'icon-success' :
-                            (${notif.type == 'DOCUMENT_REJECTED'} ? 'icon-danger' : 'icon-info')">
+                    <div th:class="'notification-icon ' +
+                        (${notif.type == 'DOCUMENT_VERIFIED'} ? 'icon-success' :
+                        (${notif.type == 'DOCUMENT_REJECTED'} ? 'icon-danger' : 'icon-info'))">
                         <i th:class="${notif.type == 'DOCUMENT_VERIFIED'} ? 'fas fa-check-circle' :
                                 (${notif.type == 'DOCUMENT_REJECTED'} ? 'fas fa-times-circle' : 'fas fa-file-upload')"></i>
                     </div>
@@ -383,9 +386,12 @@
 
 <script>
     // Toggle mobile menu
-    document.getElementById('mobileMenuToggle').addEventListener('click', function() {
-        document.getElementById('sidebar').classList.toggle('active');
-    });
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', function() {
+            document.getElementById('sidebar').classList.toggle('active');
+        });
+    }
 
     // Filter notifications
     document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -445,11 +451,13 @@
     // Responsive behavior
     window.addEventListener('resize', function() {
         const toggleBtn = document.getElementById('mobileMenuToggle');
-        if (window.innerWidth <= 768) {
-            toggleBtn.style.display = 'block';
-        } else {
-            toggleBtn.style.display = 'none';
-            document.getElementById('sidebar').classList.remove('active');
+        if (toggleBtn) {
+            if (window.innerWidth <= 768) {
+                toggleBtn.style.display = 'block';
+            } else {
+                toggleBtn.style.display = 'none';
+                document.getElementById('sidebar').classList.remove('active');
+            }
         }
     });
 

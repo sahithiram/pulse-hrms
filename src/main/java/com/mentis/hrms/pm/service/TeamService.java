@@ -10,18 +10,32 @@ import com.mentis.hrms.pm.dto.request.AddTeamMemberRequest;
 import com.mentis.hrms.pm.dto.request.UpdateTeamMemberRequest;
 import com.mentis.hrms.pm.dto.response.TeamMemberResponse;
 import java.util.List;
-
+import java.util.Set;
 public interface TeamService {
     TeamResponse createTeam(CreateTeamRequest req, Long userId);
     TeamResponse getTeam(Long id);
-    PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable);
-    List<TeamSummaryResponse> listAllForCards();
+    /** onlyTeamIds == null means "all teams". An empty set means "none". */
+    PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable, Set<Long> onlyTeamIds);
+    List<TeamSummaryResponse> listAllForCards(Set<Long> onlyTeamIds);
+    List<TeamSummaryResponse> listForDropdown(Set<Long> onlyTeamIds);
+
+    // Old signatures kept so any other caller still compiles.
+    default PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable) {
+        return listTeams(search, pageable, null);
+    }
+    default List<TeamSummaryResponse> listAllForCards() { return listAllForCards(null); }
+    default List<TeamSummaryResponse> listForDropdown() { return listForDropdown(null); }
     void deleteTeam(Long id);
 
     // NEW ─ team drawer + task board filter
     List<Long> listTeamMemberIds(Long teamId);
-    TeamTasksResult listTeamTasks(Long teamId, int limit);
-    List<TeamSummaryResponse> listForDropdown();
+    TeamTasksResult listTeamTasks(Long teamId, int limit, Long viewerId);
+
+    /** No viewer = no masking (schedulers, internal calls). */
+    default TeamTasksResult listTeamTasks(Long teamId, int limit) {
+        return listTeamTasks(teamId, limit, null);
+    }
+
     List<TeamMemberResponse> listTeamMembers(Long teamId);
     TeamMemberResponse addMember(Long teamId, AddTeamMemberRequest req, Long userId);
     TeamMemberResponse updateMember(Long teamId, Long employeeId, UpdateTeamMemberRequest req);

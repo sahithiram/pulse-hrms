@@ -46,6 +46,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -280,6 +281,18 @@ public class ApprovalServiceImpl implements ApprovalService {
                 if (w.getStatus() != TimesheetStatus.SUBMITTED)
                     throw new BusinessRuleException("Timesheet is not in SUBMITTED state");
             }
+            case "EXTENSION" -> {
+                if (!taskRepository.existsById(entityId))
+                    throw new ResourceNotFoundException("Task not found: " + entityId);
+                pmAccessService.requireCanEdit(requesterId, entityId);
+                JsonNode p = parse(payload);
+                if (p == null || !p.hasNonNull("newDueDate"))
+                    throw new BusinessRuleException("payload.newDueDate is required for an EXTENSION approval");
+                try { LocalDate.parse(p.get("newDueDate").asText()); }
+                catch (Exception e) {
+                    throw new BusinessRuleException("payload.newDueDate must be an ISO date (YYYY-MM-DD)");
+                }
+            }
             default -> { }
         }
 
@@ -376,6 +389,19 @@ public class ApprovalServiceImpl implements ApprovalService {
                 timesheetWeekRepository.findById(ar.getEntityId()).ifPresent(w ->
                         projectFinanceService.recalculateForEmployeeWeek(w.getEmployeeId(), w.getWeekStart()));
             }
+            case "EXTENSION" -> {
+                JsonNode p = parse(ar.getPayload());
+                if (p == null || !p.hasNonNull("newDueDate")) return;
+                taskRepository.findById(ar.getEntityId()).ifPresent(t -> {
+                    String old = t.getDueDate() != null ? t.getDueDate().toString() : null;
+                    t.setDueDate(LocalDate.parse(p.get("newDueDate").asText()));
+                    taskRepository.save(t);
+                    taskCommentRepository.save(TaskComment.builder()
+                            .taskId(t.getId()).authorId(actorId).authorName(nameOf(actorId))
+                            .body("✅ Due date extended: " + old + " → " + t.getDueDate())
+                            .mentions("").edited(false).deleted(false).build());
+                });
+            }
             default -> log.info("Approval {} ({}) approved; nothing to apply yet", ar.getId(), ar.getEntityType());
         }
     }
@@ -386,6 +412,15 @@ public class ApprovalServiceImpl implements ApprovalService {
 
         if ("TIMESHEET".equals(ar.getEntityType())) {
             decideTimesheet(ar, actorId, TimesheetStatus.REJECTED);
+            return;
+        }
+        if ("EXTENSION".equals(ar.getEntityType())) {
+            taskRepository.findById(ar.getEntityId()).ifPresent(t -> {
+                taskCommentRepository.save(TaskComment.builder()
+                        .taskId(t.getId()).authorId(actorId).authorName(nameOf(actorId))
+                        .body("❌ Extension rejected: " + note)
+                        .mentions("").edited(false).deleted(false).build());
+            });
             return;
         }
         if ("CHANGE_REQUEST".equals(ar.getEntityType())) {
@@ -497,6 +532,8 @@ public class ApprovalServiceImpl implements ApprovalService {
         if (entityType == null || entityId == null) return "Unknown";
         return switch (entityType.toUpperCase()) {
             case "TASK" -> taskRepository.findById(entityId).map(Task::getTitle).orElse("Task #" + entityId);
+            case "EXTENSION" -> taskRepository.findById(entityId)
+                    .map(t -> "Extension: " + t.getTitle()).orElse("Extension #" + entityId);
             case "PROJECT" -> projectRepository.findById(entityId).map(Project::getName).orElse("Project #" + entityId);
             case "BUDGET" -> projectRepository.findById(entityId)
                     .map(p -> "Budget change: " + p.getName()).orElse("Budget #" + entityId);

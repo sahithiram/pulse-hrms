@@ -14,5 +14,7 @@ public interface RiskRepository extends JpaRepository<Risk, Long> {
     List<Risk> findByStatusOrderByScoreDesc(String status);
     List<Risk> findByScoreGreaterThanEqualAndStatusNotOrderByScoreDesc(int score, String status);
     List<Risk> findByReviewDateBetween(LocalDate from, LocalDate to);
+    List<Risk> findByProjectIdAndStatusAndScoreGreaterThanEqual(
+            Long projectId, String status, int score);
     long countByProjectIdAndScoreGreaterThanEqual(Long projectId, int score);
 }

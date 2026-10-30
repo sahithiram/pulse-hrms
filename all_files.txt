@@ -1,0 +1,3067 @@
+﻿===== pom.xml =====
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.mentis</groupId>
+    <artifactId>hrms</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.0</version>
+        <relativePath/>
+    </parent>
+
+    <properties>
+        <java.version>21</java.version>
+        <lombok.version>1.18.38</lombok.version>
+        <itext.version>7.2.5</itext.version>
+        <html2pdf.version>4.0.5</html2pdf.version>
+    </properties>
+
+    <dependencies>
+        <!-- Spring Boot Starters - Core -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+
+        <!-- âœ… ADD THIS -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- âœ… DATABASE - MySQL (Clever Cloud) -->
+        <!-- REMOVED: PostgreSQL -->
+        <!-- ADDED: MySQL Connector -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- JPA & Hibernate -->
+        <dependency>
+            <groupId>org.hibernate.orm</groupId>
+            <artifactId>hibernate-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>jakarta.persistence</groupId>
+            <artifactId>jakarta.persistence-api</artifactId>
+            <version>3.1.0</version>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.38</version>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- JSON Processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Google Calendar Integration -->
+        <dependency>
+            <groupId>com.google.api-client</groupId>
+            <artifactId>google-api-client</artifactId>
+            <version>2.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.oauth-client</groupId>
+            <artifactId>google-oauth-client-jetty</artifactId>
+            <version>1.34.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.google.apis</groupId>
+            <artifactId>google-api-services-calendar</artifactId>
+            <version>v3-rev20220715-2.0.0</version>
+        </dependency>
+
+        <!-- iText PDF Generation -->
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>html2pdf</artifactId>
+            <version>4.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>kernel</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>layout</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>io</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>forms</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>pdfa</artifactId>
+            <version>7.2.5</version>
+        </dependency>
+
+        <!-- WebSockets -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-messaging</artifactId>
+        </dependency>
+
+        <!-- WebJars for WebSocket clients -->
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>sockjs-client</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars</groupId>
+            <artifactId>stomp-websocket</artifactId>
+            <version>2.3.4</version>
+        </dependency>
+
+        <!-- Apache Commons Compress -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.27.1</version>
+        </dependency>
+
+        <!-- Jakarta Annotations -->
+        <dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20240303</version>
+        </dependency>
+        <!-- HTTP Client for OpenRouter API calls -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <!-- Apache POI - Excel (.xlsx) and Word (.docx) generation for HR AI exports -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+
+        <!-- Apache POI - Excel (.xlsx) and Word (.docx) generation for HR AI exports -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.3.0</version>
+        </dependency>
+        <!-- JSON Processing (if not already present) -->
+        <!-- JSON Processing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-hibernate6</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                    <!-- Add the mainClass here inside the SAME configuration tag -->
+                    <mainClass>com.mentis.hrms.HrmsProjectApplication</mainClass>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <compilerArgs>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED</arg>
+                        <arg>--add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.38</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+===== FILE TREE (src) =====
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\HrmsProjectApplication.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\AnnouncementSchemaInitializer.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\DataInitializer.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\OpenRouterConfig.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\WebMvcConfig.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\WebSocketConfig.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AdminAIController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AdminAttendanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AdminDashboardController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AIAssistantController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AnnouncementController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AttendanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\AttendanceWebSocketController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\CandidateAuthController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\CandidateOnboardingController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\ChatController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\DashboardController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\DepartmentController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\DocumentDownloadController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\EmployeeExportController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HealthController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HolidayController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HomeController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HrAIController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HrAttendanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\HrDashboardController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\JobApplicationController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\JobController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\LeaveBalanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\LeaveManagementController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\LocationController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\NewOnboardingController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\NotificationController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\NotificationViewController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\OfferController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\PermissionController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\PresenceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\TestController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\WebController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\controller\api\LocationApiController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\AnnouncementDTO.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\ChatRequestDto.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\ChatResponseDto.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\EmployeeFormDTO.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\HiredCandidateViewModel.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\HolidayDTO.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\OfferRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\request\NotificationRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\EmployeePerformance\controller\AdminEmpPerformanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\EmployeePerformance\model\AdminEmpPerformance.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\EmployeePerformance\repository\AdminEmpPerformanceRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\EmployeePerformance\service\AdminEmpPerformanceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\event\EmployeeDeactivatedEvent.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\event\EmployeeResignedEvent.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\event\PmEmailEvent.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\exception\GlobalExceptionHandler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\interceptor\RoleInterceptor.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\AdminAIChatMessage.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\AdminAIChatSession.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Announcement.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Attendance.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\ChatMessage.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\ChatSession.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Department.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Designation.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\DocumentChecklist.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Employee.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Holiday.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\HrAIChatMessage.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\HrAIChatSession.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Job.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\JobApplication.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\LeaveBalance.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\LeaveRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Location.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\Notification.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\OfferLetter.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\OnboardingDocument.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\RolePermission.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\model\enums\UserRole.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\balance\WorkloadBalancePlanner.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\balance\WorkloadBalancePlannerTest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\config\Pmaccountanitializer.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\config\PmWebConfig.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ActiveTimerController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ApprovalController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ClientController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\DashboardController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\DevReminderController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\EmployeeLookupController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\GoalController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\HandoverController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\HandoverPendingController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\IssueController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\MilestoneController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PlanActualController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmAttentionController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmDevTriggerController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmMeController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmNotificationController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmNotifySettingsController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\PmViewController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectBaselineController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectClosureController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectDigestController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectDocumentController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectIntakeController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectMemberController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectPhaseController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectTemplateController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectTimelineController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ProjectVarianceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\RecurringTaskController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\ReportController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\RetroController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\RiskController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\SavedFilterController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\SprintController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TaskAttachmentController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TaskBulkController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TaskController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TaskTimeLogController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TaskWorkflowController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TeamController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TemplateFromProjectController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\TimesheetController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\WorkloadBalanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\WorkloadController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddChecklistRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddDependencyRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddMemberRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddTeamMemberRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddWatcherRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AssignTaskRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\BalanceApplyRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\BalancePreviewRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\BulkTaskRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ChangeRequestPayload.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ClosureItemRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CompleteSprintRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ConvertRetroItemRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateApprovalRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateClientRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateCommentRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateGoalRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateIssueRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateKeyResultRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateMilestoneRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreatePhaseRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateProjectRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateRiskRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateSprintRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateTaskRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateTeamRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreateTemplateRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\DecisionRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\FromTemplateRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\HandoverRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\LogTimeRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ProjectRequestDecision.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ProjectTemplatePayload.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\ReopenProjectRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\RetroItemRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\SubmitProjectRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\TaskFilterRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\TaskStatusChangeRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateMemberRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateProjectRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateRetroRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateTaskRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateTeamMemberRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\UpdateTimeLogRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ActivityResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ApiResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ApprovalResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\BalanceApplyResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\BalancePreviewResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\BurndownResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ChartDataResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ChecklistItemResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ClientResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ClientSummaryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ClosureItemResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ClosureStatusResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\CommentResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\DashboardKpiResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\GoalResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\HandoverResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\IssueResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\KeyResultResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\MilestoneResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\PageResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\PlanActualResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\PmMeResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectDocumentResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectFinanceResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectMemberResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectPhaseResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectRequestResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectSummaryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ProjectTemplateResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ReportDtos.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\RetroResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\RetroSummaryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\RiskResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\SprintResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TaskAttachmentResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TaskBoardMetaResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TaskResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TaskSummaryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TeamMemberResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TeamResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TeamSummaryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TimeLogResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TimesheetResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\VarianceReport.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\VelocityResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\WorkloadResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ActiveTimer.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ActivityLog.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ApprovalRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Client.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Goal.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Issue.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\KeyResult.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Milestone.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\PmNotifyPref.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\PmNotifyPrefRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Project.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectBaselineHistory.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectClosureItem.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectDocument.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectMember.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectPhase.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectRequest.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectTemplate.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\RecurringTaskRule.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Risk.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\SavedFilter.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Sprint.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\SprintRetro.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\SprintRetroItem.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Task.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskAssignment.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskAttachment.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskChecklistItem.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskComment.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskDependency.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskTimeLog.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskWatcher.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Team.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TeamMember.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TimesheetWeek.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\GoalStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\HealthMode.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\MilestoneStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectHealth.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectPhaseStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectPriority.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectRequestStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectRole.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\ProjectStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\RetroCategory.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\SprintStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\TaskPriority.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\TaskStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\TaskType.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\TemplateType.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\enums\TimesheetStatus.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\BusinessRuleException.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\DuplicateResourceException.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\InvalidOperationException.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\PmAccessDeniedException.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\PmExceptionHandler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\PmRuleExceptionHandler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\exception\ResourceNotFoundException.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\listener\EmployeeOffboardingListener.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\listener\PmEmailListener.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\listener\PmResignationListener.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\mapper\ClientMapper.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\mapper\ProjectMapper.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\mapper\TaskMapper.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\mapper\TeamMapper.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\realtime\PmEventPublisher.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ActiveTimerRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ActivityLogRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ApprovalRequestRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ClientRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\GoalRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\IssueRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\KeyResultRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\MilestoneRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectBaselineHistoryRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectClosureItemRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectDocumentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectMemberRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectPhaseRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectRequestRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectTemplateRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\RecurringTaskRuleRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\RiskRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\SavedFilterRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\SprintRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\SprintRetroItemRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\SprintRetroRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskAssignmentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskAttachmentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskChecklistItemRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskCommentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskDependencyRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskTimeLogRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TaskWatcherRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TeamMemberRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TeamRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\TimesheetWeekRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\ApprovalSlaScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\BlockedTaskEscalationScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\DigestResult.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\ProjectHealthScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\ProjectWeeklyDigestScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\RecurringTaskScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\RiskReviewScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\scheduler\TaskDueReminderScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\CurrentUserId.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\CurrentUserIdResolver.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\PmAccessService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\PmCurrentUserHolder.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\PmCurrentUserInterceptor.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\PmPageGuard.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\PmUserProvider.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\ProjectFinanceMasker.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\security\SessionPmUserProvider.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ActiveTimerService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ApprovalService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\BaselineHistoryResponse.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ChangeRequestService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ClientService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\GoalService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\HandoverService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\IssueService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\MilestoneService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\MyWorkService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\PlanActualService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\PmHandoverFinder.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\PmNotifyPrefService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\PmParticipantService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\PmWorkScoreService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectClosureService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectDocumentService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectFinanceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectIntakeService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectMemberService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectPhaseService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectTemplateService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectVarianceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\RecurringTaskExecutor.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\RecurringTaskService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ReportService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\RetroService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\RiskService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\SprintService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TaskAttachmentService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TaskEventNotifier.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TaskService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TaskTimeLogService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TaskWorkflow.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TeamService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TemplateFromProjectService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TemplateGraphValidator.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TimesheetService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\WorkloadBalanceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\WorkloadService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ApprovalServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ClientServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\GoalServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\HandoverServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\IssueServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\MilestoneServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\MyWorkServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ProjectMemberServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ProjectPhaseServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ProjectServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\ReportServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\RiskServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\SprintServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\TaskAttachmentServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\TaskServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\TaskTimeLogServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\TeamServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\TimesheetServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\WorkloadBalanceServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\impl\WorkloadServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\AdminAIChatMessageRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\AdminAIChatSessionRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\AnnouncementRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\AttendanceRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\ChatMessageRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\ChatSessionRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\DepartmentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\DesignationRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\DocumentChecklistRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\EmployeeRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\HolidayRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\HrAIChatMessageRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\HrAIChatSessionRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\JobApplicationRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\JobRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\LeaveBalanceRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\LeaveRequestRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\LocationRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\NotificationRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\OfferLetterRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\OnboardingDocumentRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\RolePermissionRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\scheduler\AnnouncementCleanupScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\scheduler\DeadlineCheckScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\scheduler\DueDateNotificationScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\seeders\DocumentChecklistSeeder.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\AdminAIService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\AdminAISessionService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\AdminReportService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\AnnouncementService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\AttendanceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\ChatService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\DashboardService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\DashboardServiceImpl.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\DeadlineMonitorService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\DepartmentService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\DocumentService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\EmailService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\EmployeeService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\FilePreviewService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\GoogleCalendarService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\HolidayService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\HrAIService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\HrAISessionService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\HrExportService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\JobApplicationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\JobService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\LeaveActionService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\LeaveBalanceService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\LocationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\NotificationCleanupService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\NotificationEmitter.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\NotificationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\OfferService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\OpenRouterService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\OrgContextService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\PasswordResetMailService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\PdfGenerationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\PermissionService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\ProfilePictureService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\TemporaryNotificationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\ValidationNotificationService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\ai\QueryIntentClassifier.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\util\PasswordGenerator.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\util\PasswordUtil.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\util\ResetPassword.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\util\StringCleaner.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\controller\WorkPerformanceController.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\dto\ClickUpTaskDTO.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\dto\CombinedPerformanceDTO.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\model\EmployeeClickUpMapping.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\model\WorkPerformanceSnapshot.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\repository\EmployeeClickUpMappingRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\repository\WorkPerformanceSnapshotRepository.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\scheduler\WorkPerformanceSyncScheduler.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\service\ClickUpApiService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\service\PerformanceSyncService.java
+C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\workperformance\service\WorkPerformanceService.java
+C:\pulse-hrms test pm\src\main\resources\application.properties
+C:\pulse-hrms test pm\src\main\resources\credentials.json
+C:\pulse-hrms test pm\src\main\resources\schema.sql
+C:\pulse-hrms test pm\src\main\resources\db\migration\alter_pm_approval_payload.sql
+C:\pulse-hrms test pm\src\main\resources\db\migration\create_pm_project_phase.sql
+C:\pulse-hrms test pm\src\main\resources\static\notifications.js
+C:\pulse-hrms test pm\src\main\resources\static\css\menti-ai.css
+C:\pulse-hrms test pm\src\main\resources\static\css\menti-theme.css
+C:\pulse-hrms test pm\src\main\resources\static\js\menti-ai.js
+C:\pulse-hrms test pm\src\main\resources\static\js\menti-sidebar.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-approvals.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-closure.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-core.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-documents.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-entry.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-finance.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-handover.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-intake.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-members.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-notify-settings.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-recurring.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-reports.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-retro.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-sprints.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-task-drawer.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-task-filter.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-timer.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-timesheet.js
+C:\pulse-hrms test pm\src\main\resources\static\pm\pm-workload.js
+C:\pulse-hrms test pm\src\main\resources\templates\addemployee.html
+C:\pulse-hrms test pm\src\main\resources\templates\ai-popup.html
+C:\pulse-hrms test pm\src\main\resources\templates\all-jobs.html
+C:\pulse-hrms test pm\src\main\resources\templates\announcement-manual.html
+C:\pulse-hrms test pm\src\main\resources\templates\announcement-with-ai.html
+C:\pulse-hrms test pm\src\main\resources\templates\announcements.html
+C:\pulse-hrms test pm\src\main\resources\templates\announcementshistory.html
+C:\pulse-hrms test pm\src\main\resources\templates\application-details.html
+C:\pulse-hrms test pm\src\main\resources\templates\applications.html
+C:\pulse-hrms test pm\src\main\resources\templates\appointment-letter-template.html
+C:\pulse-hrms test pm\src\main\resources\templates\categories.html
+C:\pulse-hrms test pm\src\main\resources\templates\clean-offer-template.html
+C:\pulse-hrms test pm\src\main\resources\templates\create-credentials.html
+C:\pulse-hrms test pm\src\main\resources\templates\dashboard.html
+C:\pulse-hrms test pm\src\main\resources\templates\departments.html
+C:\pulse-hrms test pm\src\main\resources\templates\edit-job-model.html
+C:\pulse-hrms test pm\src\main\resources\templates\employees.html
+C:\pulse-hrms test pm\src\main\resources\templates\forgot-password.html
+C:\pulse-hrms test pm\src\main\resources\templates\generated-announcement-form.html
+C:\pulse-hrms test pm\src\main\resources\templates\home.html
+C:\pulse-hrms test pm\src\main\resources\templates\interview-schedule.html
+C:\pulse-hrms test pm\src\main\resources\templates\job-details.html
+C:\pulse-hrms test pm\src\main\resources\templates\job-form.html
+C:\pulse-hrms test pm\src\main\resources\templates\jobdescription.html
+C:\pulse-hrms test pm\src\main\resources\templates\locations.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer-letter-template.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer-letter-view.html
+C:\pulse-hrms test pm\src\main\resources\templates\roles.html
+C:\pulse-hrms test pm\src\main\resources\templates\rolesaccess.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\announcements.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\bulk-upload.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\change-password.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\create-password.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\dashboard.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\forgot-password.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\login-single.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\reset-password-error.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\reset-password.html
+C:\pulse-hrms test pm\src\main\resources\templates\candidate\upload-document.html
+C:\pulse-hrms test pm\src\main\resources\templates\EmployeePerformance\performance.html
+C:\pulse-hrms test pm\src\main\resources\templates\fragments\header.html
+C:\pulse-hrms test pm\src\main\resources\templates\fragments\HrAIPanel.html
+C:\pulse-hrms test pm\src\main\resources\templates\fragments\layout.html
+C:\pulse-hrms test pm\src\main\resources\templates\fragments\pm-shell.html
+C:\pulse-hrms test pm\src\main\resources\templates\fragments\sidebar.html
+C:\pulse-hrms test pm\src\main\resources\templates\notifications\employee-notifications.html
+C:\pulse-hrms test pm\src\main\resources\templates\notifications\full-notifications.html
+C:\pulse-hrms test pm\src\main\resources\templates\notifications\hr-notifications.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer\create-offer.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer\manage-offers.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer\offer-candidates.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer\offer-success.html
+C:\pulse-hrms test pm\src\main\resources\templates\offer\view-offer.html
+C:\pulse-hrms test pm\src\main\resources\templates\onboarding\dashboard.html
+C:\pulse-hrms test pm\src\main\resources\templates\onboarding\employee-dashboard.html
+C:\pulse-hrms test pm\src\main\resources\templates\onboarding\upload-document.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\01-home.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\02-inbox.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\03-my-work.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\04-projects.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\05-planning.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\06-tasks.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\06b-graph.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\07-team.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\08-clients.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\09-quality.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\10-insights.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\11-settings.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\12-team-lead.html
+C:\pulse-hrms test pm\src\main\resources\templates\pm\handover.html
+C:\pulse-hrms test pm\src\main\webapp\.gitkeep
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\config\WebSocketConfig.java =====
+package com.mentis.hrms.config;
+
+import jakarta.servlet.http.HttpSession;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.MessageChannel;
+import org.springframework.messaging.simp.config.ChannelRegistration;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.messaging.simp.stomp.StompCommand;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.config.annotation.*;
+import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.security.Principal;
+import java.util.Map;
+
+@Configuration
+@EnableWebSocketMessageBroker
+@Slf4j
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/topic", "/queue", "/user");
+        config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(new SessionPrincipalHandshakeInterceptor())
+                .withSockJS()
+                .setStreamBytesLimit(512 * 1024)
+                .setHttpMessageCacheSize(1000)
+                .setDisconnectDelay(30 * 1000);
+
+        registry.addEndpoint("/ws-native")
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(new SessionPrincipalHandshakeInterceptor());
+    }
+
+    /**
+     * Reads HttpSession attribute "userId" (set by the HRMS login)
+     * and attaches it as a Principal on the WebSocket session.
+     */
+    public static class SessionPrincipalHandshakeInterceptor implements HandshakeInterceptor {
+        @Override
+        public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                       WebSocketHandler wsHandler, Map<String, Object> attributes) {
+            if (request instanceof ServletServerHttpRequest sreq) {
+                HttpSession session = sreq.getServletRequest().getSession(false);
+                if (session != null) {
+                    Object uid = session.getAttribute("userId");
+                    if (uid != null) {
+                        attributes.put("userId", String.valueOf(uid));
+                    }
+                }
+            }
+            // permit anonymous handshake so SockJS info requests still work;
+            // the inbound interceptor below rejects subscriptions without a Principal
+            return true;
+        }
+
+        @Override
+        public void afterHandshake(ServerHttpRequest request, ServerHttpResponse response,
+                                   WebSocketHandler wsHandler, Exception exception) { }
+    }
+
+    /**
+     * Plain Principal â€” no Spring Security dependency.
+     * STOMP only needs getName(); we don't need authorities here because
+     * message-level auth is handled by PmAccessService at the REST layer.
+     */
+    private static final class SimplePrincipal implements Principal {
+        private final String name;
+        SimplePrincipal(String name) { this.name = name; }
+        @Override public String getName() { return name; }
+        @Override public String toString() { return name; }
+    }
+
+    /**
+     * Attaches a Principal on CONNECT from the handshake attributes and
+     * blocks subscriptions to another user's personal topic.
+     */
+    @Override
+    public void configureClientInboundChannel(ChannelRegistration registration) {
+        registration.interceptors(new ChannelInterceptor() {
+            @Override
+            public Message<?> preSend(Message<?> message, MessageChannel channel) {
+                StompHeaderAccessor acc =
+                        MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+                if (acc == null) return message;
+
+                // Attach principal on CONNECT from handshake attributes
+                if (StompCommand.CONNECT.equals(acc.getCommand())
+                        && acc.getSessionAttributes() != null) {
+                    Object uid = acc.getSessionAttributes().get("userId");
+                    if (uid != null) {
+                        acc.setUser(new SimplePrincipal(String.valueOf(uid)));
+                    }
+                }
+
+                // Authorize /topic/user/{id}/... subscriptions
+                if (StompCommand.SUBSCRIBE.equals(acc.getCommand())) {
+                    String dest = acc.getDestination();
+                    if (dest != null && dest.startsWith("/topic/user/")) {
+                        String[] parts = dest.split("/");
+                        // /topic/user/{userId}/notifications â†’ parts[3]
+                        if (parts.length >= 4) {
+                            String requested = parts[3];
+                            Principal me = acc.getUser();
+                            if (me == null || !me.getName().equals(requested)) {
+                                log.warn("Blocked topic subscription: {} (me={})", dest,
+                                        me == null ? "anon" : me.getName());
+                                return null; // silently drop the frame
+                            }
+                        }
+                    }
+                }
+                return message;
+            }
+        });
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\ChatRequestDto.java =====
+package com.mentis.hrms.dto;
+
+import lombok.Data;
+import java.util.List;
+
+@Data
+public class ChatRequestDto {
+    private String employeeId;
+    private String message;
+    private Long sessionId;           // null = new session
+    private boolean temporary = false; // true = don't save to DB
+    private List<MessageDto> history; // client-side history for temp chats
+
+    @Data
+    public static class MessageDto {
+        private String role;
+        private String content;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\ChatResponseDto.java =====
+package com.mentis.hrms.dto;
+
+import lombok.Data;
+import java.util.List;
+
+@Data
+public class ChatResponseDto {
+    private boolean success;
+    private String reply;
+    private Long sessionId;
+    private String sessionName;
+    private String error;
+
+    // For history loading
+    private List<MessageInfo> messages;
+    private List<SessionInfo> sessions;
+    private String downloadUrl;
+    private String downloadLabel;
+
+    public String getDownloadUrl() { return downloadUrl; }
+    public void setDownloadUrl(String downloadUrl) { this.downloadUrl = downloadUrl; }
+    public String getDownloadLabel() { return downloadLabel; }
+    public void setDownloadLabel(String downloadLabel) { this.downloadLabel = downloadLabel; }
+    @Data
+    public static class MessageInfo {
+        private Long id;
+        private String role;
+        private String content;
+        private String createdAt;
+    }
+
+    @Data
+    public static class SessionInfo {
+        private Long id;
+        private String sessionName;
+        private String updatedAt;
+        private int messageCount;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\dto\request\NotificationRequest.java =====
+package com.mentis.hrms.dto;
+
+import lombok.*;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class NotificationRequest {
+
+    /** EmployeeId string, e.g. "SA001" â€” matches Notification.recipientId */
+    private String recipientId;
+    /** EMPLOYEE | HR | PM â€” matches Notification.recipientType */
+    private String recipientType;
+
+    /** TASK_ASSIGNED | TASK_MENTIONED | CARD_MOVED | COMMENT_ADDED | DUE_SOON | OVERDUE | ... */
+    private String type;
+    /** Short action key used by inbox filters, mirrors type */
+    private String action;
+
+    private String title;
+    private String message;
+
+    /** Task/Project FK context â€” nullable */
+    private Long taskId;
+    private Long projectId;
+    private Long actorId;
+
+    /** Who triggered it â€” display name, e.g. "Priya Sharma" */
+    private String actorName;
+
+    /** LOW | NORMAL | HIGH */
+    @Builder.Default
+    private String priority = "NORMAL";
+
+    /** Deep link for the toast click, e.g. "/pm/06-tasks?open=42" */
+    private String deepLink;
+
+    /** Persist to DB (true) or emit toast-only (false) */
+    @Builder.Default
+    private boolean persistent = true;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\event\PmEmailEvent.java =====
+package com.mentis.hrms.event;
+
+public record PmEmailEvent(String to, String subject, String body) {}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\balance\WorkloadBalancePlannerTest.java =====
+package com.mentis.hrms.pm.balance;
+
+import com.mentis.hrms.pm.balance.WorkloadBalancePlanner.Item;
+import com.mentis.hrms.pm.balance.WorkloadBalancePlanner.Person;
+import com.mentis.hrms.pm.balance.WorkloadBalancePlanner.Result;
+import org.junit.jupiter.api.Test;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+class WorkloadBalancePlannerTest {
+
+    private static final WorkloadBalancePlanner.Eligibility ANYONE = (item, to) -> true;
+
+    // capacity 40h each
+    private static Person p(long pk, String status, double allocated, boolean leave) {
+        return new Person(pk, "P" + pk, 40, allocated, leave, status);
+    }
+
+    @Test
+    void movesFromOverToLeastUtilisedAndNeverExceeds85() {
+        // A: 56h (140%), B: 8h (20% UNDER), C: 20h (50% OK)
+        List<Person> people = List.of(p(1, "OVER", 56, false), p(2, "UNDER", 8, false), p(3, "OK", 20, false));
+        List<Item> items = List.of(new Item(10L, 1L, 8), new Item(11L, 1L, 8), new Item(12L, 1L, 8),
+                new Item(13L, 1L, 8));
+
+        Result r = WorkloadBalancePlanner.plan(people, items, ANYONE, 0.85, 1.0, 20);
+
+        assertFalse(r.moves().isEmpty());
+        // first move goes to B, the least utilised
+        assertEquals(2L, r.moves().get(0).toPk());
+        // nobody who received work ends above 85% of 40h = 34h
+        assertTrue(r.finalAllocated().get(2L) <= 34.0 + 1e-9);
+        assertTrue(r.finalAllocated().get(3L) <= 34.0 + 1e-9);
+        // source stops once it is back to 100% (40h)
+        assertTrue(r.finalAllocated().get(1L) <= 40.0 + 1e-9);
+    }
+
+    @Test
+    void beforeAfterAreCumulativeForTheSameReceiver() {
+        List<Person> people = List.of(p(1, "OVER", 56, false), p(2, "UNDER", 0, false));
+        List<Item> items = List.of(new Item(10L, 1L, 8), new Item(11L, 1L, 8));
+        Result r = WorkloadBalancePlanner.plan(people, items, ANYONE, 0.85, 1.0, 20);
+        assertEquals(2, r.moves().size());
+        assertEquals(r.moves().get(0).toAfterPct(), r.moves().get(1).toBeforePct(), 1e-9);
+    }
+
+    @Test
+    void personOnLeaveNeverReceives() {
+        List<Person> people = List.of(p(1, "OVER", 56, false), p(2, "UNDER", 4, true));
+        Result r = WorkloadBalancePlanner.plan(people, List.of(new Item(10L, 1L, 8)), ANYONE, 0.85, 1.0, 20);
+        assertTrue(r.moves().isEmpty());
+    }
+
+    @Test
+    void warnAndOverPeopleNeverReceive() {
+        List<Person> people = List.of(p(1, "OVER", 56, false), p(2, "WARN", 36, false), p(3, "OVER", 50, false));
+        Result r = WorkloadBalancePlanner.plan(people, List.of(new Item(10L, 1L, 8)), ANYONE, 0.85, 1.0, 20);
+        assertTrue(r.moves().isEmpty());
+    }
+
+    @Test
+    void moveCapIsRespectedAndFlagged() {
+        List<Person> people = List.of(p(1, "OVER", 80, false), p(2, "UNDER", 0, false), p(3, "UNDER", 0, false));
+        List<Item> items = List.of(new Item(1L, 1L, 4), new Item(2L, 1L, 4), new Item(3L, 1L, 4), new Item(4L, 1L, 4));
+        Result r = WorkloadBalancePlanner.plan(people, items, ANYONE, 0.85, 1.0, 2);
+        assertEquals(2, r.moves().size());
+        assertTrue(r.capped());
+    }
+
+    @Test
+    void eligibilityRuleIsHonoured() {
+        List<Person> people = List.of(p(1, "OVER", 56, false), p(2, "UNDER", 0, false), p(3, "UNDER", 4, false));
+        // person 2 is not a valid participant for any task
+        Result r = WorkloadBalancePlanner.plan(people, List.of(new Item(10L, 1L, 8)),
+                (item, to) -> to != 2L, 0.85, 1.0, 20);
+        assertEquals(1, r.moves().size());
+        assertEquals(3L, r.moves().get(0).toPk());
+    }
+
+    @Test
+    void taskTooBigForAnyoneIsSkippedButSmallerOnesStillMove() {
+        // 36h task cannot fit under 34h cap for anyone; the 4h task can
+        List<Person> people = List.of(p(1, "OVER", 60, false), p(2, "UNDER", 0, false));
+        List<Item> items = List.of(new Item(1L, 1L, 36), new Item(2L, 1L, 4));
+        Result r = WorkloadBalancePlanner.plan(people, items, ANYONE, 0.85, 1.0, 20);
+        assertEquals(1, r.moves().size());
+        assertEquals(2L, r.moves().get(0).item().taskId());
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\controller\SavedFilterController.java =====
+package com.mentis.hrms.pm.controller;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mentis.hrms.pm.dto.response.ApiResponse;
+import com.mentis.hrms.pm.entity.SavedFilter;
+import com.mentis.hrms.pm.exception.BusinessRuleException;
+import com.mentis.hrms.pm.exception.PmAccessDeniedException;
+import com.mentis.hrms.pm.exception.ResourceNotFoundException;
+import com.mentis.hrms.pm.repository.SavedFilterRepository;
+import com.mentis.hrms.pm.security.CurrentUserId;
+import com.mentis.hrms.pm.security.PmAccessService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@RestController("pmSavedFilterController")
+@RequestMapping("/api/pm/saved-filters")
+@RequiredArgsConstructor
+public class SavedFilterController {
+
+    public record Body(String name, Long projectId, JsonNode criteria) {}
+    public record RenameBody(String name) {}
+    public record Item(Long id, String name, Long projectId, JsonNode criteria, boolean isDefault) {}
+
+    private final SavedFilterRepository repo;
+    private final PmAccessService access;
+    private final ObjectMapper mapper;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Item>>> mine(
+            @RequestParam(required = false) Long projectId, @CurrentUserId Long userId) {
+        List<Item> out = repo.findByOwnerIdOrderByNameAsc(userId).stream()
+                .filter(f -> f.getProjectId() == null || f.getProjectId().equals(projectId))
+                .map(this::toItem).collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.ok(out));
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<Item>> save(@RequestBody Body b, @CurrentUserId Long userId) {
+        String name = b.name() == null ? "" : b.name().trim();
+        if (name.isEmpty() || name.length() > 100) throw new BusinessRuleException("Name is required (max 100 characters)");
+        if (b.criteria() == null || !b.criteria().isObject()) throw new BusinessRuleException("criteria must be a JSON object");
+        String json = b.criteria().toString();
+        if (json.length() > 5000) throw new BusinessRuleException("This filter is too large");
+        if (b.projectId() != null) access.requireCanViewProject(userId, b.projectId());
+
+        SavedFilter f = repo.findByOwnerIdAndProjectIdAndName(userId, b.projectId(), name)
+                .orElseGet(() -> SavedFilter.builder().ownerId(userId).projectId(b.projectId()).name(name).build());
+        f.setCriteria(json);
+        return ResponseEntity.ok(ApiResponse.ok("Saved", toItem(repo.save(f))));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<Item>> rename(@PathVariable Long id, @RequestBody RenameBody b,
+                                                    @CurrentUserId Long userId) {
+        SavedFilter f = mine(id, userId);
+        String name = b.name() == null ? "" : b.name().trim();
+        if (name.isEmpty() || name.length() > 100) throw new BusinessRuleException("Name is required (max 100 characters)");
+        repo.findByOwnerIdAndProjectIdAndName(userId, f.getProjectId(), name)
+                .filter(x -> !x.getId().equals(id))
+                .ifPresent(x -> { throw new BusinessRuleException("You already have a filter with that name"); });
+        f.setName(name);
+        return ResponseEntity.ok(ApiResponse.ok("Renamed", toItem(repo.save(f))));
+    }
+
+    @PostMapping("/{id}/default")
+    @Transactional
+    public ResponseEntity<ApiResponse<Item>> setDefault(@PathVariable Long id, @CurrentUserId Long userId) {
+        SavedFilter f = mine(id, userId);
+        for (SavedFilter x : repo.findByOwnerIdAndProjectId(userId, f.getProjectId())) {
+            if (x.isDefault() && !x.getId().equals(id)) {
+                x.setDefault(false);
+                repo.save(x);
+            }
+        }
+        f.setDefault(true);
+        return ResponseEntity.ok(ApiResponse.ok("Default set", toItem(repo.save(f))));
+    }
+
+    @DeleteMapping("/{id}/default")
+    public ResponseEntity<ApiResponse<Item>> clearDefault(@PathVariable Long id, @CurrentUserId Long userId) {
+        SavedFilter f = mine(id, userId);
+        f.setDefault(false);
+        return ResponseEntity.ok(ApiResponse.ok("Default cleared", toItem(repo.save(f))));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, @CurrentUserId Long userId) {
+        SavedFilter f = repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Filter not found: " + id));
+        if (!Objects.equals(f.getOwnerId(), userId)) throw new PmAccessDeniedException("You can only delete your own filters.");
+        repo.delete(f);
+        return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
+    }
+
+    private SavedFilter mine(Long id, Long userId) {
+        SavedFilter f = repo.findById(id).orElseThrow(() -> new ResourceNotFoundException("Filter not found: " + id));
+        if (!Objects.equals(f.getOwnerId(), userId)) throw new PmAccessDeniedException("You can only change your own filters.");
+        return f;
+    }
+
+    private Item toItem(SavedFilter f) {
+        JsonNode node;
+        try {
+            node = mapper.readTree(f.getCriteria());
+        } catch (Exception e) {
+            node = mapper.createObjectNode();
+        }
+        return new Item(f.getId(), f.getName(), f.getProjectId(), node, f.isDefault());
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Project.java =====
+package com.mentis.hrms.pm.entity;
+
+import com.mentis.hrms.pm.enums.ProjectHealth;
+import com.mentis.hrms.pm.enums.ProjectPriority;
+import com.mentis.hrms.pm.enums.ProjectStatus;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import com.mentis.hrms.pm.enums.HealthMode;
+@Entity
+@Table(name = "pm_projects", indexes = {
+        @Index(name = "idx_pm_project_code", columnList = "code", unique = true),
+        @Index(name = "idx_pm_project_status", columnList = "status"),
+        @Index(name = "idx_pm_project_owner", columnList = "owner_id")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Project {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "code", nullable = false, unique = true, length = 40)
+    private String code;
+
+    @Column(name = "name", nullable = false, length = 200)
+    private String name;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    // FK to existing employees table (do not recreate)
+    @Column(name = "owner_id", nullable = false)
+    private Long ownerId;
+
+    // FK to existing departments table
+    @Column(name = "department_id")
+    private Long departmentId;
+
+    // Client is a PM-only table, created later
+    @Column(name = "client_id")
+    private Long clientId;
+    // â†“ ADD THIS
+    @Column(name = "team_id")
+    private Long teamId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private ProjectStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "health", length = 20)
+    private ProjectHealth health;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 20)
+    private ProjectPriority priority;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Column(name = "budget_total", precision = 14, scale = 2)
+    private BigDecimal budgetTotal;
+
+    @Column(name = "budget_spent", precision = 14, scale = 2)
+    private BigDecimal budgetSpent;
+
+    // â”€â”€ Phase 5: baseline (snapshot of the plan) â”€â”€
+    @Column(name = "baseline_start")
+    private LocalDate baselineStart;
+
+    @Column(name = "baseline_end")
+    private LocalDate baselineEnd;
+
+    @Column(name = "baseline_budget", precision = 14, scale = 2)
+    private BigDecimal baselineBudget;
+
+    @Column(name = "baselined_at")
+    private LocalDateTime baselinedAt;
+
+    @Column(name = "baselined_by")
+    private Long baselinedBy;
+
+    // â”€â”€ Phase 5: health bookkeeping â”€â”€
+    @Enumerated(EnumType.STRING)
+    @Column(name = "health_mode", length = 10)
+    private HealthMode healthMode;              // null = AUTO (older rows)
+
+    @Column(name = "health_reason", length = 500)
+    private String healthReason;                // last automatic explanation
+
+    @Column(name = "health_updated_at")
+    private LocalDateTime healthUpdatedAt;
+
+    @Column(name = "progress_pct", nullable = false)
+    private Integer progressPct;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    // â”€â”€ Phase 6.2: closure â”€â”€
+    @Column(name = "lessons_learned", columnDefinition = "TEXT")
+    private String lessonsLearned;
+    // â”€â”€ Step 4: review rule â”€â”€
+    @Column(name = "review_required", nullable = false)
+    private Boolean reviewRequired;
+    // â”€â”€ Step 8: completion and reopen â”€â”€
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "completed_by")
+    private Long completedBy;
+
+    @Column(name = "reopened_at")
+    private LocalDateTime reopenedAt;
+
+    @Column(name = "reopened_by")
+    private Long reopenedBy;
+
+    @Column(name = "reopen_reason", length = 500)
+    private String reopenReason;
+    @PrePersist
+    void prePersist() {
+        if (progressPct == null) progressPct = 0;
+        if (budgetSpent == null) budgetSpent = BigDecimal.ZERO;
+        if (healthMode == null) healthMode = HealthMode.AUTO;
+        if (reviewRequired == null) reviewRequired = Boolean.TRUE; // new projects: review ON
+        if (status == null) status = ProjectStatus.PLANNING;
+        if (priority == null) priority = ProjectPriority.MEDIUM;
+
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\ProjectMember.java =====
+package com.mentis.hrms.pm.entity;
+
+import com.mentis.hrms.pm.enums.ProjectRole;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pm_project_members",
+        uniqueConstraints = @UniqueConstraint(name = "uq_pm_project_member",
+                columnNames = {"project_id", "employee_id"}),
+        indexes = {@Index(name = "idx_pm_pmem_emp", columnList = "employee_id")})
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class ProjectMember {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "project_id", nullable = false)
+    private Long projectId;
+
+    @Column(name = "employee_id", nullable = false)
+    private Long employeeId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 20)
+    private ProjectRole role;
+
+    @Column(name = "allocation_pct")
+    private Integer allocationPct;
+
+    @Column(name = "hourly_rate", precision = 10, scale = 2)
+    private BigDecimal hourlyRate;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    void prePersist() {
+        if (role == null) role = ProjectRole.MEMBER;
+        if (allocationPct == null) allocationPct = 100;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Task.java =====
+package com.mentis.hrms.pm.entity;
+
+import com.mentis.hrms.pm.enums.TaskPriority;
+import com.mentis.hrms.pm.enums.TaskStatus;
+import com.mentis.hrms.pm.enums.TaskType;
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pm_tasks",
+        uniqueConstraints = @UniqueConstraint(name = "uq_pm_task_recurring", columnNames = {"recurring_rule_id", "recurring_occurrence"}),
+        indexes = {
+                @Index(name = "idx_pm_task_project", columnList = "project_id"),
+                @Index(name = "idx_pm_task_status", columnList = "status"),
+                @Index(name = "idx_pm_task_parent", columnList = "parent_task_id"),
+                @Index(name = "idx_pm_task_team", columnList = "team_id")
+        })
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class Task {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "project_id", nullable = false)
+    private Long projectId;
+
+    @Column(name = "parent_task_id")
+    private Long parentTaskId;
+    @Column(name = "recurring_rule_id")
+    private Long recurringRuleId;
+
+    @Column(name = "recurring_occurrence")
+    private java.time.LocalDate recurringOccurrence;
+    // optional team ownership â€” filters assignees, drives team dashboard
+    @Column(name = "team_id")
+    private Long teamId;
+
+    @Column(name = "title", nullable = false, length = 300)
+    private String title;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
+    // â”€â”€â”€ Baseline (planned) values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Set once at baseline time and never mutated afterwards. Used by the
+    // planned-vs-actual / schedule-slip report.
+    @Column(name = "baseline_start")
+    private LocalDate baselineStart;
+
+    @Column(name = "baseline_due")
+    private LocalDate baselineDue;
+
+    @Column(name = "baseline_estimate_hours")
+    private Integer baselineEstimateHours;
+
+    // â”€â”€â”€ Actuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Stamped/cleared by applyCompletionTransition(...) whenever the task
+    // transitions into or out of DONE. Both updateTask/changeStatus (via
+    // trackBlocked) and the sign-off approval path must call it so the slip
+    // report has a consistent completion timestamp.
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 20)
+    private TaskStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "priority", nullable = false, length = 20)
+    private TaskPriority priority;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "type", nullable = false, length = 20)
+    private TaskType type;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "due_date")
+    private LocalDate dueDate;
+
+    @Column(name = "estimate_hours")
+    private Integer estimateHours;
+
+    @Column(name = "logged_hours")
+    private Integer loggedHours;
+
+    /** exact minutes logged (loggedHours is only a rounded display value) */
+    @Column(name = "logged_minutes")
+    private Integer loggedMinutes;
+
+    @Column(name = "story_points")
+    private Integer storyPoints;
+
+    @Column(name = "progress_pct", nullable = false)
+    private Integer progressPct;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    // â”€â”€â”€ PHASE 5 additions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /** Sprint this task belongs to. NULL = backlog. */
+    @Column(name = "sprint_id")
+    private Long sprintId;
+
+    /** Milestone this task belongs to. NULL = no milestone. */
+    @Column(name = "milestone_id")
+    private Long milestoneId;
+
+    /** Key result this task contributes to. NULL = no KR link. */
+    @Column(name = "key_result_id")
+    private Long keyResultId;
+
+    // â”€â”€â”€ Step 5 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /** When the task last became BLOCKED. NULL when not blocked. */
+    @Column(name = "blocked_since")
+    private LocalDateTime blockedSince;
+
+    /** 0 = none sent, 1 = "still blocked" sent, 2 = escalation sent. Reset when unblocked. */
+    @Column(name = "escalation_level", nullable = false, columnDefinition = "INT NOT NULL DEFAULT 0")
+    private Integer escalationLevel;
+
+    /**
+     * Applies the completion side-effects of a status transition.
+     *
+     * Centralised so that EVERY path that moves a task into or out of DONE
+     * (updateTask, changeStatus, sign-off approval, future automation) stamps
+     * or clears completedAt identically. Otherwise the slip report would have
+     * to fall back to dueDate for some tasks and report zero slip.
+     *
+     * Safe to call with {@code from == null} (create path).
+     */
+    public void applyCompletionTransition(TaskStatus from, TaskStatus to) {
+        if (to == TaskStatus.DONE && from != TaskStatus.DONE) {
+            this.completedAt = LocalDateTime.now();
+        } else if (from == TaskStatus.DONE && to != TaskStatus.DONE) {
+            this.completedAt = null;
+        }
+    }
+
+    @PrePersist
+    void prePersist() {
+        if (progressPct == null) progressPct = 0;
+        if (status == null) status = TaskStatus.TODO;
+        if (priority == null) priority = TaskPriority.MEDIUM;
+        if (type == null) type = TaskType.TASK;
+        if (loggedHours == null) loggedHours = 0;
+        if (loggedMinutes == null) loggedMinutes = 0;
+        if (escalationLevel == null) escalationLevel = 0;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\TaskAssignment.java =====
+package com.mentis.hrms.pm.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pm_task_assignments", indexes = {
+        @Index(name = "idx_pm_ta_task", columnList = "task_id"),
+        @Index(name = "idx_pm_ta_employee", columnList = "employee_id")
+})
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class TaskAssignment {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "task_id", nullable = false)
+    private Long taskId;
+
+    @Column(name = "employee_id", nullable = false)
+    private Long employeeId;
+
+    @Column(name = "assigned_by")
+    private Long assignedBy;
+
+    @CreationTimestamp
+    @Column(name = "assigned_at", updatable = false)
+    private LocalDateTime assignedAt;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\entity\Team.java =====
+package com.mentis.hrms.pm.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Table(name = "pm_teams", indexes = {
+        @Index(name = "idx_pm_team_name", columnList = "name"),
+        @Index(name = "idx_pm_team_lead", columnList = "lead_employee_id")
+})
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class Team {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "name", nullable = false, length = 150)
+    private String name;
+
+    @Column(name = "icon", length = 50)
+    private String icon;   // font-awesome class, e.g. "fa-server"
+
+    @Column(name = "department", length = 100)
+    private String department;
+
+    @Column(name = "description", length = 500)
+    private String description;
+
+    @Column(name = "lead_employee_id")
+    private Long leadEmployeeId;
+
+    @Column(name = "status", length = 30)
+    private String status; // on-track, at-risk, planning
+
+    @Column(name = "weekly_hours")
+    private Integer weeklyHours;
+
+    @Column(name = "timezone", length = 60)
+    private String timezone;
+
+    @Column(name = "created_by")
+    private Long createdBy;
+
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    @PrePersist
+    void prePersist() {
+        if (status == null) status = "on-track";
+        if (icon == null) icon = "fa-users";
+        if (weeklyHours == null) weeklyHours = 40;
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\listener\PmEmailListener.java =====
+package com.mentis.hrms.pm.listener;
+
+import com.mentis.hrms.pm.event.PmEmailEvent;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class PmEmailListener {
+
+    private final EmailService emailService;                         // ADAPT: import yours
+
+    @Value("${pm.notify.email.enabled:true}")
+    private boolean enabled;
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void on(PmEmailEvent e) {
+        if (!enabled) return;
+        try {
+            emailService.send(e.to(), e.subject(), e.body());        // ADAPT: your signature (plain text or HTML?)
+        } catch (Exception ex) {
+            log.warn("PM email to {} failed: {}", e.to(), ex.getMessage());
+        }
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\listener\PmResignationListener.java =====
+package com.mentis.hrms.pm.listener;
+
+import com.mentis.hrms.event.EmployeeResignedEvent;                         // ADAPT package
+import com.mentis.hrms.pm.entity.ActivityLog;
+import com.mentis.hrms.pm.repository.ActivityLogRepository;
+import com.mentis.hrms.pm.service.PmHandoverFinder;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
+
+import java.util.*;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class PmResignationListener {
+
+    private final PmHandoverFinder finder;
+    private final ProjectRepository projectRepo;                              // import yours
+    private final EmployeeRepository employeeRepo;                            // import yours
+    private final NotificationService notificationService;                    // ADAPT
+    private final EmailService emailService;                                  // ADAPT
+    private final ActivityLogRepository activityRepo;
+
+    @Value("${app.base-url:}") private String baseUrl;
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void on(EmployeeResignedEvent e) {
+        try {
+            PmHandoverFinder.Detail d = finder.detail(e.employeeId());
+            if (d == null || (d.tasks().isEmpty() && d.ownedProjects().isEmpty() && d.ledTeams().isEmpty())) {
+                log.info("Resignation of employee {}: nothing to hand over", e.employeeId());
+                return;
+            }
+
+            // who must act: owners of the projects he has tasks in, owners he is himself, HR
+            Set<Long> recipients = new LinkedHashSet<>();
+            for (var t : d.tasks()) projectRepo.findById(t.projectId()).ifPresent(p -> addIfNotNull(recipients, p.getOwnerId()));    // ADAPT
+            for (var p : d.ownedProjects()) projectRepo.findById(p.id()).ifPresent(pr -> addIfNotNull(recipients, pr.getManagerId())); // ADAPT: who is above the owner
+            recipients.addAll(employeeRepo.findIdsByRoleName("HR"));                                                               // ADAPT
+            recipients.remove(e.employeeId());
+
+            String link = (baseUrl == null ? "" : baseUrl) + "/pm/handover.html?from=" + e.employeeId();
+            String title = d.name() + " is leaving: handover needed";
+            String msg = d.tasks().size() + " open task(s), " + d.ownedProjects().size() + " project(s) owned, "
+                    + d.ledTeams().size() + " team(s) led"
+                    + (d.lastWorkingDay() == null ? "" : ". Last working day: " + d.lastWorkingDay()) + ".";
+
+            for (Long to : recipients) {
+                try { notificationService.notify(to, "HANDOVER_REQUIRED", title, msg, link); }          // ADAPT signature (bell)
+                catch (Exception ex) { log.warn("Resignation bell failed for {}: {}", to, ex.getMessage()); }
+                try {
+                    String mail = employeeRepo.findById(to).map(x -> x.getEmail()).orElse(null);        // ADAPT
+                    if (mail != null && !mail.isBlank())
+                        emailService.send(mail, title, msg + "\n\nOpen: " + link);                        // ADAPT signature
+                } catch (Exception ex) { log.warn("Resignation email failed for {}: {}", to, ex.getMessage()); }
+            }
+
+            activityRepo.save(ActivityLog.builder().entityType("EMPLOYEE").entityId(e.employeeId())
+                    .action("RESIGNATION_HANDOVER_ALERT").actorId(e.actorId())
+                    .newValue(msg).message(title + " â€” " + msg).build());                                // ADAPT fields
+        } catch (Exception ex) {
+            log.warn("PM resignation handler failed for employee {}: {}", e.employeeId(), ex.getMessage());
+        }
+    }
+
+    private static void addIfNotNull(Set<Long> s, Long v) { if (v != null) s.add(v); }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\repository\ProjectRepository.java =====
+package com.mentis.hrms.pm.repository;
+
+import com.mentis.hrms.pm.entity.Project;
+import com.mentis.hrms.pm.enums.ProjectStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface ProjectRepository extends JpaRepository<Project, Long> {
+
+    Optional<Project> findByCode(String code);
+
+    boolean existsByCode(String code);
+
+    Page<Project> findByStatus(ProjectStatus status, Pageable pageable);
+
+    Page<Project> findByOwnerId(Long ownerId, Pageable pageable);
+
+    long countByStatus(ProjectStatus status);
+
+    long countByHealth(com.mentis.hrms.pm.enums.ProjectHealth health);
+    List<Project> findByOwnerId(Long ownerId);
+    @Query("SELECT p FROM Project p WHERE " +
+            "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "AND (:ownerId IS NULL OR p.ownerId = :ownerId)")
+    Page<Project> search(@Param("search") String search,
+                         @Param("status") ProjectStatus status,
+                         @Param("ownerId") Long ownerId,
+                         Pageable pageable);
+
+    @Query("SELECT p FROM Project p WHERE " +
+            "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "OR LOWER(p.code) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:status IS NULL OR p.status = :status) " +
+            "AND (:ownerId IS NULL OR p.ownerId = :ownerId) " +
+            "AND (p.ownerId = :viewerId " +
+            " OR p.teamId IN (SELECT tm.teamId FROM TeamMember tm WHERE tm.employeeId = :viewerId) " +
+            " OR p.teamId IN (SELECT t.id FROM Team t WHERE t.leadEmployeeId = :viewerId) " +
+            " OR p.id IN (SELECT pm.projectId FROM ProjectMember pm WHERE pm.employeeId = :viewerId) " +
+            " OR p.id IN (SELECT tk.projectId FROM Task tk, TaskAssignment a " +
+            "             WHERE a.taskId = tk.id AND a.employeeId = :viewerId))")
+    Page<Project> searchVisible(@Param("search") String search,
+                                @Param("status") ProjectStatus status,
+                                @Param("ownerId") Long ownerId,
+                                @Param("viewerId") Long viewerId,
+                                Pageable pageable);
+
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\TemplateGraphValidator.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.exception.BusinessRuleException;
+import java.util.*;
+
+public final class TemplateGraphValidator {
+
+    static final int MAX_TASKS = 500, MAX_CHECKLIST = 50, MAX_ITEM_LEN = 300, MAX_DEPS = 20, MAX_KEY_LEN = 40;
+
+    private TemplateGraphValidator() {}
+
+    private static <T> List<T> nz(List<T> l) { return l == null ? List.of() : l; }
+
+    /** Cleans checklists in place and throws BusinessRuleException on the first problem. */
+    public static void validate(List<TaskPart> parts) {              // ADAPT: import TaskPart
+        if (parts.size() > MAX_TASKS)
+            throw new BusinessRuleException("A template can hold at most " + MAX_TASKS + " tasks.");
+
+        Set<String> keys = new HashSet<>();
+        for (TaskPart t : parts) {
+            if (t.getKey() != null) {
+                String k = t.getKey().trim();
+                if (k.isEmpty() || k.length() > MAX_KEY_LEN)
+                    throw new BusinessRuleException("A task key must be 1-" + MAX_KEY_LEN + " characters.");
+                if (!keys.add(k)) throw new BusinessRuleException("Duplicate task key: " + k);
+                t.setKey(k);
+            }
+            List<String> clean = new ArrayList<>();
+            for (String item : nz(t.getChecklist())) {
+                String s = item == null ? "" : item.trim();
+                if (s.isEmpty()) continue;
+                if (s.length() > MAX_ITEM_LEN)
+                    throw new BusinessRuleException("A checklist item is longer than " + MAX_ITEM_LEN + " characters.");
+                clean.add(s);
+            }
+            if (clean.size() > MAX_CHECKLIST)
+                throw new BusinessRuleException("A task can have at most " + MAX_CHECKLIST + " checklist items.");
+            t.setChecklist(clean);
+        }
+
+        Map<String, List<String>> graph = new HashMap<>();
+        for (TaskPart t : parts) {
+            List<String> deps = nz(t.getDependsOn());
+            if (deps.isEmpty()) { if (t.getKey() != null) graph.put(t.getKey(), List.of()); continue; }
+            if (t.getKey() == null) throw new BusinessRuleException("A task with dependencies needs a key.");
+            if (deps.size() > MAX_DEPS) throw new BusinessRuleException("A task can depend on at most " + MAX_DEPS + " others.");
+            Set<String> seen = new LinkedHashSet<>();
+            for (String d : deps) {
+                if (d == null || !keys.contains(d.trim())) throw new BusinessRuleException("Unknown dependency: " + d);
+                if (d.trim().equals(t.getKey())) throw new BusinessRuleException("A task cannot depend on itself: " + d);
+                seen.add(d.trim());
+            }
+            t.setDependsOn(new ArrayList<>(seen));
+            graph.put(t.getKey(), t.getDependsOn());
+        }
+
+        // cycle check: DFS, state 0 = new, 1 = on the current path, 2 = finished
+        Map<String, Integer> state = new HashMap<>();
+        for (String k : graph.keySet()) visit(k, graph, state);
+    }
+
+    private static void visit(String k, Map<String, List<String>> g, Map<String, Integer> state) {
+        int s = state.getOrDefault(k, 0);
+        if (s == 2) return;
+        if (s == 1) throw new BusinessRuleException("Dependency cycle through task " + k);
+        state.put(k, 1);
+        for (String d : g.getOrDefault(k, List.of())) visit(d, g, state);
+        state.put(k, 2);
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\repository\EmployeeRepository.java =====
+package com.mentis.hrms.repository;
+import com.mentis.hrms.model.Employee;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+import java.util.Optional;
+import com.mentis.hrms.model.enums.UserRole;
+import java.util.List;
+import org.springframework.data.domain.Sort; // Add this import
+@Repository
+public interface EmployeeRepository extends JpaRepository<Employee, Long> {
+    Optional<Employee> findByEmployeeId(String employeeId);
+    boolean existsByEmployeeId(String employeeId);
+    boolean existsByPersonalEmail(String personalEmail);
+
+    // STEP F1: look a reset token up directly instead of scanning every employee
+    Optional<Employee> findByResetToken(String resetToken);
+
+    // Existing methods
+    List<Employee> findByDocumentDeadlineIsNotNull();
+    List<Employee> findByDocumentDeadlineIsNotNullAndOnboardingStatusIn(List<String> statuses);
+
+    // NEW: Find all employees sorted by createdDate descending (newest first)
+    List<Employee> findAllByOrderByCreatedDateDesc();
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\EmailService.java =====
+package com.mentis.hrms.service;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.core.io.FileSystemResource;
+
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.MessagingException;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.scheduling.annotation.Async;
+
+import java.io.File;
+import java.nio.file.Paths;
+
+@Service
+public class EmailService {
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
+
+    private final JavaMailSender mailSender;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
+
+    // ADD THIS: Add basePath for file access
+    @Value("${app.upload.base-path:C:/hrms/uploads}")
+    private String basePath;
+
+    public EmailService(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+    }
+
+    @Async
+    public void sendApplicationConfirmation(String toEmail, String candidateName, String jobTitle) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Application Received - " + jobTitle);
+
+            String emailContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: #f8f9fa; padding: 20px; text-align: center; }
+                        .content { padding: 20px; }
+                        .footer { background: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h2>Mentis IT Solutions</h2>
+                        </div>
+                        <div class="content">
+                            <h3>Dear %s,</h3>
+                            <p>Thank you for applying for the <strong>%s</strong> position at Mentis IT Solutions.</p>
+                            <p>We have received your application and will review it carefully. Our HR team will contact you if your qualifications match our requirements.</p>
+                            <p>Best regards,<br>HR Team<br>Mentis IT Solutions</p>
+                        </div>
+                        <div class="footer">
+                            <p>This is an automated message. Please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(candidateName, jobTitle);
+
+            helper.setText(emailContent, true);
+            mailSender.send(message);
+
+            logger.info("Application confirmation email sent to: {}", toEmail);
+        } catch (MessagingException e) {
+            logger.error("Failed to send application confirmation email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendApplicationNotification(String candidateName, String jobTitle, String candidateEmail) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom(fromEmail);
+            helper.setTo("hr@mentisit.com"); // HR email
+            helper.setSubject("New Application Received - " + jobTitle);
+
+            String emailContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: #f8f9fa; padding: 20px; text-align: center; }
+                        .content { padding: 20px; }
+                        .info-box { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 10px 0; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h2>New Job Application</h2>
+                        </div>
+                        <div class="content">
+                            <h3>Application Details:</h3>
+                            <div class="info-box">
+                                <p><strong>Candidate:</strong> %s</p>
+                                <p><strong>Position:</strong> %s</p>
+                                <p><strong>Email:</strong> %s</p>
+                                <p><strong>Date:</strong> %s</p>
+                            </div>
+                            <p>Please review this application in the HRMS dashboard.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(candidateName, jobTitle, candidateEmail, java.time.LocalDateTime.now().toString());
+
+            helper.setText(emailContent, true);
+            mailSender.send(message);
+
+            logger.info("Application notification email sent to HR");
+        } catch (MessagingException e) {
+            logger.error("Failed to send application notification email: {}", e.getMessage());
+        }
+    }
+
+    @Async
+    public void sendOfferLetter(String toEmail, String candidateName, String filePath, String offerType) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(offerType + " Letter - Mentis IT Solutions");
+
+            String emailContent = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .header { background: #f8f9fa; padding: 20px; text-align: center; }
+                        .content { padding: 20px; }
+                        .footer { background: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; color: #666; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h2>Mentis IT Solutions</h2>
+                        </div>
+                        <div class="content">
+                            <h3>Dear %s,</h3>
+                            <p>Congratulations! We are pleased to extend your %s letter.</p>
+                            <p>Please find your %s letter attached with this email.</p>
+                            <p>If you have any questions, please don't hesitate to contact our HR department.</p>
+                            <p>Best regards,<br>HR Team<br>Mentis IT Solutions</p>
+                        </div>
+                        <div class="footer">
+                            <p>This is an automated message. Please do not reply to this email.</p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+                """.formatted(candidateName, offerType, offerType);
+
+            helper.setText(emailContent, true);
+
+            // Attach the offer letter file (HTML or PDF)
+            File file = new File(Paths.get(basePath).resolve(filePath).toString());
+            if (file.exists()) {
+                FileSystemResource resource = new FileSystemResource(file);
+
+                // Use PDF if available, otherwise HTML
+                String pdfFilePath = filePath.replace(".html", ".pdf");
+                File pdfFile = new File(Paths.get(basePath).resolve(pdfFilePath).toString());
+
+                if (pdfFile.exists()) {
+                    // Attach PDF
+                    FileSystemResource pdfResource = new FileSystemResource(pdfFile);
+                    helper.addAttachment(offerType + "_Letter.pdf", pdfResource);
+                    logger.info("PDF offer letter attached: {}", pdfFilePath);
+                } else {
+                    // Fallback to HTML
+                    helper.addAttachment(offerType + "_Letter.html", resource);
+                    logger.info("HTML offer letter attached: {}", filePath);
+                }
+            }
+
+            mailSender.send(message);
+
+            logger.info("{} letter sent to: {}", offerType, toEmail);
+        } catch (MessagingException e) {
+            logger.error("Failed to send {} letter to {}: {}", offerType, toEmail, e.getMessage());
+        }
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\LeaveActionService.java =====
+package com.mentis.hrms.service;
+
+import com.mentis.hrms.dto.NotificationRequest;
+import com.mentis.hrms.model.Employee;
+import com.mentis.hrms.model.LeaveRequest;
+import com.mentis.hrms.pm.entity.Project;
+import com.mentis.hrms.pm.entity.ProjectMember;
+import com.mentis.hrms.pm.entity.Task;
+import com.mentis.hrms.pm.entity.TaskAssignment;
+import com.mentis.hrms.pm.enums.TaskStatus;
+import com.mentis.hrms.pm.repository.ProjectMemberRepository;
+import com.mentis.hrms.pm.repository.ProjectRepository;
+import com.mentis.hrms.pm.repository.TaskAssignmentRepository;
+import com.mentis.hrms.pm.repository.TaskRepository;
+import com.mentis.hrms.repository.EmployeeRepository;
+import com.mentis.hrms.repository.LeaveRequestRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.mentis.hrms.pm.entity.Team;
+import com.mentis.hrms.pm.enums.ProjectRole;
+import com.mentis.hrms.pm.repository.TeamRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+@Service
+public class LeaveActionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(LeaveActionService.class);
+
+    @Autowired private LeaveRequestRepository leaveRequestRepository;
+    @Autowired private LeaveBalanceService leaveBalanceService;
+    @Autowired private AttendanceService attendanceService;
+    @Autowired private NotificationEmitter notificationEmitter;
+
+    @Autowired private EmployeeRepository employeeRepository;
+    @Autowired private ProjectMemberRepository projectMemberRepository;
+    @Autowired private ProjectRepository projectRepository;
+    @Autowired private TaskAssignmentRepository taskAssignmentRepository;
+    @Autowired private TaskRepository taskRepository;
+    @Autowired private TeamRepository teamRepository;
+    // ---------------------------------------------------------------
+    // APPLY - creates a new PENDING leave request
+    // ---------------------------------------------------------------
+    @Transactional
+    public Map<String, Object> applyLeave(LeaveRequest leaveRequest) {
+        Map<String, Object> result = new HashMap<>();
+
+        if (leaveRequest.getEmployeeId() == null || leaveRequest.getEmployeeId().isEmpty()) {
+            result.put("success", false);
+            result.put("error", "Employee ID is required");
+            return result;
+        }
+        if (leaveRequest.getStartDate() == null || leaveRequest.getEndDate() == null) {
+            result.put("success", false);
+            result.put("error", "Start date and end date are required");
+            return result;
+        }
+        if (leaveRequest.getEndDate().isBefore(leaveRequest.getStartDate())) {
+            result.put("success", false);
+            result.put("error", "End date cannot be before start date");
+            return result;
+        }
+        if (leaveRequest.getLeaveType() == null || leaveRequest.getLeaveType().trim().isEmpty()) {
+            result.put("success", false);
+            result.put("error", "Leave type is required (sick, casual, or earned)");
+            return result;
+        }
+
+        boolean hasSufficientBalance = leaveBalanceService.hasSufficientBalance(
+                leaveRequest.getEmployeeId(),
+                leaveRequest.getLeaveType(),
+                leaveRequest.getStartDate(),
+                leaveRequest.getEndDate(),
+                leaveRequest.getLeaveDuration(),
+                leaveRequest.getHalfDayType()
+        );
+
+        if (!hasSufficientBalance) {
+            result.put("success", false);
+            result.put("error", "Insufficient leave balance");
+            return result;
+        }
+
+        if (leaveRequest.getTotalDays() == null || leaveRequest.getTotalDays() == 0) {
+            long days = ChronoUnit.DAYS.between(leaveRequest.getStartDate(), leaveRequest.getEndDate()) + 1;
+            leaveRequest.setTotalDays((double) days);
+        }
+
+        leaveRequest.setStatus("PENDING");
+        leaveRequest.setCreatedAt(LocalDateTime.now());
+
+        try {
+            LeaveRequest saved = leaveRequestRepository.save(leaveRequest);
+            logger.info("Leave request {} created for employee {}", saved.getId(), saved.getEmployeeId());
+
+            result.put("success", true);
+            result.put("message", "Leave request submitted successfully");
+            result.put("leaveId", saved.getId());
+            result.put("status", saved.getStatus());
+        } catch (Exception e) {
+            logger.error("Error saving leave request: {}", e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", "Failed to save to database: " + e.getMessage());
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------
+    // APPROVE - PENDING -> APPROVED, deducts balance, creates attendance
+    // ---------------------------------------------------------------
+    @Transactional
+    public Map<String, Object> approveLeave(String leaveId, String approverId, String remarks) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
+
+            if ("APPROVED".equals(leave.getStatus())) {
+                result.put("success", false);
+                result.put("error", "Leave " + leaveId + " is already approved");
+                return result;
+            }
+            if (!"PENDING".equals(leave.getStatus())) {
+                result.put("success", false);
+                result.put("error", "Only PENDING leaves can be approved (current status: " + leave.getStatus() + ")");
+                return result;
+            }
+
+            if (leave.getTotalDays() == null || leave.getTotalDays() == 0) {
+                long days = ChronoUnit.DAYS.between(leave.getStartDate(), leave.getEndDate()) + 1;
+                leave.setTotalDays((double) days);
+                leave.setLeaveDuration("full_day");
+            }
+
+            leave.setStatus("APPROVED");
+            leave.setApprovedBy(approverId != null ? approverId : "SYSTEM");
+            leave.setApprovedDate(LocalDateTime.now());
+            if (remarks != null && !remarks.trim().isEmpty()) {
+                leave.setApprovalRemarks(remarks);
+            }
+
+            boolean deducted = leaveBalanceService.deductLeaveBalance(leave);
+            if (!deducted) {
+                logger.warn("Could not deduct leave balance for {} during approval - check balance records", leaveId);
+            }
+
+            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
+
+            createAttendanceForApprovedLeave(saved);
+
+            // GAP 4 FIX: Trigger Notification safely AFTER save
+            notifyProjectManagersOfLeave(saved);
+
+            result.put("success", true);
+            result.put("message", "Leave approved successfully");
+            result.put("leaveId", leaveId);
+            result.put("status", saved.getStatus());
+        } catch (Exception e) {
+            logger.error("Error approving leave {}: {}", leaveId, e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------
+    // REJECT - PENDING -> REJECTED
+    // ---------------------------------------------------------------
+    @Transactional
+    public Map<String, Object> rejectLeave(String leaveId, String approverId, String reason) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            if (reason == null || reason.trim().isEmpty()) {
+                reason = "No reason provided";
+            }
+
+            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
+
+            if (!"PENDING".equals(leave.getStatus())) {
+                result.put("success", false);
+                result.put("error", "Only PENDING leaves can be rejected (current status: " + leave.getStatus() + ")");
+                return result;
+            }
+
+            leave.setStatus("REJECTED");
+            leave.setApprovedBy(approverId != null ? approverId : "SYSTEM");
+            leave.setApprovedDate(LocalDateTime.now());
+            leave.setRejectionReason(reason);
+
+            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
+
+            result.put("success", true);
+            result.put("message", "Leave rejected successfully");
+            result.put("leaveId", leaveId);
+            result.put("status", saved.getStatus());
+            result.put("rejectionReason", reason);
+        } catch (Exception e) {
+            logger.error("Error rejecting leave {}: {}", leaveId, e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------
+    // WITHDRAW - employee retracts a request that is still PENDING
+    // ---------------------------------------------------------------
+    @Transactional
+    public Map<String, Object> withdrawLeave(String leaveId, String reason) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
+
+            if (!"PENDING".equals(leave.getStatus())) {
+                result.put("success", false);
+                result.put("error", "Only PENDING leave requests can be withdrawn. This leave is "
+                        + leave.getStatus() + " - use cancel instead if it has already been approved.");
+                return result;
+            }
+
+            leave.setStatus("WITHDRAWN");
+            leave.setWithdrawn(true);
+            leave.setWithdrawnDate(LocalDateTime.now());
+            leave.setCancelReason(reason);
+
+            LeaveRequest saved = leaveRequestRepository.save(leave);
+
+            result.put("success", true);
+            result.put("message", "Leave request withdrawn successfully");
+            result.put("leaveId", leaveId);
+            result.put("status", saved.getStatus());
+        } catch (Exception e) {
+            logger.error("Error withdrawing leave {}: {}", leaveId, e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------
+    // CANCEL - employee cancels a PENDING or an already-APPROVED leave.
+    // ---------------------------------------------------------------
+    @Transactional
+    public Map<String, Object> cancelLeave(String leaveId, String reason) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            LeaveRequest leave = leaveRequestRepository.findById(leaveId)
+                    .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
+
+            String previousStatus = leave.getStatus();
+
+            if (!"PENDING".equals(previousStatus) && !"APPROVED".equals(previousStatus)) {
+                result.put("success", false);
+                result.put("error", "Only PENDING or APPROVED leaves can be cancelled (current status: " + previousStatus + ")");
+                return result;
+            }
+
+            leave.setStatus("CANCELLED");
+            leave.setCancelReason(reason);
+            leave.setWithdrawn(true);
+            leave.setWithdrawnDate(LocalDateTime.now());
+
+            boolean balanceRestored = false;
+            if ("APPROVED".equals(previousStatus)) {
+                balanceRestored = leaveBalanceService.addBackLeaveBalance(leave);
+                if (!balanceRestored) {
+                    logger.warn("Could not restore leave balance for cancelled leave {}", leaveId);
+                }
+            }
+
+            LeaveRequest saved = leaveRequestRepository.save(leave);
+
+            result.put("success", true);
+            result.put("message", "Leave cancelled successfully"
+                    + (balanceRestored ? " and leave balance restored" : ""));
+            result.put("leaveId", leaveId);
+            result.put("status", saved.getStatus());
+        } catch (Exception e) {
+            logger.error("Error cancelling leave {}: {}", leaveId, e.getMessage(), e);
+            result.put("success", false);
+            result.put("error", e.getMessage());
+        }
+        return result;
+    }
+
+    public Map<String, Object> checkConflicts(String employeeId, LocalDate startDate, LocalDate endDate) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("hasConflicts", false);
+        List<Map<String, Object>> tasksDue = new ArrayList<>();
+        List<Map<String, Object>> teammatesOnLeave = new ArrayList<>();
+        List<String> messages = new ArrayList<>();
+
+        if (employeeId == null || employeeId.isBlank() || startDate == null || endDate == null) {
+            result.put("tasksDue", tasksDue);
+            result.put("teammatesOnLeave", teammatesOnLeave);
+            result.put("messages", messages);
+            return result;
+        }
+        if (endDate.isBefore(startDate)) {
+            LocalDate tmp = startDate;
+            startDate = endDate;
+            endDate = tmp;
+        }
+
+        Employee employee = employeeRepository.findByEmployeeId(employeeId).orElse(null);
+        if (employee == null) {
+            result.put("tasksDue", tasksDue);
+            result.put("teammatesOnLeave", teammatesOnLeave);
+            result.put("messages", messages);
+            return result;
+        }
+
+        Set<Long> seenTasks = new HashSet<>();
+        for (TaskAssignment a : taskAssignmentRepository.findByEmployeeId(employee.getId())) {
+            Task t = taskRepository.findById(a.getTaskId()).orElse(null);
+            if (t == null || t.getStatus() == TaskStatus.DONE || t.getDueDate() == null) continue;
+            if (t.getDueDate().isBefore(startDate) || t.getDueDate().isAfter(endDate)) continue;
+            if (!seenTasks.add(t.getId())) continue;
+            String projectName = t.getProjectId() != null
+                    ? projectRepository.findById(t.getProjectId()).map(Project::getName).orElse("Project #" + t.getProjectId())
+                    : "No project";
+            Map<String, Object> row = new HashMap<>();
+            row.put("taskId", t.getId());
+            row.put("title", t.getTitle());
+            row.put("dueDate", t.getDueDate().toString());
+            row.put("projectName", projectName);
+            tasksDue.add(row);
+            messages.add("Task \"" + t.getTitle() + "\" is due " + t.getDueDate() + " on " + projectName);
+        }
+
+        Set<String> seenTeammates = new HashSet<>();
+        for (ProjectMember membership : projectMemberRepository.findByEmployeeId(employee.getId())) {
+            Project project = projectRepository.findById(membership.getProjectId()).orElse(null);
+            String projectName = project != null ? project.getName() : "Project #" + membership.getProjectId();
+            for (ProjectMember other : projectMemberRepository.findByProjectId(membership.getProjectId())) {
+                if (other.getEmployeeId().equals(employee.getId())) continue;
+                Employee teammate = employeeRepository.findById(other.getEmployeeId()).orElse(null);
+                if (teammate == null || teammate.getEmployeeId() == null) continue;
+                List<LeaveRequest> leaves = leaveRequestRepository
+                        .findApprovedLeavesForEmployeeInRange(teammate.getEmployeeId(), startDate, endDate);
+                if (leaves.isEmpty()) continue;
+                String key = teammate.getId() + ":" + membership.getProjectId();
+                if (!seenTeammates.add(key)) continue;
+                String name = ((teammate.getFirstName() == null ? "" : teammate.getFirstName()) + " "
+                        + (teammate.getLastName() == null ? "" : teammate.getLastName())).trim();
+                if (name.isEmpty()) name = teammate.getEmployeeId();
+                LeaveRequest lr = leaves.get(0);
+                Map<String, Object> row = new HashMap<>();
+                row.put("employeeId", teammate.getEmployeeId());
+                row.put("employeeName", name);
+                row.put("projectName", projectName);
+                row.put("startDate", lr.getStartDate() != null ? lr.getStartDate().toString() : null);
+                row.put("endDate", lr.getEndDate() != null ? lr.getEndDate().toString() : null);
+                teammatesOnLeave.add(row);
+                messages.add(name + " is also on leave during this period (" + projectName + ")");
+            }
+        }
+
+        boolean has = !tasksDue.isEmpty() || !teammatesOnLeave.isEmpty();
+        result.put("hasConflicts", has);
+        result.put("tasksDue", tasksDue);
+        result.put("teammatesOnLeave", teammatesOnLeave);
+        result.put("messages", messages);
+        return result;
+    }
+
+    private void createAttendanceForApprovedLeave(LeaveRequest leave) {
+        try {
+            java.time.LocalDate current = leave.getStartDate();
+            while (!current.isAfter(leave.getEndDate())) {
+                attendanceService.createOrUpdateLeaveAttendance(leave.getEmployeeId(), current, "LEAVE");
+                current = current.plusDays(1);
+            }
+        } catch (Exception e) {
+            logger.error("Error creating attendance for approved leave {}: {}", leave.getId(), e.getMessage());
+        }
+    }
+
+    // ================================================================
+    // GAP 4 FIX: Notify Project Managers of Leave Impact
+    // ================================================================
+    private void notifyProjectManagersOfLeave(LeaveRequest leave) {
+        try {
+            if (leave.getStartDate() == null || leave.getEndDate() == null) return;
+            Employee emp = employeeRepository.findByEmployeeId(leave.getEmployeeId()).orElse(null);
+            if (emp == null) return;
+
+            // Find projects where this person has an open task due inside the leave window
+            Set<Long> projectIds = new LinkedHashSet<>();
+            for (TaskAssignment a : taskAssignmentRepository.findByEmployeeId(emp.getId())) {
+                Task t = taskRepository.findById(a.getTaskId()).orElse(null);
+                if (t == null || t.getProjectId() == null || t.getDueDate() == null || t.getStatus() == TaskStatus.DONE) continue;
+                if (t.getDueDate().isBefore(leave.getStartDate()) || t.getDueDate().isAfter(leave.getEndDate())) continue;
+                projectIds.add(t.getProjectId());
+            }
+            if (projectIds.isEmpty()) return;
+
+            // Recipients per project: owner + MANAGER/LEAD members + lead of the project's team
+            Map<Long, Map<Long, String>> byOwner = new LinkedHashMap<>();
+            for (Long pid : projectIds) {
+                Project p = projectRepository.findById(pid).orElse(null);
+                if (p == null) continue;
+                Set<Long> recipients = new LinkedHashSet<>();
+                if (p.getOwnerId() != null) recipients.add(p.getOwnerId());
+                projectMemberRepository.findByProjectId(pid).stream()
+                        .filter(m -> m.getRole() == ProjectRole.MANAGER || m.getRole() == ProjectRole.LEAD)
+                        .forEach(m -> recipients.add(m.getEmployeeId()));
+                if (p.getTeamId() != null) {
+                    teamRepository.findById(p.getTeamId()).map(Team::getLeadEmployeeId)
+                            .ifPresent(lead -> { if (lead != null) recipients.add(lead); });
+                }
+                recipients.remove(emp.getId());
+                for (Long r : recipients) {
+                    byOwner.computeIfAbsent(r, k -> new LinkedHashMap<>()).put(pid, p.getName());
+                }
+            }
+
+            String name = ((emp.getFirstName() == null ? "" : emp.getFirstName()) + " "
+                    + (emp.getLastName() == null ? "" : emp.getLastName())).trim();
+            if (name.isEmpty()) name = emp.getEmployeeId();
+
+            for (Map.Entry<Long, Map<Long, String>> e : byOwner.entrySet()) {
+                String ownerCode = employeeRepository.findById(e.getKey())
+                        .map(Employee::getEmployeeId).orElse(null);
+                if (ownerCode == null) continue;
+                Long firstProject = e.getValue().keySet().iterator().next();
+
+                NotificationRequest req = NotificationRequest.builder()
+                        .recipientId(ownerCode)
+                        .recipientType("EMPLOYEE")
+                        .type("LEAVE_IMPACT")
+                        .action("LEAVE_IMPACT")
+                        .title("Team member on leave: " + name)
+                        .message("Employee " + name + " is on approved leave from " + leave.getStartDate()
+                                + " to " + leave.getEndDate() + ". Please review their open tasks ("
+                                + String.join(", ", e.getValue().values()) + ").")
+                        .projectId(firstProject)
+                        .priority("MEDIUM")
+                        .deepLink("/pm/06-tasks")
+                        .build();
+                notificationEmitter.emit(req);
+            }
+        } catch (Exception ex) {
+            logger.warn("Leave-impact notification failed for leave {}: {}", leave.getId(), ex.getMessage());
+        }
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\NotificationEmitter.java =====
+package com.mentis.hrms.service;
+
+import com.mentis.hrms.dto.NotificationRequest;
+import com.mentis.hrms.model.Notification;
+import com.mentis.hrms.repository.NotificationRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Phase 4 â€” unified emitter for HRMS + PM notifications.
+ * Persists one row, broadcasts to:
+ *   /topic/user/{employeeId}/notifications       (personal bell)
+ *   /topic/project/{projectId}/events            (per-project board updates)
+ *   /topic/global/events                         (announcements)
+ *   /topic/pm/events                             (back-compat for pm-core.js)
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class NotificationEmitter {
+
+    private final NotificationRepository repo;
+    private final SimpMessagingTemplate messaging;
+
+    @Transactional
+    public Notification emit(NotificationRequest req) {
+        Notification n = new Notification();
+        n.setRecipientId(req.getRecipientId());
+        n.setRecipientType(req.getRecipientType());
+        n.setType(req.getType());
+        n.setTitle(req.getTitle());
+        n.setMessage(req.getMessage());
+        n.setSender(req.getActorName());              // existing field
+        n.setReferenceId(req.getTaskId() == null ? null : String.valueOf(req.getTaskId()));
+        n.setReferenceType(req.getTaskId() == null ? null : "TASK");
+        n.setTaskId(req.getTaskId());
+        n.setProjectId(req.getProjectId());
+        n.setActorId(req.getActorId());
+        n.setAction(req.getAction() != null ? req.getAction() : req.getType());
+        n.setPriority(req.getPriority());
+        n.setDeepLink(req.getDeepLink());
+        n.setCreatedAt(LocalDateTime.now());
+        n.setReadAt(null);
+        n.setPersistent(req.isPersistent());
+
+        Notification saved = repo.save(n);
+
+        broadcast(saved);
+        return saved;
+    }
+
+    private void broadcast(Notification n) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", n.getId());
+        payload.put("type", n.getType());
+        payload.put("action", n.getAction());
+        payload.put("title", n.getTitle());
+        payload.put("message", n.getMessage());
+        payload.put("taskId", n.getTaskId());
+        payload.put("projectId", n.getProjectId());
+        payload.put("actorId", n.getActorId());
+        payload.put("sender", n.getSender());
+        payload.put("priority", n.getPriority());
+        payload.put("deepLink", n.getDeepLink());
+        payload.put("referenceId", n.getReferenceId());
+        payload.put("referenceType", n.getReferenceType());
+        payload.put("createdAt", n.getCreatedAt() != null ? n.getCreatedAt().toString() : null);
+        payload.put("persistent", n.isPersistent());
+
+        // 1) personal bell â€” keyed by recipientId string (e.g. "SA001")
+        try {
+            messaging.convertAndSend(
+                    "/topic/user/" + n.getRecipientId() + "/notifications", payload);
+        } catch (Exception e) {
+            log.warn("Per-user broadcast failed for {}: {}", n.getRecipientId(), e.getMessage());
+        }
+
+        // 2) per-project board â€” keyed by projectId
+        if (n.getProjectId() != null) {
+            try {
+                messaging.convertAndSend(
+                        "/topic/project/" + n.getProjectId() + "/events", payload);
+            } catch (Exception e) {
+                log.warn("Per-project broadcast failed for {}: {}", n.getProjectId(), e.getMessage());
+            }
+        }
+
+        // 3) legacy PM topic (keeps pm-core.js working with zero changes)
+        try {
+            messaging.convertAndSend("/topic/pm/events", payload);
+        } catch (Exception e) {
+            log.warn("Legacy PM broadcast failed: {}", e.getMessage());
+        }
+    }
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\service\NotificationService.java =====
+package com.mentis.hrms.service;
+
+import com.mentis.hrms.model.Notification;
+import com.mentis.hrms.model.OnboardingDocument;
+import com.mentis.hrms.model.Employee;
+import com.mentis.hrms.repository.NotificationRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.springframework.context.annotation.Lazy;
+@Service
+@Transactional
+public class NotificationService {
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private EmployeeService employeeService;
+
+    @Autowired
+    @Lazy  // â† ADD THIS ANNOTATION HERE
+    private DocumentService documentService;
+
+    // ========== BACKWARD COMPATIBLE METHODS ==========
+
+    // Original method signature for backward compatibility
+    public Notification createNotification(String recipientId, String recipientType,
+                                           String type, String title, String message,
+                                           String referenceId, String referenceType,
+                                           String sender) {
+        return createNotification(recipientId, recipientType, type, title, message,
+                referenceId, referenceType, sender, true);
+    }
+
+    // New method with persistent parameter
+    public Notification createNotification(String recipientId, String recipientType,
+                                           String type, String title, String message,
+                                           String referenceId, String referenceType,
+                                           String sender, boolean persistent) {
+
+        Notification notification = new Notification();
+        notification.setRecipientId(recipientId);
+        notification.setRecipientType(recipientType);
+        notification.setType(type);
+        notification.setTitle(title);
+        notification.setMessage(message);
+        notification.setReferenceId(referenceId);
+        notification.setReferenceType(referenceType);
+        notification.setSender(sender);
+        notification.setCreatedAt(LocalDateTime.now());
+        notification.setReadAt(null);
+        notification.setPersistent(persistent);
+
+        Notification saved = notificationRepository.save(notification);
+        sendRealTimeNotification(saved);
+        return saved;
+    }
+
+    // Original getNotifications method
+    public List<Notification> getNotifications(String recipientId, String recipientType) {
+        return notificationRepository.findByRecipientIdAndRecipientTypeOrderByCreatedAtDesc(recipientId, recipientType);
+    }
+
+    // New method for persistent only
+    public List<Notification> getPersistentNotifications(String recipientId, String recipientType) {
+        return notificationRepository.findPersistentByRecipientIdAndRecipientTypeOrderByCreatedAtDesc(recipientId, recipientType);
+    }
+
+    // FIXED: Added getAllNotifications method
+    public List<Notification> getAllNotifications(String recipientId, String recipientType) {
+        return getNotifications(recipientId, recipientType);
+    }
+
+    // Original getUnreadCount method
+    public long getUnreadCount(String recipientId, String recipientType) {
+        return notificationRepository.countByRecipientIdAndRecipientTypeAndReadAtIsNull(recipientId, recipientType);
+    }
+
+    // New method for persistent unread count
+    public long getUnreadPersistentCount(String recipientId, String recipientType) {
+        return notificationRepository.countPersistentUnreadByRecipientIdAndRecipientType(recipientId, recipientType);
+    }
+
+    // FIXED: Correct markAsRead method
+    public void markAsRead(Long notificationId, String recipientId, String recipientType) {
+        // FIX: Use findByIdAndRecipientIdAndRecipientType which returns Optional<Notification>
+        Optional<Notification> notificationOpt = notificationRepository.findByIdAndRecipientIdAndRecipientType(
+                notificationId, recipientId, recipientType);
+
+        if (notificationOpt.isPresent()) {
+            Notification notification = notificationOpt.get();
+            notification.setReadAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+        }
+    }
+
+    public void markAllAsRead(String recipientId, String recipientType) {
+        notificationRepository.markAllAsRead(recipientId, recipientType);
+    }
+
+    // ========== NOTIFICATION TYPES ==========
+
+    // Permanent notification for all documents uploaded
+    // Permanent notification for all documents uploaded
+    public void notifyAllDocumentsUploaded(Employee employee) {
+        createNotification(
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "ALL_DOCUMENTS_UPLOADED",
+                "âœ… All Documents Uploaded Successfully!",
+                "Congratulations! All your onboarding documents have been uploaded and submitted successfully. HR will now review them.",
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "HR_SYSTEM",
+                true  // âœ… PERMANENT - always visible in notifications page
+        );
+    }
+
+    // Temporary deadline warning
+    public void notifyDeadlineApproaching(Employee employee, long hoursLeft) {
+        String timeUnit = hoursLeft >= 24 ? (hoursLeft/24) + " days" : hoursLeft + " hours";
+        createNotification(
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "DEADLINE_WARNING",
+                "âš ï¸ Document Upload Deadline Approaching",
+                "You have " + timeUnit + " left to upload all required documents.",
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "HR_SYSTEM",
+                false  // âœ… TEMPORARY - won't appear in notifications page
+        );
+    }
+
+    // Temporary deadline reached
+    public void notifyDeadlineReached(Employee employee) {
+        createNotification(
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "DEADLINE_REACHED",
+                "â° Document Upload Deadline Reached",
+                "Your document upload deadline has passed. Please contact HR immediately.",
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "HR_SYSTEM",
+                false  // Temporary
+        );
+    }
+
+    // Document verified (persistent for employee)
+    public void notifyDocumentVerified(OnboardingDocument document, String verifiedBy) {
+        Employee employee = document.getEmployee();
+        String status = document.getStatus();
+        boolean isVerified = "VERIFIED".equals(status);
+
+        String title = isVerified ? "âœ… Document Verified" : "âŒ Document Rejected";
+        String message = isVerified ?
+                String.format("âœ… Your %s has been verified by %s.", document.getDocumentName(), verifiedBy) :
+                String.format("âŒ Your %s has been rejected by %s.", document.getDocumentName(), verifiedBy);
+
+        // Employee notification - PERMANENT (stored)
+        createNotification(
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "DOCUMENT_" + status,
+                title,
+                message,
+                String.valueOf(document.getId()),
+                "DOCUMENT",
+                verifiedBy,
+                true  // âœ… PERMANENT - appears in notifications page
+        );
+
+        // HR notification - TEMPORARY (toast only)
+        // âœ… This will NOT appear in HR notifications page
+        createNotification(
+                "HR_SYSTEM",
+                "HR",
+                "DOCUMENT_" + status,
+                title,
+                String.format("%s for %s has been %s", document.getDocumentName(), employee.getFirstName(), status.toLowerCase()),
+                String.valueOf(document.getId()),
+                "DOCUMENT",
+                verifiedBy,
+                false  // âœ… TEMPORARY - toast only
+        );
+    }
+
+    // Document uploaded (temporary for HR)
+    public void notifyDocumentUploaded(OnboardingDocument document) {
+        Employee employee = document.getEmployee();
+
+        createNotification(
+                "HR_SYSTEM",
+                "HR",
+                "DOCUMENT_UPLOADED",
+                "ðŸ“„ New Document Submitted",
+                employee.getFirstName() + " uploaded: " + document.getDocumentName(),
+                String.valueOf(document.getId()),
+                "DOCUMENT",
+                employee.getEmployeeId(),
+                false  // Temporary
+        );
+    }
+
+    // Onboarding completed notification
+    public void notifyOnboardingCompleted(Employee employee) {
+        createNotification(
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "ONBOARDING_COMPLETED",
+                "ðŸŽ‰ Onboarding Complete!",
+                "Welcome to Menti's IT Solutions! Your onboarding process is complete.",
+                employee.getEmployeeId(),
+                "EMPLOYEE",
+                "HR_SYSTEM",
+                true  // Permanent
+        );
+    }
+
+    private void sendRealTimeNotification(Notification notification) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("id", notification.getId());
+        payload.put("type", notification.getType());
+        payload.put("title", notification.getTitle());
+        payload.put("message", notification.getMessage());
+        payload.put("referenceId", notification.getReferenceId());
+        payload.put("sender", notification.getSender());
+        payload.put("createdAt", notification.getCreatedAt().toString());
+        payload.put("read", notification.getReadAt() != null);
+        payload.put("persistent", notification.isPersistent());
+        payload.put("color", notification.getNotificationColor());
+        payload.put("icon", notification.getNotificationIcon());
+
+        String topic = String.format("/topic/%s/%s/notifications",
+                notification.getRecipientType().toLowerCase(),
+                notification.getRecipientId());
+
+        messagingTemplate.convertAndSend(topic, payload);
+    }
+}

@@ -43,4 +43,16 @@ public interface TaskTimeLogRepository extends JpaRepository<TaskTimeLog, Long> 
     /** All time logs booked on tasks of one project. */
     @Query("select l from TaskTimeLog l, Task t where l.taskId = t.id and t.projectId = :projectId")
     List<TaskTimeLog> findForProject(@Param("projectId") Long projectId);
+    @org.springframework.data.jpa.repository.Query(
+            "select l.taskId, sum(l.minutes) from TaskTimeLog l where l.taskId in :ids group by l.taskId")
+    java.util.List<Object[]> sumMinutesByTask(@org.springframework.data.repository.query.Param("ids") java.util.Collection<Long> ids);
+
+    @Query("select coalesce(sum(l.minutes),0) from TaskTimeLog l where l.billable = :b "
+            + "and l.taskId in (select t.id from Task t where t.projectId = :pid)")
+    long sumMinutesForProjectByBillable(@Param("pid") Long pid, @Param("b") boolean b);
+
+    @Query("select coalesce(sum(l.minutes),0) from TaskTimeLog l where l.overtime = true "
+            + "and l.taskId in (select t.id from Task t where t.projectId = :pid)")
+    long sumOvertimeMinutesForProject(@Param("pid") Long pid);
+
 }

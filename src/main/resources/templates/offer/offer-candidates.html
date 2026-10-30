@@ -4,1178 +4,367 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Offer Letter Candidates - HRMS</title>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
     <style>
-        /* Global Black Scrollbar */
-        html {
-            scrollbar-color: #1a1a1a #000000;
-            scrollbar-width: thin;
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #000000;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #1a1a1a;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #333333;
-        }
-
-        :root {
-            --dark-bg: #0f172a;
-            --dark-card: #1e293b;
-            --dark-border: #334155;
-            --dark-text: #f8fafc;
-            --dark-text-secondary: #cbd5e1;
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --info: #0ea5e9;
-            --sidebar-bg: #0f172a;
-            --sidebar-hover: #1e293b;
-            --transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--dark-bg);
-            color: var(--dark-text);
-            font-size: 14px;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* === SIDEBAR STYLES === */
-      .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: var(--sidebar-bg);
-            box-shadow: 2px 0 10px rgba(0, 0, 0, .2);
-            transition: var(--transition);
-            z-index: 1000;
-        }
-
-       .sidebar-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--dark-border);
-    color: #fff;
-    font-weight: 600;
-    font-size: 1.25rem;
-    position: sticky;
-    top: 0;
-    background: var(--sidebar-bg);
-    z-index: 10;
-}
-
-.brand-icon {
-    width: 64px;
-    height: 64px;
-    background: #fff;
-    color: var(--sidebar-bg);
-    border-radius: 8px;
-    display: grid;
-    place-content: center;
-    flex-shrink: 0;
-    overflow: hidden;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-}
-
-        .nav-section {
-            padding: 1.2rem 1.5rem 0.5rem;
-            color: #94a3b8;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 1rem;
-        }
-
-        .nav-section:first-of-type {
-            margin-top: 0.5rem;
-        }
-
-        .nav-section i {
-            font-size: 0.8rem;
-            color: var(--primary);
-            opacity: 0.8;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0.65rem 1.5rem;
-            margin: 0 0.5rem 0.25rem;
-            width: calc(100% - 1rem);
-            color: #94a3b8;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            border: none;
-            background: none;
-            text-align: left;
-            font-size: 0.875rem;
-            cursor: pointer;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            background: var(--sidebar-hover);
-            color: #fff;
-            transform: translateX(2px);
-        }
-
-        .nav-link i {
-            width: 20px;
-            text-align: center;
-            font-size: 1rem;
-            color: var(--primary);
-            transition: all 0.2s;
-        }
-
-        .nav-link:hover i,
-        .nav-link.active i {
-            color: #fff;
-        }
-
-        .nav-badge {
-            margin-left: auto; background: var(--primary); color: white;
-            padding: 0.2rem 0.5rem; border-radius: 10px; font-size: 0.7rem;
-            font-weight: 600; min-width: 24px; text-align: center;
-        }
-
-        .nav-badge.success { background: var(--success); }
-        .nav-badge.warning { background: var(--warning); }
-
-        .sidebar-content {
-            height: calc(100vh - 80px); overflow-y: auto; padding-bottom: 20px;
-        }
-
-        .sidebar-content::-webkit-scrollbar { width: 6px; }
-        .sidebar-content::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05); border-radius: 10px;
-        }
-        .sidebar-content::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1); border-radius: 10px;
-        }
-        .sidebar-content::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        /* === MAIN CONTENT === */
-        .main-content { margin-left: 280px; min-height: 100vh; transition: var(--transition); }
-
-        /* === TOP HEADER === */
-        .top-header {
-            display: flex; justify-content: space-between; align-items: center;
-            background: var(--dark-card); border-bottom: 1px solid var(--dark-border);
-            padding: .75rem 1.5rem; position: sticky; top: 0; z-index: 100;
-        }
-
-        .search-box {
-            position: relative;
-            width: 300px;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: .6rem .75rem .6rem 2.5rem;
-            border-radius: 8px;
-            border: 1px solid var(--dark-border);
-            background: var(--dark-bg);
-            color: var(--dark-text);
-            font-size: .875rem;
-            transition: var(--transition);
-        }
-
-        .search-box input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99,102,241,.1);
-            outline: none;
-        }
-
-        .search-box i {
-            position: absolute;
-            left: .75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--dark-text-secondary);
-        }
-
-        /* === TOP HEADER ACTIONS === */
-        .top-header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .icon-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: var(--dark-bg);
-            border: 1px solid var(--dark-border);
-            color: var(--dark-text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .icon-btn:hover {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
-            color: #fff;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 0.65rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        .user-profile-menu {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        /* === NOTIFICATION DROPDOWN === */
-        .notification-dropdown {
-            position: relative;
-        }
-
-        .notification-dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: 0.5rem;
-            background: var(--dark-card);
-            border: 1px solid var(--dark-border);
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,.2);
-            min-width: 320px;
-            z-index: 1000;
-        }
-
-        .notification-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--dark-border);
-        }
-
-        .notification-header h6 {
-            margin: 0;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--dark-text);
-        }
-
-        .notification-list {
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .empty-notifications {
-            padding: 24px;
-            text-align: center;
-            color: var(--dark-text-secondary);
-            font-size: 13px;
-        }
-
-        .notification-footer {
-            padding: 10px 16px;
-            border-top: 1px solid var(--dark-border);
-            text-align: center;
-        }
-
-        /* === DROPDOWN MENU === */
-        .dropdown-menu {
-            background: var(--dark-card);
-            border: 1px solid var(--dark-border);
-            box-shadow: 0 10px 25px rgba(0,0,0,.2);
-        }
-
-        .dropdown-item {
-            color: var(--dark-text);
-            transition: var(--transition);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem 1rem;
-        }
-
-        .dropdown-item:hover {
-            background: var(--sidebar-hover);
-            color: var(--dark-text);
-        }
-
-        .dropdown-divider {
-            border-color: var(--dark-border);
-            margin: 0.5rem 0;
-        }
-
-        /* === CONTENT AREA === */
-        .content-area { padding: 1.5rem; }
-
-        .page-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin: 0;
-            color: var(--dark-text);
-        }
-
-        /* === CONTROLS BAR === */
-        .controls-bar {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            gap: 1.5rem;
-            align-items: center;
-            margin-bottom: 1.5rem;
-            background: var(--dark-card);
-            border: 1px solid var(--dark-border);
-            border-radius: 10px;
-            padding: 1rem;
-        }
-
-        /* Success Popup Modal Styles */
-        #successPopup.modal {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        #successPopup .modal-content {
-            animation: slideInUp 0.4s ease-out;
-            border: 1px solid var(--dark-border);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        #successPopup .btn-close-white {
-            filter: invert(1) grayscale(100%) brightness(200%);
-            transition: transform 0.2s ease;
-        }
-
-        #successPopup .btn-close-white:hover {
-            transform: scale(1.1);
-            opacity: 1;
-        }
-
-        #successPopup .btn {
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        #successPopup .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        #successPopup .btn-primary:hover {
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-        }
-
-        #successPopup .btn-info:hover {
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
-        }
-
-        /* === EMPLOYEE COUNT BUBBLE === */
-        .employee-count-bubble {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .6rem 1rem;
-            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-            border-radius: 50px;
-            color: white;
-            font-weight: 600;
-            font-size: .875rem;
-            white-space: nowrap;
-            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
-        }
-
-        .employee-count-bubble i {
-            font-size: 1rem;
-        }
-
-        .employee-count-bubble .count-number {
-            background: rgba(255, 255, 255, 0.2);
-            padding: .2rem .5rem;
-            border-radius: 12px;
-            font-size: .8rem;
-            font-weight: 700;
-        }
-
-        /* === FILTER DROPDOWN === */
-        .filter-dropdown {
-            position: relative;
-        }
-
+        .filter-dropdown { position: relative; }
         .filter-dropdown-btn {
-            display: flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .6rem 1rem;
-            border-radius: 8px;
+            display: flex; align-items: center; gap: .5rem;
+            padding: .55rem 1rem; border-radius: var(--radius-btn);
             border: 1px solid var(--dark-border);
             background: var(--dark-bg);
             color: var(--dark-text);
-            font-size: .875rem;
+            font-size: var(--fs-sm);
             cursor: pointer;
             transition: var(--transition);
-            white-space: nowrap;
         }
-
-        .filter-dropdown-btn:hover {
-            border-color: var(--primary);
-            background: rgba(99, 102, 241, 0.05);
-        }
-
+        .filter-dropdown-btn:hover { border-color: var(--primary); }
         .filter-dropdown-menu {
-            position: absolute;
-            top: 100%;
-            right: 0;
-            margin-top: .5rem;
-            background: var(--dark-card);
-            border: 1px solid var(--dark-border);
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0,0,0,.2);
+            position: absolute; top: 100%; right: 0; margin-top: .5rem;
             min-width: 180px;
-            z-index: 1000;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: var(--transition);
-        }
-
-        .filter-dropdown-menu.show {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .filter-option {
-            padding: .75rem 1rem;
-            cursor: pointer;
-            transition: var(--transition);
-            color: var(--dark-text);
-            font-size: .875rem;
-            border-bottom: 1px solid var(--dark-border);
-        }
-
-        .filter-option:last-child {
-            border-bottom: none;
-        }
-
-        /* Add Employee Button Style */
-        .btn-add-employee {
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .btn-add-employee:hover {
-            background: #10b981;
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-        }
-
-        /* Update existing button styles for consistency */
-        .btn-start {
-            background: rgba(99, 102, 241, 0.1);
-            color: #6366f1;
-            border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .btn-start:hover {
-            background: #6366f1;
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
-        }
-
-        /* Ensure action buttons have proper spacing */
-        .action-buttons {
-            display: flex;
-            gap: .375rem;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .filter-option:hover {
-            background: var(--sidebar-hover);
-        }
-
-        .filter-option.active {
-            background: rgba(99, 102, 241, 0.1);
-            color: var(--primary);
-        }
-
-        .filter-option.active::before {
-            content: '✓';
-            margin-right: .5rem;
-        }
-
-        /* === TABLE STYLES === */
-        .table-container {
             background: var(--dark-card);
-            border-radius: 10px;
-            overflow: hidden;
             border: 1px solid var(--dark-border);
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: .875rem;
-            margin: 0;
-            color: var(--dark-text);
-        }
-
-        .table thead {
-            background: rgba(0, 0, 0, 0.3);
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .table th {
-            text-transform: uppercase;
-            font-size: .75rem;
-            font-weight: 600;
-            color: var(--dark-text-secondary) !important;
-            padding: 1rem .75rem;
-            border-bottom: 1px solid var(--dark-border);
-            background: rgba(0, 0, 0, 0.3);
-            white-space: nowrap;
-        }
-
-        .table td {
-            padding: .875rem .75rem;
-            border-top: 1px solid var(--dark-border);
-            vertical-align: middle;
-            color: var(--dark-text) !important;
-            background: var(--dark-card);
-            white-space: nowrap;
-        }
-
-        .table tbody tr {
+            border-radius: var(--radius-btn);
+            box-shadow: var(--shadow-md);
+            z-index: 100;
+            opacity: 0; visibility: hidden;
+            transform: translateY(-6px);
             transition: var(--transition);
+            padding: .25rem;
         }
-
-        .table tbody tr:hover {
-            background: rgba(255, 255, 255, .05) !important;
-            transform: translateX(2px);
-        }
-
-        .table tbody tr:nth-child(even) {
-            background: rgba(255, 255, 255, 0.02);
-        }
-
-        .table tbody tr.hidden {
-            display: none;
-        }
-
-        /* === ACTION BUTTONS === */
-        .action-buttons {
-            display: flex;
-            gap: .375rem;
-            justify-content: flex-end;
-        }
-
-        .btn-action {
-            width: 32px;
-            height: 32px;
+        .filter-dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .filter-option {
+            padding: .55rem .75rem;
             border-radius: 6px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border: none;
             cursor: pointer;
-            transition: var(--transition);
-            text-decoration: none;
-            font-size: .8rem;
-        }
-
-        .btn-view {
-            background: rgba(14, 165, 233, 0.1);
-            color: #0ea5e9;
-            border: 1px solid rgba(14, 165, 233, 0.2);
-        }
-
-        .btn-start {
-            background: rgba(99, 102, 241, 0.1);
-            color: #6366f1;
-            border: 1px solid rgba(99, 102, 241, 0.2);
-        }
-
-        .btn-view:hover { background: #0ea5e9; color: white; }
-        .btn-start:hover { background: #6366f1; color: white; }
-
-        /* === EMPTY STATE === */
-        .empty-state {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: var(--dark-text-secondary);
-        }
-
-        .empty-state i {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            opacity: .4;
-        }
-
-        .empty-state h4 {
-            color: var(--dark-text-secondary);
-            margin-bottom: .5rem;
-            font-weight: 600;
-        }
-
-        .empty-state p {
-            margin-bottom: 1.5rem;
-            color: var(--dark-text-secondary);
-        }
-
-        /* === ALERTS === */
-        .alert {
-            padding: 0.75rem 1rem;
-            border-radius: 6px;
-            margin-bottom: 1rem;
-            border: 1px solid transparent;
-            display: flex;
-            align-items: center;
-        }
-
-        .alert-danger {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-
-        .btn-delete {
-            background: rgba(239, 68, 68, 0.1);
-            color: #ef4444;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-
-        .btn-delete:hover {
-            background: #ef4444;
-            color: white;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-        }
-
-        /* === MOBILE MENU === */
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
             color: var(--dark-text);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1001;
+            font-size: var(--fs-sm);
+        }
+        .filter-option:hover { background: var(--sidebar-hover); }
+        .filter-option.active { background: rgba(99,102,241,.12); color: var(--primary); }
+
+        .candidate-cell-name { font-weight: 600; color: var(--dark-text); }
+        .candidate-cell-email { font-size: .78rem; color: var(--dark-text-secondary); }
+
+        .count-pill {
+            display: inline-flex; align-items: center; gap: .4rem;
+            padding: .4rem .85rem;
+            background: rgba(99,102,241,.1);
+            border: 1px solid rgba(99,102,241,.25);
+            border-radius: var(--radius-pill);
+            color: var(--primary);
+            font-weight: 600;
+            font-size: var(--fs-sm);
         }
 
-        /* === RESPONSIVE === */
-        @media(max-width: 992px) {
-            .controls-bar {
-                grid-template-columns: 1fr;
-                gap: .75rem;
-            }
-
-            .employee-count-bubble {
-                justify-self: center;
-            }
-
-            .filter-dropdown {
-                justify-self: end;
-            }
+        /* Create-offer modal */
+        #createOfferOverlay {
+            display:none; position:fixed; inset:0; background:rgba(0,0,0,.75);
+            z-index:2000; align-items:center; justify-content:center;
         }
-
-        @media(max-width: 768px) {
-            .mobile-menu-toggle { display: block; }
-            .sidebar { transform: translateX(-100%); }
-            .sidebar.active { transform: translateX(0); }
-            .main-content { margin-left: 0; }
-
-            .top-header {
-                flex-direction: column;
-                gap: 1rem;
-                padding: 1rem;
-                align-items: stretch;
-            }
-
-            .search-box {
-                width: 100%;
-                order: 2;
-            }
-
-            .top-header-actions {
-                order: 1;
-                justify-content: flex-end;
-                width: 100%;
-            }
-
-            .notification-dropdown-menu {
-                position: fixed;
-                top: 70px;
-                right: 1rem;
-                left: 1rem;
-                width: auto;
-                min-width: auto;
-            }
-
-            .content-area { padding: 1rem; }
-
-            .filter-dropdown {
-                justify-self: stretch;
-            }
-
-            .filter-dropdown-btn {
-                width: 100%;
-                justify-content: space-between;
-            }
+        #createOfferPanel {
+            display:none;
+            position:fixed; top:50%; left:50%;
+            transform:translate(-50%,-50%) scale(.95);
+            z-index:2001;
+            width:min(750px,95vw); max-height:90vh; overflow-y:auto;
+            background:var(--dark-card); border:1px solid var(--dark-border);
+            border-radius:var(--radius-card);
+            box-shadow:0 25px 60px rgba(0,0,0,.5);
+            transition:transform .3s ease, opacity .3s ease;
+            opacity:0;
         }
-
-        @media(max-width: 576px) {
-            .search-box {
-                min-width: 100%;
-            }
-
-            .filter-dropdown-menu {
-                left: 0;
-                right: 0;
-            }
-
-            .table-container { overflow-x: auto; }
-            .table { min-width: 600px; }
-            .action-buttons { gap: .25rem; }
-            .btn-action { width: 28px; height: 28px; }
-
-            .top-header-actions {
-                gap: 0.5rem;
-            }
-
-            .icon-btn {
-                width: 36px;
-                height: 36px;
-            }
-
-            .user-profile-menu .dropdown-toggle {
-                padding: 0.375rem 0.75rem;
-                font-size: 0.875rem;
-            }
-
-            .avatar-sm {
-                width: 28px !important;
-                height: 28px !important;
-            }
+        .panel-header {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:1.25rem 1.5rem;
+            border-bottom:1px solid var(--dark-border);
+            position:sticky; top:0; background:var(--dark-card);
+            z-index:10; border-radius:var(--radius-card) var(--radius-card) 0 0;
         }
+        .panel-body { padding:1.5rem; }
+        .panel-footer {
+            display:flex; justify-content:space-between; align-items:center;
+            margin-top:1.5rem; padding-top:1.5rem;
+            border-top:1px solid var(--dark-border);
+        }
+        .panel-form-group label {
+            display:block; font-weight:600; color:var(--dark-text);
+            margin-bottom:.4rem; font-size:.875rem;
+        }
+        .panel-form-group input,
+        .panel-form-group select,
+        .panel-form-group textarea {
+            width:100%; padding:.65rem .75rem;
+            border-radius:8px;
+            border:1px solid var(--dark-border);
+            background:var(--dark-bg); color:var(--dark-text);
+            font-size:.875rem; font-family:inherit;
+            transition:var(--transition);
+        }
+        .panel-form-group input:focus,
+        .panel-form-group select:focus,
+        .panel-form-group textarea:focus {
+            border-color:var(--primary);
+            box-shadow:0 0 0 3px rgba(99,102,241,.1);
+            outline:none;
+        }
+        .panel-steps { display:flex; justify-content:space-between; margin-bottom:1.5rem; position:relative; }
+        .panel-steps::before {
+            content:''; position:absolute; top:20px; left:50px; right:50px;
+            height:2px; background:var(--dark-border); z-index:0;
+        }
+        .panel-step { display:flex; flex-direction:column; align-items:center; z-index:1; flex:1; }
+        .panel-step-num {
+            width:40px; height:40px; border-radius:50%;
+            background:var(--dark-border); color:var(--dark-text-secondary);
+            display:flex; align-items:center; justify-content:center;
+            font-weight:600; margin-bottom:.4rem;
+            transition:var(--transition);
+        }
+        .panel-step-label { font-size:.75rem; color:var(--dark-text-secondary); text-align:center; }
+        .panel-step.active .panel-step-num { background:var(--primary); color:#fff; }
+        .panel-step.active .panel-step-label { color:var(--primary); font-weight:600; }
+        .panel-step.completed .panel-step-num { background:var(--success); color:#fff; }
+        .panel-step.completed .panel-step-label { color:var(--success); }
     </style>
 </head>
 <body>
 
-<div th:replace="~{fragments/layout :: sidebar('offer-candidates')}"></div>
+<!-- === SHARED SIDEBAR (offer-letters active) === -->
+<div th:replace="~{fragments/layout :: sidebar('offer-letters')}"></div>
 
-<!-- === MAIN CONTENT === -->
 <div class="main-content">
     <header th:replace="~{fragments/layout :: topbar}"></header>
 
     <div class="content-area">
-        <!-- Error Alert -->
-        <div th:if="${param.error}" id="errorAlert" class="alert alert-danger" role="alert" style="display: none;">
+
+        <div class="pm-page-head">
+            <div>
+                <h1 class="pm-page-title">
+                    <i class="fas fa-file-contract"></i>
+                    <span>Offer Letter Candidates</span>
+                </h1>
+                <div class="pm-page-sub">Generate and manage offer letters</div>
+            </div>
+            <div class="pm-page-actions">
+                <button type="button" class="pm-btn pm-btn-primary" onclick="openCreateOfferPanel()">
+                    <i class="fas fa-plus"></i> Create Offer
+                </button>
+            </div>
+        </div>
+
+        <div th:if="${param.error}" class="alert alert-danger" style="margin-bottom: 1rem;">
             <i class="fas fa-exclamation-circle me-2"></i>
             <span th:text="${param.error}"></span>
-            <button type="button" class="btn-close" onclick="this.parentElement.remove()" style="margin-left: auto; background: none; border: none; color: inherit; cursor: pointer;">&times;</button>
         </div>
 
-        <!-- Page Title for Offer Candidates -->
-        <!-- Page Title for Offer Candidates -->
-        <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-            <h1 class="page-title">Offer Letter Candidates</h1>
-            <button type="button" onclick="openCreateOfferPanel()"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem;
-                   padding: 0.6rem 1.25rem; border-radius: 8px; border: none; cursor: pointer;
-                   background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-                   color: white; font-weight: 600; font-size: 0.875rem;
-                   transition: all 0.2s ease;">
-                <i class="fas fa-plus"></i> Create Offer
+        <!-- Toolbar -->
+        <div class="content-card" style="margin-bottom: 1rem;">
+            <div class="card-body">
+                <div style="display: flex; gap: .75rem; flex-wrap: wrap; align-items: center;">
+                    <div class="search-box" style="flex: 1; min-width: 240px; width: auto;">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="searchInputOffers"
+                               placeholder="Search candidate or position...">
+                    </div>
+
+                    <span class="count-pill">
+                        <i class="fas fa-file-contract"></i>
+                        Offers: <span id="recordCount">0</span>
+                    </span>
+
+                    <div class="filter-dropdown">
+                        <button class="filter-dropdown-btn" id="filterDropdownBtn">
+                            <i class="fas fa-filter"></i>
+                            <span id="selectedFilterText">All Time</span>
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                        <div class="filter-dropdown-menu" id="filterDropdownMenu">
+                            <div class="filter-option active" data-value="all" data-text="All Time">All Time</div>
+                            <div class="filter-option" data-value="today" data-text="Today">Today</div>
+                            <div class="filter-option" data-value="week" data-text="Last 7 Days">Last 7 Days</div>
+                            <div class="filter-option" data-value="month" data-text="Last 30 Days">Last 30 Days</div>
+                            <div class="filter-option" data-value="3months" data-text="Last 3 Months">Last 3 Months</div>
+                            <div class="filter-option" data-value="6months" data-text="Last 6 Months">Last 6 Months</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="content-card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas fa-list"></i> Generated Offers
+                </h5>
+            </div>
+            <div class="table-container">
+                <table class="pm-table" id="offersTable">
+                    <thead>
+                    <tr>
+                        <th style="width: 55px;">#</th>
+                        <th>Candidate</th>
+                        <th>Email</th>
+                        <th>Position</th>
+                        <th>Generated</th>
+                        <th style="text-align: right; width: 200px;">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="offer, stat : ${offerCandidates}"
+                        th:if="${offerCandidates != null and !offerCandidates.empty}"
+                        th:attr="data-name=${offer.candidateName},
+                                 data-email=${offer.candidateEmail},
+                                 data-position=${offer.designation},
+                                 data-date=${offer.createdDate}">
+                        <td th:text="${stat.count}">1</td>
+                        <td>
+                            <span class="candidate-cell-name"
+                                  th:text="${offer.candidateName != null and offer.candidateName.contains(',') ? #strings.substringBefore(offer.candidateName, ',') : offer.candidateName}">—</span>
+                        </td>
+                        <td>
+                            <span class="candidate-cell-email"
+                                  th:text="${offer.candidateEmail != null and offer.candidateEmail.contains(',') ? #strings.substringBefore(offer.candidateEmail, ',') : offer.candidateEmail}">—</span>
+                        </td>
+                        <td th:text="${offer.designation}">—</td>
+                        <td th:text="${#temporals.format(offer.createdDate, 'dd/MM/yyyy HH:mm')}">—</td>
+                        <td>
+                            <div class="action-buttons" style="justify-content: flex-end;">
+                                <a th:href="@{/dashboard/hr/view-offer/{id}(id=${offer.id})}"
+                                   target="_blank" class="btn-action btn-view" title="View Offer">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a th:href="@{/dashboard/hr/start-onboarding/{offerId}(offerId=${offer.id})}"
+                                   class="btn-action btn-edit" title="Start Onboarding">
+                                    <i class="fas fa-play"></i>
+                                </a>
+                                <a th:if="${offer.employeeId == null}"
+                                   th:href="@{/dashboard/hr/add-employee(firstName=${offer.candidateName != null ? #strings.substringBefore(offer.candidateName, ' ') : ''},lastName=${offer.candidateName != null and offer.candidateName.contains(' ') ? #strings.substringAfter(offer.candidateName, ' ') : ''},department=${offer.department},designation=${offer.designation},employmentType='Full-time')}"
+                                   class="btn-action btn-docs" title="Add as Employee">
+                                    <i class="fas fa-user-plus"></i>
+                                </a>
+                                <button type="button"
+                                        class="btn-action btn-delete"
+                                        title="Delete Offer"
+                                        th:data-offer-id="${offer.id}"
+                                        th:data-candidate-name="${offer.candidateName}"
+                                        onclick="deleteOffer(this)">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${offerCandidates == null or offerCandidates.empty}">
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <i class="fas fa-file-contract"></i>
+                                <h4>No Offer Candidates Found</h4>
+                                <p>Generate your first offer to get started.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete confirm modal -->
+<div class="attendance-modal" id="deleteConfirmModal">
+    <div class="attendance-modal-content" style="max-width: 480px;">
+        <div class="attendance-modal-header">
+            <h3 style="color: var(--danger);">
+                <i class="fas fa-exclamation-triangle"></i> Confirm Delete
+            </h3>
+            <button type="button" class="close-attendance-modal" onclick="closeDeleteModal()">&times;</button>
+        </div>
+        <div style="padding: .5rem 0 1rem;">
+            <p id="deleteConfirmMessage" style="color: var(--dark-text);">
+                Are you sure you want to delete this offer?
+            </p>
+            <p style="font-size: .85rem; color: var(--warning);">
+                <i class="fas fa-info-circle"></i> This action cannot be undone.
+            </p>
+        </div>
+        <div style="display: flex; gap: .75rem; justify-content: flex-end;">
+            <button type="button" class="pm-btn" onclick="closeDeleteModal()">Cancel</button>
+            <button type="button" class="pm-btn pm-btn-danger" id="confirmDeleteBtn">
+                <i class="fas fa-trash-alt"></i> Delete
             </button>
         </div>
-        <!-- Search, Count & Filter -->
-        <div class="controls-bar">
-            <div class="search-box">
-                <i class="fas fa-search"></i>
-                <input type="text" id="searchInputOffers" placeholder="Search by candidate name or position...">
-            </div>
-
-            <div class="employee-count-bubble">
-                <i class="fas fa-file-contract"></i>
-                <span class="count-text">Offers:</span>
-                <span class="count-number" id="recordCount">0</span>
-            </div>
-
-            <div class="filter-dropdown">
-                <button class="filter-dropdown-btn" id="filterDropdownBtn">
-                    <i class="fas fa-filter"></i>
-                    <span id="selectedFilterText">All Time</span>
-                    <i class="fas fa-chevron-down"></i>
-                </button>
-                <div class="filter-dropdown-menu" id="filterDropdownMenu">
-                    <div class="filter-option active" data-value="all" data-text="All Time">All Time</div>
-                    <div class="filter-option" data-value="today" data-text="Today">Today</div>
-                    <div class="filter-option" data-value="week" data-text="Last 7 Days">Last 7 Days</div>
-                    <div class="filter-option" data-value="month" data-text="Last 30 Days">Last 30 Days</div>
-                    <div class="filter-option" data-value="3months" data-text="Last 3 Months">Last 3 Months</div>
-                    <div class="filter-option" data-value="6months" data-text="Last 6 Months">Last 6 Months</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Table Container -->
-        <div class="table-container">
-            <table class="table table-dark table-striped" id="offersTable">
-                <thead>
-                <tr>
-                    <th style="width: 50px;">S.No</th>
-                    <th>Employee</th>
-                    <th>Email</th>
-                    <th>Position</th>
-                    <th>Generated Date</th>
-                    <th style="text-align: center; width: 150px;">Actions</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="offer, stat : ${offerCandidates}"
-                    th:attr="data-name=${offer.candidateName},data-email=${offer.candidateEmail},data-position=${offer.designation},data-date=${offer.createdDate}">
-                    <td th:text="${stat.count}">1</td>
-                    <td>
-                        <span th:text="${offer.candidateName != null and offer.candidateName.contains(',') ? #strings.substringBefore(offer.candidateName, ',') : offer.candidateName}"></span>
-                    </td>
-                    <td>
-                        <span th:text="${offer.candidateEmail != null and offer.candidateEmail.contains(',') ? #strings.substringBefore(offer.candidateEmail, ',') : offer.candidateEmail}"></span>
-                    </td>
-                    <td th:text="${offer.designation}">Software Engineer</td>
-                    <td th:text="${#temporals.format(offer.createdDate, 'dd/MM/yyyy HH:mm')}">25/11/2025 20:05</td>
-                    <td style="text-align: center;">
-                        <div class="action-buttons">
-                            <!-- View Offer -->
-                            <a th:href="@{/dashboard/hr/view-offer/{id}(id=${offer.id})}"
-                               target="_blank" class="btn-action btn-view" title="View Offer">
-                                <i class="fas fa-eye"></i>
-                            </a>
-
-                            <!-- Start Onboarding -->
-                            <a th:href="@{/dashboard/hr/start-onboarding/{offerId}(offerId=${offer.id})}"
-                               class="btn-action btn-start" title="Start Onboarding">
-                                <i class="fas fa-play"></i>
-                            </a>
-
-                            <!-- Add Employee -->
-                            <a th:href="@{/dashboard/hr/add-employee(firstName=${offer.candidateName != null ? #strings.substringBefore(offer.candidateName, ' ') : ''},
-                   lastName=${offer.candidateName != null and offer.candidateName.contains(' ') ? #strings.substringAfter(offer.candidateName, ' ') : ''},
-                   department=${offer.department},
-                   designation=${offer.designation},
-                   employmentType='Full-time')}"
-                               th:if="${offer.employeeId == null}"
-                               class="btn-action btn-add-employee" title="Add as Employee">
-                                <i class="fas fa-user-plus"></i>
-                            </a>
-
-                            <!-- DELETE BUTTON -->
-                            <!-- DELETE BUTTON -->
-                            <button type="button"
-                                    class="btn-action btn-delete"
-                                    title="Delete Offer"
-                                    th:data-offer-id="${offer.id}"
-                                    th:data-candidate-name="${offer.candidateName}"
-                                    onclick="deleteOffer(this)">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                <tr th:if="${offerCandidates == null or offerCandidates.empty}">
-                    <td colspan="6">
-                        <div class="empty-state">
-                            <i class="fas fa-file-contract"></i>
-                            <h4>No Offer Candidates Found</h4>
-                            <p>There are no pending offer letters at the moment.</p>
-                        </div>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
     </div>
 </div>
 
-<!-- Success Popup Modal -->
-<div th:if="${showSuccessPopup}" class="modal fade show" id="successPopup"
-     style="display: block; background: rgba(0,0,0,0.8); z-index: 9999;" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-md">
-        <div class="modal-content" style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--dark-border); padding: 1.25rem;">
-                <h5 class="modal-title" style="color: var(--success); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-check-circle"></i>
-                    Offer Generated Successfully!
-                </h5>
-                <button type="button"
-                        onclick="document.getElementById('successPopup').style.display='none';
-                 document.getElementById('successPopup').remove();
-                 console.log('✅ Popup closed');"
-                        style="position:absolute;top:10px;right:15px;background:none;border:none;font-size:28px;color:white;">
-                    ×
-                </button>
-            </div>
-            <div class="modal-body" style="color: var(--dark-text); padding: 2rem; text-align: center;">
-                <div style="margin-bottom: 1.5rem;">
-                    <i class="fas fa-file-contract" style="font-size: 4rem; color: var(--primary);"></i>
-                </div>
-                <p style="font-size: 1.1rem; margin-bottom: 0.5rem;">
-                    Offer letter has been generated for
-                    <strong th:text="${candidateName != null ? candidateName : 'Candidate'}" style="color: var(--primary);"></strong>.
-                </p>
-                <p style="color: var(--dark-text-secondary); margin-bottom: 0;">What would you like to do next?</p>
-            </div>
-            <div class="modal-footer" style="border-top: 1px solid var(--dark-border); justify-content: center; gap: 0.75rem; padding: 1.25rem;">
-                <button type="button"
-                        onclick="document.getElementById('successPopup').style.display='none';
-                 document.getElementById('successPopup').remove();
-                 console.log('✅ Popup closed');"
-                        class="btn btn-outline-light w-100 py-2">
-                    × Close
-                </button>
-                <a th:href="@{/dashboard/hr/view-offer/{id}(id=${offer.id})}" class="btn btn-info" target="_blank" style="background: var(--info); color: white; border: none; min-width: 100px; border-radius: 8px;">
-                    <i class="fas fa-eye"></i> View Offer
-                </a>
-                <button type="button" th:onclick="'startOnboardingFromOffer(\'' + ${offerId} + '\')'" class="btn btn-primary" style="background: linear-gradient(135deg, var(--primary), var(--primary-hover)); border: none; min-width: 140px; border-radius: 8px;">
-                    <i class="fas fa-play"></i> Start Onboarding
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Create offer overlay + panel -->
+<div id="createOfferOverlay" onclick="closeCreateOfferPanel()"></div>
 
-<!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: var(--dark-card); border: 1px solid var(--dark-border);">
-            <div class="modal-header" style="border-bottom: 1px solid var(--dark-border);">
-                <h5 class="modal-title" style="color: var(--danger);">
-                    <i class="fas fa-exclamation-triangle"></i> Confirm Delete
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body" style="color: var(--dark-text); padding: 1.5rem;">
-                <p id="deleteConfirmMessage">Are you sure you want to delete this offer?</p>
-                <p class="text-warning mt-2" style="font-size: 0.9rem;">
-                    <i class="fas fa-info-circle"></i> This action cannot be undone.
-                </p>
-            </div>
-            <div class="modal-footer" style="border-top: 1px solid var(--dark-border);">
-                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                    <i class="fas fa-trash-alt"></i> Delete
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Create Offer Modal Overlay -->
-<div id="createOfferOverlay" onclick="closeCreateOfferPanel()"
-     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75);
-            z-index:2000; align-items:center; justify-content:center;"></div>
-
-<!-- Create Offer Modal (Centered Popup) -->
-<div id="createOfferPanel"
-     style="display:none; position:fixed; top:50%; left:50%; z-index:2001;
-            transform:translate(-50%, -50%) scale(0.95);
-            width:min(750px, 95vw); max-height:90vh; overflow-y:auto;
-            background:var(--dark-card); border:1px solid var(--dark-border);
-            border-radius:12px; box-shadow:0 25px 60px rgba(0,0,0,0.5);
-            transition:transform 0.3s ease, opacity 0.3s ease; opacity:0;">
-
-    <!-- Modal Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center;
-                padding:1.25rem 1.5rem; border-bottom:1px solid var(--dark-border);
-                position:sticky; top:0; background:var(--dark-card); z-index:10; border-radius:12px 12px 0 0;">
-        <h5 style="margin:0; color:var(--primary); font-weight:600; display:flex; align-items:center; gap:0.5rem;">
+<div id="createOfferPanel">
+    <div class="panel-header">
+        <h5 style="margin:0; color:var(--primary); font-weight:600; display:flex; align-items:center; gap:.5rem;">
             <i class="fas fa-file-contract"></i> Create Offer Letter
         </h5>
-        <button onclick="closeCreateOfferPanel()"
+        <button type="button" onclick="closeCreateOfferPanel()"
                 style="background:none; border:none; color:var(--dark-text-secondary);
-                       font-size:1.5rem; cursor:pointer; line-height:1; padding:0.25rem 0.5rem;">×</button>
+                       font-size:1.5rem; cursor:pointer; line-height:1; padding:.25rem .5rem;">×</button>
     </div>
 
-    <!-- Modal Body -->
-    <div style="padding:1.5rem;">
-
-        <!-- Step Indicators -->
-        <div style="display:flex; justify-content:space-between; margin-bottom:1.5rem; position:relative;">
-            <div style="position:absolute; top:20px; left:50px; right:50px;
-                        height:2px; background:var(--dark-border); z-index:0;"></div>
-
-            <div id="panelStep1" style="display:flex; flex-direction:column; align-items:center; z-index:1; flex:1;">
-                <div class="ps-num" id="psn1"
-                     style="width:40px; height:40px; border-radius:50%; background:var(--primary);
-                            color:white; display:flex; align-items:center; justify-content:center;
-                            font-weight:600; margin-bottom:0.4rem;">1</div>
-                <span id="psl1" style="font-size:0.75rem; color:var(--primary); font-weight:600; text-align:center;">Candidate</span>
+    <div class="panel-body">
+        <div class="panel-steps">
+            <div class="panel-step active" id="panelStep1">
+                <div class="panel-step-num" id="psn1">1</div>
+                <div class="panel-step-label">Candidate</div>
             </div>
-            <div id="panelStep2" style="display:flex; flex-direction:column; align-items:center; z-index:1; flex:1;">
-                <div class="ps-num" id="psn2"
-                     style="width:40px; height:40px; border-radius:50%; background:var(--dark-border);
-                            color:var(--dark-text-secondary); display:flex; align-items:center; justify-content:center;
-                            font-weight:600; margin-bottom:0.4rem;">2</div>
-                <span id="psl2" style="font-size:0.75rem; color:var(--dark-text-secondary); text-align:center;">Compensation</span>
+            <div class="panel-step" id="panelStep2">
+                <div class="panel-step-num" id="psn2">2</div>
+                <div class="panel-step-label">Compensation</div>
             </div>
-            <div id="panelStep3" style="display:flex; flex-direction:column; align-items:center; z-index:1; flex:1;">
-                <div class="ps-num" id="psn3"
-                     style="width:40px; height:40px; border-radius:50%; background:var(--dark-border);
-                            color:var(--dark-text-secondary); display:flex; align-items:center; justify-content:center;
-                            font-weight:600; margin-bottom:0.4rem;">3</div>
-                <span id="psl3" style="font-size:0.75rem; color:var(--dark-text-secondary); text-align:center;">Generate</span>
+            <div class="panel-step" id="panelStep3">
+                <div class="panel-step-num" id="psn3">3</div>
+                <div class="panel-step-label">Generate</div>
             </div>
         </div>
 
-        <!-- SINGLE FORM — no required on hidden fields, JS validates manually -->
         <form id="panelOfferForm" method="POST" action="/dashboard/hr/save-offer" enctype="multipart/form-data">
-
-            <!-- Hidden fields the backend needs -->
             <input type="hidden" name="applicationId" value="">
             <input type="hidden" name="employeeId" value="">
             <input type="hidden" name="type" value="NEW">
 
-            <!-- ===== SECTION 1: Candidate ===== -->
+            <!-- Section 1 -->
             <div id="panelSection1">
-                <h6 style="color:var(--primary); font-weight:600; margin-bottom:1rem;
-                            padding-bottom:0.5rem; border-bottom:2px solid var(--primary);">
-                    <i class="fas fa-user"></i> Candidate Information
-                </h6>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Candidate Name <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="candidateName" id="panelCandidateName"
-                               placeholder="Full name" data-panel-required="1"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Candidate Name <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="candidateName" id="panelCandidateName" data-panel-required="1" placeholder="Full name">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Candidate Email <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="email" name="candidateEmail" id="panelCandidateEmail"
-                               placeholder="email@example.com" data-panel-required="1"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Candidate Email <span style="color:var(--danger);">*</span></label>
+                        <input type="email" name="candidateEmail" id="panelCandidateEmail" data-panel-required="1" placeholder="email@example.com">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Department <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="department" id="panelDepartment"
-                               placeholder="e.g. Engineering" data-panel-required="1"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Department <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="department" data-panel-required="1" placeholder="e.g. Engineering">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Designation <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="designation" id="panelDesignation"
-                               placeholder="e.g. Software Engineer" data-panel-required="1"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Designation <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="designation" data-panel-required="1" placeholder="e.g. Software Engineer">
                     </div>
                 </div>
             </div>
 
-            <!-- ===== SECTION 2: Compensation (hidden, NO required attr) ===== -->
+            <!-- Section 2 -->
             <div id="panelSection2" style="display:none;">
-                <h6 style="color:var(--primary); font-weight:600; margin-bottom:1rem;
-                            padding-bottom:0.5rem; border-bottom:2px solid var(--primary);">
-                    <i class="fas fa-briefcase"></i> Position & Compensation
-                </h6>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Employment Type <span style="color:var(--danger);">*</span>
-                        </label>
-                        <select name="employmentType" data-panel-required="2"
-                                style="width:100%; padding:0.75rem; border-radius:8px;
-                                       border:1px solid var(--dark-border);
-                                       background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Employment Type <span style="color:var(--danger);">*</span></label>
+                        <select name="employmentType" data-panel-required="2">
                             <option value="">Select Type</option>
                             <option value="Full-time">Full-time</option>
                             <option value="Part-time">Part-time</option>
@@ -1183,929 +372,394 @@
                             <option value="Internship">Internship</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Work Location <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="workLocation" data-panel-required="2"
-                               placeholder="e.g. Hyderabad Office"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Work Location <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="workLocation" data-panel-required="2" placeholder="e.g. Hyderabad">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Annual Salary <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="annualSalary" data-panel-required="2"
-                               placeholder="e.g. 500000"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Annual Salary <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="annualSalary" data-panel-required="2" placeholder="e.g. 500000">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Currency <span style="color:var(--danger);">*</span>
-                        </label>
-                        <select name="currency" data-panel-required="2"
-                                style="width:100%; padding:0.75rem; border-radius:8px;
-                                       border:1px solid var(--dark-border);
-                                       background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Currency <span style="color:var(--danger);">*</span></label>
+                        <select name="currency" data-panel-required="2">
                             <option value="">Select Currency</option>
                             <option value="INR">INR (₹)</option>
                             <option value="USD">USD ($)</option>
                             <option value="EUR">EUR (€)</option>
                         </select>
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Joining Date <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="date" name="joiningDate" id="panelJoiningDate" data-panel-required="2"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Joining Date <span style="color:var(--danger);">*</span></label>
+                        <input type="date" name="joiningDate" id="panelJoiningDate" data-panel-required="2">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Reporting Manager <span style="color:var(--danger);">*</span>
-                        </label>
-                        <input type="text" name="reportingManager" data-panel-required="2"
-                               placeholder="Manager name"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Reporting Manager <span style="color:var(--danger);">*</span></label>
+                        <input type="text" name="reportingManager" data-panel-required="2" placeholder="Manager name">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Probation Period
-                        </label>
-                        <input type="text" name="probationPeriod" value="3 months"
-                               style="width:100%; padding:0.75rem; border-radius:8px;
-                                      border:1px solid var(--dark-border);
-                                      background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Probation Period</label>
+                        <input type="text" name="probationPeriod" value="3 months">
                     </div>
-                    <div>
-                        <label style="display:block; font-weight:600; color:var(--dark-text);
-                                      margin-bottom:0.4rem; font-size:0.875rem;">
-                            Letter Type <span style="color:var(--danger);">*</span>
-                        </label>
-                        <select name="offerType" data-panel-required="2"
-                                style="width:100%; padding:0.75rem; border-radius:8px;
-                                       border:1px solid var(--dark-border);
-                                       background:var(--dark-bg); color:var(--dark-text); font-size:0.875rem;">
+                    <div class="panel-form-group">
+                        <label>Letter Type <span style="color:var(--danger);">*</span></label>
+                        <select name="offerType" data-panel-required="2">
                             <option value="">Select Type</option>
                             <option value="OFFER">Offer Letter</option>
                             <option value="APPOINTMENT">Appointment Letter</option>
                         </select>
                     </div>
                 </div>
-                <div style="margin-top:1rem;">
-                    <label style="display:block; font-weight:600; color:var(--dark-text);
-                                  margin-bottom:0.4rem; font-size:0.875rem;">Additional Notes</label>
-                    <textarea name="additionalNotes" rows="3" placeholder="Any additional information..."
-                              style="width:100%; padding:0.75rem; border-radius:8px;
-                                     border:1px solid var(--dark-border);
-                                     background:var(--dark-bg); color:var(--dark-text);
-                                     font-size:0.875rem; resize:vertical;"></textarea>
+                <div class="panel-form-group" style="margin-top:1rem;">
+                    <label>Additional Notes</label>
+                    <textarea name="additionalNotes" rows="3" placeholder="Any additional information..."></textarea>
                 </div>
             </div>
 
-            <!-- ===== SECTION 3: Signature ===== -->
+            <!-- Section 3 -->
             <div id="panelSection3" style="display:none;">
-                <h6 style="color:var(--primary); font-weight:600; margin-bottom:1rem;
-                            padding-bottom:0.5rem; border-bottom:2px solid var(--primary);">
-                    <i class="fas fa-signature"></i> Signature & Generate
-                </h6>
-                <p style="color:var(--dark-text-secondary); font-size:0.875rem; margin-bottom:1rem;">
-                    Upload a transparent PNG signature (optional)
-                </p>
-                <div onclick="document.getElementById('panelSignatureFile').click()"
-                     id="panelSignaturePreview"
-                     style="border:2px dashed var(--primary); border-radius:8px; padding:2rem;
-                            text-align:center; background:rgba(99,102,241,0.05); cursor:pointer; margin-bottom:1rem;">
-                    <div id="panelUploadPlaceholder">
-                        <i class="fas fa-signature" style="font-size:2rem; color:var(--primary); display:block; margin-bottom:0.5rem;"></i>
-                        <p style="margin:0; color:var(--dark-text);">Click to upload signature</p>
-                        <small style="color:var(--dark-text-secondary);">PNG with transparent background recommended</small>
+                <div class="panel-form-group">
+                    <label>Signature (optional)</label>
+                    <div onclick="document.getElementById('panelSignatureFile').click()"
+                         style="border:2px dashed var(--primary); border-radius:8px; padding:2rem;
+                                text-align:center; background:rgba(99,102,241,.05);
+                                cursor:pointer; margin-bottom:.75rem;">
+                        <div id="panelUploadPlaceholder">
+                            <i class="fas fa-signature"
+                               style="font-size:2rem; color:var(--primary); display:block; margin-bottom:.5rem;"></i>
+                            <p style="margin:0; color:var(--dark-text);">Click to upload signature</p>
+                            <small style="color:var(--dark-text-secondary);">PNG recommended</small>
+                        </div>
+                        <img id="panelSignatureImage"
+                             style="display:none; max-height:100px; max-width:100%;" alt="Signature">
                     </div>
-                    <img id="panelSignatureImage" style="display:none; max-height:100px; max-width:100%;" alt="Signature">
-                </div>
-                <input type="file" id="panelSignatureFile" name="signatureFile"
-                       accept="image/*" style="display:none;" onchange="panelPreviewSignature(this)">
-                <div id="panelSignatureActions" style="display:none; margin-bottom:1rem; align-items:center;">
-                    <button type="button" onclick="panelRemoveSignature()"
-                            style="background:rgba(239,68,68,0.1); color:var(--danger);
-                                   border:1px solid rgba(239,68,68,0.2); padding:0.4rem 0.75rem;
-                                   border-radius:6px; cursor:pointer; font-size:0.8rem;">
-                        <i class="fas fa-times"></i> Remove
-                    </button>
-                    <small id="panelFileName" style="color:var(--dark-text-secondary); margin-left:0.75rem;"></small>
+                    <input type="file" id="panelSignatureFile" name="signatureFile"
+                           accept="image/*" style="display:none;"
+                           onchange="panelPreviewSignature(this)">
+                    <div id="panelSignatureActions"
+                         style="display:none; margin-top:.5rem; align-items:center; gap:.5rem;">
+                        <button type="button" class="pm-btn pm-btn-danger pm-btn-sm"
+                                onclick="panelRemoveSignature()">
+                            <i class="fas fa-times"></i> Remove
+                        </button>
+                        <small id="panelFileName"
+                               style="color:var(--dark-text-secondary); margin-left:.75rem;"></small>
+                    </div>
                 </div>
             </div>
 
-            <!-- Nav Buttons -->
-            <div style="display:flex; justify-content:space-between; align-items:center;
-                        margin-top:1.5rem; padding-top:1.5rem; border-top:1px solid var(--dark-border);">
+            <div class="panel-footer">
                 <button type="button" id="panelPrevBtn" onclick="panelPrevStep()"
-                        style="display:none; padding:0.75rem 1.5rem; border-radius:8px;
-                               border:1px solid var(--dark-border); background:transparent;
-                               color:var(--dark-text-secondary); font-weight:600; cursor:pointer;
-                               align-items:center; gap:0.5rem;">
+                        class="pm-btn" style="display:none;">
                     <i class="fas fa-arrow-left"></i> Previous
                 </button>
-                <div style="margin-left:auto; display:flex; gap:0.75rem;">
+                <div style="margin-left:auto; display:flex; gap:.75rem;">
                     <button type="button" id="panelNextBtn" onclick="panelNextStep()"
-                            style="padding:0.75rem 1.5rem; border-radius:8px; border:none;
-                                   background:linear-gradient(135deg,var(--primary),var(--primary-hover));
-                                   color:white; font-weight:600; cursor:pointer;
-                                   display:inline-flex; align-items:center; gap:0.5rem;">
+                            class="pm-btn pm-btn-primary">
                         Next <i class="fas fa-arrow-right"></i>
                     </button>
                     <button type="submit" id="panelGenerateBtn"
-                            style="display:none; padding:0.75rem 1.5rem; border-radius:8px; border:none;
-                                   background:linear-gradient(135deg,var(--success),#059669);
-                                   color:white; font-weight:600; cursor:pointer;
-                                   align-items:center; gap:0.5rem;">
+                            class="pm-btn pm-btn-success" style="display:none;">
                         <i class="fas fa-file-pdf"></i> Generate Offer
                     </button>
                 </div>
             </div>
-
         </form>
     </div>
 </div>
 
+<!-- === SHARED AI PANEL === -->
+<div th:replace="~{fragments/layout :: aipanel}"></div>
 
+<!-- === SHARED SCRIPTS === -->
 <div th:replace="~{fragments/layout :: common-scripts}"></div>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script th:src="@{/js/offer-auto-view.js}"></script>
+
+<!-- === PAGE-SPECIFIC SCRIPTS (unchanged) === -->
 <script>
-    // ============================================
-    // GLOBAL FUNCTIONS - MUST BE AT TOP LEVEL
-    // ============================================
-// Delete Offer function (moved to TOP to fix "not defined" error)
-  // Delete Offer function
-    function deleteOffer(button) {
-        const offerId = button.getAttribute('data-offer-id');
-        const candidateName = button.getAttribute('data-candidate-name');
+    'use strict';
 
-        if (!offerId) {
-            alert("Error: Offer ID is missing!");
-            return;
-        }
+    /* ============ Search + filter ============ */
+    function initializeSearchAndFilters() {
+        var searchInput = document.getElementById('searchInputOffers');
+        var filterBtn = document.getElementById('filterDropdownBtn');
+        var filterMenu = document.getElementById('filterDropdownMenu');
+        var selectedText = document.getElementById('selectedFilterText');
+        var options = document.querySelectorAll('.filter-option');
+        var rows = document.querySelectorAll('#offersTable tbody tr[data-name]');
 
-        window.currentDeleteOfferId = offerId;
+        updateCount(rows.length);
 
-        // Update modal message
-        const messageEl = document.getElementById('deleteConfirmMessage');
-        if (messageEl) {
-            messageEl.innerHTML = `Are you sure you want to delete the offer for <strong>${candidateName || 'this candidate'}</strong>?`;
-        }
-
-        // Show the modal
-        const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-        modal.show();
-    }
-
-    // Variables for delete (moved to top too)
-    let currentDeleteOfferId = null;
-    let currentDeleteRow = null;
-
-    // Close Success Popup - Now in global scope
-    function closeSuccessPopup() {
-        console.log('closeSuccessPopup called');
-        const popup = document.getElementById('successPopup');
-        if (popup) {
-            // Add fade-out animation
-            popup.style.transition = 'opacity 0.3s ease';
-            popup.style.opacity = '0';
-
-            // Remove after animation completes
-            setTimeout(() => {
-                popup.style.display = 'none';
-                popup.remove(); // Completely remove from DOM
-
-                // Clean up URL parameters to prevent popup on refresh
-                if (window.history.replaceState) {
-                    const cleanUrl = window.location.protocol + "//" +
-                                   window.location.host +
-                                   window.location.pathname;
-                    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-                }
-                console.log('Popup closed and removed');
-            }, 300);
-        } else {
-            console.log('Popup not found');
-        }
-    }
-
-    // Close Dynamic Popup
-    function closeDynamicPopup() {
-        console.log('closeDynamicPopup called');
-        const popup = document.getElementById('dynamicSuccessPopup');
-        if (popup) {
-            popup.remove();
-        }
-    }
-
-    // Start Onboarding from Offer
-    function startOnboardingFromOffer(offerId) {
-        if (!offerId) {
-            alert('Error: No offer ID provided');
-            return;
-        }
-
-        // Show loading state if triggered from button
-        if (event && event.target) {
-            const btn = event.target.closest('button') || event.target.closest('a');
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                btn.style.pointerEvents = 'none';
+        filterBtn.addEventListener('click', function () {
+            filterMenu.classList.toggle('show');
+        });
+        document.addEventListener('click', function (ev) {
+            if (!filterBtn.contains(ev.target) && !filterMenu.contains(ev.target)) {
+                filterMenu.classList.remove('show');
             }
+        });
+
+        options.forEach(function (opt) {
+            opt.addEventListener('click', function () {
+                options.forEach(function (o) { o.classList.remove('active'); });
+                opt.classList.add('active');
+                selectedText.textContent = opt.getAttribute('data-text');
+                filterMenu.classList.remove('show');
+                applyFilter(opt.getAttribute('data-value'));
+            });
+        });
+
+        searchInput.addEventListener('input', function () {
+            var active = document.querySelector('.filter-option.active');
+            applyFilter(active ? active.getAttribute('data-value') : 'all');
+        });
+
+        function applyFilter(dateFilter) {
+            var term = searchInput.value.toLowerCase();
+            var today = new Date();
+            var startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            var startOfWeek = new Date(today); startOfWeek.setDate(today.getDate() - 7);
+            var startOfMonth = new Date(today); startOfMonth.setDate(today.getDate() - 30);
+            var start3m = new Date(today); start3m.setMonth(today.getMonth() - 3);
+            var start6m = new Date(today); start6m.setMonth(today.getMonth() - 6);
+            var visible = 0;
+
+            rows.forEach(function (row) {
+                var name = (row.getAttribute('data-name') || '').toLowerCase();
+                var position = (row.getAttribute('data-position') || '').toLowerCase();
+                var dateStr = row.getAttribute('data-date');
+                var rowDate = dateStr ? new Date(dateStr) : null;
+                var show = true;
+
+                if (term && name.indexOf(term) === -1 && position.indexOf(term) === -1) show = false;
+
+                if (dateFilter !== 'all' && rowDate) {
+                    if (dateFilter === 'today' && rowDate < startOfToday) show = false;
+                    if (dateFilter === 'week' && rowDate < startOfWeek) show = false;
+                    if (dateFilter === 'month' && rowDate < startOfMonth) show = false;
+                    if (dateFilter === '3months' && rowDate < start3m) show = false;
+                    if (dateFilter === '6months' && rowDate < start6m) show = false;
+                }
+
+                row.style.display = show ? '' : 'none';
+                if (show) visible++;
+            });
+
+            updateCount(visible);
         }
 
-        window.location.href = '/dashboard/hr/start-onboarding/' + offerId;
+        function updateCount(n) {
+            var el = document.getElementById('recordCount');
+            if (el) el.textContent = n;
+        }
     }
 
+    /* ============ Delete ============ */
+    var currentDeleteOfferId = null;
 
+    function deleteOffer(btn) {
+        var id = btn.getAttribute('data-offer-id');
+        var name = btn.getAttribute('data-candidate-name');
+        if (!id) { showPmToast('Missing offer id', 'error'); return; }
+        currentDeleteOfferId = id;
 
+        var msg = document.getElementById('deleteConfirmMessage');
+        if (msg) msg.innerHTML = 'Are you sure you want to delete the offer for <strong>' +
+            (name || 'this candidate') + '</strong>?';
 
-    // Perform Delete - Async function
+        var modal = document.getElementById('deleteConfirmModal');
+        if (modal) modal.style.display = 'block';
+    }
+
+    function closeDeleteModal() {
+        var modal = document.getElementById('deleteConfirmModal');
+        if (modal) modal.style.display = 'none';
+        currentDeleteOfferId = null;
+    }
+
     async function performDelete() {
-        const offerId = window.currentDeleteOfferId;
-        if (!offerId) {
-            alert("Error: Offer ID is missing. Please try again.");
-            return;
-        }
-
-        const confirmBtn = document.getElementById('confirmDeleteBtn');
-        const originalText = confirmBtn.innerHTML;
-        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
-        confirmBtn.disabled = true;
+        if (!currentDeleteOfferId) return;
+        var btn = document.getElementById('confirmDeleteBtn');
+        var original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
 
         try {
-            const response = await fetch(`/dashboard/offers/delete/${offerId}`, {
+            var res = await fetch('/dashboard/offers/delete/' + currentDeleteOfferId, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
+            var text = await res.text();
+            var data;
+            try { data = JSON.parse(text); } catch (e) { data = { success: res.ok }; }
 
-            // Handle non-JSON responses safely
-            let result;
-            const text = await response.text();
-            try {
-                result = JSON.parse(text);
-            } catch (e) {
-                result = { success: false, error: "Server returned invalid response" };
-            }
-
-            if (result.success) {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
-                if (modal) modal.hide();
-
-                           const row = document.querySelector(`button[data-offer-id="${offerId}"]`)?.closest('tr');
+            if (data.success) {
+                closeDeleteModal();
+                var row = document.querySelector('button[data-offer-id="' + currentDeleteOfferId + '"]').closest('tr');
                 if (row) {
-                    row.style.transition = 'all 0.3s ease';
+                    row.style.transition = 'opacity .3s';
                     row.style.opacity = '0';
-                    setTimeout(() => {
-                        row.remove();
-                        updateSerialNumbers();
-                        const visibleRows = document.querySelectorAll('#offersTable tbody tr:not(.hidden)').length;
-                        document.getElementById('recordCount').textContent = visibleRows;
-                        if (visibleRows === 0) showEmptyState();
-                        showToast('success', 'Offer deleted successfully');
-                    }, 300);
-                } else {
-                    location.reload();
+                    setTimeout(function () { row.remove(); initializeSearchAndFilters(); }, 300);
                 }
+                showPmToast('Offer deleted successfully', 'success');
             } else {
-                alert('Error: ' + (result.error || 'Failed to delete offer'));
+                showPmToast(data.error || 'Failed to delete offer', 'error');
             }
-        } catch (error) {
-            console.error('Delete error:', error);
-            alert('Error deleting offer. Please try again.');
+        } catch (err) {
+            showPmToast('Error deleting offer', 'error');
         } finally {
-            confirmBtn.innerHTML = originalText;
-            confirmBtn.disabled = false;
-            window.currentDeleteOfferId = null;
+            btn.disabled = false;
+            btn.innerHTML = original;
+            currentDeleteOfferId = null;
         }
     }
 
+    /* ============ Create offer modal ============ */
+    var panelCurrentStep = 1;
 
-// Function to clean the URL after modal closes
-function cleanUrl() {
-    if (window.history.replaceState) {
-        const cleanUrl = window.location.protocol + "//" +
-                       window.location.host +
-                       window.location.pathname;
-        window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-    }
-}
-    // Function to update serial numbers after deletion
-    function updateSerialNumbers() {
-        const rows = document.querySelectorAll('#offersTable tbody tr:not(.hidden)');
-        rows.forEach((row, index) => {
-            const snoCell = row.querySelector('td:first-child');
-            if (snoCell) {
-                snoCell.textContent = index + 1;
-            }
-        });
-    }
+    function openCreateOfferPanel() {
+        var modal = document.getElementById('createOfferPanel');
+        var overlay = document.getElementById('createOfferOverlay');
 
-    // Function to show empty state
-    function showEmptyState() {
-        const tbody = document.querySelector('#offersTable tbody');
-        if (tbody) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6">
-                        <div class="empty-state">
-                            <i class="fas fa-file-contract"></i>
-                            <h4>No Offer Candidates Found</h4>
-                            <p>There are no pending offer letters at the moment.</p>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-    }
+        var d = new Date(); d.setDate(d.getDate() + 14);
+        var jd = document.getElementById('panelJoiningDate');
+        if (jd && !jd.value) jd.value = d.toISOString().split('T')[0];
 
-    // Toast notification function
-    function showToast(type, message) {
-        // Create toast container if not exists
-        let toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 9999;
-            `;
-            document.body.appendChild(toastContainer);
-        }
+        overlay.style.display = 'flex';
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
 
-        // Create toast
-        const toast = document.createElement('div');
-        toast.className = `alert alert-${type} alert-dismissible fade show`;
-        toast.style.cssText = `
-            background: ${type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
-            border-color: ${type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
-            color: ${type === 'success' ? '#10b981' : '#ef4444'};
-            margin-bottom: 10px;
-            min-width: 300px;
-        `;
-        toast.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
-            <span>${message}</span>
-            <button type="button" class="btn-close" onclick="this.parentElement.remove()" style="float: right;"></button>
-        `;
-
-        toastContainer.appendChild(toast);
-
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            toast.remove();
-        }, 5000);
-    }
-
-    // === NOTIFICATION SYSTEM ===
-    function toggleHRNotificationDropdown() {
-        const dropdown = document.getElementById('hrNotificationDropdownMenu');
-        if (dropdown) {
-            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-        }
-    }
-
-    function markAllHRNotificationsRead() {
-        const badge = document.getElementById('hrNotificationBadge');
-        if (badge) {
-            badge.style.display = 'none';
-            badge.textContent = '0';
-        }
-        const items = document.querySelectorAll('.notification-item.unread');
-        items.forEach(item => item.classList.remove('unread'));
-    }
-
-    // === HR LEAVE BADGE MANAGER CLASS ===
-    class HRLeaveBadgeManager {
-        constructor() {
-            this.badgeElement = document.getElementById('leaveCountBadge');
-            this.linkElement = document.getElementById('attendanceLeaveLink');
-            this.currentCount = 0;
-            this.init();
-        }
-
-        init() {
-            this.fetchAndUpdateBadge();
-
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'hr_leave_count_updated' || e.key === 'menti_leave_requests') {
-                    this.fetchAndUpdateBadge();
-                }
-            });
-
-            setInterval(() => {
-                if (!document.hidden) {
-                    this.fetchAndUpdateBadge();
-                }
-            }, 10000);
-        }
-
-        async fetchAndUpdateBadge() {
-            try {
-                const response = await fetch('/api/leaves/pending');
-                const data = await response.json();
-
-                if (data.success) {
-                    const count = data.count || 0;
-                    this.updateBadgeDisplay(count);
-                    localStorage.setItem('hr_pending_leave_count', count);
-                    localStorage.setItem('hr_leave_count_updated', Date.now().toString());
-                }
-            } catch (error) {
-                const fallbackCount = parseInt(localStorage.getItem('hr_pending_leave_count')) || 0;
-                this.updateBadgeDisplay(fallbackCount);
-            }
-        }
-
-        updateBadgeDisplay(count) {
-            this.currentCount = count;
-            if (this.badgeElement) {
-                if (count > 0) {
-                    this.badgeElement.textContent = count > 99 ? '99+' : count;
-                    this.badgeElement.style.display = 'flex';
-                    this.badgeElement.classList.remove('zero');
-                    if (this.linkElement) {
-                        this.linkElement.title = `${count} pending leave request${count > 1 ? 's' : ''} awaiting approval`;
-                    }
-                } else {
-                    this.badgeElement.style.display = 'none';
-                    this.badgeElement.classList.add('zero');
-                }
-            }
-        }
-    }
-
-    // === SEARCH & FILTER FUNCTIONALITY ===
-    function initializeSearchAndFilters() {
-        const searchInput = document.getElementById('searchInputOffers');
-        const filterDropdownBtn = document.getElementById('filterDropdownBtn');
-        const filterDropdownMenu = document.getElementById('filterDropdownMenu');
-        const selectedFilterText = document.getElementById('selectedFilterText');
-        const filterOptions = document.querySelectorAll('.filter-option');
-        const tableRows = document.querySelectorAll('#offersTable tbody tr[data-name]');
-
-        // Update record count
-        updateRecordCount(tableRows.length);
-
-        // Filter dropdown toggle
-        filterDropdownBtn.addEventListener('click', function() {
-            filterDropdownMenu.classList.toggle('show');
-            this.classList.toggle('active');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!filterDropdownBtn.contains(event.target) && !filterDropdownMenu.contains(event.target)) {
-                filterDropdownMenu.classList.remove('show');
-                filterDropdownBtn.classList.remove('active');
-            }
-        });
-
-        // Filter option selection
-        filterOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                filterOptions.forEach(opt => opt.classList.remove('active'));
-                this.classList.add('active');
-
-                const text = this.getAttribute('data-text');
-                const value = this.getAttribute('data-value');
-                selectedFilterText.textContent = text;
-
-                filterDropdownMenu.classList.remove('show');
-                filterDropdownBtn.classList.remove('active');
-
-                applyFilters(value);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                modal.style.opacity = '1';
+                modal.style.transform = 'translate(-50%,-50%) scale(1)';
             });
         });
-
-        // Search input
-        searchInput.addEventListener('input', function() {
-            const currentFilter = document.querySelector('.filter-option.active').getAttribute('data-value');
-            applyFilters(currentFilter);
-        });
-
-        function applyFilters(dateFilter) {
-            const searchTerm = searchInput.value.toLowerCase();
-            let visibleCount = 0;
-
-            const today = new Date();
-            const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-            const startOfWeek = new Date(today);
-            startOfWeek.setDate(today.getDate() - 7);
-            const startOfMonth = new Date(today);
-            startOfMonth.setDate(today.getDate() - 30);
-            const startOf3Months = new Date(today);
-            startOf3Months.setMonth(today.getMonth() - 3);
-            const startOf6Months = new Date(today);
-            startOf6Months.setMonth(today.getMonth() - 6);
-
-            tableRows.forEach(row => {
-                const name = row.getAttribute('data-name').toLowerCase();
-                const position = row.getAttribute('data-position').toLowerCase();
-                const dateStr = row.getAttribute('data-date');
-                const rowDate = new Date(dateStr);
-
-                let visible = true;
-
-                if (searchTerm && !name.includes(searchTerm) && !position.includes(searchTerm)) {
-                    visible = false;
-                }
-
-                if (dateFilter !== 'all') {
-                    if (dateFilter === 'today' && rowDate < startOfToday) {
-                        visible = false;
-                    } else if (dateFilter === 'week' && rowDate < startOfWeek) {
-                        visible = false;
-                    } else if (dateFilter === 'month' && rowDate < startOfMonth) {
-                        visible = false;
-                    } else if (dateFilter === '3months' && rowDate < startOf3Months) {
-                        visible = false;
-                    } else if (dateFilter === '6months' && rowDate < startOf6Months) {
-                        visible = false;
-                    }
-                }
-
-                row.classList.toggle('hidden', !visible);
-                if (visible) visibleCount++;
-            });
-
-            updateRecordCount(visibleCount);
-        }
-
-        function updateRecordCount(count) {
-            const countElement = document.getElementById('recordCount');
-            if (countElement) {
-                countElement.textContent = count;
-            }
-        }
     }
 
-    // === SUCCESS POPUP SCRIPT ENHANCEMENT ===
-    function showSuccessPopup(offerId, message) {
-        // Create popup if not exists
-        let popup = document.getElementById('dynamicSuccessPopup');
-        if (!popup) {
-            popup = document.createElement('div');
-            popup.id = 'dynamicSuccessPopup';
-            popup.className = 'modal fade show';
-            popup.style.display = 'block';
-            popup.style.background = 'rgba(0,0,0,0.8)';
-            popup.style.zIndex = '9999';
-            popup.setAttribute('tabindex', '-1');
-
-            popup.innerHTML = `
-                <div class="modal-dialog modal-dialog-centered modal-md">
-                    <div class="modal-content" style="background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 12px;">
-                        <div class="modal-header" style="border-bottom: 1px solid var(--dark-border);">
-                            <h5 class="modal-title" style="color: #10b981;">
-                                <i class="fas fa-check-circle"></i> Success!
-                            </h5>
-                            <button type="button" class="btn-close btn-close-white" onclick="closeSuccessPopup()"></button>
-                        </div>
-                        <div class="modal-body" style="color: var(--dark-text); text-align: center; padding: 2rem;">
-                            <i class="fas fa-file-contract" style="font-size: 4rem; color: #6366f1; margin-bottom: 1rem;"></i>
-                            <p>` + message + `</p>
-                        </div>
-                        <div class="modal-footer" style="border-top: 1px solid var(--dark-border); justify-content: center;">
-                            <button class="btn btn-outline-light" onclick="closeSuccessPopup()">Close</button>
-                            <a href="/dashboard/hr/view-offer/` + offerId + `" class="btn btn-info" target="_blank">
-                                <i class="fas fa-eye"></i> View Offer
-                            </a>
-                            <a href="/dashboard/hr/start-onboarding/` + offerId + `" class="btn btn-primary">
-                                <i class="fas fa-play"></i> Start Onboarding
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            document.body.appendChild(popup);
-
-            // Clean URL
-            if (window.history.replaceState) {
-                const cleanUrl = window.location.protocol + "//" +
-                               window.location.host +
-                               window.location.pathname;
-                window.history.replaceState({path: cleanUrl}, '', cleanUrl);
-            }
-        }
+    function closeCreateOfferPanel() {
+        var modal = document.getElementById('createOfferPanel');
+        var overlay = document.getElementById('createOfferOverlay');
+        modal.style.opacity = '0';
+        modal.style.transform = 'translate(-50%,-50%) scale(.95)';
+        setTimeout(function () {
+            modal.style.display = 'none';
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            document.getElementById('panelOfferForm').reset();
+            panelCurrentStep = 1;
+            panelGoToStep(1);
+            panelRemoveSignature();
+            document.querySelectorAll('#panelOfferForm [data-panel-required]')
+                .forEach(function (f) { f.style.borderColor = ''; f.style.boxShadow = ''; });
+        }, 300);
     }
 
+    document.getElementById('createOfferOverlay').addEventListener('click', closeCreateOfferPanel);
 
-    // ============================================
-    // DOM CONTENT LOADED EVENT LISTENER
-    // ============================================
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM fully loaded and parsed');
-
-        // Mobile menu toggle
-        const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-        const sidebar = document.getElementById('sidebar');
-
-        if (mobileMenuToggle) {
-            mobileMenuToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-            });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            if (document.getElementById('createOfferPanel').style.display === 'block') closeCreateOfferPanel();
+            if (document.getElementById('deleteConfirmModal').style.display === 'block') closeDeleteModal();
         }
+    });
 
-        // Close sidebar when clicking outside on mobile
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768 &&
-                !sidebar.contains(event.target) &&
-                !mobileMenuToggle.contains(event.target) &&
-                sidebar.classList.contains('active')) {
-                sidebar.classList.remove('active');
-            }
+    function panelGoToStep(step) {
+        [1,2,3].forEach(function (i) {
+            document.getElementById('panelSection' + i).style.display = (i === step) ? 'block' : 'none';
+            var lbl = document.getElementById('panelStep' + i);
+            lbl.classList.remove('active', 'completed');
+            if (i < step) lbl.classList.add('completed');
+            if (i === step) lbl.classList.add('active');
         });
+        document.getElementById('panelPrevBtn').style.display = step === 1 ? 'none' : 'inline-flex';
+        document.getElementById('panelNextBtn').style.display = step === 3 ? 'none' : 'inline-flex';
+        document.getElementById('panelGenerateBtn').style.display = step === 3 ? 'inline-flex' : 'none';
+    }
 
-        // Set active nav link based on current URL
-        const currentPath = window.location.pathname;
-        const navLinks = document.querySelectorAll('.nav-link');
-
-        navLinks.forEach(link => {
-            const href = link.getAttribute('href');
-            if (href && currentPath.includes(href)) {
-                link.classList.add('active');
+    function panelValidateStep(step) {
+        var fields = document.querySelectorAll('#panelOfferForm [data-panel-required="' + step + '"]');
+        var valid = true;
+        fields.forEach(function (f) {
+            if (!f.value.trim()) {
+                f.style.borderColor = 'var(--danger)';
+                f.style.boxShadow = '0 0 0 3px rgba(239,68,68,.1)';
+                valid = false;
             } else {
-                link.classList.remove('active');
+                f.style.borderColor = '';
+                f.style.boxShadow = '';
             }
         });
-
-        // Show error alert if present
-        const errorAlert = document.getElementById('errorAlert');
-        if (errorAlert && errorAlert.style.display !== 'none') {
-            setTimeout(() => errorAlert.remove(), 8000);
+        if (step === 1) {
+            var email = document.getElementById('panelCandidateEmail');
+            if (email.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+                email.style.borderColor = 'var(--danger)';
+                showPmToast('Please enter a valid email', 'error');
+                return false;
+            }
         }
+        if (!valid) showPmToast('Please fill all required fields', 'error');
+        return valid;
+    }
 
-        // Initialize search and filters
+    function panelNextStep() {
+        if (!panelValidateStep(panelCurrentStep)) return;
+        if (panelCurrentStep < 3) {
+            panelCurrentStep++;
+            panelGoToStep(panelCurrentStep);
+            document.getElementById('createOfferPanel').scrollTop = 0;
+        }
+    }
+
+    function panelPrevStep() {
+        if (panelCurrentStep > 1) {
+            panelCurrentStep--;
+            panelGoToStep(panelCurrentStep);
+            document.getElementById('createOfferPanel').scrollTop = 0;
+        }
+    }
+
+    function panelPreviewSignature(input) {
+        var file = input.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('panelSignatureImage').src = e.target.result;
+            document.getElementById('panelSignatureImage').style.display = 'block';
+            document.getElementById('panelUploadPlaceholder').style.display = 'none';
+            document.getElementById('panelSignatureActions').style.display = 'flex';
+            document.getElementById('panelFileName').textContent = file.name;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function panelRemoveSignature() {
+        var fi = document.getElementById('panelSignatureFile');
+        if (fi) fi.value = '';
+        var img = document.getElementById('panelSignatureImage');
+        if (img) { img.src = ''; img.style.display = 'none'; }
+        var ph = document.getElementById('panelUploadPlaceholder');
+        if (ph) ph.style.display = 'block';
+        var sa = document.getElementById('panelSignatureActions');
+        if (sa) sa.style.display = 'none';
+    }
+
+    document.getElementById('panelOfferForm').addEventListener('submit', function (e) {
+        if (!panelValidateStep(1) || !panelValidateStep(2)) {
+            e.preventDefault();
+            showPmToast('Please complete all required fields', 'error');
+            return;
+        }
+        var btn = document.getElementById('panelGenerateBtn');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
+    });
+
+    /* ============ Boot ============ */
+    document.addEventListener('DOMContentLoaded', function () {
         initializeSearchAndFilters();
-
-        // Add event listener for backdrop click on successPopup
-        const popup = document.getElementById('successPopup');
-        if (popup) {
-            // Close when clicking on the backdrop (outside the modal)
-            popup.addEventListener('click', function(e) {
-                if (e.target === popup) {
-                    closeSuccessPopup();
-                }
-            });
-
-            // Close on Escape key press
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && popup.style.display === 'block') {
-                    closeSuccessPopup();
-                }
-            });
-        }
-
-        // Initialize delete confirmation button
-        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.addEventListener('click', performDelete);
-        }
-
-        // Reset currentDeleteOfferId when modal is hidden
-        const deleteModal = document.getElementById('deleteConfirmModal');
-        if (deleteModal) {
-            deleteModal.addEventListener('hidden.bs.modal', function () {
-                currentDeleteOfferId = null;
-                const confirmBtn = document.getElementById('confirmDeleteBtn');
-                if (confirmBtn) {
-                    confirmBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete';
-                    confirmBtn.disabled = false;
-                }
-            });
-        }
-
-        // Initialize HR Leave Badge
-        window.hrBadgeManager = new HRLeaveBadgeManager();
-
-        // Close notification dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('hrNotificationDropdownMenu');
-            const trigger = document.querySelector('.notification-trigger');
-
-            if (dropdown && trigger && !dropdown.contains(event.target) && !trigger.contains(event.target)) {
-                dropdown.style.display = 'none';
-            }
-        });
-
-        // Check URL parameters for success message
-        const urlParams = new URLSearchParams(window.location.search);
-        const success = urlParams.get('success');
-        const offerId = urlParams.get('offerId');
-        const showPopup = urlParams.get('showPopup');
-
-        if (success && offerId && showPopup === 'true') {
-            // Show success popup
-            showSuccessPopup(offerId, success);
-        }
+        var confirmBtn = document.getElementById('confirmDeleteBtn');
+        if (confirmBtn) confirmBtn.addEventListener('click', performDelete);
     });
-// ============================================
-// CREATE OFFER MODAL — FIXED VERSION
-// ============================================
-let panelCurrentStep = 1;
-
-function openCreateOfferPanel() {
-    const modal   = document.getElementById('createOfferPanel');
-    const overlay = document.getElementById('createOfferOverlay');
-
-    // Default joining date: 2 weeks from now
-    const d = new Date();
-    d.setDate(d.getDate() + 14);
-    const jd = document.getElementById('panelJoiningDate');
-    if (jd && !jd.value) jd.value = d.toISOString().split('T')[0];
-
-    overlay.style.display = 'flex';
-    modal.style.display   = 'block';
-    document.body.style.overflow = 'hidden';
-
-    // Animate in
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            modal.style.opacity   = '1';
-            modal.style.transform = 'translate(-50%, -50%) scale(1)';
-        });
-    });
-}
-
-function closeCreateOfferPanel() {
-    const modal   = document.getElementById('createOfferPanel');
-    const overlay = document.getElementById('createOfferOverlay');
-
-    modal.style.opacity   = '0';
-    modal.style.transform = 'translate(-50%, -50%) scale(0.95)';
-
-    setTimeout(() => {
-        modal.style.display   = 'none';
-        overlay.style.display = 'none';
-        document.body.style.overflow = '';
-        // Reset
-        document.getElementById('panelOfferForm').reset();
-        panelCurrentStep = 1;
-        panelGoToStep(1);
-        panelRemoveSignature();
-        // Clear any red borders
-        document.querySelectorAll('#panelOfferForm [data-panel-required]')
-            .forEach(f => { f.style.borderColor = ''; f.style.boxShadow = ''; });
-    }, 300);
-}
-
-// Close on overlay click
-document.getElementById('createOfferOverlay')
-    .addEventListener('click', closeCreateOfferPanel);
-
-// Close on Escape
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' &&
-        document.getElementById('createOfferPanel').style.display === 'block') {
-        closeCreateOfferPanel();
-    }
-});
-
-function panelGoToStep(step) {
-    [1, 2, 3].forEach(i => {
-        document.getElementById('panelSection' + i).style.display =
-            (i === step) ? 'block' : 'none';
-
-        const num   = document.getElementById('psn' + i);
-        const label = document.getElementById('psl' + i);
-
-        if (i < step) {
-            num.style.background = 'var(--success)';
-            num.style.color      = 'white';
-            label.style.color    = 'var(--success)';
-        } else if (i === step) {
-            num.style.background = 'var(--primary)';
-            num.style.color      = 'white';
-            label.style.color    = 'var(--primary)';
-        } else {
-            num.style.background = 'var(--dark-border)';
-            num.style.color      = 'var(--dark-text-secondary)';
-            label.style.color    = 'var(--dark-text-secondary)';
-        }
-    });
-
-    const prevBtn     = document.getElementById('panelPrevBtn');
-    const nextBtn     = document.getElementById('panelNextBtn');
-    const generateBtn = document.getElementById('panelGenerateBtn');
-
-    prevBtn.style.display     = step === 1 ? 'none' : 'inline-flex';
-    nextBtn.style.display     = step === 3 ? 'none' : 'inline-flex';
-    generateBtn.style.display = step === 3 ? 'inline-flex' : 'none';
-}
-
-// KEY FIX: uses data-panel-required="stepNumber" instead of HTML required attr
-function panelValidateStep(step) {
-    const fields = document.querySelectorAll(
-        `#panelOfferForm [data-panel-required="${step}"]`
-    );
-    let valid = true;
-
-    fields.forEach(f => {
-        if (!f.value.trim()) {
-            f.style.borderColor = 'var(--danger)';
-            f.style.boxShadow   = '0 0 0 3px rgba(239,68,68,0.1)';
-            valid = false;
-        } else {
-            f.style.borderColor = '';
-            f.style.boxShadow   = '';
-        }
-    });
-
-    // Also validate email format
-    if (step === 1) {
-        const emailField = document.getElementById('panelCandidateEmail');
-        if (emailField.value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailField.value)) {
-            emailField.style.borderColor = 'var(--danger)';
-            emailField.style.boxShadow   = '0 0 0 3px rgba(239,68,68,0.1)';
-            valid = false;
-            showToast('error', 'Please enter a valid email address');
-            return false;
-        }
-    }
-
-    if (!valid) showToast('error', 'Please fill in all required fields');
-    return valid;
-}
-
-function panelNextStep() {
-    if (!panelValidateStep(panelCurrentStep)) return;
-    if (panelCurrentStep < 3) {
-        panelCurrentStep++;
-        panelGoToStep(panelCurrentStep);
-        document.getElementById('createOfferPanel').scrollTop = 0;
-    }
-}
-
-function panelPrevStep() {
-    if (panelCurrentStep > 1) {
-        panelCurrentStep--;
-        panelGoToStep(panelCurrentStep);
-        document.getElementById('createOfferPanel').scrollTop = 0;
-    }
-}
-
-function panelPreviewSignature(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        document.getElementById('panelSignatureImage').src          = e.target.result;
-        document.getElementById('panelSignatureImage').style.display = 'block';
-        document.getElementById('panelUploadPlaceholder').style.display = 'none';
-        document.getElementById('panelSignatureActions').style.display  = 'flex';
-        document.getElementById('panelFileName').textContent = file.name;
-    };
-    reader.readAsDataURL(file);
-}
-
-function panelRemoveSignature() {
-    const fi = document.getElementById('panelSignatureFile');
-    if (fi) fi.value = '';
-    const img = document.getElementById('panelSignatureImage');
-    if (img) { img.src = ''; img.style.display = 'none'; }
-    const ph = document.getElementById('panelUploadPlaceholder');
-    if (ph) ph.style.display = 'block';
-    const sa = document.getElementById('panelSignatureActions');
-    if (sa) sa.style.display = 'none';
-}
-
-// Loading state on submit
-document.getElementById('panelOfferForm').addEventListener('submit', function(e) {
-    // Final validation before submit
-    if (!panelValidateStep(1) || !panelValidateStep(2)) {
-        e.preventDefault();
-        showToast('error', 'Please complete all required fields');
-        return;
-    }
-    const btn = document.getElementById('panelGenerateBtn');
-    btn.innerHTML     = '<i class="fas fa-spinner fa-spin"></i> Generating...';
-    btn.disabled      = true;
-    btn.style.opacity = '0.7';
-});
-
-
 </script>
 </body>
 </html>
-

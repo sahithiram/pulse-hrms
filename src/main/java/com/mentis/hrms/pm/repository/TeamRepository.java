@@ -17,6 +17,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     List<Team> findByStatus(String status);
     List<Team> findByLeadEmployeeId(Long leadEmployeeId);
+    boolean existsByLeadEmployeeId(Long leadEmployeeId);
     @Query("SELECT t FROM Team t WHERE " +
             "(:search IS NULL OR LOWER(t.name) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Team> search(@Param("search") String search, Pageable pageable);

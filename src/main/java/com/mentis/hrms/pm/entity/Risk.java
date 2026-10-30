@@ -39,7 +39,8 @@ public class Risk {
     /** score = likelihoodWeight × impactWeight (1..25). */
     @Column(name = "score", nullable = false)
     private Integer score;
-
+    @Column(name = "task_id") private Long taskId;
+    @Column(name = "milestone_id") private Long milestoneId;
     @Column(name = "status", nullable = false, length = 20)
     private String status;       // OPEN | MITIGATING | RESOLVED | ACCEPTED
 

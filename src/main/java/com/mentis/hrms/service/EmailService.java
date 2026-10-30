@@ -32,6 +32,26 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
+    /**
+     * Plain-text send used by PM listeners (PmEmailListener, PmResignationListener).
+     * Uses the same fromEmail and mailSender as the other send* methods.
+     */
+    @Async
+    public void send(String toEmail, String subject, String body) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(body, false);
+            mailSender.send(message);
+            logger.info("Email sent to: {} (subject: {})", toEmail, subject);
+        } catch (MessagingException e) {
+            logger.error("Failed to send email to {}: {}", toEmail, e.getMessage());
+        }
+    }
+
     @Async
     public void sendApplicationConfirmation(String toEmail, String candidateName, String jobTitle) {
         try {

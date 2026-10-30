@@ -1,5 +1,6 @@
 package com.mentis.hrms.service;
 
+import com.mentis.hrms.event.EmployeeDeactivatedEvent;
 import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.repository.EmployeeRepository;
 import org.slf4j.Logger;
@@ -7,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.context.ApplicationEventPublisher;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,9 @@ public class EmployeeService {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     /**
      * Save employee with all details
@@ -59,6 +63,7 @@ public class EmployeeService {
 
             Employee savedEmployee = employeeRepository.save(employee);
             employeeRepository.flush(); // Force immediate save
+            publishIfDeactivated(false, savedEmployee);
 
             logger.info("Employee saved successfully: {}", savedEmployee.getEmployeeId());
             return savedEmployee;
@@ -79,6 +84,9 @@ public class EmployeeService {
                 throw new IllegalArgumentException("Cannot update employee without ID");
             }
 
+            boolean wasDeactivated = employeeRepository.findById(employee.getId())
+                    .map(EmployeeService::isDeactivated).orElse(false);
+
             // Set update timestamp
             employee.setUpdatedDate(LocalDateTime.now());
 
@@ -92,6 +100,7 @@ public class EmployeeService {
 
             Employee updatedEmployee = employeeRepository.save(employee);
             employeeRepository.flush();
+            publishIfDeactivated(wasDeactivated, updatedEmployee);
 
             logger.info("Employee updated successfully: {}", updatedEmployee.getEmployeeId());
             return updatedEmployee;
@@ -163,7 +172,11 @@ public class EmployeeService {
             if (!employeeRepository.existsById(id)) {
                 throw new IllegalArgumentException("Employee not found with ID: " + id);
             }
+            Employee existing = employeeRepository.findById(id).orElse(null);
             employeeRepository.deleteById(id);
+            if (existing != null) {
+                eventPublisher.publishEvent(new EmployeeDeactivatedEvent(existing.getId(), displayName(existing)));
+            }
             logger.info("Employee deleted: {}", id);
         } catch (Exception e) {
             logger.error("Error deleting employee {}: {}", id, e.getMessage(), e);
@@ -176,6 +189,36 @@ public class EmployeeService {
      */
     public boolean employeeExists(String employeeId) {
         return employeeRepository.existsByEmployeeId(employeeId);
+    }
+
+    private void publishIfDeactivated(boolean wasDeactivated, Employee saved) {
+        if (saved == null || saved.getId() == null) return;
+        if (!wasDeactivated && isDeactivated(saved)) {
+            eventPublisher.publishEvent(new EmployeeDeactivatedEvent(saved.getId(), displayName(saved)));
+        }
+    }
+
+    static boolean isDeactivated(Employee e) {
+        if (e == null) return false;
+        String status = e.getStatus();
+        if (status != null && (status.equalsIgnoreCase("INACTIVE")
+                || status.equalsIgnoreCase("Terminated")
+                || status.equalsIgnoreCase("Inactive"))) {
+            return true;
+        }
+        if (!e.isActive()) return true;
+        return Boolean.FALSE.equals(e.getIsActive());
+    }
+
+    private static String displayName(Employee e) {
+        if (e == null) return "Unknown";
+        String first = e.getFirstName() == null ? "" : e.getFirstName().trim();
+        String last = e.getLastName() == null ? "" : e.getLastName().trim();
+        String full = (first + " " + last).trim();
+        if (!full.isEmpty()) return full;
+        if (e.getEmployeeName() != null && !e.getEmployeeName().isBlank()) return e.getEmployeeName().trim();
+        if (e.getEmployeeId() != null) return e.getEmployeeId();
+        return "Employee #" + e.getId();
     }
 
     /**

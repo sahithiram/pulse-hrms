@@ -13,7 +13,9 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
+import com.mentis.hrms.repository.EmployeeRepository;
+import com.mentis.hrms.service.PasswordResetMailService;
+import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,7 +35,17 @@ public class CandidateAuthController {
     // ADD THIS FIELD
     @Autowired
     private AttendanceService attendanceService;
+    @Autowired
+    private EmployeeRepository employeeRepository;
 
+    @Autowired
+    private PasswordResetMailService passwordResetMailService;
+
+    @Value("${app.base-url:http://localhost:8080}")
+    private String appBaseUrl;
+
+    private static final String GENERIC_RESET_MESSAGE =
+            "If the details match an account, a reset link has been sent to its registered email. It works for 60 minutes.";
     /* ==================== LOGIN METHOD UPDATED ==================== */
     @PostMapping("/login")
     public String processLogin(
@@ -188,63 +200,7 @@ public class CandidateAuthController {
         return "candidate/forgot-password";
     }
 
-    @PostMapping("/forgot-password")
-    public String sendResetLink(@RequestParam String email,
-                                @RequestParam(required = false) String employeeId,
-                                RedirectAttributes ra) {
 
-        logger.info("Forgot password request for email: {}, employeeId: {}", email, employeeId);
-
-        try {
-            Optional<Employee> employeeOpt;
-
-            if (employeeId != null && !employeeId.trim().isEmpty()) {
-                employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId.trim());
-            } else {
-                employeeOpt = employeeService.getAllEmployees().stream()
-                        .filter(e -> email.equalsIgnoreCase(e.getEmail()) ||
-                                email.equalsIgnoreCase(e.getPersonalEmail()))
-                        .findFirst();
-            }
-
-            if (employeeOpt.isEmpty()) {
-                ra.addFlashAttribute("error", "No account found with provided email/employee ID.");
-                return "redirect:/candidate/auth/forgot-password";
-            }
-
-            Employee employee = employeeOpt.get();
-
-            if (!employee.isActive()) {
-                ra.addFlashAttribute("error", "Account is deactivated. Please contact HR.");
-                return "redirect:/candidate/auth/forgot-password";
-            }
-
-            if (employee.getPassword() == null || employee.getPassword().isEmpty()) {
-                ra.addFlashAttribute("error", "You haven't created your credentials yet. Please use the login page first.");
-                return "redirect:/candidate/auth/forgot-password";
-            }
-
-            String resetToken = UUID.randomUUID().toString();
-            employee.setResetToken(resetToken);
-            employee.setTokenExpiry(LocalDateTime.now().plusHours(24));
-
-            employeeService.saveEmployee(employee);
-
-            String resetLink = "http://localhost:8080/candidate/auth/reset-password?token=" + resetToken;
-
-            ra.addFlashAttribute("resetLink", resetLink);
-            ra.addFlashAttribute("successMessage", "Password reset link generated successfully!");
-
-            logger.info("Reset token generated for {}: {}", employee.getEmployeeId(), resetToken);
-
-            return "redirect:/candidate/auth/forgot-password";
-
-        } catch (Exception e) {
-            logger.error("Error in forgot password: {}", e.getMessage(), e);
-            ra.addFlashAttribute("error", "An error occurred. Please try again.");
-            return "redirect:/candidate/auth/forgot-password";
-        }
-    }
 
     @GetMapping("/change-password")
     public String showChangePasswordPage(HttpSession session, Model model) {
@@ -304,36 +260,56 @@ public class CandidateAuthController {
         return "redirect:/candidate/dashboard/" + employee.getEmployeeId();
     }
 
+    @PostMapping("/forgot-password")
+    public String sendResetLink(@RequestParam String email,
+                                @RequestParam(required = false) String employeeId,
+                                RedirectAttributes ra) {
+        String typed = email == null ? "" : email.trim();
+        try {
+            Optional<Employee> employeeOpt;
+            if (employeeId != null && !employeeId.trim().isEmpty()) {
+                employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId.trim());
+            } else {
+                employeeOpt = employeeService.getAllEmployees().stream()
+                        .filter(e -> typed.equalsIgnoreCase(e.getEmail()) || typed.equalsIgnoreCase(e.getPersonalEmail()))
+                        .findFirst();
+            }
+            // The typed address must be one stored on the account. The link goes ONLY to that address.
+            employeeOpt = employeeOpt.filter(e -> !typed.isEmpty()
+                    && (typed.equalsIgnoreCase(e.getEmail()) || typed.equalsIgnoreCase(e.getPersonalEmail())));
+
+            if (employeeOpt.isPresent()) {
+                Employee employee = employeeOpt.get();
+                if (employee.isActive() && employee.getPassword() != null && !employee.getPassword().isEmpty()) {
+                    String token = UUID.randomUUID().toString();
+                    employee.setResetToken(token);
+                    employee.setTokenExpiry(LocalDateTime.now().plusMinutes(60));
+                    employeeService.saveEmployee(employee);
+                    String link = appBaseUrl + "/candidate/auth/reset-password?token=" + token;
+                    passwordResetMailService.sendResetLink(typed, employee.getFirstName(), link);
+                    logger.info("Password reset requested for employee {}", employee.getEmployeeId());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error in forgot password: {}", e.getMessage());
+        }
+        // Same reply whether or not an account matched, so the form cannot be used to find valid IDs.
+        ra.addFlashAttribute("successMessage", GENERIC_RESET_MESSAGE);
+        return "redirect:/candidate/auth/forgot-password";
+    }
+
     @GetMapping("/reset-password")
     public String showResetPasswordPage(@RequestParam String token, Model model) {
-        try {
-            logger.info("Processing reset password request with token: {}", token);
-
-            Optional<Employee> employeeOpt = employeeService.getAllEmployees().stream()
-                    .filter(e -> token.equals(e.getResetToken()) &&
-                            e.getTokenExpiry() != null &&
-                            e.getTokenExpiry().isAfter(LocalDateTime.now()))
-                    .findFirst();
-
-            if (employeeOpt.isEmpty()) {
-                logger.warn("Invalid or expired reset token: {}", token);
-                model.addAttribute("error", "Invalid or expired reset token.");
-                return "candidate/reset-password-error";
-            }
-
-            Employee employee = employeeOpt.get();
-            model.addAttribute("token", token);
-            model.addAttribute("employeeId", employee.getEmployeeId());
-            model.addAttribute("employeeName", employee.getFirstName() + " " + employee.getLastName());
-
-            logger.info("Reset password page loaded for employee: {}", employee.getEmployeeId());
-            return "candidate/reset-password";
-
-        } catch (Exception e) {
-            logger.error("Error showing reset password page: {}", e.getMessage(), e);
-            model.addAttribute("error", "Invalid reset token.");
+        Optional<Employee> employeeOpt = findByValidToken(token);
+        if (employeeOpt.isEmpty()) {
+            model.addAttribute("error", "Invalid or expired reset token.");
             return "candidate/reset-password-error";
         }
+        Employee employee = employeeOpt.get();
+        model.addAttribute("token", token);
+        model.addAttribute("employeeId", employee.getEmployeeId());
+        model.addAttribute("employeeName", employee.getFirstName() + " " + employee.getLastName());
+        return "candidate/reset-password";
     }
 
     @PostMapping("/reset-password")
@@ -341,45 +317,42 @@ public class CandidateAuthController {
                                 @RequestParam String password,
                                 @RequestParam String confirmPassword,
                                 RedirectAttributes ra) {
-
         try {
-            Optional<Employee> employeeOpt = employeeService.getAllEmployees().stream()
-                    .filter(e -> token.equals(e.getResetToken()) &&
-                            e.getTokenExpiry() != null &&
-                            e.getTokenExpiry().isAfter(LocalDateTime.now()))
-                    .findFirst();
-
+            Optional<Employee> employeeOpt = findByValidToken(token);
             if (employeeOpt.isEmpty()) {
                 ra.addFlashAttribute("error", "Invalid or expired reset token.");
                 return "redirect:/candidate/login";
             }
-
             if (!password.equals(confirmPassword)) {
                 ra.addFlashAttribute("error", "Passwords do not match.");
                 return "redirect:/candidate/auth/reset-password?token=" + token;
             }
-
             if (password.length() < 8) {
                 ra.addFlashAttribute("error", "Password must be at least 8 characters long.");
                 return "redirect:/candidate/auth/reset-password?token=" + token;
             }
-
             Employee employee = employeeOpt.get();
-
             employee.setPassword(passwordUtil.encodePassword(password));
-            employee.setResetToken(null);
+            employee.setResetToken(null);      // single use
             employee.setTokenExpiry(null);
-
             employeeService.saveEmployee(employee);
-
+            logger.info("Password reset completed for employee {}", employee.getEmployeeId());
             ra.addFlashAttribute("success", "Password reset successfully! You can now login with your new password.");
             return "redirect:/candidate/login";
-
         } catch (Exception e) {
-            logger.error("Error resetting password: {}", e.getMessage(), e);
+            logger.error("Error resetting password: {}", e.getMessage());
             ra.addFlashAttribute("error", "An error occurred. Please try again.");
             return "redirect:/candidate/auth/reset-password?token=" + token;
         }
+    }
+
+    /** A token is valid when it exists, is not expired and the account is active. Tokens are never logged. */
+    private Optional<Employee> findByValidToken(String token) {
+        if (token == null || token.isBlank()) return Optional.empty();
+        return employeeRepository.findByResetToken(token.trim())
+                .filter(e -> e.isActive()
+                        && e.getTokenExpiry() != null
+                        && e.getTokenExpiry().isAfter(LocalDateTime.now()));
     }
 
     @GetMapping("/logout")

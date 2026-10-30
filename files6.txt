@@ -1,0 +1,252 @@
+﻿
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddChecklistRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class AddChecklistRequest {
+
+    @NotBlank
+    private String title;
+
+    private Long parentId;
+    private Long assigneeId;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\AddDependencyRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.*;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class AddDependencyRequest {
+
+    @NotNull
+    private Long dependsOnTaskId;
+
+    private String type;   // BLOCKS, BLOCKED_BY, RELATES_TO
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\request\CreatePhaseRequest.java =====
+package com.mentis.hrms.pm.dto.request;
+
+import com.mentis.hrms.pm.enums.ProjectPhaseStatus;
+import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+
+import java.time.LocalDate;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class CreatePhaseRequest {
+    @NotBlank private String name;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private ProjectPhaseStatus status;
+}
+
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\ChecklistItemResponse.java =====
+package com.mentis.hrms.pm.dto.response;
+
+import lombok.*;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class ChecklistItemResponse {
+    private Long id;
+    private Long taskId;
+    private Long parentId;
+    private String title;
+    private Boolean done;
+    private Long assigneeId;
+    private Integer sortOrder;
+    private LocalDateTime createdAt;
+    private List<ChecklistItemResponse> children;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\dto\response\TaskResponse.java =====
+package com.mentis.hrms.pm.dto.response;
+
+import com.mentis.hrms.pm.enums.TaskPriority;
+import com.mentis.hrms.pm.enums.TaskStatus;
+import com.mentis.hrms.pm.enums.TaskType;
+import lombok.*;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+public class TaskResponse {
+    private Long id;
+    private Long projectId;
+    private String projectName;
+    private Long parentTaskId;
+
+    private Long teamId;
+    private String teamName;
+
+    // ─── Phase 5 additions ─────────────────────────────────────
+    private Long sprintId;
+    private String sprintName;
+    private Long milestoneId;
+    private String milestoneName;
+    private Long keyResultId;
+
+    private String title;
+    private String description;
+    private TaskStatus status;
+    private TaskPriority priority;
+    private TaskType type;
+    private LocalDate startDate;
+    private LocalDate dueDate;
+    private Integer estimateHours;
+    private Integer loggedHours;
+    private Integer loggedMinutes;
+    private Integer storyPoints;
+    private Integer progressPct;
+
+    private List<Long> assigneeIds;
+    private List<String> assigneeNames;
+
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+
+    private long subtaskCount;
+    private long subtaskDone;
+    private long openBlockerCount;
+
+    // ─── Phase 6 addition ─────────────────────────────────────
+    /** Human-readable capacity warnings from WorkloadService when assigning. */
+    private List<String> assignmentWarnings;
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\MilestoneService.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.dto.request.CreateMilestoneRequest;
+import com.mentis.hrms.pm.dto.response.MilestoneResponse;
+import com.mentis.hrms.pm.dto.response.TaskSummaryResponse;
+
+import java.util.List;
+
+public interface MilestoneService {
+
+    MilestoneResponse create(Long projectId, CreateMilestoneRequest req, Long userId);
+
+    MilestoneResponse get(Long id);
+
+    List<MilestoneResponse> listByProject(Long projectId);
+
+    MilestoneResponse update(Long id, CreateMilestoneRequest req, Long userId);
+
+    MilestoneResponse complete(Long id, Long userId);
+
+    void delete(Long id, Long userId);
+
+    List<TaskSummaryResponse> milestoneTasks(Long milestoneId);
+
+    void addTaskToMilestone(Long milestoneId, Long taskId, Long userId);
+
+    void removeTaskFromMilestone(Long milestoneId, Long taskId, Long userId);
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectPhaseService.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.dto.request.CreatePhaseRequest;
+import com.mentis.hrms.pm.dto.response.ProjectPhaseResponse;
+
+import java.util.List;
+
+public interface ProjectPhaseService {
+
+    List<ProjectPhaseResponse> listByProject(Long projectId);
+
+    ProjectPhaseResponse create(Long projectId, CreatePhaseRequest req, Long userId);
+
+    ProjectPhaseResponse get(Long id);
+
+    ProjectPhaseResponse update(Long id, CreatePhaseRequest req, Long userId);
+
+    void delete(Long id, Long userId);
+}
+
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\ProjectService.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.dto.request.CreateProjectRequest;
+import com.mentis.hrms.pm.dto.request.UpdateProjectRequest;
+import com.mentis.hrms.pm.dto.response.BaselineHistoryResponse;
+import com.mentis.hrms.pm.dto.response.PageResponse;
+import com.mentis.hrms.pm.dto.response.ProjectResponse;
+import com.mentis.hrms.pm.dto.response.ProjectSummaryResponse;
+import com.mentis.hrms.pm.enums.ProjectStatus;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+
+public interface ProjectService {
+
+    ProjectResponse createProject(CreateProjectRequest req, Long currentUserId);
+
+    ProjectResponse updateProject(Long id, UpdateProjectRequest req, Long currentUserId);
+    ProjectResponse rebaseline(Long id, String reason, Long currentUserId);
+    ProjectResponse getProject(Long id);
+    ProjectResponse saveBaseline(Long id, Long currentUserId);
+
+    /** Same as {@link #saveBaseline(Long, Long)}; {@code reason} is required when a baseline already exists. */
+    ProjectResponse saveBaseline(Long id, Long currentUserId, String reason);
+    PageResponse<ProjectSummaryResponse> listProjects(String search,
+                                                      ProjectStatus status,
+                                                      Long ownerId,
+                                                      Pageable pageable);
+
+    ProjectResponse archiveProject(Long id, Long currentUserId);
+    ProjectResponse reopenProject(Long id, String reason, Long currentUserId);
+    void deleteProject(Long id, Long currentUserId);
+
+    PageResponse<ProjectSummaryResponse> listVisibleProjects(String search,
+                                                             ProjectStatus status,
+                                                             Long ownerId,
+                                                             Long viewerId,
+                                                             Pageable pageable);
+
+    /** Version history of every baseline / re-baseline for the project, newest first. */
+    List<BaselineHistoryResponse> baselineHistory(Long id);
+}
+
+===== C:\pulse-hrms test pm\src\main\java\com\mentis\hrms\pm\service\SprintService.java =====
+package com.mentis.hrms.pm.service;
+
+import com.mentis.hrms.pm.dto.request.CompleteSprintRequest;
+import com.mentis.hrms.pm.dto.request.CreateSprintRequest;
+import com.mentis.hrms.pm.dto.response.BurndownResponse;
+import com.mentis.hrms.pm.dto.response.SprintResponse;
+import com.mentis.hrms.pm.dto.response.TaskSummaryResponse;
+import com.mentis.hrms.pm.dto.response.VelocityResponse;
+
+import java.util.List;
+
+public interface SprintService {
+    SprintResponse create(Long projectId, CreateSprintRequest req, Long userId);
+    SprintResponse get(Long id);
+    List<SprintResponse> listByProject(Long projectId);
+    SprintResponse update(Long id, CreateSprintRequest req, Long userId);
+    SprintResponse start(Long id, Long userId);
+    SprintResponse complete(Long id, CompleteSprintRequest req, Long userId);
+    SprintResponse updateRetro(Long id, String retroNotes, Long userId);
+    VelocityResponse velocity(Long projectId);
+    void delete(Long id, Long userId);
+
+    List<TaskSummaryResponse> sprintTasks(Long sprintId);
+    void addTaskToSprint(Long sprintId, Long taskId, Long userId);
+    void removeTaskFromSprint(Long sprintId, Long taskId, Long userId);
+    List<TaskSummaryResponse> backlog(Long projectId);
+    BurndownResponse burndown(Long sprintId);
+}

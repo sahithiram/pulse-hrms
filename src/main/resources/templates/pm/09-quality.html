@@ -1,886 +1,1269 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>PM · Quality</title>
+  <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+  <title>Project Management · Quality</title>
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- ============ SHARED THEME ============ -->
+  <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+  <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
   <style>
-    :root{--bg:#0f172a;--bg2:#131c31;--card:#1e293b;--card2:#243347;--bd:#2a3950;--bd2:#3b4d6a;--tx:#f1f5f9;--tx2:#94a3b8;--tx3:#64748b;--pri:#6366f1;--pri-h:#4f46e5;--pri-soft:rgba(99,102,241,.12);--suc:#10b981;--suc-soft:rgba(16,185,129,.14);--dng:#ef4444;--dng-soft:rgba(239,68,68,.14);--wrn:#f59e0b;--wrn-soft:rgba(245,158,11,.14);--inf:#0ea5e9;--inf-soft:rgba(14,165,233,.14);--pur:#a855f7;--pur-soft:rgba(168,85,247,.14);--sb:232px;--sb-c:56px;--hh:46px;--r:6px;--rl:8px;--fs-xs:10.5px;--fs-sm:11.5px;--fs:12.5px;--fs-md:13.5px;--fs-lg:15px;--fs-xl:18px;--fs-2xl:22px;--t:180ms cubic-bezier(.4,0,.2,1);--t-fast:120ms cubic-bezier(.4,0,.2,1);--sh:0 4px 12px rgba(0,0,0,.35);--sh-lg:0 12px 40px rgba(0,0,0,.5);--z-sb:1000;--z-h:900;--z-dr:1200;--z-ts:1600;--z-cmd:1700;--z-modal:1500}
-    .pm-light{--bg:#f8fafc;--bg2:#fff;--card:#fff;--card2:#f1f5f9;--bd:#e2e8f0;--bd2:#cbd5e1;--tx:#0f172a;--tx2:#475569;--tx3:#94a3b8}
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html,body{height:100%}
-    body{font-family:'Inter',sans-serif;font-size:var(--fs);line-height:1.45;background:var(--bg);color:var(--tx);overflow-x:hidden;-webkit-font-smoothing:antialiased}
-    ::-webkit-scrollbar{width:6px;height:6px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:6px}
-    a{color:var(--pri);text-decoration:none}
-    button{font-family:inherit}
-    .pm-shell{display:grid;grid-template-columns:var(--sb) 1fr;min-height:100vh;transition:grid-template-columns var(--t)}
-    .pm-shell.collapsed{grid-template-columns:var(--sb-c) 1fr}
-    .pm-sidebar{position:sticky;top:0;height:100vh;background:var(--bg2);border-right:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden;z-index:var(--z-sb)}
-    .pm-brand{display:flex;align-items:center;gap:8px;padding:10px 12px;height:var(--hh);border-bottom:1px solid var(--bd);flex-shrink:0}
-    .pm-brand-logo{width:28px;height:28px;border-radius:6px;background:linear-gradient(135deg,var(--pri),var(--pur));display:grid;place-content:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0}
-    .pm-brand-name{font-weight:600;font-size:var(--fs-md);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-    .pm-shell.collapsed .pm-brand-name,.pm-shell.collapsed .pm-nav-section,.pm-shell.collapsed .pm-nav-label,.pm-shell.collapsed .pm-nav-badge{display:none}
-    .pm-sidebar-scroll{flex:1;overflow-y:auto;padding:6px 6px 20px}
-    .pm-nav-section{padding:12px 10px 4px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px}
-    .pm-nav-section i{font-size:9px;color:var(--pri)}
-    .pm-nav-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--r);color:var(--tx2);text-decoration:none;font-size:var(--fs);font-weight:500;transition:background var(--t-fast),color var(--t-fast);cursor:pointer;white-space:nowrap;margin:1px 0}
-    .pm-nav-link:hover{background:var(--card2);color:var(--tx)}
-    .pm-nav-link.active{background:var(--pri-soft);color:var(--pri)}
-    .pm-nav-link i{width:16px;text-align:center;font-size:12.5px;flex-shrink:0}
-    .pm-nav-label{flex:1;overflow:hidden;text-overflow:ellipsis}
-    .pm-nav-badge{background:var(--pri);color:#fff;font-size:var(--fs-xs);font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center}
-    .pm-nav-badge.warn{background:var(--wrn)}
-    .pm-main{min-width:0;display:flex;flex-direction:column}
-    .pm-header{position:sticky;top:0;z-index:var(--z-h);height:var(--hh);background:var(--card);border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0}
-    .pm-iconbtn{width:30px;height:30px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx2);display:grid;place-content:center;cursor:pointer;font-size:12px;transition:var(--t-fast);position:relative;flex-shrink:0}
-    .pm-iconbtn:hover{color:var(--tx);border-color:var(--pri)}
-    .pm-iconbtn .dot{position:absolute;top:-3px;right:-3px;background:var(--dng);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;min-width:15px;text-align:center;line-height:1.2}
-    .pm-search{position:relative;flex:1;max-width:380px}
-    .pm-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--tx3)}
-    .pm-search input{width:100%;height:30px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 10px 0 30px;font-size:var(--fs);font-family:inherit;outline:none}
-    .pm-search input:focus{border-color:var(--pri)}
-    .pm-search kbd{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--card2);border:1px solid var(--bd);border-radius:4px;padding:1px 5px;font-size:var(--fs-xs);color:var(--tx3)}
-    .pm-header-right{display:flex;align-items:center;gap:6px;margin-left:auto}
-    .pm-live{display:flex;align-items:center;gap:5px;font-size:var(--fs-xs);color:var(--tx3);font-weight:600;padding:0 6px}
-    .pm-live .dot{width:6px;height:6px;border-radius:50%;background:var(--suc);position:relative}
-    .pm-live .dot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid var(--suc);animation:pm-pulse 1.8s ease-out infinite}
-    @keyframes pm-pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.8);opacity:0}}
-    .pm-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-weight:700;font-size:11px;display:grid;place-content:center;cursor:pointer;flex-shrink:0}
-    .pm-content{padding:12px 14px;flex:1;min-width:0}
-    .pm-breadcrumb{font-size:var(--fs-sm);color:var(--tx3);margin-bottom:8px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
-    .pm-breadcrumb a{color:var(--tx3)}
-    .pm-breadcrumb a:hover{color:var(--pri)}
-    .pm-page-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap}
-    .pm-page-title{font-size:var(--fs-xl);font-weight:600;display:flex;align-items:center;gap:8px}
-    .pm-page-title i{color:var(--pri);font-size:15px}
-    .pm-page-sub{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .pm-page-actions{display:flex;gap:6px;flex-wrap:wrap}
-    .pm-btn{height:28px;padding:0 10px;border-radius:var(--r);border:1px solid var(--bd);background:transparent;color:var(--tx);font-family:inherit;font-size:var(--fs);font-weight:500;display:inline-flex;align-items:center;gap:5px;cursor:pointer;transition:var(--t-fast);white-space:nowrap}
-    .pm-btn:hover{border-color:var(--pri);color:var(--pri)}
-    .pm-btn i{font-size:11px}
-    .pm-btn-primary{background:var(--pri);border-color:var(--pri);color:#fff}
-    .pm-btn-primary:hover{background:var(--pri-h);border-color:var(--pri-h);color:#fff}
-    .pm-btn-sm{height:22px;padding:0 8px;font-size:var(--fs-sm)}
-    .pm-btn-icon{width:26px;height:26px;padding:0;justify-content:center}
-    .pm-btn-danger{color:var(--dng);border-color:rgba(239,68,68,.3)}
-    .pm-btn-danger:hover{border-color:var(--dng);color:var(--dng);background:var(--dng-soft)}
-    .pm-input,.pm-select{height:28px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);padding:0 8px;font-family:inherit;font-size:var(--fs);outline:none;width:100%}
-    .pm-input:focus,.pm-select:focus{border-color:var(--pri)}
-    .pm-card{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
-    .pm-badge{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:10px;font-size:var(--fs-xs);font-weight:600;white-space:nowrap;line-height:1.6}
-    .pm-badge.primary{background:var(--pri-soft);color:var(--pri)}
-    .pm-badge.success{background:var(--suc-soft);color:var(--suc)}
-    .pm-badge.danger{background:var(--dng-soft);color:var(--dng)}
-    .pm-badge.warning{background:var(--wrn-soft);color:var(--wrn)}
-    .pm-badge.info{background:var(--inf-soft);color:var(--inf)}
-    .pm-badge.purple{background:var(--pur-soft);color:var(--pur)}
-    .pm-progress{height:5px;background:var(--bg);border-radius:10px;overflow:hidden;width:100%}
-    .pm-progress-bar{height:100%;background:var(--pri);border-radius:10px;transition:width 300ms ease}
-    .pm-table{width:100%;border-collapse:collapse;font-size:var(--fs)}
-    .pm-table thead th{text-align:left;font-size:var(--fs-xs);font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--tx3);padding:6px 8px;border-bottom:1px solid var(--bd);white-space:nowrap}
-    .pm-table tbody td{padding:6px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}
-    .pm-table tbody tr:hover{background:var(--card2)}
-    .pm-table tbody tr:last-child td{border-bottom:none}
-    .pm-toasts{position:fixed;top:12px;right:12px;z-index:var(--z-ts);display:flex;flex-direction:column;gap:6px;max-width:340px;pointer-events:none}
-    .pm-toast{background:var(--card);border:1px solid var(--bd);border-left:3px solid var(--pri);border-radius:var(--rl);padding:8px 10px;display:flex;align-items:center;gap:8px;box-shadow:var(--sh);transform:translateX(120%);transition:transform 280ms cubic-bezier(.4,0,.2,1);pointer-events:auto;cursor:pointer}
-    .pm-toast.show{transform:translateX(0)}
-    .pm-toast.success{border-left-color:var(--suc)}
-    .pm-toast.error{border-left-color:var(--dng)}
-    .pm-toast.warning{border-left-color:var(--wrn)}
-    .pm-toast-icon{width:22px;height:22px;border-radius:50%;display:grid;place-content:center;color:#fff;font-size:10px;flex-shrink:0}
-    .pm-toast.success .pm-toast-icon{background:var(--suc)}
-    .pm-toast.error .pm-toast-icon{background:var(--dng)}
-    .pm-toast.warning .pm-toast-icon{background:var(--wrn)}
-    .pm-toast.info .pm-toast-icon{background:var(--inf)}
-    .pm-toast-msg{flex:1;font-size:var(--fs);font-weight:500}
-    .pm-cmd-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);z-index:var(--z-cmd);display:none;align-items:flex-start;justify-content:center;padding-top:12vh}
-    .pm-cmd-backdrop.open{display:flex}
-    .pm-cmd{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);width:100%;max-width:560px;box-shadow:var(--sh-lg);overflow:hidden}
-    .pm-cmd-input{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid var(--bd)}
-    .pm-cmd-input input{flex:1;background:transparent;border:none;outline:none;color:var(--tx);font-size:var(--fs-md);font-family:inherit}
-    .pm-cmd-list{max-height:340px;overflow-y:auto;padding:4px}
-    .pm-cmd-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:var(--fs-md)}
-    .pm-cmd-item:hover,.pm-cmd-item.active{background:var(--pri-soft)}
-    .pm-cmd-item i{color:var(--pri);width:16px;text-align:center}
-    .pm-cmd-foot{padding:6px 12px;border-top:1px solid var(--bd);font-size:var(--fs-xs);color:var(--tx3);display:flex;gap:14px;background:var(--bg)}
-    .pm-drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:var(--z-dr);opacity:0;pointer-events:none;transition:opacity var(--t)}
-    .pm-drawer-backdrop.open{opacity:1;pointer-events:auto}
-    .pm-drawer{position:fixed;top:0;right:0;width:min(640px,96vw);height:100vh;background:var(--card);border-left:1px solid var(--bd);z-index:calc(var(--z-dr) + 1);transform:translateX(100%);transition:transform 280ms cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:var(--sh-lg)}
-    .pm-drawer.open{transform:translateX(0)}
-    .pm-drawer-head{height:var(--hh);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
-    .pm-drawer-title{font-size:var(--fs-md);font-weight:600}
-    .pm-drawer-body{flex:1;overflow-y:auto;padding:12px}
-    .pm-tabs{display:flex;gap:0;border-bottom:1px solid var(--bd);margin-bottom:12px;overflow-x:auto;padding:0 2px}
-    .pm-tabs button{background:none;border:none;color:var(--tx2);padding:8px 12px;font-size:var(--fs-md);font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:var(--t-fast);margin-bottom:-1px}
-    .pm-tabs button:hover{color:var(--tx)}
-    .pm-tabs button.active{color:var(--pri);border-bottom-color:var(--pri);font-weight:600}
-    .pm-pane{display:none}
-    .pm-pane.active{display:block;animation:pmFade .18s ease}
-    @keyframes pmFade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
-    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px}
-    .kpi{background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px 10px;cursor:pointer;transition:var(--t-fast)}
-    .kpi:hover{border-color:var(--pri);transform:translateY(-1px)}
-    .kpi-icon{width:24px;height:24px;border-radius:var(--r);display:grid;place-content:center;font-size:11px;margin-bottom:4px}
-    .kpi-icon.blue{background:var(--pri-soft);color:var(--pri)}
-    .kpi-icon.green{background:var(--suc-soft);color:var(--suc)}
-    .kpi-icon.red{background:var(--dng-soft);color:var(--dng)}
-    .kpi-icon.orange{background:var(--wrn-soft);color:var(--wrn)}
-    .kpi-icon.cyan{background:var(--inf-soft);color:var(--inf)}
-    .kpi-icon.purple{background:var(--pur-soft);color:var(--pur)}
-    .kpi-value{font-size:var(--fs-2xl);font-weight:700;line-height:1}
-    .kpi-label{font-size:var(--fs-sm);color:var(--tx2);margin-top:2px}
-    .wf-step{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);padding:3px 8px;border-radius:14px;background:var(--bg);border:1px solid var(--bd);color:var(--tx2);cursor:pointer;transition:var(--t-fast);white-space:nowrap}
-    .wf-step:hover{border-color:var(--pri);color:var(--tx)}
-    .wf-step.active{background:var(--pri);border-color:var(--pri);color:#fff}
-    .wf-step.done{background:var(--suc-soft);border-color:transparent;color:var(--suc)}
-    .wf-arrow{color:var(--tx3);font-size:9px;margin:0 4px}
-    .wf-wrap{display:flex;align-items:center;flex-wrap:wrap;gap:2px;padding:8px 10px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);margin-bottom:12px}
-    .sev{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:var(--fs-xs);font-weight:700}
-    .sev.critical{background:var(--dng);color:#fff}
-    .sev.major{background:var(--dng-soft);color:var(--dng)}
-    .sev.minor{background:var(--wrn-soft);color:var(--wrn)}
-    .prio{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:6px;font-size:var(--fs-xs);font-weight:700}
-    .prio.critical{background:var(--dng);color:#fff}
-    .prio.high{background:var(--dng-soft);color:var(--dng)}
-    .prio.medium{background:var(--wrn-soft);color:var(--wrn)}
-    .prio.low{background:var(--suc-soft);color:var(--suc)}
-    .matrix-grid{display:grid;grid-template-columns:70px 1fr 1fr 1fr;gap:3px;background:var(--card);border:1px solid var(--bd);border-radius:var(--rl);padding:8px}
-    .mx-cell{padding:14px 8px;border-radius:6px;text-align:center;font-size:var(--fs-sm);font-weight:600;cursor:pointer;transition:var(--t-fast);position:relative}
-    .mx-cell:hover{transform:scale(1.03);z-index:1}
-    .mx-cell.high{background:var(--dng-soft);color:var(--dng)}
-    .mx-cell.medium{background:var(--wrn-soft);color:var(--wrn)}
-    .mx-cell.low{background:var(--suc-soft);color:var(--suc)}
-    .mx-lbl{display:flex;align-items:center;justify-content:center;font-size:var(--fs-xs);color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
-    .rs-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
-    .rs-dot.high{background:var(--dng)}
-    .rs-dot.med{background:var(--wrn)}
-    .rs-dot.low{background:var(--suc)}
-    .bulk-bar{display:none;background:var(--pri);color:#fff;border-radius:var(--rl);padding:8px 12px;margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap}
-    .bulk-bar.show{display:flex}
-    .bulk-bar button{background:rgba(255,255,255,.15);color:#fff;border:none;padding:4px 10px;border-radius:6px;font-size:var(--fs-sm);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
-    .bulk-bar button:hover{background:rgba(255,255,255,.25)}
-    .tl{position:relative;padding-left:16px}
-    .tl::before{content:'';position:absolute;left:5px;top:4px;bottom:4px;width:1.5px;background:var(--bd)}
-    .tl-item{position:relative;padding-bottom:10px}
-    .tl-item:last-child{padding-bottom:0}
-    .tl-item::before{content:'';position:absolute;left:-16px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--pri);border:2px solid var(--card)}
-    .tl-item.success::before{background:var(--suc)}
-    .tl-item.warning::before{background:var(--wrn)}
-    .tl-item.danger::before{background:var(--dng)}
-    .tl-title{font-size:var(--fs);font-weight:500}
-    .tl-meta{font-size:var(--fs-xs);color:var(--tx3);margin-top:2px}
-    .tpl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-    .tpl-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:16px;background:var(--bg);border:1px solid var(--bd);color:var(--tx2);font-size:var(--fs-sm);cursor:pointer;transition:var(--t-fast)}
-    .tpl-chip:hover{border-color:var(--pri);color:var(--pri)}
-    .tpl-chip i{font-size:10px}
-    .att-row{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--bd);border-radius:var(--r);padding:6px 10px;margin-bottom:4px;font-size:var(--fs)}
-    .watchers-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:6px 0}
-    .watcher{display:inline-flex;align-items:center;gap:4px;background:var(--card2);padding:2px 8px;border-radius:12px;font-size:var(--fs-sm)}
-    .watcher .x{cursor:pointer;opacity:.6;font-size:9px}
-    .watcher .x:hover{opacity:1}
-    .watcher-icon{width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,var(--pri),var(--pur));color:#fff;font-size:8px;font-weight:700;display:grid;place-content:center}
-    .watcher-chip{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:12px;background:var(--bg);border:1px solid var(--bd);font-size:var(--fs-sm);cursor:pointer;transition:var(--t-fast)}
-    .watcher-chip:hover{border-color:var(--pri)}
-    .watcher-chip.on{background:var(--pri-soft);border-color:var(--pri);color:var(--pri);font-weight:600}
-    .hist-entry{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid rgba(42,57,80,.4);font-size:var(--fs)}
-    .hist-entry:last-child{border-bottom:none}
-    .hist-icon{width:20px;height:20px;border-radius:50%;display:grid;place-content:center;font-size:9px;flex-shrink:0;background:var(--card2);color:var(--tx2)}
-    .hist-body{flex:1;min-width:0}
-    .hist-what{font-size:var(--fs)}
-    .hist-when{font-size:var(--fs-xs);color:var(--tx3);margin-top:1px}
-    .hist-diff{font-size:var(--fs-xs);color:var(--tx2);margin-top:2px;background:var(--card2);padding:2px 6px;border-radius:3px;display:inline-block}
-    .hist-diff .old{color:var(--dng);text-decoration:line-through}
-    .hist-diff .new{color:var(--suc)}
-    .mob-toggle{display:none;position:fixed;top:.5rem;left:.5rem;z-index:1100;width:34px;height:34px;background:var(--card);border:1px solid var(--bd);border-radius:6px;color:var(--tx);cursor:pointer;place-content:center}
-    @media(max-width:900px){.pm-shell{grid-template-columns:1fr}.pm-sidebar{position:fixed;transform:translateX(-100%);transition:transform var(--t);width:var(--sb)}.pm-sidebar.open{transform:translateX(0)}.mob-toggle{display:grid}.pm-header{padding-left:2.5rem}.matrix-grid{font-size:9px}}
+    /* ============ PAGE-SPECIFIC STYLES ONLY (PM Quality) ============ */
+
+    .pm-breadcrumb {
+      font-size: .8125rem; color: var(--dark-text-secondary);
+      margin-bottom: .75rem; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    .pm-breadcrumb a { color: var(--dark-text-secondary); }
+    .pm-breadcrumb a:hover { color: var(--primary); }
+
+    /* Workflow strip */
+    .wf-wrap {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+      padding: .5rem .75rem; background: var(--dark-card);
+      border: 1px solid var(--dark-border); border-radius: var(--radius-card);
+      margin-bottom: 1rem;
+    }
+    .wf-step {
+      display: inline-flex; align-items: center; gap: .25rem;
+      font-size: var(--fs-xs); padding: .2rem .65rem; border-radius: 14px;
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+      color: var(--dark-text-secondary); cursor: pointer;
+      transition: var(--transition); white-space: nowrap;
+    }
+    .wf-step:hover { border-color: var(--primary); color: var(--dark-text); }
+    .wf-step.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .wf-step.done { background: rgba(16,185,129,.15); border-color: transparent; color: var(--success); }
+    .wf-arrow { color: var(--dark-text-secondary); font-size: .55rem; margin: 0 .25rem; }
+
+    /* Severity / priority pills */
+    .sev { display: inline-flex; align-items: center; gap: .25rem; padding: 2px .5rem; border-radius: 10px; font-size: var(--fs-xs); font-weight: 700; }
+    .sev.critical { background: var(--danger); color: #fff; }
+    .sev.major    { background: rgba(239,68,68,.15); color: var(--danger); }
+    .sev.minor    { background: rgba(245,158,11,.15); color: var(--warning); }
+    .prio { display: inline-flex; align-items: center; gap: .25rem; padding: 2px .5rem; border-radius: 6px; font-size: var(--fs-xs); font-weight: 700; }
+    .prio.critical { background: var(--danger); color: #fff; }
+    .prio.high     { background: rgba(239,68,68,.15); color: var(--danger); }
+    .prio.medium   { background: rgba(245,158,11,.15); color: var(--warning); }
+    .prio.low      { background: rgba(16,185,129,.15); color: var(--success); }
+
+    /* Matrices */
+    .matrix-grid {
+      display: grid; grid-template-columns: 70px 1fr 1fr 1fr; gap: 3px;
+      background: var(--dark-card); border: 1px solid var(--dark-border);
+      border-radius: var(--radius-card); padding: .5rem;
+    }
+    .mx-cell {
+      padding: .85rem .5rem; border-radius: 6px; text-align: center;
+      font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
+      transition: var(--transition); position: relative;
+    }
+    .mx-cell:hover { transform: scale(1.03); z-index: 1; }
+    .mx-cell.high   { background: rgba(239,68,68,.15); color: var(--danger); }
+    .mx-cell.medium { background: rgba(245,158,11,.15); color: var(--warning); }
+    .mx-cell.low    { background: rgba(16,185,129,.15); color: var(--success); }
+    .mx-lbl {
+      display: flex; align-items: center; justify-content: center;
+      font-size: var(--fs-xs); color: var(--dark-text-secondary);
+      font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    }
+
+    /* Risk dot */
+    .rs-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: .25rem; }
+    .rs-dot.high { background: var(--danger); }
+    .rs-dot.med  { background: var(--warning); }
+    .rs-dot.low  { background: var(--success); }
+
+    /* Bulk bar */
+    .bulk-bar {
+      display: none; background: var(--primary); color: #fff;
+      border-radius: var(--radius-card); padding: .6rem .9rem;
+      margin-bottom: 1rem; align-items: center; gap: .5rem; flex-wrap: wrap;
+    }
+    .bulk-bar.show { display: flex; }
+    .bulk-bar button {
+      background: rgba(255,255,255,.15); color: #fff; border: none;
+      padding: .35rem .85rem; border-radius: 6px; font-size: var(--fs-sm);
+      cursor: pointer; display: inline-flex; align-items: center; gap: .35rem;
+    }
+    .bulk-bar button:hover { background: rgba(255,255,255,.25); }
+
+    /* Template chips */
+    .tpl-chips { display: flex; gap: .35rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .tpl-chip {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .3rem .7rem; border-radius: 16px;
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+      color: var(--dark-text-secondary); font-size: var(--fs-sm); cursor: pointer;
+      transition: var(--transition);
+    }
+    .tpl-chip:hover { border-color: var(--primary); color: var(--primary); }
+    .tpl-chip i { font-size: .65rem; }
+
+    /* Watcher chip */
+    .watcher-chip {
+      display: inline-flex; align-items: center; gap: .25rem;
+      padding: 2px .5rem; border-radius: 12px;
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+      font-size: var(--fs-xs); cursor: pointer; transition: var(--transition);
+    }
+    .watcher-chip:hover { border-color: var(--primary); }
+    .watcher-chip.on { background: rgba(99,102,241,.15); border-color: var(--primary); color: var(--primary); font-weight: 600; }
+
+    /* History entries (in drawer) */
+    .hist-entry {
+      display: flex; gap: .5rem; padding: .4rem 0;
+      border-bottom: 1px solid rgba(51,65,85,.4);
+      font-size: var(--fs-base);
+    }
+    .hist-entry:last-child { border-bottom: none; }
+    .hist-icon {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: grid; place-content: center; font-size: .55rem;
+      flex-shrink: 0; background: rgba(148,163,184,.15); color: var(--dark-text-secondary);
+    }
+    .hist-body { flex: 1; min-width: 0; }
+    .hist-what { font-size: var(--fs-base); }
+    .hist-when { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: 1px; }
+    .hist-diff {
+      font-size: var(--fs-xs); color: var(--dark-text-secondary);
+      margin-top: 2px; background: var(--dark-bg);
+      padding: 2px .4rem; border-radius: 3px; display: inline-block;
+    }
+    .hist-diff .old { color: var(--danger); text-decoration: line-through; }
+    .hist-diff .new { color: var(--success); }
+
+    /* Filter toolbar */
+    .tk-toolbar {
+      display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;
+    }
+    .tk-toolbar .form-input {
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+      color: var(--dark-text); border-radius: var(--radius-btn);
+      height: 32px; padding: 0 .65rem;
+      font-family: inherit; font-size: var(--fs-base); outline: none;
+      width: 100%;
+    }
+    .tk-toolbar .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .tk-toolbar label {
+      display: flex; align-items: center; gap: .35rem;
+      font-size: var(--fs-sm); color: var(--dark-text-secondary);
+      padding: 0 .5rem; background: var(--dark-card); border: 1px solid var(--dark-border);
+      border-radius: var(--radius-btn); cursor: pointer; height: 32px;
+    }
+    .tk-toolbar label input { accent-color: var(--primary); }
+
+    /* Breakdown rows */
+    .type-breakdown { display: flex; justify-content: space-between; align-items: center; margin-bottom: .35rem; font-size: var(--fs-base); }
+    .type-breakdown .bar { flex: 1; margin: 0 .5rem; }
   </style>
 </head>
 <body>
-<button class="mob-toggle" id="mobToggle"><i class="fas fa-bars"></i></button>
 
-<div class="pm-shell" id="pmShell">
-  <aside class="pm-sidebar" id="pmSidebar">
-    <div class="pm-brand"><div class="pm-brand-logo">M</div><div class="pm-brand-name">Menti's PM</div></div>
-    <div class="pm-sidebar-scroll" id="pmSidebarNav"></div>
-  </aside>
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+  <i class="fas fa-bars"></i>
+</button>
 
-  <div class="pm-main">
-    <header class="pm-header">
-      <button class="pm-iconbtn" onclick="PM.toggleSidebar()"><i class="fas fa-bars"></i></button>
-      <div class="pm-search" onclick="PM.openCmd()"><i class="fas fa-search"></i><input placeholder="Search issues, risks..." readonly style="cursor:pointer"><kbd>⌘K</kbd></div>
-      <div class="pm-header-right">
-        <div class="pm-live"><span class="dot"></span> Live · <span id="pmLiveAgo">just now</span></div>
-        <button class="pm-iconbtn" onclick="PM.openCmd()"><i class="fas fa-terminal"></i></button>
-        <button class="pm-iconbtn" onclick="PM.toggleTheme()"><i class="fas fa-moon"></i></button>
-        <button class="pm-iconbtn" onclick="location.href='/pm/02-inbox?tab=notifications'"><i class="fas fa-bell"></i><span class="dot" id="pmNotifBadge">0</span></button>
-        <div class="pm-avatar" id="pmUserAvatar" title="Loading...">?</div>
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon" id="sidebarBrandIcon">
+      <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+      <i id="sidebarIcon" class="fas fa-building"></i>
+    </div>
+    <span id="sidebarCompanyName">Menti's IT Solutions</span>
+  </div>
+
+  <div class="sidebar-tools">
+    <div class="sidebar-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off" aria-label="Search sidebar menu">
+    </div>
+    <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle" aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+      <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-content">
+    <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+      <div class="side-group" data-group="workspace">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+          <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+          <span class="side-group-label">Workspace</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupWorkspace">
+          <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+          <li><a class="nav-link" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+          <li><a class="nav-link" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+            <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span></a></li>
+        </ul>
       </div>
-    </header>
 
-    <div class="pm-content">
-      <div class="pm-breadcrumb"><a href="/pm/01-home"><i class="fas fa-house"></i></a> / Project Management / Quality / <span id="pmCrumb">Issues</span></div>
-
-      <div class="pm-page-head">
-        <div>
-          <div class="pm-page-title"><i class="fas fa-shield-halved" id="pmPageIcon"></i> <span id="pmPageTitle">Issues</span></div>
-          <div class="pm-page-sub" id="pmPageSub">Track bugs, enhancements, and quality</div>
-        </div>
-        <div class="pm-page-actions" id="pmActions"></div>
+      <div class="side-group" data-group="delivery">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+          <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+          <span class="side-group-label">Delivery</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupDelivery">
+          <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+          <li><a class="nav-link" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+          <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+          <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+          <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+        </ul>
       </div>
 
-      <div class="pm-tabs" id="pmTabs">
-        <button class="active" data-tab="issues" onclick="switchTab('issues',this)">Issues</button>
-        <button data-tab="risks" onclick="switchTab('risks',this)">Risks</button>
+      <div class="side-group" data-group="finance">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+          <span class="side-group-label">Finance</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupFinance">
+          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+        </ul>
       </div>
 
-      <div class="pm-pane active" id="pane-issues">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon red"><i class="fas fa-fire"></i></div><div class="kpi-value" id="kCritical">0</div><div class="kpi-label">Critical Open</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-exclamation-triangle"></i></div><div class="kpi-value" id="kTotalOpen">0</div><div class="kpi-label">Total Open</div></div>
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-check-circle"></i></div><div class="kpi-value">6.2d</div><div class="kpi-label">Avg Resolution</div></div>
-          <div class="kpi"><div class="kpi-icon cyan"><i class="fas fa-eye"></i></div><div class="kpi-value" id="kWatching">0</div><div class="kpi-label">Watching</div></div>
-        </div>
+      <div class="side-group" data-group="insights">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+          <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+          <span class="side-group-label">Insights</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupInsights">
+          <li><a class="nav-link active" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+        </ul>
+      </div>
 
-        <div class="wf-wrap">
-          <span style="font-size:var(--fs-xs);color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-right:6px">Workflow:</span>
-          <span class="wf-step done"><i class="fas fa-check" style="font-size:8px"></i> New</span>
-          <span class="wf-arrow">→</span>
-          <span class="wf-step done"><i class="fas fa-check" style="font-size:8px"></i> Assigned</span>
-          <span class="wf-arrow">→</span>
-          <span class="wf-step active">In Progress</span>
-          <span class="wf-arrow">→</span>
-          <span class="wf-step">Fixed</span>
-          <span class="wf-arrow">→</span>
-          <span class="wf-step">Verified</span>
-          <span class="wf-arrow">→</span>
-          <span class="wf-step">Closed</span>
-        </div>
+      <div class="side-empty" id="sideNavEmpty" hidden>No menu items match your search</div>
+    </nav>
+  </div>
+</aside>
 
-        <div class="tpl-chips">
-          <span class="tpl-chip" onclick="addIssue('Bug')"><i class="fas fa-bug"></i> Bug Report</span>
-          <span class="tpl-chip" onclick="addIssue('Feature')"><i class="fas fa-star"></i> Feature Request</span>
-          <span class="tpl-chip" onclick="addIssue('Security')"><i class="fas fa-lock"></i> Security</span>
-          <span class="tpl-chip" onclick="addIssue('Performance')"><i class="fas fa-bolt"></i> Performance</span>
-          <span class="tpl-chip" onclick="addIssue('Question')"><i class="fas fa-question"></i> Question</span>
-        </div>
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+  <header class="top-header">
+    <div class="search-box" onclick="PM.openCmd()">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+      <kbd>⌘K</kbd>
+    </div>
 
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <input class="pm-input" style="max-width:240px" placeholder="Search issues..." id="issSearch" oninput="renderIssues()">
-          <select class="pm-select" style="max-width:150px" id="issSev" onchange="renderIssues()">
-            <option value="">All Severity</option>
-            <option value="Critical">Critical</option><option value="Major">Major</option><option value="Minor">Minor</option>
-          </select>
-          <select class="pm-select" style="max-width:160px" id="issStatus" onchange="renderIssues()">
-            <option value="">All Status</option>
-            <option value="Open">Open</option><option value="In Progress">In Progress</option>
-            <option value="Fixed">Fixed</option><option value="Verified">Verified</option><option value="Closed">Closed</option>
-          </select>
-          <label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-sm);color:var(--tx2);padding:0 8px;background:var(--card);border:1px solid var(--bd);border-radius:var(--r);cursor:pointer">
-            <input type="checkbox" id="issWatchOnly" onchange="renderIssues()" style="accent-color:var(--pri)">
-            <i class="fas fa-eye"></i> Only watching
-          </label>
-        </div>
+    <div class="top-header-actions">
+      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
+      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+      <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+      </button>
 
-        <div class="bulk-bar" id="issBulk">
-          <span><span id="issSelCount">0</span> selected</span>
-          <button onclick="bulkIssueStatus()"><i class="fas fa-sync"></i> Status</button>
-          <button onclick="bulkIssueAssignee()"><i class="fas fa-user"></i> Assign</button>
-          <button onclick="bulkWatch()"><i class="fas fa-eye"></i> Watch</button>
-          <button onclick="bulkIssueDelete()" style="background:rgba(255,255,255,.25)"><i class="fas fa-trash"></i> Delete</button>
-          <button onclick="clearIssSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
-        </div>
+      <div class="menti-ai-nav-wrapper">
+        <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()" aria-label="Open Menti PM Assistant">
+          <span class="menti-ai-pulse"></span>
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </button>
+        <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+      </div>
 
-        <div class="pm-card" style="padding:0;overflow:hidden">
-          <div style="overflow-x:auto">
-            <table class="pm-table">
-              <thead><tr>
-                <th style="width:32px"><input type="checkbox" onchange="toggleAllIss(this)" style="accent-color:var(--pri)"></th>
-                <th>ID</th><th>Issue</th><th>Severity</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Watchers</th><th>Reported</th><th>Type</th><th></th>
-              </tr></thead>
-              <tbody id="issBody"></tbody>
-            </table>
-          </div>
+      <div class="user-profile-menu">
+        <div class="dropdown">
+          <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="avatar-sm" id="pmUserAvatar">?</div>
+            <span id="pmUserName">Loading…</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+            <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
         </div>
+      </div>
+    </div>
+  </header>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-          <div class="pm-card">
-            <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-table" style="color:var(--pri)"></i> Priority Matrix</div>
+  <div class="content-area">
+
+    <div class="pm-breadcrumb">
+      <a href="/pm/01-home"><i class="fas fa-house"></i></a>
+      <span>/</span><span>Project Management</span>
+      <span>/</span><span>Quality</span>
+      <span>/</span><span id="pmCrumb">Issues</span>
+    </div>
+
+    <div class="pm-page-head">
+      <div>
+        <div class="pm-page-title"><i class="fas fa-shield-halved" id="pmPageIcon"></i> <span id="pmPageTitle">Issues</span></div>
+        <div class="pm-page-sub" id="pmPageSub">Track bugs, enhancements, and quality</div>
+      </div>
+      <div class="pm-page-actions">
+        <select class="form-input" id="projPicker" style="max-width:220px;height:32px;font-size:var(--fs-sm);padding:0 .65rem;background:var(--dark-bg);color:var(--dark-text);border:1px solid var(--dark-border);border-radius:var(--radius-btn)" onchange="onProjectChange(this.value)">
+          <option value="">Loading projects…</option>
+        </select>
+        <div id="pmActions"></div>
+      </div>
+    </div>
+
+    <div class="pm-tabs" id="pmTabs">
+      <button class="active" data-tab="issues" onclick="switchTab('issues',this)">Issues</button>
+      <button data-tab="risks" onclick="switchTab('risks',this)">Risks</button>
+    </div>
+
+    <!-- ════════ ISSUES ════════ -->
+    <div class="pm-pane active" id="pane-issues">
+      <div class="pm-kpi-grid">
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-fire"></i></div></div><div class="pm-kpi-value" id="kCritical">0</div><div class="pm-kpi-label">Critical Open</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-exclamation-triangle"></i></div></div><div class="pm-kpi-value" id="kTotalOpen">0</div><div class="pm-kpi-label">Total Open</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-check-circle"></i></div></div><div class="pm-kpi-value">6.2d</div><div class="pm-kpi-label">Avg Resolution</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon cyan"><i class="fas fa-eye"></i></div></div><div class="pm-kpi-value" id="kWatching">0</div><div class="pm-kpi-label">Watching</div></div>
+      </div>
+
+      <div class="wf-wrap">
+        <span style="font-size:var(--fs-xs);color:var(--dark-text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-right:.4rem">Workflow:</span>
+        <span class="wf-step done"><i class="fas fa-check" style="font-size:.55rem"></i> New</span>
+        <span class="wf-arrow">→</span>
+        <span class="wf-step done"><i class="fas fa-check" style="font-size:.55rem"></i> Assigned</span>
+        <span class="wf-arrow">→</span>
+        <span class="wf-step active">In Progress</span>
+        <span class="wf-arrow">→</span>
+        <span class="wf-step">Fixed</span>
+        <span class="wf-arrow">→</span>
+        <span class="wf-step">Verified</span>
+        <span class="wf-arrow">→</span>
+        <span class="wf-step">Closed</span>
+      </div>
+
+      <div class="tpl-chips">
+        <span class="tpl-chip" onclick="addIssue('Bug')"><i class="fas fa-bug"></i> Bug Report</span>
+        <span class="tpl-chip" onclick="addIssue('Feature')"><i class="fas fa-star"></i> Feature Request</span>
+        <span class="tpl-chip" onclick="addIssue('Security')"><i class="fas fa-lock"></i> Security</span>
+        <span class="tpl-chip" onclick="addIssue('Performance')"><i class="fas fa-bolt"></i> Performance</span>
+        <span class="tpl-chip" onclick="addIssue('Question')"><i class="fas fa-question"></i> Question</span>
+      </div>
+
+      <div class="tk-toolbar">
+        <input class="form-input" style="max-width:240px" placeholder="Search issues..." id="issSearch" oninput="renderIssues()">
+        <select class="form-input" style="max-width:150px" id="issSev" onchange="renderIssues()">
+          <option value="">All Severity</option>
+          <option value="Critical">Critical</option><option value="Major">Major</option><option value="Minor">Minor</option>
+        </select>
+        <select class="form-input" style="max-width:160px" id="issStatus" onchange="renderIssues()">
+          <option value="">All Status</option>
+          <option value="Open">Open</option><option value="In Progress">In Progress</option>
+          <option value="Fixed">Fixed</option><option value="Verified">Verified</option><option value="Closed">Closed</option>
+        </select>
+        <label>
+          <input type="checkbox" id="issWatchOnly" onchange="renderIssues()">
+          <i class="fas fa-eye"></i> Only watching
+        </label>
+      </div>
+
+      <div class="bulk-bar" id="issBulk">
+        <span><span id="issSelCount">0</span> selected</span>
+        <button onclick="bulkIssueStatus()"><i class="fas fa-sync"></i> Status</button>
+        <button onclick="bulkWatch()"><i class="fas fa-eye"></i> Watch</button>
+        <button onclick="bulkIssueDelete()" style="background:rgba(255,255,255,.25)"><i class="fas fa-trash"></i> Delete</button>
+        <button onclick="clearIssSelection()" style="margin-left:auto"><i class="fas fa-times"></i> Clear</button>
+      </div>
+
+      <div class="pm-widget" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="pm-table">
+            <thead><tr>
+              <th style="width:32px"><input type="checkbox" onchange="toggleAllIss(this)" style="accent-color:var(--primary)"></th>
+              <th>ID</th><th>Issue</th><th>Severity</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Watchers</th><th>Reported</th><th>Type</th><th></th>
+            </tr></thead>
+            <tbody id="issBody">
+            <tr><td colspan="11" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-top:.75rem">
+        <div class="pm-widget">
+          <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-table"></i> Priority Matrix</div></div>
+          <div class="pm-widget-body">
             <div class="matrix-grid">
               <div class="mx-lbl"></div>
               <div class="mx-lbl">Low Impact</div>
               <div class="mx-lbl">Med Impact</div>
               <div class="mx-lbl">High Impact</div>
               <div class="mx-lbl">High Prob</div>
-              <div class="mx-cell medium">🟡 12</div>
-              <div class="mx-cell high">🔴 8</div>
-              <div class="mx-cell high">🔴 5</div>
+              <div class="mx-cell medium" id="issue-mx-med-high">🟡 0</div>
+              <div class="mx-cell high" id="issue-mx-high-high">🔴 0</div>
+              <div class="mx-cell high" id="issue-mx-critical">🔴 0</div>
               <div class="mx-lbl">Med Prob</div>
-              <div class="mx-cell low">🟢 9</div>
-              <div class="mx-cell medium">🟡 6</div>
-              <div class="mx-cell high">🔴 3</div>
+              <div class="mx-cell low" id="issue-mx-low-med">🟢 0</div>
+              <div class="mx-cell medium" id="issue-mx-med-med">🟡 0</div>
+              <div class="mx-cell high" id="issue-mx-high-med">🔴 0</div>
               <div class="mx-lbl">Low Prob</div>
-              <div class="mx-cell low">🟢 4</div>
-              <div class="mx-cell low">🟢 2</div>
-              <div class="mx-cell medium">🟡 1</div>
+              <div class="mx-cell low" id="issue-mx-low-low">🟢 0</div>
+              <div class="mx-cell low" id="issue-mx-low-maj">🟢 0</div>
+              <div class="mx-cell medium" id="issue-mx-med-maj">🟡 0</div>
             </div>
           </div>
-          <div class="pm-card">
-            <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-chart-pie" style="color:var(--pri)"></i> By Type</div>
-            <div id="typeBreakdown"></div>
+        </div>
+        <div class="pm-widget">
+          <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-chart-pie"></i> By Type</div></div>
+          <div class="pm-widget-body" id="typeBreakdown">
+            <div style="text-align:center;padding:1rem;color:var(--dark-text-secondary)">Loading…</div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="pm-pane" id="pane-risks">
-        <div class="kpi-grid">
-          <div class="kpi"><div class="kpi-icon red"><i class="fas fa-fire"></i></div><div class="kpi-value" id="rHigh">0</div><div class="kpi-label">High Severity</div></div>
-          <div class="kpi"><div class="kpi-icon orange"><i class="fas fa-list"></i></div><div class="kpi-value" id="rTotal">0</div><div class="kpi-label">Total Tracked</div></div>
-          <div class="kpi"><div class="kpi-icon green"><i class="fas fa-shield"></i></div><div class="kpi-value">0</div><div class="kpi-label">Mitigating</div></div>
-          <div class="kpi"><div class="kpi-icon cyan"><i class="fas fa-eye"></i></div><div class="kpi-value" id="rWatching">0</div><div class="kpi-label">Watching</div></div>
+    <!-- ════════ RISKS ════════ -->
+    <div class="pm-pane" id="pane-risks">
+      <div class="pm-kpi-grid">
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-fire"></i></div></div><div class="pm-kpi-value" id="rHigh">0</div><div class="pm-kpi-label">High Severity</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-list"></i></div></div><div class="pm-kpi-value" id="rTotal">0</div><div class="pm-kpi-label">Total Tracked</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-shield"></i></div></div><div class="pm-kpi-value">0</div><div class="pm-kpi-label">Mitigating</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon cyan"><i class="fas fa-eye"></i></div></div><div class="pm-kpi-value" id="rWatching">0</div><div class="pm-kpi-label">Watching</div></div>
+      </div>
+
+      <div class="tk-toolbar">
+        <input class="form-input" style="max-width:240px" placeholder="Search risks..." id="rSearch" oninput="renderRisks()">
+        <select class="form-input" style="max-width:150px" id="rSev" onchange="renderRisks()">
+          <option value="">All Severity</option>
+          <option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option>
+        </select>
+        <select class="form-input" style="max-width:160px" id="rStatus" onchange="renderRisks()">
+          <option value="">All Status</option>
+          <option value="Open">Open</option><option value="Escalated">Escalated</option>
+          <option value="Mitigating">Mitigating</option><option value="Resolved">Resolved</option>
+        </select>
+        <button class="pm-btn pm-btn-primary" style="margin-left:auto" onclick="addRisk()"><i class="fas fa-plus"></i> Log Risk</button>
+      </div>
+
+      <div class="pm-widget" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="pm-table">
+            <thead><tr>
+              <th>ID</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Score</th><th>Status</th><th>Owner</th><th>Watchers</th><th></th>
+            </tr></thead>
+            <tbody id="riskBody">
+            <tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">Loading…</td></tr>
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <input class="pm-input" style="max-width:240px" placeholder="Search risks..." id="rSearch" oninput="renderRisks()">
-          <select class="pm-select" style="max-width:150px" id="rSev" onchange="renderRisks()">
-            <option value="">All Severity</option>
-            <option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option>
-          </select>
-          <select class="pm-select" style="max-width:160px" id="rStatus" onchange="renderRisks()">
-            <option value="">All Status</option>
-            <option value="Open">Open</option><option value="Escalated">Escalated</option>
-            <option value="Mitigating">Mitigating</option><option value="Resolved">Resolved</option>
-          </select>
-          <button class="pm-btn pm-btn-primary" style="margin-left:auto" onclick="addRisk()"><i class="fas fa-plus"></i> Log Risk</button>
-        </div>
-
-        <div class="pm-card" style="padding:0;overflow:hidden">
-          <div style="overflow-x:auto">
-            <table class="pm-table">
-              <thead><tr>
-                <th>ID</th><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Score</th><th>Status</th><th>Owner</th><th>Watchers</th><th></th>
-              </tr></thead>
-              <tbody id="riskBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="pm-card" style="margin-top:12px">
-          <div style="font-weight:600;margin-bottom:8px"><i class="fas fa-th" style="color:var(--pri)"></i> Risk Matrix</div>
+      <div class="pm-widget" style="margin-top:.75rem">
+        <div class="pm-widget-head"><div class="pm-widget-title"><i class="fas fa-th"></i> Risk Matrix</div></div>
+        <div class="pm-widget-body">
           <div class="matrix-grid">
             <div class="mx-lbl"></div>
             <div class="mx-lbl">Low Impact</div>
             <div class="mx-lbl">Med Impact</div>
             <div class="mx-lbl">High Impact</div>
             <div class="mx-lbl">High Prob</div>
-            <div class="mx-cell medium">🟡 2</div>
-            <div class="mx-cell high">🔴 3</div>
-            <div class="mx-cell high">🔴 1</div>
+            <div class="mx-cell medium" id="risk-mx-med-high">🟡 0</div>
+            <div class="mx-cell high" id="risk-mx-high-high">🔴 0</div>
+            <div class="mx-cell high" id="risk-mx-critical-high">🔴 0</div>
             <div class="mx-lbl">Med Prob</div>
-            <div class="mx-cell low">🟢 3</div>
-            <div class="mx-cell medium">🟡 4</div>
-            <div class="mx-cell high">🔴 1</div>
+            <div class="mx-cell low" id="risk-mx-low-med">🟢 0</div>
+            <div class="mx-cell medium" id="risk-mx-med-med">🟡 0</div>
+            <div class="mx-cell high" id="risk-mx-high-med">🔴 0</div>
             <div class="mx-lbl">Low Prob</div>
-            <div class="mx-cell low">🟢 5</div>
-            <div class="mx-cell low">🟢 2</div>
-            <div class="mx-cell medium">🟡 1</div>
+            <div class="mx-cell low" id="risk-mx-low-low">🟢 0</div>
+            <div class="mx-cell low" id="risk-mx-maj-low">🟢 0</div>
+            <div class="mx-cell medium" id="risk-mx-maj-med">🟡 0</div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
-<script src="/pm/pm-core.js"></script>
-<script src="/pm/pm-task-drawer.js"></script>
-<script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
-<script src="/webjars/stomp-websocket/2.3.4/lib/stomp.min.js"></script>
+<div class="pm-toasts" id="pmToasts"></div>
+
+<div class="pm-cmd-backdrop" id="pmCmdBackdrop" onclick="if(event.target===this)PM.closeCmd()">
+  <div class="pm-cmd">
+    <div class="pm-cmd-input">
+      <i class="fas fa-search"></i>
+      <input id="pmCmdInput" placeholder="Search pages, projects, tasks…" autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="pm-cmd-list" id="pmCmdList"></div>
+    <div class="pm-cmd-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> open</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+  <span class="menti-ai-fab-dot"></span>
+  <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+  <div class="menti-ai-chat-header">
+    <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+      <div class="menti-ai-hdr-avatar">M</div>
+      <div class="menti-ai-hdr-info">
+        <div class="menti-ai-hdr-name">Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i></div>
+        <div class="menti-ai-hdr-status">
+          <span class="menti-ai-status-dot"></span>
+          <span id="mentiAiModeLabel">💾 New saved chat</span>
+        </div>
+      </div>
+    </div>
+    <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="menti-ai-body">
+    <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+    <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+      <div class="menti-ai-sessions-header">
+        <span>Saved Chats</span>
+        <span id="mentiAiSessionCount">0</span>
+      </div>
+      <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()"><i class="fas fa-plus"></i> New Saved Chat</button>
+      <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+        <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+      </div>
+    </div>
+
+    <div class="menti-ai-chat-col">
+      <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+      <div class="menti-ai-chips" id="mentiAiSuggestions">
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show critical open issues')"><i class="fas fa-fire"></i> Critical</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which risks need mitigation?')"><i class="fas fa-shield"></i> Unmitigated</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize issues by type')"><i class="fas fa-chart-pie"></i> By type</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which issues are oldest?')"><i class="fas fa-clock"></i> Oldest</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show me high-score risks')"><i class="fas fa-triangle-exclamation"></i> High risk</button>
+      </div>
+
+      <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about quality…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+        <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
 <script>
-  PM.bootstrap().then(function(me){
-
-  var tabMeta={
-    issues:{t:'Issue Tracker',i:'fa-bug',s:'Track bugs, enhancements, and quality'},
-    risks:{t:'Risk Register',i:'fa-triangle-exclamation',s:'Track, score, and mitigate project risks'}
+  window.MENTI_AI_CONFIG = {
+    role: 'PM',
+    roleTag: 'PM',
+    assistantName: 'Menti PM',
+    userInitial: 'U',
+    sendUrl: '/api/chat/pm/send',
+    sessionsUrl: '/api/chat/pm/sessions',
+    historyUrl: '/api/chat/pm/session',
+    deleteUrl: '/api/chat/pm/session'
   };
-  function switchTab(tab,el){
-    document.querySelectorAll('#pmTabs button').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
-    document.querySelectorAll('.pm-pane').forEach(function(p){p.classList.remove('active');});
-    document.getElementById('pane-'+tab).classList.add('active');
-    document.querySelectorAll('.pm-nav-link').forEach(function(n){n.classList.remove('active');});
-    var nav=document.querySelector('.pm-nav-link[data-tab="'+tab+'"]'); if(nav) nav.classList.add('active');
-    var m=tabMeta[tab]; if(m){ document.getElementById('pmPageTitle').textContent=m.t; document.getElementById('pmPageIcon').className='fas '+m.i; document.getElementById('pmPageSub').textContent=m.s; document.getElementById('pmCrumb').textContent=m.t; }
-    var acts={
-      issues:'<button class="pm-btn pm-btn-primary" onclick="addIssue(\'Bug\')"><i class="fas fa-plus"></i> Report Issue</button>',
-      risks:'<button class="pm-btn pm-btn-primary" onclick="addRisk()"><i class="fas fa-plus"></i> Log Risk</button>'
-    };
-    document.getElementById('pmActions').innerHTML=acts[tab]||'';
-    if (tab === 'issues') reloadIssues();
-    if (tab === 'risks')  reloadRisks();
-  }
-  window.switchTab = switchTab;
+</script>
 
-  // ─── State ───
-  var issues = [];
-  var risks = [];
-  var allProjects = [];
-  var currentProjectId = null;
-  var issSel = new Set();
-  var riskHistory = {};   // client-side history (backend stores via ActivityLog but not exposed here yet)
-  var issueHistory = {};
+<script src="/pm/pm-core.js" onerror="this.remove()"></script>
 
-  // ─── Load projects ───
-  function loadProjects() {
-    return PM.api('GET', '/api/pm/projects?page=0&size=100').then(function (content) {
-      allProjects = (content || []).map(function (p) { return { id: p.id, name: p.name }; });
-      if (!currentProjectId && allProjects.length) currentProjectId = allProjects[0].id;
-      var sel = document.getElementById('projPicker');
-      if (!sel) {
-        sel = document.createElement('select');
-        sel.id = 'projPicker';
-        sel.className = 'pm-select';
-        sel.style.cssText = 'max-width:220px;margin-left:8px';
-        sel.onchange = function () { currentProjectId = parseInt(this.value); reloadIssues(); reloadRisks(); };
-        var head = document.querySelector('.pm-page-head > div');
-        if (head) head.appendChild(sel);
-      }
-      sel.innerHTML = allProjects.map(function (p) {
-        return '<option value="' + p.id + '"' + (p.id === currentProjectId ? ' selected' : '') + '>' + PM.esc(p.name) + '</option>';
-      }).join('');
-    }).catch(function () {});
-  }
-
-  // ─── Issues ───
-  function reloadIssues() {
-    if (!currentProjectId) return;
-    PM.api('GET', '/api/pm/issues/project/' + currentProjectId).then(function (list) {
-      issues = (list || []).map(function (i) {
-        return {
-          id: 'ISS-' + i.id,
-          rawId: i.id,
-          title: i.title,
-          project: i.projectName || ('Project #' + i.projectId),
-          severity: mapSeverity(i.severity),
-          priority: mapPriority(i.priority),
-          status: mapIssueStatus(i.status),
-          assignee: i.assigneeName || '—',
-          reported: i.createdAt ? PM.fmtDate(i.createdAt) : '—',
-          type: mapIssueType(i.type),
-          desc: i.description || '',
-          linkedTaskId: i.linkedTaskId,
-          watchers: issueHistory['ISS-' + i.id]?.watchers || [],
-          history: issueHistory['ISS-' + i.id]?.history || []
-        };
-      });
-      renderIssues();
-    }).catch(function (e) { PM.toast('Failed to load issues: ' + e.message, 'error'); });
-  }
-  window.reloadIssues = reloadIssues;
-
-  function mapSeverity(s) {
-    s = (s || 'MEDIUM').toUpperCase();
-    if (s === 'CRITICAL') return 'Critical';
-    if (s === 'HIGH') return 'Major';
-    if (s === 'LOW') return 'Minor';
-    return 'Major';
-  }
-  function mapPriority(p) {
-    p = (p || 'MEDIUM').toUpperCase();
-    if (p === 'CRITICAL') return 'Critical';
-    if (p === 'HIGH') return 'High';
-    if (p === 'LOW') return 'Low';
-    return 'Medium';
-  }
-  function mapIssueStatus(s) {
-    s = (s || 'OPEN').toUpperCase();
-    if (s === 'IN_PROGRESS') return 'In Progress';
-    if (s === 'RESOLVED') return 'Verified';
-    if (s === 'CLOSED') return 'Closed';
-    if (s === 'WONT_FIX') return 'Closed';
-    return 'Open';
-  }
-  function mapIssueType(t) {
-    t = (t || 'BUG').toUpperCase();
-    if (t === 'FEATURE') return 'Feature';
-    if (t === 'SECURITY') return 'Security';
-    if (t === 'PERFORMANCE') return 'Performance';
-    if (t === 'QUESTION') return 'Question';
-    return 'Bug';
-  }
-  function backendStatus(label) {
-    if (label === 'In Progress') return 'IN_PROGRESS';
-    if (label === 'Fixed') return 'RESOLVED';
-    if (label === 'Verified') return 'RESOLVED';
-    if (label === 'Closed') return 'CLOSED';
-    return 'OPEN';
-  }
-
-  function renderIssues() {
-    var q = (document.getElementById('issSearch').value || '').toLowerCase();
-    var sev = document.getElementById('issSev').value;
-    var st = document.getElementById('issStatus').value;
-    var watchOnly = document.getElementById('issWatchOnly').checked;
-    var meName = (PM.user && PM.user.name) || '';
-
-    var filtered = issues.filter(function (i) {
-      if (q && !(i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q))) return false;
-      if (sev && i.severity !== sev) return false;
-      if (st && i.status !== st) return false;
-      if (watchOnly && i.watchers.indexOf(meName) === -1) return false;
-      return true;
-    });
-
-    document.getElementById('kCritical').textContent = issues.filter(function (i) {
-      return i.severity === 'Critical' && i.status !== 'Closed' && i.status !== 'Verified';
-    }).length;
-    document.getElementById('kTotalOpen').textContent = issues.filter(function (i) {
-      return i.status !== 'Closed' && i.status !== 'Verified';
-    }).length;
-    document.getElementById('kWatching').textContent = issues.filter(function (i) {
-      return i.watchers.indexOf(meName) > -1;
-    }).length;
-
-    var tb = document.getElementById('issBody');
-    if (!filtered.length) {
-      tb.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:20px;color:var(--tx3)">No issues match filters</td></tr>';
-      return;
+<script>
+  (function () {
+    if (window.PM && window.PM.bootstrap) return;
+    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD' };
+    var rules = { creator: true, manage: true, clients: true, lead: true, admin: true, super: true };
+    function toast(msg, type) {
+      var box = document.getElementById('pmToasts'); if (!box) return;
+      var el = document.createElement('div');
+      el.className = 'pm-toast ' + (type || 'info');
+      var icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-info-circle' };
+      el.innerHTML = '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i></div><div class="pm-toast-msg">' + PM.esc(msg) + '</div>';
+      box.appendChild(el);
+      requestAnimationFrame(function () { el.classList.add('show'); });
+      setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 300); }, 3500);
+      el.onclick = function () { el.remove(); };
     }
-    tb.innerHTML = filtered.map(function (i) {
+    window.PM = {
+      esc: function (s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; },
+      fmtDateTime: function (v) { try { return new Date(v).toLocaleString(); } catch (e) { return String(v || ''); } },
+      fmtDate: function (v) { try { return new Date(v).toLocaleDateString(); } catch (e) { return String(v || ''); } },
+      getInitials: function (name) { return String(name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(); },
+      toast: toast,
+      can: function (r) { return !!rules[r]; },
+      me: function () { return Promise.resolve(me); },
+      bootstrap: function () { return Promise.resolve(me); },
+      meTasks: function () { return Promise.resolve([]); },
+      api: function (method, url, body) {
+        var opts = { method: method, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' };
+        if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+        return fetch(url, opts).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.status === 204 ? null : r.json(); });
+      },
+      apiList: function (method, url) { return window.PM.api(method, url).then(function (d) { if (Array.isArray(d)) return d; if (d && Array.isArray(d.content)) return d.content; return []; }); },
+      openCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.add('open'); },
+      closeCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.remove('open'); },
+      openIntake: function () { toast('Project intake is not wired in this preview.', 'info'); },
+      openDrawer: function (html, title) { PM.toast(title || 'Preview only', 'info'); },
+      closeDrawer: function () {},
+      toggleTheme: function () {
+        document.body.classList.toggle('pm-light');
+        try { localStorage.setItem('pm.theme', document.body.classList.contains('pm-light') ? 'light' : 'dark'); } catch (e) {}
+      },
+      confirm: function (opts) { return Promise.resolve(window.confirm((opts && opts.message) || 'Are you sure?')); },
+      Form: { open: function () { PM.toast('Form open is not wired in this preview.', 'info'); } }
+    };
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); window.PM.openCmd(); }
+      if (e.key === 'Escape') window.PM.closeCmd();
+    });
+    try { if (localStorage.getItem('pm.theme') === 'light') document.body.classList.add('pm-light'); } catch (e) {}
+  })();
+</script>
+
+<script>
+  /* ============================================================
+     PM QUALITY PAGE LOGIC
+     ============================================================ */
+  PM.bootstrap().then(function (me) {
+
+    var userNameEl = document.getElementById('pmUserName');
+    if (userNameEl) userNameEl.textContent = me.name || 'User';
+    var avatarEl = document.getElementById('pmUserAvatar');
+    if (avatarEl) {
+      avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+      avatarEl.title = me.name || 'User';
+    }
+
+    var tabMeta = {
+      issues: { t: 'Issue Tracker',  i: 'fa-bug',                 s: 'Track bugs, enhancements, and quality' },
+      risks:  { t: 'Risk Register',  i: 'fa-triangle-exclamation', s: 'Track, score, and mitigate project risks' }
+    };
+
+    function switchTab(tab, el) {
+      document.querySelectorAll('#pmTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('.pm-pane').forEach(function (p) { p.classList.remove('active'); });
+      var pane = document.getElementById('pane-' + tab); if (pane) pane.classList.add('active');
+
+      var m = tabMeta[tab];
+      if (m) {
+        document.getElementById('pmPageTitle').textContent = m.t;
+        document.getElementById('pmPageIcon').className = 'fas ' + m.i;
+        document.getElementById('pmPageSub').textContent = m.s;
+        document.getElementById('pmCrumb').textContent = m.t;
+      }
+
+      var acts = {
+        issues: '<button class="pm-btn pm-btn-primary" onclick="addIssue(\'Bug\')"><i class="fas fa-plus"></i> Report Issue</button>',
+        risks:  '<button class="pm-btn pm-btn-primary" onclick="addRisk()"><i class="fas fa-plus"></i> Log Risk</button>'
+      };
+      document.getElementById('pmActions').innerHTML = acts[tab] || '';
+
+      if (tab === 'issues') reloadIssues();
+      if (tab === 'risks')  reloadRisks();
+    }
+    window.switchTab = switchTab;
+
+    /* ===== State ===== */
+    var issues = [];
+    var risks = [];
+    var allProjects = [];
+    var currentProjectId = null;
+    var issSel = new Set();
+    var riskHistory = {};
+    var issueHistory = {};
+
+    function loadProjects() {
+      return PM.api('GET', '/api/pm/projects?page=0&size=100').then(function (content) {
+        var arr = Array.isArray(content) ? content : (content && content.content) || [];
+        allProjects = arr.map(function (p) { return { id: p.id, name: p.name }; });
+        if (!currentProjectId && allProjects.length) currentProjectId = allProjects[0].id;
+        var sel = document.getElementById('projPicker');
+        if (sel) {
+          sel.innerHTML = allProjects.length
+            ? allProjects.map(function (p) {
+                return '<option value="' + p.id + '"' + (p.id === currentProjectId ? ' selected' : '') + '>' + PM.esc(p.name) + '</option>';
+              }).join('')
+            : '<option value="">No projects</option>';
+        }
+      }).catch(function () {});
+    }
+    window.onProjectChange = function (v) {
+      currentProjectId = parseInt(v, 10);
+      reloadIssues();
+      reloadRisks();
+    };
+
+    /* ===== Issues ===== */
+    function reloadIssues() {
+      if (!currentProjectId) return;
+      PM.api('GET', '/api/pm/issues/project/' + currentProjectId).then(function (list) {
+        issues = (list || []).map(function (i) {
+          return {
+            id: 'ISS-' + i.id,
+            rawId: i.id,
+            title: i.title,
+            project: i.projectName || ('Project #' + i.projectId),
+            severity: mapSeverity(i.severity),
+            priority: mapPriority(i.priority),
+            status: mapIssueStatus(i.status),
+            assignee: i.assigneeName || '—',
+            reported: i.createdAt ? PM.fmtDate(i.createdAt) : '—',
+            type: mapIssueType(i.type),
+            desc: i.description || '',
+            linkedTaskId: i.linkedTaskId,
+            watchers: issueHistory['ISS-' + i.id]?.watchers || [],
+            history: issueHistory['ISS-' + i.id]?.history || []
+          };
+        });
+        renderIssues();
+        updateIssueMatrix(issues);
+      }).catch(function (e) { PM.toast('Failed to load issues: ' + e.message, 'error'); });
+    }
+    window.reloadIssues = reloadIssues;
+
+    function mapSeverity(s) {
+      s = (s || 'MEDIUM').toUpperCase();
+      if (s === 'CRITICAL') return 'Critical';
+      if (s === 'HIGH') return 'Major';
+      if (s === 'LOW') return 'Minor';
+      return 'Major';
+    }
+    function mapPriority(p) {
+      p = (p || 'MEDIUM').toUpperCase();
+      if (p === 'CRITICAL') return 'Critical';
+      if (p === 'HIGH') return 'High';
+      if (p === 'LOW') return 'Low';
+      return 'Medium';
+    }
+    function mapIssueStatus(s) {
+      s = (s || 'OPEN').toUpperCase();
+      if (s === 'IN_PROGRESS') return 'In Progress';
+      if (s === 'RESOLVED') return 'Verified';
+      if (s === 'CLOSED') return 'Closed';
+      if (s === 'WONT_FIX') return 'Closed';
+      return 'Open';
+    }
+    function mapIssueType(t) {
+      t = (t || 'BUG').toUpperCase();
+      if (t === 'FEATURE') return 'Feature';
+      if (t === 'SECURITY') return 'Security';
+      if (t === 'PERFORMANCE') return 'Performance';
+      if (t === 'QUESTION') return 'Question';
+      return 'Bug';
+    }
+    function backendStatus(label) {
+      if (label === 'In Progress') return 'IN_PROGRESS';
+      if (label === 'Fixed') return 'RESOLVED';
+      if (label === 'Verified') return 'RESOLVED';
+      if (label === 'Closed') return 'CLOSED';
+      return 'OPEN';
+    }
+
+    function renderIssues() {
+      var q = (document.getElementById('issSearch').value || '').toLowerCase();
+      var sev = document.getElementById('issSev').value;
+      var st = document.getElementById('issStatus').value;
+      var watchOnly = document.getElementById('issWatchOnly').checked;
+      var meName = (PM.user && PM.user.name) || (me && me.name) || '';
+
+      var filtered = issues.filter(function (i) {
+        if (q && !(i.title.toLowerCase().includes(q) || i.id.toLowerCase().includes(q))) return false;
+        if (sev && i.severity !== sev) return false;
+        if (st && i.status !== st) return false;
+        if (watchOnly && i.watchers.indexOf(meName) === -1) return false;
+        return true;
+      });
+
+      document.getElementById('kCritical').textContent = issues.filter(function (i) {
+        return i.severity === 'Critical' && i.status !== 'Closed' && i.status !== 'Verified';
+      }).length;
+      document.getElementById('kTotalOpen').textContent = issues.filter(function (i) {
+        return i.status !== 'Closed' && i.status !== 'Verified';
+      }).length;
+      document.getElementById('kWatching').textContent = issues.filter(function (i) {
+        return i.watchers.indexOf(meName) > -1;
+      }).length;
+
+      var tb = document.getElementById('issBody');
+      if (!filtered.length) {
+        tb.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">No issues match filters</td></tr>';
+        return;
+      }
+      tb.innerHTML = filtered.map(function (i) {
+        var sevCls = i.severity === 'Critical' ? 'critical' : i.severity === 'Major' ? 'major' : 'minor';
+        var prioCls = i.priority.toLowerCase();
+        var stCls = i.status === 'Open' ? 'primary' : i.status === 'In Progress' ? 'warning' : i.status === 'Fixed' ? 'info' : 'success';
+        var sevDot = i.severity === 'Critical' ? 'var(--danger)' : i.severity === 'Major' ? 'var(--warning)' : 'var(--info)';
+        var isWatching = i.watchers.indexOf(meName) > -1;
+        return '<tr style="cursor:pointer" onclick="openIssue(\'' + i.id + '\')">' +
+          '<td onclick="event.stopPropagation()"><input type="checkbox" ' + (issSel.has(i.id) ? 'checked' : '') + ' onchange="toggleIss(\'' + i.id + '\',this)" style="accent-color:var(--primary)"></td>' +
+          '<td style="color:var(--dark-text-secondary);font-size:var(--fs-xs);font-weight:600">' + i.id + '</td>' +
+          '<td><div style="font-weight:500"><i class="fas fa-circle" style="color:' + sevDot + ';font-size:6px;margin-right:.25rem"></i>' + PM.esc(i.title) + '</div>' +
+            '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">' + PM.esc(i.project) + '</div></td>' +
+          '<td><span class="sev ' + sevCls + '">' + i.severity + '</span></td>' +
+          '<td><span class="prio ' + prioCls + '">' + i.priority + '</span></td>' +
+          '<td><span class="pm-badge ' + stCls + '">' + i.status + '</span></td>' +
+          '<td>' + PM.esc(i.assignee) + '</td>' +
+          '<td onclick="event.stopPropagation()"><span class="watcher-chip' + (isWatching ? ' on' : '') + '" onclick="event.stopPropagation();toggleWatch(\'' + i.id + '\')"><i class="fas fa-eye"></i> ' + i.watchers.length + '</span></td>' +
+          '<td style="font-size:var(--fs-xs)">' + i.reported + '</td>' +
+          '<td><span class="pm-badge primary">' + i.type + '</span></td>' +
+          '<td onclick="event.stopPropagation()"><button class="pm-btn pm-btn-sm" onclick="openIssue(\'' + i.id + '\')">Open</button></td>' +
+        '</tr>';
+      }).join('');
+
+      var counts = {};
+      issues.forEach(function (i) { counts[i.type] = (counts[i.type] || 0) + 1; });
+      var total = issues.length || 1;
+      document.getElementById('typeBreakdown').innerHTML = Object.keys(counts).map(function (k) {
+        var pct = Math.round(counts[k] / total * 100);
+        var color = k === 'Bug' ? 'var(--danger)' : k === 'Security' ? 'var(--warning)' : k === 'Feature' ? 'var(--primary)' : k === 'Performance' ? 'var(--info)' : 'var(--purple)';
+        return '<div class="type-breakdown">' +
+          '<span>' + k + '</span>' +
+          '<div class="bar"><div class="pm-progress"><div class="pm-progress-bar" style="width:' + pct + '%;background:' + color + '"></div></div></div>' +
+          '<span style="font-weight:600;min-width:30px;text-align:right">' + counts[k] + '</span>' +
+        '</div>';
+      }).join('');
+    }
+    window.renderIssues = renderIssues;
+
+    function addHist(item, icon, what, who, diff) {
+      if (!issueHistory[item.id]) issueHistory[item.id] = { history: [], watchers: [] };
+      issueHistory[item.id].history.unshift({ icon: icon, what: what, when: 'Just now', who: who, diff: diff });
+      item.history = issueHistory[item.id].history;
+    }
+
+    function openIssue(id) {
+      var i = issues.find(function (x) { return x.id === id; });
+      if (!i) return;
       var sevCls = i.severity === 'Critical' ? 'critical' : i.severity === 'Major' ? 'major' : 'minor';
       var prioCls = i.priority.toLowerCase();
       var stCls = i.status === 'Open' ? 'primary' : i.status === 'In Progress' ? 'warning' : i.status === 'Fixed' ? 'info' : 'success';
-      var sevDot = i.severity === 'Critical' ? 'var(--dng)' : i.severity === 'Major' ? 'var(--wrn)' : 'var(--inf)';
-      var isWatching = i.watchers.indexOf(meName) > -1;
-      return '<tr style="cursor:pointer" onclick="openIssue(\'' + i.id + '\')">' +
-        '<td onclick="event.stopPropagation()"><input type="checkbox" ' + (issSel.has(i.id) ? 'checked' : '') + ' onchange="toggleIss(\'' + i.id + '\',this)" style="accent-color:var(--pri)"></td>' +
-        '<td style="color:var(--tx3);font-size:var(--fs-xs);font-weight:600">' + i.id + '</td>' +
-        '<td><div style="font-weight:500"><i class="fas fa-circle" style="color:' + sevDot + ';font-size:6px;margin-right:4px"></i>' + PM.esc(i.title) + '</div><div style="font-size:var(--fs-xs);color:var(--tx3)">' + PM.esc(i.project) + '</div></td>' +
-        '<td><span class="sev ' + sevCls + '">' + i.severity + '</span></td>' +
-        '<td><span class="prio ' + prioCls + '">' + i.priority + '</span></td>' +
-        '<td><span class="pm-badge ' + stCls + '">' + i.status + '</span></td>' +
-        '<td>' + PM.esc(i.assignee) + '</td>' +
-        '<td onclick="event.stopPropagation()"><span class="watcher-chip' + (isWatching ? ' on' : '') + '" onclick="event.stopPropagation();toggleWatch(\'' + i.id + '\')"><i class="fas fa-eye"></i> ' + i.watchers.length + '</span></td>' +
-        '<td style="font-size:var(--fs-xs)">' + i.reported + '</td>' +
-        '<td><span class="pm-badge primary">' + i.type + '</span></td>' +
-        '<td onclick="event.stopPropagation()"><button class="pm-btn pm-btn-sm" onclick="openIssue(\'' + i.id + '\')">Open</button></td>' +
-      '</tr>';
-    }).join('');
+      var statuses = ['Open', 'In Progress', 'Fixed', 'Verified', 'Closed'];
 
-    var counts = {};
-    issues.forEach(function (i) { counts[i.type] = (counts[i.type] || 0) + 1; });
-    var total = issues.length || 1;
-    document.getElementById('typeBreakdown').innerHTML = Object.keys(counts).map(function (k) {
-      var pct = Math.round(counts[k] / total * 100);
-      var color = k === 'Bug' ? 'var(--dng)' : k === 'Security' ? 'var(--wrn)' : k === 'Feature' ? 'var(--pri)' : k === 'Performance' ? 'var(--inf)' : 'var(--pur)';
-      return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:var(--fs)"><span>' + k + '</span><div style="display:flex;align-items:center;gap:8px"><div class="pm-progress" style="width:80px"><div class="pm-progress-bar" style="width:' + pct + '%;background:' + color + '"></div></div><span style="font-weight:600;min-width:30px;text-align:right">' + counts[k] + '</span></div></div>';
-    }).join('');
-  }
-  window.renderIssues = renderIssues;
+      PM.openDrawer(
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem">' +
+          '<span class="pm-badge primary">' + i.id + '</span>' +
+          '<span class="sev ' + sevCls + '">' + i.severity + '</span>' +
+          '<span class="prio ' + prioCls + '">' + i.priority + '</span>' +
+          '<span class="pm-badge ' + stCls + '">' + i.status + '</span>' +
+        '</div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-bottom:.25rem">Description</div>' +
+          '<div style="font-size:var(--fs-base);color:var(--dark-text-secondary);line-height:1.5">' + PM.esc(i.desc || 'No description') + '</div>' +
+        '</div></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.5rem">' +
+          '<div class="pm-widget" style="margin:0"><div class="pm-widget-body" style="padding:.5rem .75rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Assignee</div><div style="font-weight:600">' + PM.esc(i.assignee) + '</div></div></div>' +
+          '<div class="pm-widget" style="margin:0"><div class="pm-widget-body" style="padding:.5rem .75rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Reported</div><div style="font-weight:600">' + i.reported + '</div></div></div>' +
+        '</div>' +
+        (i.linkedTaskId ? '<div class="pm-widget" style="cursor:pointer;margin-bottom:.5rem" onclick="PMTask.open(' + i.linkedTaskId + ')"><div class="pm-widget-body" style="padding:.5rem .75rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-bottom:.25rem">Linked task</div><div style="font-weight:500"><i class="fas fa-list-check" style="color:var(--primary)"></i> Task #' + i.linkedTaskId + '</div></div></div>' : '') +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.4rem"><i class="fas fa-sync"></i> Change Status</div>' +
+          statuses.map(function (s) {
+            return '<button class="pm-btn' + (i.status === s ? ' pm-btn-primary' : '') + '" style="display:flex;justify-content:flex-start;width:100%;margin-bottom:.25rem" onclick="changeIssueStatus(\'' + i.id + '\',\'' + s + '\')">' + s + (i.status === s ? ' ✓' : '') + '</button>';
+          }).join('') +
+        '</div></div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.4rem"><i class="fas fa-clock-rotate-left"></i> History</div>' +
+          (i.history || []).map(function (h) {
+            return '<div class="hist-entry">' +
+              '<div class="hist-icon"><i class="fas ' + h.icon + '"></i></div>' +
+              '<div class="hist-body">' +
+                '<div class="hist-what">' + PM.esc(h.what) + '</div>' +
+                (h.diff ? '<div class="hist-diff"><span class="old">' + PM.esc(h.diff.old) + '</span> → <span class="new">' + PM.esc(h.diff.new) + '</span></div>' : '') +
+                '<div class="hist-when">' + PM.esc(h.when) + ' · ' + PM.esc(h.who || '—') + '</div>' +
+              '</div>' +
+            '</div>';
+          }).join('') || '<div style="text-align:center;padding:.5rem;color:var(--dark-text-secondary);font-size:var(--fs-sm)">No history yet</div>' +
+        '</div></div>' +
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap">' +
+          '<button class="pm-btn pm-btn-danger" style="flex:1;justify-content:center" onclick="deleteIssue(\'' + i.id + '\')"><i class="fas fa-trash"></i> Delete</button>' +
+        '</div>',
+        i.title
+      );
+    }
+    window.openIssue = openIssue;
 
-  function addHist(item, icon, what, who, diff) {
-    if (!issueHistory[item.id]) issueHistory[item.id] = { history: [], watchers: [] };
-    issueHistory[item.id].history.unshift({ icon: icon, what: what, when: 'Just now', who: who, diff: diff });
-    item.history = issueHistory[item.id].history;
-  }
+    function changeIssueStatus(id, st) {
+      var i = issues.find(function (x) { return x.id === id; });
+      if (!i) return;
+      var backend = backendStatus(st);
+      PM.api('POST', '/api/pm/issues/' + i.rawId + '/status', { status: backend }).then(function () {
+        var old = i.status;
+        i.status = st;
+        addHist(i, 'fa-sync', 'Status: ' + old + ' → ' + st, (me && me.name) || 'You', { old: old, new: st });
+        PM.toast('✓ ' + id + ' → ' + st, 'success');
+        PM.closeDrawer();
+        renderIssues();
+        updateIssueMatrix(issues);
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.changeIssueStatus = changeIssueStatus;
 
-  function openIssue(id) {
-    var i = issues.find(function (x) { return x.id === id; });
-    if (!i) return;
-    var sevCls = i.severity === 'Critical' ? 'critical' : i.severity === 'Major' ? 'major' : 'minor';
-    var prioCls = i.priority.toLowerCase();
-    var stCls = i.status === 'Open' ? 'primary' : i.status === 'In Progress' ? 'warning' : i.status === 'Fixed' ? 'info' : 'success';
-    var statuses = ['Open', 'In Progress', 'Fixed', 'Verified', 'Closed'];
-    var meName = (PM.user && PM.user.name) || '';
-    var isWatching = i.watchers.indexOf(meName) > -1;
+    function addIssue(type) {
+      if (!currentProjectId) { PM.toast('Pick a project first', 'warning'); return; }
+      var title = prompt(type + ' title:');
+      if (!title) return;
+      var sev = type === 'Security' ? 'CRITICAL' : type === 'Bug' ? 'HIGH' : type === 'Performance' ? 'HIGH' : 'MEDIUM';
+      PM.api('POST', '/api/pm/issues', {
+        projectId: currentProjectId, title: title, description: '',
+        severity: sev, priority: sev === 'CRITICAL' ? 'CRITICAL' : sev === 'HIGH' ? 'HIGH' : 'MEDIUM',
+        type: type.toUpperCase()
+      }).then(function (created) {
+        var hid = 'ISS-' + (created && created.id ? created.id : '');
+        if (hid !== 'ISS-') {
+          if (!issueHistory[hid]) issueHistory[hid] = { history: [], watchers: [] };
+          issueHistory[hid].history.unshift({ icon: 'fa-plus', what: 'Issue created', when: 'Just now', who: (me && me.name) || 'You' });
+        }
+        PM.toast('✓ ' + type + ' created', 'success');
+        reloadIssues();
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.addIssue = addIssue;
 
-    PM.openDrawer(
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="pm-badge primary">' + i.id + '</span><span class="sev ' + sevCls + '">' + i.severity + '</span><span class="prio ' + prioCls + '">' + i.priority + '</span><span class="pm-badge ' + stCls + '">' + i.status + '</span></div>' +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);margin-bottom:4px">Description</div><div style="font-size:var(--fs);color:var(--tx2);line-height:1.5">' + PM.esc(i.desc || 'No description') + '</div></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
-        '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Assignee</div><div style="font-weight:600">' + PM.esc(i.assignee) + '</div></div>' +
-        '<div class="pm-card" style="margin:0"><div style="font-size:var(--fs-xs);color:var(--tx3)">Reported</div><div style="font-weight:600">' + i.reported + '</div></div>' +
-      '</div>' +
-      (i.linkedTaskId ? '<div class="pm-card" style="cursor:pointer" onclick="PMTask.open(' + i.linkedTaskId + ')"><div style="font-size:var(--fs-xs);color:var(--tx3);margin-bottom:4px">Linked task</div><div style="font-weight:500"><i class="fas fa-list-check" style="color:var(--pri)"></i> Task #' + i.linkedTaskId + '</div></div>' : '') +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px"><i class="fas fa-sync"></i> Change Status</div>' +
-        statuses.map(function (s) { return '<button class="pm-btn' + (i.status === s ? ' pm-btn-primary' : '') + '" style="display:flex;justify-content:flex-start;width:100%;margin-bottom:4px" onclick="changeIssueStatus(\'' + i.id + '\',\'' + s + '\')">' + s + (i.status === s ? ' ✓' : '') + '</button>'; }).join('') +
-      '</div>' +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px"><i class="fas fa-clock-rotate-left"></i> History</div>' +
-        (i.history || []).map(function (h) { return '<div class="hist-entry"><div class="hist-icon"><i class="fas ' + h.icon + '"></i></div><div class="hist-body"><div class="hist-what">' + PM.esc(h.what) + '</div>' + (h.diff ? '<div class="hist-diff"><span class="old">' + PM.esc(h.diff.old) + '</span> → <span class="new">' + PM.esc(h.diff.new) + '</span></div>' : '') + '<div class="hist-when">' + PM.esc(h.when) + ' · ' + PM.esc(h.who || '—') + '</div></div></div>'; }).join('') || '<div style="text-align:center;padding:10px;color:var(--tx3);font-size:var(--fs-sm)">No history yet</div>' +
-      '</div>' +
-      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
-        '<button class="pm-btn" style="flex:1;justify-content:center" onclick="deleteIssue(\'' + i.id + '\')"><i class="fas fa-trash"></i> Delete</button>' +
-      '</div>',
-      i.title
-    );
-  }
-  window.openIssue = openIssue;
+    function deleteIssue(id) {
+      var i = issues.find(function (x) { return x.id === id; });
+      if (!i) return;
+      if (!confirm('Delete ' + id + '?')) return;
+      PM.api('DELETE', '/api/pm/issues/' + i.rawId).then(function () {
+        if (!issueHistory[id]) issueHistory[id] = { history: [], watchers: [] };
+        issueHistory[id].history.unshift({ icon: 'fa-trash', what: 'Issue deleted', when: 'Just now', who: (me && me.name) || 'You' });
+        PM.closeDrawer();
+        reloadIssues();
+        PM.toast('Deleted', 'success');
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.deleteIssue = deleteIssue;
 
-  function changeIssueStatus(id, st) {
-    var i = issues.find(function (x) { return x.id === id; });
-    if (!i) return;
-    var backend = backendStatus(st);
-    PM.api('POST', '/api/pm/issues/' + i.rawId + '/status', { status: backend }).then(function () {
-      var old = i.status;
-      i.status = st;
-      addHist(i, 'fa-sync', 'Status: ' + old + ' → ' + st, (PM.user && PM.user.name) || 'You', { old: old, new: st });
-      PM.toast('✓ ' + id + ' → ' + st, 'success');
-      PM.closeDrawer();
-      renderIssues();
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.changeIssueStatus = changeIssueStatus;
+    /* ===== Risks ===== */
+    function reloadRisks() {
+      if (!currentProjectId) return;
+      PM.api('GET', '/api/pm/risks/project/' + currentProjectId).then(function (list) {
+        risks = (list || []).map(function (r) {
+          return {
+            id: 'RSK-' + r.id,
+            rawId: r.id,
+            title: r.title,
+            project: r.projectName || ('Project #' + r.projectId),
+            likelihood: r.likelihood,
+            impact: r.impact,
+            score: r.score,
+            status: mapRiskStatus(r.status),
+            owner: r.ownerName || '—',
+            mitigation: r.mitigation || '',
+            watchers: riskHistory['RSK-' + r.id]?.watchers || [],
+            history: riskHistory['RSK-' + r.id]?.history || []
+          };
+        });
+        renderRisks();
+        updateRiskMatrix(risks);
+      }).catch(function (e) { PM.toast('Failed to load risks: ' + e.message, 'error'); });
+    }
+    window.reloadRisks = reloadRisks;
 
-  function addIssue(type) {
-    if (!currentProjectId) { PM.toast('Pick a project first', 'warning'); return; }
-    var title = prompt(type + ' title:');
-    if (!title) return;
-    var sev = type === 'Security' ? 'CRITICAL' : type === 'Bug' ? 'HIGH' : type === 'Performance' ? 'HIGH' : 'MEDIUM';
-    PM.api('POST', '/api/pm/issues', {
-      projectId: currentProjectId,
-      title: title,
-      description: '',
-      severity: sev,
-      priority: sev === 'CRITICAL' ? 'CRITICAL' : sev === 'HIGH' ? 'HIGH' : 'MEDIUM',
-      type: type.toUpperCase()
-    }).then(function () {
-      PM.toast('✓ ' + type + ' created', 'success');
-      reloadIssues();
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.addIssue = addIssue;
+    function mapRiskStatus(s) {
+      s = (s || 'OPEN').toUpperCase();
+      if (s === 'MITIGATING') return 'Mitigating';
+      if (s === 'RESOLVED') return 'Resolved';
+      if (s === 'ACCEPTED') return 'Resolved';
+      return 'Open';
+    }
+    function backendRiskStatus(label) {
+      if (label === 'Mitigating') return 'MITIGATING';
+      if (label === 'Resolved') return 'RESOLVED';
+      if (label === 'Escalated') return 'OPEN';
+      return 'OPEN';
+    }
+    function severityClass(score) { return score >= 15 ? 'high' : score >= 9 ? 'medium' : 'low'; }
 
-  function deleteIssue(id) {
-    var i = issues.find(function (x) { return x.id === id; });
-    if (!i) return;
-    if (!confirm('Delete ' + id + '?')) return;
-    PM.api('DELETE', '/api/pm/issues/' + i.rawId).then(function () {
-      PM.closeDrawer();
-      reloadIssues();
-      PM.toast('Deleted', 'success');
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.deleteIssue = deleteIssue;
+    function renderRisks() {
+      var q = (document.getElementById('rSearch').value || '').toLowerCase();
+      var sev = document.getElementById('rSev').value;
+      var st = document.getElementById('rStatus').value;
+      var meName = (PM.user && PM.user.name) || (me && me.name) || '';
 
-  // ─── Risks ───
-  function reloadRisks() {
-    if (!currentProjectId) return;
-    PM.api('GET', '/api/pm/risks/project/' + currentProjectId).then(function (list) {
-      risks = (list || []).map(function (r) {
-        return {
-          id: 'RSK-' + r.id,
-          rawId: r.id,
-          title: r.title,
-          project: r.projectName || ('Project #' + r.projectId),
-          likelihood: r.likelihood,
-          impact: r.impact,
-          score: r.score,
-          status: mapRiskStatus(r.status),
-          owner: r.ownerName || '—',
-          mitigation: r.mitigation || '',
-          watchers: riskHistory['RSK-' + r.id]?.watchers || [],
-          history: riskHistory['RSK-' + r.id]?.history || []
-        };
+      var filtered = risks.filter(function (r) {
+        var sCls = severityClass(r.score);
+        if (q && !(r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q))) return false;
+        if (sev && sCls !== sev.toLowerCase()) return false;
+        if (st && r.status !== st) return false;
+        return true;
       });
-      renderRisks();
-    }).catch(function (e) { PM.toast('Failed to load risks: ' + e.message, 'error'); });
-  }
-  window.reloadRisks = reloadRisks;
 
-  function mapRiskStatus(s) {
-    s = (s || 'OPEN').toUpperCase();
-    if (s === 'MITIGATING') return 'Mitigating';
-    if (s === 'RESOLVED') return 'Resolved';
-    if (s === 'ACCEPTED') return 'Resolved';
-    return 'Open';
-  }
-  function backendRiskStatus(label) {
-    if (label === 'Mitigating') return 'MITIGATING';
-    if (label === 'Resolved') return 'RESOLVED';
-    if (label === 'Escalated') return 'OPEN';
-    return 'OPEN';
-  }
+      document.getElementById('rHigh').textContent = risks.filter(function (r) { return r.score >= 15; }).length;
+      document.getElementById('rTotal').textContent = risks.length;
+      document.getElementById('rWatching').textContent = risks.filter(function (r) { return r.watchers.indexOf(meName) > -1; }).length;
 
-  function severityClass(score) { return score >= 15 ? 'high' : score >= 9 ? 'medium' : 'low'; }
-
-  function renderRisks() {
-    var q = (document.getElementById('rSearch').value || '').toLowerCase();
-    var sev = document.getElementById('rSev').value;
-    var st = document.getElementById('rStatus').value;
-    var meName = (PM.user && PM.user.name) || '';
-
-    var filtered = risks.filter(function (r) {
-      var sCls = severityClass(r.score);
-      if (q && !(r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q))) return false;
-      if (sev && sCls !== sev.toLowerCase()) return false;
-      if (st && r.status !== st) return false;
-      return true;
-    });
-
-    document.getElementById('rHigh').textContent = risks.filter(function (r) { return r.score >= 15; }).length;
-    document.getElementById('rTotal').textContent = risks.length;
-    document.getElementById('rWatching').textContent = risks.filter(function (r) { return r.watchers.indexOf(meName) > -1; }).length;
-
-    var tb = document.getElementById('riskBody');
-    if (!filtered.length) {
-      tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--tx3)">No risks match filters</td></tr>';
-      return;
+      var tb = document.getElementById('riskBody');
+      if (!filtered.length) {
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">No risks match filters</td></tr>';
+        return;
+      }
+      tb.innerHTML = filtered.map(function (r) {
+        var sCls = severityClass(r.score);
+        var dotColor = r.score >= 15 ? 'var(--danger)' : r.score >= 9 ? 'var(--warning)' : 'var(--success)';
+        var stCls = r.status === 'Open' ? 'primary' : r.status === 'Escalated' ? 'danger' : r.status === 'Mitigating' ? 'warning' : 'success';
+        var isWatching = r.watchers.indexOf(meName) > -1;
+        return '<tr style="cursor:pointer" onclick="openRisk(\'' + r.id + '\')">' +
+          '<td style="color:var(--dark-text-secondary);font-size:var(--fs-xs);font-weight:600">' + r.id + '</td>' +
+          '<td><div style="font-weight:500"><span class="rs-dot ' + sCls + '"></span>' + PM.esc(r.title) + '</div>' +
+            '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">' + PM.esc(r.project) + '</div></td>' +
+          '<td>' + r.likelihood + '</td>' +
+          '<td>' + r.impact + '</td>' +
+          '<td><span style="color:' + dotColor + ';font-weight:700">' + r.score + '</span></td>' +
+          '<td><span class="pm-badge ' + stCls + '">' + r.status + '</span></td>' +
+          '<td>' + PM.esc(r.owner) + '</td>' +
+          '<td onclick="event.stopPropagation()"><span class="watcher-chip' + (isWatching ? ' on' : '') + '" onclick="event.stopPropagation();toggleWatch(\'' + r.id + '\')"><i class="fas fa-eye"></i> ' + r.watchers.length + '</span></td>' +
+          '<td><button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();openRisk(\'' + r.id + '\')">Open</button></td>' +
+        '</tr>';
+      }).join('');
     }
-    tb.innerHTML = filtered.map(function (r) {
+    window.renderRisks = renderRisks;
+
+    function addRisk() {
+      if (!currentProjectId) { PM.toast('Pick a project first', 'warning'); return; }
+      var title = prompt('Risk title:');
+      if (!title) return;
+      var l = (prompt('Likelihood (HIGH / MEDIUM / LOW):', 'MEDIUM') || 'MEDIUM').toUpperCase();
+      var im = (prompt('Impact (CRITICAL / HIGH / MEDIUM / LOW):', 'MEDIUM') || 'MEDIUM').toUpperCase();
+      PM.api('POST', '/api/pm/risks', {
+        projectId: currentProjectId, title: title, likelihood: l, impact: im, mitigation: ''
+      }).then(function (created) {
+        var hid = 'RSK-' + (created && created.id ? created.id : '');
+        if (hid !== 'RSK-') {
+          if (!riskHistory[hid]) riskHistory[hid] = { history: [], watchers: [] };
+          riskHistory[hid].history.unshift({ icon: 'fa-plus', what: 'Risk logged', when: 'Just now', who: (me && me.name) || 'You' });
+        }
+        PM.toast('✓ Risk logged', 'success');
+        reloadRisks();
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.addRisk = addRisk;
+
+    function openRisk(id) {
+      var r = risks.find(function (x) { return x.id === id; });
+      if (!r) return;
       var sCls = severityClass(r.score);
-      var dotColor = r.score >= 15 ? 'var(--dng)' : r.score >= 9 ? 'var(--wrn)' : 'var(--suc)';
       var stCls = r.status === 'Open' ? 'primary' : r.status === 'Escalated' ? 'danger' : r.status === 'Mitigating' ? 'warning' : 'success';
-      var isWatching = r.watchers.indexOf(meName) > -1;
-      return '<tr style="cursor:pointer" onclick="openRisk(\'' + r.id + '\')">' +
-        '<td style="color:var(--tx3);font-size:var(--fs-xs);font-weight:600">' + r.id + '</td>' +
-        '<td><div style="font-weight:500"><span class="rs-dot ' + sCls + '"></span>' + PM.esc(r.title) + '</div><div style="font-size:var(--fs-xs);color:var(--tx3)">' + PM.esc(r.project) + '</div></td>' +
-        '<td>' + r.likelihood + '</td>' +
-        '<td>' + r.impact + '</td>' +
-        '<td><span style="color:' + dotColor + ';font-weight:700">' + r.score + '</span></td>' +
-        '<td><span class="pm-badge ' + stCls + '">' + r.status + '</span></td>' +
-        '<td>' + PM.esc(r.owner) + '</td>' +
-        '<td onclick="event.stopPropagation()"><span class="watcher-chip' + (isWatching ? ' on' : '') + '"><i class="fas fa-eye"></i> ' + r.watchers.length + '</span></td>' +
-        '<td><button class="pm-btn pm-btn-sm" onclick="event.stopPropagation();openRisk(\'' + r.id + '\')">Open</button></td>' +
-      '</tr>';
-    }).join('');
-  }
-  window.renderRisks = renderRisks;
-
-  function addRisk() {
-    if (!currentProjectId) { PM.toast('Pick a project first', 'warning'); return; }
-    var title = prompt('Risk title:');
-    if (!title) return;
-    var l = (prompt('Likelihood (HIGH / MEDIUM / LOW):', 'MEDIUM') || 'MEDIUM').toUpperCase();
-    var im = (prompt('Impact (CRITICAL / HIGH / MEDIUM / LOW):', 'MEDIUM') || 'MEDIUM').toUpperCase();
-    PM.api('POST', '/api/pm/risks', {
-      projectId: currentProjectId,
-      title: title,
-      likelihood: l,
-      impact: im,
-      mitigation: ''
-    }).then(function () {
-      PM.toast('✓ Risk logged', 'success');
-      reloadRisks();
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.addRisk = addRisk;
-
-  function openRisk(id) {
-    var r = risks.find(function (x) { return x.id === id; });
-    if (!r) return;
-    var sCls = severityClass(r.score);
-    var stCls = r.status === 'Open' ? 'primary' : r.status === 'Escalated' ? 'danger' : r.status === 'Mitigating' ? 'warning' : 'success';
-    PM.openDrawer(
-      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"><span class="pm-badge primary">' + r.id + '</span><span class="pm-badge ' + sCls + '">Score: ' + r.score + '</span><span class="pm-badge ' + stCls + '">' + r.status + '</span></div>' +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px"><i class="fas fa-shield"></i> Mitigation Plan</div><div style="font-size:var(--fs);color:var(--tx2);line-height:1.5">' + PM.esc(r.mitigation || 'No mitigation plan yet.') + '</div><button class="pm-btn pm-btn-sm" style="margin-top:8px" onclick="updateMitigation(\'' + r.id + '\')"><i class="fas fa-pen"></i> Update Plan</button></div>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">' +
-        '<div class="pm-card" style="margin:0;text-align:center"><div style="font-size:var(--fs-xs);color:var(--tx3)">Likelihood</div><div style="font-weight:700;font-size:var(--fs-md)">' + r.likelihood + '</div></div>' +
-        '<div class="pm-card" style="margin:0;text-align:center"><div style="font-size:var(--fs-xs);color:var(--tx3)">Impact</div><div style="font-weight:700;font-size:var(--fs-md)">' + r.impact + '</div></div>' +
-        '<div class="pm-card" style="margin:0;text-align:center"><div style="font-size:var(--fs-xs);color:var(--tx3)">Score</div><div style="font-weight:700;font-size:var(--fs-md);color:' + (r.score >= 15 ? 'var(--dng)' : r.score >= 9 ? 'var(--wrn)' : 'var(--suc)') + '">' + r.score + '</div></div>' +
-      '</div>' +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3)">Owner</div><div style="font-weight:600">' + PM.esc(r.owner) + '</div></div>' +
-      '<div class="pm-card"><div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:6px"><i class="fas fa-sync"></i> Change Status</div>' +
-        ['Open', 'Escalated', 'Mitigating', 'Resolved'].map(function (s) { return '<button class="pm-btn' + (r.status === s ? ' pm-btn-primary' : '') + '" style="display:flex;justify-content:flex-start;width:100%;margin-bottom:4px" onclick="changeRiskStatus(\'' + r.id + '\',\'' + s + '\')">' + s + (r.status === s ? ' ✓' : '') + '</button>'; }).join('') +
-      '</div>' +
-      '<button class="pm-btn pm-btn-danger" style="width:100%;justify-content:center;margin-top:8px" onclick="deleteRisk(\'' + r.id + '\')"><i class="fas fa-trash"></i> Delete risk</button>',
-      r.title
-    );
-  }
-  window.openRisk = openRisk;
-
-  function updateMitigation(id) {
-    var r = risks.find(function (x) { return x.id === id; });
-    if (!r) return;
-    var t = prompt('Updated mitigation plan:', r.mitigation);
-    if (t === null) return;
-    PM.api('POST', '/api/pm/risks/' + r.rawId + '/mitigation', { mitigation: t }).then(function () {
-      r.mitigation = t;
-      PM.toast('✓ Plan updated', 'success');
-      openRisk(id);
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.updateMitigation = updateMitigation;
-
-  function changeRiskStatus(id, st) {
-    var r = risks.find(function (x) { return x.id === id; });
-    if (!r) return;
-    var backend = backendRiskStatus(st);
-    PM.api('POST', '/api/pm/risks/' + r.rawId + '/status', { status: backend }).then(function () {
-      r.status = st;
-      PM.toast('✓ ' + id + ' → ' + st, 'success');
-      PM.closeDrawer();
-      renderRisks();
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.changeRiskStatus = changeRiskStatus;
-
-  function deleteRisk(id) {
-    var r = risks.find(function (x) { return x.id === id; });
-    if (!r) return;
-    if (!confirm('Delete ' + id + '?')) return;
-    PM.api('DELETE', '/api/pm/risks/' + r.rawId).then(function () {
-      PM.closeDrawer();
-      reloadRisks();
-      PM.toast('Deleted', 'success');
-    }).catch(function (e) { PM.toast(e.message, 'error'); });
-  }
-  window.deleteRisk = deleteRisk;
-
-  // ─── Bulk + watchers (kept for compatibility) ───
-  function toggleIss(id, cb) {
-    if (cb.checked) issSel.add(id); else issSel.delete(id);
-    document.getElementById('issSelCount').textContent = issSel.size;
-    document.getElementById('issBulk').classList.toggle('show', issSel.size > 0);
-  }
-  function toggleAllIss(cb) { issSel.clear(); if (cb.checked) issues.forEach(function (i) { issSel.add(i.id); }); renderIssues(); }
-  function clearIssSelection() { issSel.clear(); renderIssues(); document.getElementById('issBulk').classList.remove('show'); }
-  function bulkIssueStatus() {}
-  function bulkIssueAssignee() {}
-  function bulkWatch() {}
-  function bulkIssueDelete() {}
-  window.toggleIss = toggleIss;
-  window.toggleAllIss = toggleAllIss;
-  window.clearIssSelection = clearIssSelection;
-  window.bulkIssueStatus = bulkIssueStatus;
-  window.bulkIssueAssignee = bulkIssueAssignee;
-  window.bulkWatch = bulkWatch;
-  window.bulkIssueDelete = bulkIssueDelete;
-
-  function toggleWatch(id) {
-    var obj = issues.find(function (x) { return x.id === id; }) || risks.find(function (x) { return x.id === id; });
-    if (!obj) return;
-    var me = (PM.user && PM.user.name) || 'You';
-    var idx = obj.watchers.indexOf(me);
-    if (idx > -1) {
-      obj.watchers.splice(idx, 1);
-      PM.toast('Stopped watching ' + id, 'info');
-    } else {
-      obj.watchers.push(me);
-      PM.toast('✓ Now watching ' + id, 'success');
+      PM.openDrawer(
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem">' +
+          '<span class="pm-badge primary">' + r.id + '</span>' +
+          '<span class="pm-badge ' + sCls + '">Score: ' + r.score + '</span>' +
+          '<span class="pm-badge ' + stCls + '">' + r.status + '</span>' +
+        '</div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.4rem"><i class="fas fa-shield"></i> Mitigation Plan</div>' +
+          '<div style="font-size:var(--fs-base);color:var(--dark-text-secondary);line-height:1.5">' + PM.esc(r.mitigation || 'No mitigation plan yet.') + '</div>' +
+          '<button class="pm-btn pm-btn-sm" style="margin-top:.5rem" onclick="updateMitigation(\'' + r.id + '\')"><i class="fas fa-pen"></i> Update Plan</button>' +
+        '</div></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:.5rem">' +
+          '<div class="pm-widget" style="margin:0"><div class="pm-widget-body" style="padding:.5rem;text-align:center"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Likelihood</div><div style="font-weight:700;font-size:var(--fs-md)">' + r.likelihood + '</div></div></div>' +
+          '<div class="pm-widget" style="margin:0"><div class="pm-widget-body" style="padding:.5rem;text-align:center"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Impact</div><div style="font-weight:700;font-size:var(--fs-md)">' + r.impact + '</div></div></div>' +
+          '<div class="pm-widget" style="margin:0"><div class="pm-widget-body" style="padding:.5rem;text-align:center"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Score</div><div style="font-weight:700;font-size:var(--fs-md);color:' + (r.score >= 15 ? 'var(--danger)' : r.score >= 9 ? 'var(--warning)' : 'var(--success)') + '">' + r.score + '</div></div></div>' +
+        '</div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.5rem .75rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Owner</div>' +
+          '<div style="font-weight:600">' + PM.esc(r.owner) + '</div>' +
+        '</div></div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.4rem"><i class="fas fa-sync"></i> Change Status</div>' +
+          ['Open', 'Escalated', 'Mitigating', 'Resolved'].map(function (s) {
+            return '<button class="pm-btn' + (r.status === s ? ' pm-btn-primary' : '') + '" style="display:flex;justify-content:flex-start;width:100%;margin-bottom:.25rem" onclick="changeRiskStatus(\'' + r.id + '\',\'' + s + '\')">' + s + (r.status === s ? ' ✓' : '') + '</button>';
+          }).join('') +
+        '</div></div>' +
+        '<button class="pm-btn pm-btn-danger" style="width:100%;justify-content:center;margin-top:.5rem" onclick="deleteRisk(\'' + r.id + '\')"><i class="fas fa-trash"></i> Delete risk</button>',
+        r.title
+      );
     }
-    renderIssues();
-    renderRisks();
-  }
-  window.toggleWatch = toggleWatch;
+    window.openRisk = openRisk;
 
-  document.getElementById('mobToggle').addEventListener('click', function () {
-    document.getElementById('pmSidebar').classList.toggle('open');
-  });
+    function updateMitigation(id) {
+      var r = risks.find(function (x) { return x.id === id; });
+      if (!r) return;
+      var t = prompt('Updated mitigation plan:', r.mitigation);
+      if (t === null) return;
+      PM.api('POST', '/api/pm/risks/' + r.rawId + '/mitigation', { mitigation: t }).then(function () {
+        r.mitigation = t;
+        PM.toast('✓ Plan updated', 'success');
+        openRisk(id);
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.updateMitigation = updateMitigation;
 
-  window.pmRefresh = function () {
-    var active = document.querySelector('#pmTabs button.active');
-    if (active && active.dataset.tab === 'issues') reloadIssues();
-    if (active && active.dataset.tab === 'risks')  reloadRisks();
-  };
+    function changeRiskStatus(id, st) {
+      var r = risks.find(function (x) { return x.id === id; });
+      if (!r) return;
+      var backend = backendRiskStatus(st);
+      PM.api('POST', '/api/pm/risks/' + r.rawId + '/status', { status: backend }).then(function () {
+        r.status = st;
+        PM.toast('✓ ' + id + ' → ' + st, 'success');
+        PM.closeDrawer();
+        renderRisks();
+        updateRiskMatrix(risks);
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.changeRiskStatus = changeRiskStatus;
 
-  loadProjects().then(function () {
-    var q = (location.search || '').match(/tab=(\w+)/);
-    var t = q && tabMeta[q[1]] ? q[1] : 'issues';
-    switchTab(t, document.querySelector('#pmTabs button[data-tab="' + t + '"]'));
-  });
+    function deleteRisk(id) {
+      var r = risks.find(function (x) { return x.id === id; });
+      if (!r) return;
+      if (!confirm('Delete ' + id + '?')) return;
+      PM.api('DELETE', '/api/pm/risks/' + r.rawId).then(function () {
+        if (!riskHistory[id]) riskHistory[id] = { history: [], watchers: [] };
+        riskHistory[id].history.unshift({ icon: 'fa-trash', what: 'Risk deleted', when: 'Just now', who: (me && me.name) || 'You' });
+        PM.closeDrawer();
+        reloadRisks();
+        PM.toast('Deleted', 'success');
+      }).catch(function (e) { PM.toast(e.message, 'error'); });
+    }
+    window.deleteRisk = deleteRisk;
 
+    /* ===== Bulk ===== */
+    function toggleIss(id, cb) {
+      if (cb.checked) issSel.add(id); else issSel.delete(id);
+      document.getElementById('issSelCount').textContent = issSel.size;
+      document.getElementById('issBulk').classList.toggle('show', issSel.size > 0);
+    }
+    function toggleAllIss(cb) {
+      issSel.clear();
+      if (cb.checked) issues.forEach(function (i) { issSel.add(i.id); });
+      renderIssues();
+    }
+    function clearIssSelection() { issSel.clear(); renderIssues(); document.getElementById('issBulk').classList.remove('show'); }
+    function bulkIssueStatus() {
+      if (!issSel.size) return;
+      var st = prompt('New status (Open / In Progress / Fixed / Verified / Closed):');
+      if (!st) return;
+      Array.from(issSel).forEach(function (id) { changeIssueStatus(id, st); });
+    }
+    function bulkWatch() { Array.from(issSel).forEach(function (id) { toggleWatch(id); }); }
+    function bulkIssueDelete() {
+      if (!issSel.size) return;
+      if (!confirm('Delete ' + issSel.size + ' issue(s)?')) return;
+      Array.from(issSel).forEach(function (id) { deleteIssue(id); });
+      clearIssSelection();
+    }
+    window.toggleIss = toggleIss;
+    window.toggleAllIss = toggleAllIss;
+    window.clearIssSelection = clearIssSelection;
+    window.bulkIssueStatus = bulkIssueStatus;
+    window.bulkWatch = bulkWatch;
+    window.bulkIssueDelete = bulkIssueDelete;
+
+    function toggleWatch(id) {
+      var obj = issues.find(function (x) { return x.id === id; }) || risks.find(function (x) { return x.id === id; });
+      if (!obj) return;
+      var meName = (PM.user && PM.user.name) || (me && me.name) || 'You';
+      var idx = obj.watchers.indexOf(meName);
+      if (idx > -1) { obj.watchers.splice(idx, 1); PM.toast('Stopped watching ' + id, 'info'); }
+      else { obj.watchers.push(meName); PM.toast('✓ Now watching ' + id, 'success'); }
+      renderIssues();
+      renderRisks();
+    }
+    window.toggleWatch = toggleWatch;
+
+    /* ===== Matrices ===== */
+    function updateIssueMatrix(data) {
+      var counts = { highHigh: 0, medHigh: 0, lowMed: 0, medMed: 0, highMed: 0, lowLow: 0, lowMaj: 0, medMaj: 0, critical: 0 };
+      data.forEach(function (item) {
+        var sev = item.severity;
+        var pri = item.priority;
+        if (sev === 'Critical') counts.critical++;
+        else if (sev === 'Major') {
+          if (pri === 'High') counts.highHigh++;
+          else if (pri === 'Medium') counts.medHigh++;
+          else counts.lowMed++;
+        } else if (sev === 'Minor') {
+          if (pri === 'High') counts.highMed++;
+          else if (pri === 'Medium') counts.medMed++;
+          else counts.lowLow++;
+        }
+      });
+      var set = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = '🔴 ' + val; };
+      set('issue-mx-critical', counts.critical);
+      set('issue-mx-high-high', counts.highHigh);
+      document.getElementById('issue-mx-med-high').textContent = '🟡 ' + counts.medHigh;
+      set('issue-mx-high-med', counts.highMed);
+      document.getElementById('issue-mx-med-med').textContent = '🟡 ' + counts.medMed;
+      document.getElementById('issue-mx-low-med').textContent = '🟢 ' + counts.lowMed;
+      document.getElementById('issue-mx-med-maj').textContent = '🟡 ' + counts.medMaj;
+      document.getElementById('issue-mx-low-maj').textContent = '🟢 ' + counts.lowMaj;
+      document.getElementById('issue-mx-low-low').textContent = '🟢 ' + counts.lowLow;
+    }
+
+    function updateRiskMatrix(data) {
+      var counts = { highHigh: 0, medHigh: 0, lowMed: 0, medMed: 0, highMed: 0, lowLow: 0, lowMaj: 0, medMaj: 0, criticalHigh: 0 };
+      data.forEach(function (item) {
+        var l = (item.likelihood || '').toUpperCase();
+        var im = (item.impact || '').toUpperCase();
+        if (l === 'HIGH' && im === 'HIGH') counts.highHigh++;
+        else if (l === 'HIGH' && im === 'MEDIUM') counts.medHigh++;
+        else if (l === 'HIGH' && im === 'LOW') counts.lowMed++;
+        else if (l === 'MEDIUM' && im === 'HIGH') counts.highMed++;
+        else if (l === 'MEDIUM' && im === 'MEDIUM') counts.medMed++;
+        else if (l === 'MEDIUM' && im === 'LOW') counts.lowLow++;
+        else if (l === 'LOW' && im === 'HIGH') counts.criticalHigh++;
+        else if (l === 'LOW' && im === 'MEDIUM') counts.medMaj++;
+        else counts.lowMaj++;
+      });
+      document.getElementById('risk-mx-critical-high').textContent = '🔴 ' + counts.criticalHigh;
+      document.getElementById('risk-mx-high-high').textContent = '🔴 ' + counts.highHigh;
+      document.getElementById('risk-mx-med-high').textContent = '🟡 ' + counts.medHigh;
+      document.getElementById('risk-mx-high-med').textContent = '🔴 ' + counts.highMed;
+      document.getElementById('risk-mx-med-med').textContent = '🟡 ' + counts.medMed;
+      document.getElementById('risk-mx-low-med').textContent = '🟢 ' + counts.lowMed;
+      document.getElementById('risk-mx-maj-med').textContent = '🟡 ' + counts.medMaj;
+      document.getElementById('risk-mx-maj-low').textContent = '🟢 ' + counts.lowMaj;
+      document.getElementById('risk-mx-low-low').textContent = '🟢 ' + counts.lowLow;
+    }
+
+    /* ===== Refresh hook ===== */
+    window.pmRefresh = function () {
+      var active = document.querySelector('#pmTabs button.active');
+      if (active && active.dataset.tab === 'issues') reloadIssues();
+      if (active && active.dataset.tab === 'risks')  reloadRisks();
+    };
+
+    /* ===== Boot ===== */
+    loadProjects().then(function () {
+      if (!allProjects.length) {
+        PM.toast('No projects yet. Create a project before logging issues or risks.', 'warning');
+      }
+      var q = (location.search || '').match(/tab=(\w+)/);
+      var t = q && tabMeta[q[1]] ? q[1] : 'issues';
+      switchTab(t, document.querySelector('#pmTabs button[data-tab="' + t + '"]'));
+    });
+  }).catch(function (e) {
+    console.error('PM.bootstrap failed:', e);
+    var sub = document.getElementById('pmPageSub');
+    if (sub) sub.textContent = 'Unable to load user context.';
   });
 </script>
 </body>

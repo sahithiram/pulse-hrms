@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+
     <style>
         :root {
             --dark-bg: #121826;
@@ -184,7 +186,7 @@
         }
 
         .btn-primary:hover {
-            background: var(--primary-hover);
+            background: var(--hover-bg);
             transform: translateY(-1px);
         }
 
@@ -495,7 +497,7 @@
 </head>
 <body>
 <div class="main-container">
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR (employee-flavored, not the HR fragment) -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <a th:href="@{/candidate/dashboard/{id}(id=${employee.employeeId})}" class="sidebar-brand">
@@ -578,8 +580,8 @@
                 <div class="notification-header">
                     <div class="notification-title-wrapper">
                         <div th:class="'notification-icon ' +
-                            ${notif.type == 'DOCUMENT_VERIFIED'} ? 'icon-success' :
-                            (${notif.type == 'DOCUMENT_REJECTED'} ? 'icon-danger' : 'icon-info')">
+                            (${notif.type == 'DOCUMENT_VERIFIED'} ? 'icon-success' :
+                            (${notif.type == 'DOCUMENT_REJECTED'} ? 'icon-danger' : 'icon-info'))">
                             <i th:class="${notif.type == 'DOCUMENT_VERIFIED'} ? 'fas fa-check-circle' :
                                     (${notif.type == 'DOCUMENT_REJECTED'} ? 'fas fa-times-circle' : 'fas fa-file-upload')"></i>
                         </div>
@@ -787,5 +789,7 @@
         document.head.appendChild(style);
     });
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
 </body>
 </html>

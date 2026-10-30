@@ -473,17 +473,17 @@
     if (closeModalBtn) closeModalBtn.addEventListener('click', closeMainModal);
     if (cancelBtn) cancelBtn.addEventListener('click', closeMainModal);
 
-  if (openAiBtn) {
-    openAiBtn.addEventListener('click', function() {
-        // Open AI popup (small window with tabs and generate button)
-        if (window.parent && window.parent.openAIPopup) {
-            window.parent.openAIPopup();
-            closeMainModal();
-        } else {
-            window.open('/announcement/ai-popup', '_blank', 'width=550,height=600');
-        }
-    });
-}
+    if (openAiBtn) {
+        openAiBtn.addEventListener('click', function() {
+            // Open AI popup (small window with tabs and generate button)
+            if (window.parent && window.parent.openAIPopup) {
+                window.parent.openAIPopup();
+                closeMainModal();
+            } else {
+                window.open('/announcement/ai-popup', '_blank', 'width=550,height=600');
+            }
+        });
+    }
 
     window.toggleAnnouncementExpiryField = function() {
         const expiryContainer = document.getElementById('expiryContainer');

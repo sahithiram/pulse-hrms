@@ -8,6 +8,7 @@ import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.SprintPart;
 import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.TaskPart;
 import com.mentis.hrms.pm.dto.response.ProjectResponse;
 import com.mentis.hrms.pm.dto.response.ProjectTemplateResponse;
+import com.mentis.hrms.pm.dto.response.TaskResponse;
 import com.mentis.hrms.pm.entity.ProjectMember;
 import com.mentis.hrms.pm.entity.ProjectTemplate;
 import com.mentis.hrms.pm.enums.ProjectPriority;
@@ -22,11 +23,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.mentis.hrms.pm.dto.request.ProjectTemplatePayload.PhasePart;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -49,7 +52,7 @@ public class ProjectTemplateService {
     private final SprintService sprintService;
     private final TaskService taskService;
     private final ProjectMemberRepository projectMemberRepository;
-
+    private final ProjectPhaseService projectPhaseService;
     // ───────────────────────── templates ─────────────────────────
 
     @Transactional(readOnly = true)
@@ -105,6 +108,8 @@ public class ProjectTemplateService {
         for (MilestonePart m : p.getMilestones()) planEnd = later(planEnd, start.plusDays(m.getDueOffsetDays()));
         for (SprintPart s : p.getSprints())
             planEnd = later(planEnd, start.plusDays(s.getStartOffsetDays() + s.getDurationDays() - 1L));
+        for (PhasePart ph : p.getPhases())
+            planEnd = later(planEnd, start.plusDays(ph.getStartOffsetDays() + ph.getDurationDays() - 1L));
         LocalDate end = req.getEndDate() != null ? req.getEndDate() : planEnd;
 
         ProjectResponse project = projectService.createProject(CreateProjectRequest.builder()
@@ -133,7 +138,14 @@ public class ProjectTemplateService {
                     .name(s.getName().trim()).goal(s.getGoal()).startDate(sStart).endDate(sEnd).build(), userId).getId());
             sprintEnd.add(sEnd);
         }
-
+        for (PhasePart ph : p.getPhases()) {
+            LocalDate phStart = start.plusDays(ph.getStartOffsetDays());
+            projectPhaseService.create(pid, CreatePhaseRequest.builder()
+                    .name(ph.getName().trim())
+                    .startDate(phStart)
+                    .endDate(phStart.plusDays(ph.getDurationDays() - 1L))
+                    .build(), userId);
+        }
         // people: MANAGER -> the owner; MEMBER -> round-robin over the project's MEMBER-role members
         List<Long> memberPool = projectMemberRepository.findByProjectId(pid).stream()
                 .filter(m -> m.getRole() == ProjectRole.MEMBER)
@@ -142,13 +154,15 @@ public class ProjectTemplateService {
                 .collect(Collectors.toList());
         int[] rr = {0};
 
+        // ─── Create tasks, remembering key → taskId so checklists and dependencies can wire up ───
+        Map<String, Long> createdTaskIdByKey = new HashMap<>();
         for (TaskPart tp : p.getTasks()) {
             Long assignee = assignee(tp.getAssignToRole(), ownerId, memberPool, rr);
             LocalDate due = tp.getDueOffsetDays() != null ? start.plusDays(tp.getDueOffsetDays())
                     : tp.getSprintIndex() != null ? sprintEnd.get(tp.getSprintIndex())
                     : tp.getMilestoneIndex() != null ? milestoneDue.get(tp.getMilestoneIndex())
                     : null;
-            taskService.createTask(CreateTaskRequest.builder()
+            TaskResponse created = taskService.createTask(CreateTaskRequest.builder()
                     .projectId(pid).title(tp.getTitle().trim())
                     .priority(notBlank(tp.getPriority()) ? TaskPriority.valueOf(tp.getPriority().trim().toUpperCase()) : TaskPriority.MEDIUM)
                     .type(notBlank(tp.getType()) ? TaskType.valueOf(tp.getType().trim().toUpperCase()) : TaskType.TASK)
@@ -157,11 +171,45 @@ public class ProjectTemplateService {
                     .milestoneId(tp.getMilestoneIndex() != null ? milestoneIds.get(tp.getMilestoneIndex()) : null)
                     .assigneeIds(assignee == null ? null : List.of(assignee))
                     .build(), userId);
+            if (tp.getKey() != null && !tp.getKey().isBlank())
+                createdTaskIdByKey.put(tp.getKey(), created.getId());
         }
 
-        log.info("Project {} created from template {} ({} milestones, {} sprints, {} tasks)",
-                pid, templateId, milestoneIds.size(), sprintIds.size(), p.getTasks().size());
-        return projectService.getProject(pid);
+        // ─── Recreate checklists now that every task has an id ───
+        for (TaskPart tp : p.getTasks()) {
+            Long taskId = createdTaskIdByKey.get(tp.getKey());
+            if (taskId == null || tp.getChecklist() == null) continue;
+            for (String item : tp.getChecklist()) {
+                taskService.addChecklistItem(taskId,
+                        AddChecklistRequest.builder().title(item).build(), userId);
+            }
+        }
+
+        // ─── Recreate cross-task dependencies now that every task has an id ───
+        for (TaskPart tp : p.getTasks()) {
+            Long taskId = createdTaskIdByKey.get(tp.getKey());
+            if (taskId == null || tp.getDependsOn() == null) continue;
+            for (String preKey : tp.getDependsOn()) {
+                Long preId = createdTaskIdByKey.get(preKey);
+                if (preId == null) continue;   // validator already rejected unknown keys
+                taskService.addDependency(taskId,
+                        AddDependencyRequest.builder().dependsOnTaskId(preId).type("BLOCKED_BY").build());
+            }
+        }
+
+        log.info("Project {} created from template {} ({} milestones, {} sprints, {} tasks, {} with checklist, {} with deps)",
+                pid, templateId, milestoneIds.size(), sprintIds.size(), p.getTasks().size(),
+                createdTaskIdByKey.size(),
+                p.getTasks().stream().filter(x -> x.getDependsOn() != null && !x.getDependsOn().isEmpty()).count());
+        // Templates create PLANNING projects. Task baselines are captured on first
+        // activation in ProjectServiceImpl. If a future path instantiates as ACTIVE, capture now.
+        ProjectResponse created = projectService.getProject(pid);
+        if (created.getStatus() == com.mentis.hrms.pm.enums.ProjectStatus.ACTIVE
+                && created.getBaselinedAt() == null
+                && created.getStartDate() != null && created.getEndDate() != null) {
+            created = projectService.saveBaseline(pid, userId);
+        }
+        return created;
     }
 
     // ───────────────────────── helpers ─────────────────────────

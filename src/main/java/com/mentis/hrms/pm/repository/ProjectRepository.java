@@ -36,6 +36,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
                          @Param("status") ProjectStatus status,
                          @Param("ownerId") Long ownerId,
                          Pageable pageable);
+    @Query("SELECT p FROM Project p WHERE p.ownerId = :ownerId " +
+            "AND p.status <> com.mentis.hrms.pm.enums.ProjectStatus.COMPLETED " +
+            "AND p.status <> com.mentis.hrms.pm.enums.ProjectStatus.ARCHIVED")
+    List<Project> findActiveByOwnerId(@Param("ownerId") Long ownerId);
 
     @Query("SELECT p FROM Project p WHERE " +
             "(:search IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :search, '%')) " +

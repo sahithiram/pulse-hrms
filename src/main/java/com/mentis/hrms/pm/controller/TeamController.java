@@ -16,12 +16,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.mentis.hrms.pm.security.PmAccessService;
+
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.mentis.hrms.pm.exception.PmAccessDeniedException;
 import com.mentis.hrms.pm.dto.request.AddTeamMemberRequest;
 import com.mentis.hrms.pm.dto.request.UpdateTeamMemberRequest;
 import com.mentis.hrms.pm.dto.response.TeamMemberResponse;
+
+import java.util.Set;
+
 @RestController("pmTeamController")
 @RequestMapping("/api/pm/teams")
 @RequiredArgsConstructor
@@ -39,42 +45,53 @@ public class TeamController {
                 .body(ApiResponse.ok("Team created", teamService.createTeam(req, userId)));
     }
 
+    // ✅ PHASE 4 (F-P20): object-level check on team read.
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<TeamResponse>> get(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<TeamResponse>> get(
+            @PathVariable Long id, @CurrentUserId Long userId) {
+        access.requireCanViewTeam(userId, id);
         return ResponseEntity.ok(ApiResponse.ok(teamService.getTeam(id)));
     }
 
+    // GAP 1: no longer admin-only. Admin and PM see all teams; everyone else sees their own.
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<TeamSummaryResponse>>> list(
             @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @CurrentUserId Long userId) {
+        Set<Long> scope = access.canSeeAllTeams(userId) ? null : access.myTeamIds(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "name"));
-        return ResponseEntity.ok(ApiResponse.ok(teamService.listTeams(search, pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(teamService.listTeams(search, pageable, scope)));
     }
 
     @GetMapping("/cards")
-    public ResponseEntity<ApiResponse<List<TeamSummaryResponse>>> cards() {
-        return ResponseEntity.ok(ApiResponse.ok(teamService.listAllForCards()));
+    public ResponseEntity<ApiResponse<List<TeamSummaryResponse>>> cards(@CurrentUserId Long userId) {
+        Set<Long> scope = access.canSeeAllTeams(userId) ? null : access.myTeamIds(userId);
+        return ResponseEntity.ok(ApiResponse.ok(teamService.listAllForCards(scope)));
     }
 
-    // NEW — for task create modal + filters
     @GetMapping("/dropdown")
-    public ResponseEntity<ApiResponse<List<TeamSummaryResponse>>> dropdown() {
-        return ResponseEntity.ok(ApiResponse.ok(teamService.listForDropdown()));
+    public ResponseEntity<ApiResponse<List<TeamSummaryResponse>>> dropdown(@CurrentUserId Long userId) {
+        Set<Long> scope = access.canSeeAllTeams(userId) ? null : access.myTeamIds(userId);
+        return ResponseEntity.ok(ApiResponse.ok(teamService.listForDropdown(scope)));
     }
 
+    // ✅ PHASE 4 (F-P7 + F-P15): delete now goes through canManageTeam (SA + creator), not requireAdmin.
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, @CurrentUserId Long userId) {
-        access.requireAdmin(userId);
+        access.requireCanManageTeam(userId, id);
         teamService.deleteTeam(id);
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }
 
+    // ✅ PHASE 4 (F-P20): object-level check.
     @GetMapping("/{id}/members")
-    public ResponseEntity<ApiResponse<List<Long>>> members(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<List<Long>>> members(@PathVariable Long id, @CurrentUserId Long userId) {
+        access.requireCanViewTeam(userId, id);
         return ResponseEntity.ok(ApiResponse.ok(teamService.listTeamMemberIds(id)));
     }
+
     // ─── PHASE 2: member management ──────────────────────────
 
     @GetMapping("/{id}/members/details")
@@ -84,11 +101,13 @@ public class TeamController {
         return ResponseEntity.ok(ApiResponse.ok(teamService.listTeamMembers(id)));
     }
 
+
     @GetMapping("/{id}/members/me")
     public ResponseEntity<ApiResponse<Map<String, Object>>> myTeamAccess(
             @PathVariable Long id, @CurrentUserId Long userId) {
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("canManage", access.canManageTeam(userId, id));
+        m.put("canManage", access.canManageTeam(userId, id));               // delete team
+        m.put("canManageMembers", access.canManageTeamMembers(userId, id)); // add / edit / remove members
         return ResponseEntity.ok(ApiResponse.ok(m));
     }
 
@@ -97,7 +116,7 @@ public class TeamController {
             @PathVariable Long id,
             @Valid @RequestBody AddTeamMemberRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageTeam(userId, id);
+        access.requireCanManageTeamMembers(userId, id);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok("Member added", teamService.addMember(id, req, userId)));
     }
@@ -108,7 +127,7 @@ public class TeamController {
             @PathVariable Long employeeId,
             @Valid @RequestBody UpdateTeamMemberRequest req,
             @CurrentUserId Long userId) {
-        access.requireCanManageTeam(userId, id);
+        access.requireCanManageTeamMembers(userId, id);
         return ResponseEntity.ok(ApiResponse.ok(teamService.updateMember(id, employeeId, req)));
     }
 
@@ -117,10 +136,15 @@ public class TeamController {
             @PathVariable Long id,
             @PathVariable Long employeeId,
             @CurrentUserId Long userId) {
-        access.requireCanManageTeam(userId, id);
+        access.requireCanManageTeamMembers(userId, id);
+        // A lead can't remove the lead (themselves) and leave the team without one.
+        if (!access.canManageTeam(userId, id) && access.isTeamLead(employeeId, id))
+            throw new PmAccessDeniedException(
+                    "The team lead can't be removed by a lead. Ask a Super Admin or the team's creator.");
         teamService.removeMember(id, employeeId);
         return ResponseEntity.ok(ApiResponse.ok("Removed", null));
     }
+
     /**
      * Rich team dashboard endpoint.
      * Returns: team meta + members + tasks (both explicit + member-derived).
@@ -132,8 +156,7 @@ public class TeamController {
             @CurrentUserId Long userId) {
         access.requireCanViewTeam(userId, id);
 
-        TeamService.TeamTasksResult r = teamService.listTeamTasks(id, limit);
-
+        TeamService.TeamTasksResult r = teamService.listTeamTasks(id, limit, userId);
         Map<String, Object> team = new LinkedHashMap<>();
         team.put("id", r.teamId());
         team.put("name", r.teamName());

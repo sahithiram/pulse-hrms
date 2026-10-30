@@ -85,7 +85,7 @@
       h += '<div class="pm-card" style="text-align:center;color:var(--tx3)">No explicit members yet.</div>';
     } else {
       h += '<div class="pm-card" style="padding:0;overflow:hidden"><div style="overflow-x:auto"><table class="pm-table"><thead><tr>' +
-        '<th>Person</th><th>Role</th><th>Alloc %</th>' + (can ? '<th>Rate / h</th><th></th>' : '') +
+        '<th>Person</th><th>Role</th><th>Alloc %</th><th>Util %</th>' + (can ? '<th>Rate / h</th><th></th>' : '') +
         '</tr></thead><tbody>' + P.members.map(function (m) { return projectRow(m, can); }).join('') + '</tbody></table></div></div>';
     }
     bodyEl().innerHTML = h;
@@ -106,6 +106,12 @@
       '<div><div style="font-weight:600">' + PM.esc(m.employeeName) + (m.owner ? ' <span class="pm-badge purple">Owner</span>' : '') + '</div>' +
       '<div style="font-size:var(--fs-xs);color:var(--tx3)">' + PM.esc(m.employeeCode || '') + '</div></div></div></td>' +
       '<td>' + roleCell + '</td><td>' + allocCell + '</td>' +
+      '<td>' + (function () {
+        var util = m.utilizationPct == null ? 0 : m.utilizationPct;
+        var color = util > 100 ? 'var(--dng)' : util > 85 ? 'var(--wrn)' : 'var(--suc)';
+        var width = Math.max(0, Math.min(util, 100));
+        return '<div style="display:flex;align-items:center;gap:6px"><div class="pm-progress" style="width:72px"><div class="pm-progress-bar" style="width:' + width + '%;background:' + color + '"></div></div><span style="font-size:var(--fs-xs);font-weight:600">' + util + '%</span></div>';
+      })() + '</td>' +
       (can
         ? '<td><input class="pm-input pmm-rate" type="number" min="0" step="0.01" value="' + (m.hourlyRate == null ? '' : m.hourlyRate) + '" style="width:90px"></td>' +
           '<td><button class="pm-btn pm-btn-sm pm-btn-icon pm-btn-danger pmm-del" title="Remove"><i class="fas fa-trash"></i></button></td>'

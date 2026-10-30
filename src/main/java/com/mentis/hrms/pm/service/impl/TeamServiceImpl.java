@@ -10,6 +10,7 @@ import com.mentis.hrms.pm.entity.TaskAssignment;
 import com.mentis.hrms.pm.entity.Team;
 import com.mentis.hrms.pm.entity.TeamMember;
 import com.mentis.hrms.pm.enums.TaskStatus;
+import com.mentis.hrms.pm.exception.BusinessRuleException;
 import com.mentis.hrms.pm.exception.DuplicateResourceException;
 import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.mapper.TeamMapper;
@@ -25,7 +26,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.PageImpl;
 import java.util.*;
 import java.util.stream.Collectors;
 import com.mentis.hrms.pm.dto.request.AddTeamMemberRequest;
@@ -43,7 +44,7 @@ public class TeamServiceImpl implements TeamService {
     private final ProjectRepository projectRepository;
     private final TeamMapper teamMapper;
     private final com.mentis.hrms.repository.EmployeeRepository employeeRepository;
-
+    private final com.mentis.hrms.pm.security.PmAccessService access;
     @Override
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest req, Long userId) {
@@ -68,28 +69,47 @@ public class TeamServiceImpl implements TeamService {
         return toResponseWithMembers(t);
     }
 
+
     @Override
     @Transactional(readOnly = true)
-    public PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable) {
-        Page<Team> page = teamRepository.search(search, pageable);
+    public PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable, Set<Long> onlyTeamIds) {
+        if (onlyTeamIds == null) {
+            Page<Team> page = teamRepository.search(search, pageable);
+            return PageResponse.of(page.map(this::toSummaryWithLeadName));
+        }
+        String q = search == null ? "" : search.trim().toLowerCase();
+        List<Team> all = teamsInScope(onlyTeamIds).stream()
+                .filter(t -> q.isEmpty() || (t.getName() != null && t.getName().toLowerCase().contains(q)))
+                .sorted(Comparator.comparing(Team::getName, String.CASE_INSENSITIVE_ORDER))
+                .collect(Collectors.toList());
+        int from = (int) Math.min(pageable.getOffset(), all.size());
+        int to = Math.min(from + pageable.getPageSize(), all.size());
+        Page<Team> page = new PageImpl<>(all.subList(from, to), pageable, all.size());
         return PageResponse.of(page.map(this::toSummaryWithLeadName));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<TeamSummaryResponse> listAllForCards() {
-        return teamRepository.findAll().stream()
+    public List<TeamSummaryResponse> listAllForCards(Set<Long> onlyTeamIds) {
+        return teamsInScope(onlyTeamIds).stream()
                 .map(this::toSummaryWithLeadName)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<TeamSummaryResponse> listForDropdown() {
-        return teamRepository.findAll().stream()
+    public List<TeamSummaryResponse> listForDropdown(Set<Long> onlyTeamIds) {
+        return teamsInScope(onlyTeamIds).stream()
                 .sorted(Comparator.comparing(Team::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(this::toSummaryWithLeadName)
                 .collect(Collectors.toList());
+    }
+
+    /** null = every team, empty = none, otherwise only those ids. */
+    private List<Team> teamsInScope(Set<Long> onlyTeamIds) {
+        if (onlyTeamIds == null) return teamRepository.findAll();
+        if (onlyTeamIds.isEmpty()) return List.of();
+        return teamRepository.findAllById(onlyTeamIds);
     }
 
     @Override
@@ -97,6 +117,13 @@ public class TeamServiceImpl implements TeamService {
     public void deleteTeam(Long id) {
         if (!teamRepository.existsById(id))
             throw new ResourceNotFoundException("Team not found: " + id);
+
+        // GAP 3: Safety Check
+        long activeTasks = taskRepository.countByTeamIdAndStatusNot(id, TaskStatus.DONE);
+        if (activeTasks > 0) {
+            throw new BusinessRuleException("Cannot delete team. It has " + activeTasks + " active tasks attached.");
+        }
+
         teamMemberRepository.deleteByTeamId(id);
         teamRepository.deleteById(id);
     }
@@ -110,24 +137,15 @@ public class TeamServiceImpl implements TeamService {
                 .stream().map(TeamMember::getEmployeeId).collect(Collectors.toList());
     }
 
-    /**
-     * Team tasks = union of:
-     *   (A) Tasks explicitly tagged with teamId
-     *   (B) Tasks assigned to any member of the team
-     * Sorted: open first, then newest.
-     *
-     * FIX 5: Query already filters correctly — no code change required.
-     */
     @Override
     @Transactional(readOnly = true)
-    public TeamTasksResult listTeamTasks(Long teamId, int limit) {
+    public TeamTasksResult listTeamTasks(Long teamId, int limit, Long viewerId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
 
         List<Long> memberIds = teamMemberRepository.findByTeamId(teamId)
                 .stream().map(TeamMember::getEmployeeId).collect(Collectors.toList());
 
-        // (A) explicit team tasks
         Set<Long> seen = new HashSet<>();
         List<Task> combined = new ArrayList<>();
 
@@ -135,14 +153,12 @@ public class TeamServiceImpl implements TeamService {
             if (seen.add(t.getId())) combined.add(t);
         }
 
-        // (B) tasks assigned to any team member
         if (!memberIds.isEmpty()) {
             for (Task t : taskRepository.findAllByAssigneeIn(memberIds)) {
                 if (seen.add(t.getId())) combined.add(t);
             }
         }
 
-        // sort: open first, then due date asc, then createdAt desc
         combined.sort((a, b) -> {
             boolean aDone = a.getStatus() == TaskStatus.DONE;
             boolean bDone = b.getStatus() == TaskStatus.DONE;
@@ -159,9 +175,10 @@ public class TeamServiceImpl implements TeamService {
         long open = combined.stream().filter(t -> t.getStatus() != TaskStatus.DONE).count();
         long done = combined.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
 
+        Map<Long, Boolean> visible = new HashMap<>();   // one permission check per project, not per task
         List<TaskSummaryResponse> summaries = combined.stream()
                 .limit(limit > 0 ? limit : 100)
-                .map(this::toTaskSummary)
+                .map(t -> toTaskSummary(t, viewerId, visible))
                 .collect(Collectors.toList());
 
         String leadName = team.getLeadEmployeeId() != null
@@ -249,11 +266,7 @@ public class TeamServiceImpl implements TeamService {
         return teamMapper.toSummary(t, count, leadName);
     }
 
-    /**
-     * FIX 7: Defensive name resolution loop — any single employee lookup failure
-     * must not break the entire task summary response.
-     */
-    private TaskSummaryResponse toTaskSummary(Task t) {
+    private TaskSummaryResponse toTaskSummary(Task t, Long viewerId, Map<Long, Boolean> visible) {
         List<Long> ids = taskAssignmentRepository.findByTaskId(t.getId())
                 .stream().map(TaskAssignment::getEmployeeId).collect(Collectors.toList());
 
@@ -267,26 +280,31 @@ public class TeamServiceImpl implements TeamService {
             }
         }
 
+        // GAP 4: hide title and project when the viewer can't open that project.
+        // Status, dates and assignees stay, so workload numbers remain correct.
+        boolean hidden = viewerId != null && t.getProjectId() != null
+                && !visible.computeIfAbsent(t.getProjectId(), pid -> access.canViewProject(viewerId, pid));
+
         String projectName = t.getProjectId() != null
                 ? projectRepository.findById(t.getProjectId()).map(p -> p.getName()).orElse(null)
                 : null;
 
         return TaskSummaryResponse.builder()
-                .id(t.getId()).title(t.getTitle())
+                .id(t.getId())
+                .title(hidden ? "Task in another project" : t.getTitle())
                 .status(t.getStatus()).priority(t.getPriority())
                 .dueDate(t.getDueDate()).progressPct(t.getProgressPct())
-                .projectId(t.getProjectId()).projectName(projectName)
+                .projectId(hidden ? null : t.getProjectId())
+                .projectName(hidden ? "Another project" : projectName)
                 .teamId(t.getTeamId())
                 .parentTaskId(t.getParentTaskId())
                 .assigneeIds(ids).assigneeNames(names)
                 .build();
     }
 
-    /**
-     * FIX 4: Null-safe employee name resolution.
-     * Order of preference: firstName + lastName → employeeName → email → "Employee #id".
-     * Never returns null; never throws.
-     */
+
+
+
     private String resolveEmployeeName(Long id) {
         if (id == null) return null;
         try {

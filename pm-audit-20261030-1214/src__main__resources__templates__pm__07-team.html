@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
+  <title>Project Management · Team</title>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- ============ SHARED THEME ============ -->
+  <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+  <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
+  <style>
+    /* ============ PAGE-SPECIFIC STYLES ONLY (PM Team) ============ */
+
+    .pm-breadcrumb {
+      font-size: .8125rem; color: var(--dark-text-secondary);
+      margin-bottom: .75rem; display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
+    }
+    .pm-breadcrumb a { color: var(--dark-text-secondary); }
+    .pm-breadcrumb a:hover { color: var(--primary); }
+
+    /* Avatar helpers (kept page-local because sizing varies) */
+    .av-lg {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--purple));
+      color: #fff; font-weight: 700; font-size: .8rem;
+      display: grid; place-content: center; flex-shrink: 0;
+    }
+    .av-md {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: .6rem; font-weight: 700;
+      display: grid; place-content: center; flex-shrink: 0;
+    }
+    .av-sm {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--primary); color: #fff;
+      font-size: .5rem; font-weight: 700;
+      display: grid; place-content: center;
+      border: 2px solid var(--dark-card); margin-left: -6px;
+    }
+    .av-sm:first-child { margin-left: 0; }
+    .av-stack { display: flex; }
+
+    /* Teams grid */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(320px,1fr));
+      gap: .75rem;
+    }
+    .team-card {
+      background: var(--dark-card); border: 1px solid var(--dark-border);
+      border-radius: var(--radius-card); padding: .85rem;
+      transition: var(--transition); cursor: pointer;
+    }
+    .team-card:hover { border-color: var(--primary); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .team-head { display: flex; justify-content: space-between; align-items: start; gap: .5rem; margin-bottom: .4rem; }
+    .team-name { font-weight: 600; font-size: var(--fs-lg); display: flex; align-items: center; gap: .4rem; }
+    .team-name i { color: var(--primary); font-size: .85rem; }
+    .team-lead { font-size: var(--fs-sm); color: var(--dark-text-secondary); margin-bottom: .5rem; }
+    .team-stats { display: flex; gap: .75rem; font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-bottom: .5rem; flex-wrap: wrap; }
+    .team-stats b { color: var(--dark-text); font-size: var(--fs-md); font-weight: 700; display: block; }
+
+    /* Task mini-row (used inside openTeam drawer) */
+    .tk-mini-row {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .5rem .65rem; border-radius: var(--radius-btn);
+      border: 1px solid var(--dark-border); background: var(--dark-bg);
+      margin-bottom: .35rem; cursor: pointer; transition: var(--transition);
+    }
+    .tk-mini-row:hover { border-color: var(--primary); transform: translateX(2px); }
+    .tk-mini-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .tk-mini-body { flex: 1; min-width: 0; }
+    .tk-mini-title { font-size: var(--fs-base); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tk-mini-meta { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: 1px; display: flex; gap: .5rem; flex-wrap: wrap; }
+    .tk-mini-status {
+      font-size: .55rem; font-weight: 700; padding: 2px .4rem; border-radius: 8px; text-transform: uppercase;
+    }
+    .tk-mini-status.todo { background: rgba(99,102,241,.15); color: var(--primary); }
+    .tk-mini-status.progress { background: rgba(245,158,11,.15); color: var(--warning); }
+    .tk-mini-status.done { background: rgba(16,185,129,.15); color: var(--success); }
+    .tk-mini-status.blocked { background: rgba(239,68,68,.15); color: var(--danger); }
+    .tk-mini-status.review { background: rgba(14,165,233,.15); color: var(--info); }
+
+    /* Priority dots */
+    .priority-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: .25rem; vertical-align: middle; }
+    .p-h { background: var(--danger); }
+    .p-m { background: var(--warning); }
+    .p-l { background: var(--success); }
+    .p-c { background: #dc2626; box-shadow: 0 0 0 2px rgba(220,38,38,.3); }
+
+    /* Forms in modals */
+    .form-group { margin-bottom: .75rem; }
+    .form-group label { display: block; font-size: var(--fs-sm); font-weight: 600; color: var(--dark-text-secondary); margin-bottom: .35rem; }
+    .form-group label .req { color: var(--danger); margin-left: 2px; }
+    .form-row { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: .75rem; }
+    .form-input, .form-textarea {
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+      color: var(--dark-text); border-radius: var(--radius-btn);
+      width: 100%; height: 32px; padding: 0 .65rem;
+      font-family: inherit; font-size: var(--fs-base); outline: none;
+      transition: var(--transition);
+    }
+    .form-textarea { height: auto; min-height: 70px; padding: .5rem .65rem; resize: vertical; line-height: 1.5; }
+    .form-input:focus, .form-textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+
+    /* Chip input */
+    .chip-input {
+      display: flex; flex-wrap: wrap; gap: .35rem;
+      padding: .35rem .5rem; background: var(--dark-bg);
+      border: 1px solid var(--dark-border); border-radius: var(--radius-btn);
+      min-height: 36px; align-items: center;
+      transition: var(--transition);
+    }
+    .chip-input:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .chip {
+      background: var(--primary); color: #fff;
+      padding: 2px .5rem; border-radius: 12px;
+      font-size: var(--fs-sm);
+      display: inline-flex; align-items: center; gap: .25rem;
+    }
+    .chip .x { opacity: .7; cursor: pointer; font-size: .55rem; }
+    .chip-input input {
+      border: none; background: transparent; color: var(--dark-text);
+      flex: 1; min-width: 80px; outline: none;
+      font-family: inherit; font-size: var(--fs-base);
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); backdrop-filter: blur(3px);
+      z-index: 1300; display: none;
+      align-items: center; justify-content: center; padding: 1rem; overflow-y: auto;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--dark-card); border: 1px solid var(--dark-border);
+      border-radius: var(--radius-card); width: 100%; max-width: 560px;
+      box-shadow: var(--shadow-md); display: flex; flex-direction: column; max-height: 90vh;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; padding: .9rem 1.1rem; border-bottom: 1px solid var(--dark-border); flex-shrink: 0; }
+    .modal-head h3 { font-size: var(--fs-lg); font-weight: 600; display: flex; align-items: center; gap: .5rem; margin: 0; }
+    .modal-head h3 i { color: var(--primary); }
+    .modal-body { flex: 1; overflow-y: auto; padding: 1.1rem; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: .5rem; padding: .9rem 1.1rem; border-top: 1px solid var(--dark-border); flex-shrink: 0; flex-wrap: wrap; }
+
+    /* Filter bar */
+    .tk-toolbar {
+      display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; align-items: center;
+    }
+    .tk-toolbar .form-input { max-width: 240px; height: 32px; }
+    .tk-toolbar .pm-btn { height: 32px; padding: .35rem .75rem; font-size: var(--fs-sm); }
+
+    @media (max-width: 900px) {
+      .team-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Mobile burger -->
+<button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
+  <i class="fas fa-bars"></i>
+</button>
+
+<input type="hidden" id="currentEmployeeId" th:value="${session.userId}">
+
+<!-- ============================================================
+     SIDEBAR
+     ============================================================ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon" id="sidebarBrandIcon">
+      <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS" alt="logo" style="display:none;">
+      <i id="sidebarIcon" class="fas fa-building"></i>
+    </div>
+    <span id="sidebarCompanyName">Menti's IT Solutions</span>
+  </div>
+
+  <div class="sidebar-tools">
+    <div class="sidebar-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="sideNavSearch" placeholder="Search menu..." autocomplete="off" aria-label="Search sidebar menu">
+    </div>
+    <button type="button" class="sidebar-rail-toggle" id="sidebarRailToggle" aria-label="Collapse sidebar to icon rail" title="Collapse sidebar">
+      <i class="fas fa-angles-left" id="sidebarRailIcon"></i>
+    </button>
+  </div>
+
+  <div class="sidebar-content">
+    <nav class="side-nav" id="sideNav" aria-label="Main navigation">
+
+      <div class="side-group" data-group="workspace">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupWorkspace">
+          <span class="side-group-icon"><i class="fas fa-compass"></i></span>
+          <span class="side-group-label">Workspace</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupWorkspace">
+          <li><a class="nav-link" href="/pm/01-home"><i class="fas fa-gauge-high"></i> <span>Dashboard</span></a></li>
+          <li><a class="nav-link" href="/pm/03-my-work"><i class="fas fa-square-check"></i> <span>My Work</span></a></li>
+          <li>
+            <a class="nav-link" href="/pm/02-inbox"><i class="fas fa-inbox"></i> <span>Inbox</span>
+              <span class="nav-badge" id="pmInboxBadge" style="display:none">0</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="side-group" data-group="delivery">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupDelivery">
+          <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
+          <span class="side-group-label">Delivery</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupDelivery">
+          <li><a class="nav-link" href="/pm/04-projects"><i class="fas fa-folder-open"></i> <span>Projects</span></a></li>
+          <li><a class="nav-link" href="/pm/06-tasks"><i class="fas fa-list-check"></i> <span>Tasks</span></a></li>
+          <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
+          <li><a class="nav-link active" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
+          <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+        </ul>
+      </div>
+
+      <div class="side-group" data-group="finance">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
+          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
+          <span class="side-group-label">Finance</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupFinance">
+          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+        </ul>
+      </div>
+
+      <div class="side-group" data-group="insights">
+        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
+          <span class="side-group-icon"><i class="fas fa-chart-line"></i></span>
+          <span class="side-group-label">Insights</span>
+          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
+        </button>
+        <ul class="side-submenu" id="sideGroupInsights">
+          <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
+        </ul>
+      </div>
+
+      <div class="side-empty" id="sideNavEmpty" hidden>No menu items match your search</div>
+    </nav>
+  </div>
+</aside>
+
+<!-- ============================================================
+     MAIN CONTENT
+     ============================================================ -->
+<div class="main-content" id="mainContent">
+
+  <header class="top-header">
+    <div class="search-box" onclick="PM.openCmd()">
+      <i class="fas fa-search"></i>
+      <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
+      <kbd>⌘K</kbd>
+    </div>
+
+    <div class="top-header-actions">
+      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
+      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+      <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
+      </button>
+
+      <div class="menti-ai-nav-wrapper">
+        <button class="menti-ai-nav-btn" id="mentiAiNavBtn" onclick="toggleMentiAiPanel()" aria-label="Open Menti PM Assistant">
+          <span class="menti-ai-pulse"></span>
+          <i class="fas fa-wand-magic-sparkles"></i>
+        </button>
+        <span class="menti-ai-nav-tooltip">Menti PM — AI Assistant</span>
+      </div>
+
+      <div class="user-profile-menu">
+        <div class="dropdown">
+          <button class="btn profile-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="avatar-sm" id="pmUserAvatar">?</div>
+            <span id="pmUserName">Loading…</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="/pm/03-my-work"><i class="fas fa-user me-2"></i>My Work</a></li>
+            <li><a class="dropdown-item" href="/pm/11-settings"><i class="fas fa-gear me-2"></i>Settings</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-danger" href="/candidate/auth/logout"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="content-area">
+
+    <div class="pm-breadcrumb">
+      <a href="/pm/01-home"><i class="fas fa-house"></i></a>
+      <span>/</span><span>Project Management</span>
+      <span>/</span><span>Team</span>
+      <span>/</span><span id="pmCrumb">Teams</span>
+    </div>
+
+    <div class="pm-page-head">
+      <div>
+        <div class="pm-page-title"><i class="fas fa-people-group" id="pmPageIcon"></i> <span id="pmPageTitle">Teams</span></div>
+        <div class="pm-page-sub" id="pmPageSub">Teams · Members · Skill matrix · Workload</div>
+      </div>
+      <div class="pm-page-actions" id="pmActions"></div>
+    </div>
+
+    <div class="pm-tabs" id="pmTabs">
+      <button class="active" data-tab="teams" onclick="switchTab('teams',this)">Teams</button>
+      <button data-tab="members" onclick="switchTab('members',this)">Members</button>
+      <button data-tab="resources" onclick="switchTab('resources',this)">Resources</button>
+      <button data-tab="timesheets" onclick="switchTab('timesheets',this)">Timesheets</button>
+      <button data-tab="reviews" onclick="switchTab('reviews',this)">Performance</button>
+    </div>
+
+    <!-- ════════ TEAMS ════════ -->
+    <div class="pm-pane active" id="pane-teams">
+      <div class="pm-kpi-grid">
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-users"></i></div></div><div class="pm-kpi-value" id="kTeams">0</div><div class="pm-kpi-label">Total Teams</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-user-friends"></i></div></div><div class="pm-kpi-value" id="kMembers">0</div><div class="pm-kpi-label">Total Members</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-gauge"></i></div></div><div class="pm-kpi-value" id="kUtil">0%</div><div class="pm-kpi-label">Avg Utilization</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div></div><div class="pm-kpi-value" id="kGaps">0</div><div class="pm-kpi-label">Skill Gaps</div></div>
+      </div>
+      <div class="team-grid" id="teamGrid">
+        <div style="grid-column:1/-1;padding:1.5rem;text-align:center;color:var(--dark-text-secondary)">Loading…</div>
+      </div>
+    </div>
+
+    <!-- ════════ MEMBERS ════════ -->
+    <div class="pm-pane" id="pane-members">
+      <div class="tk-toolbar">
+        <input class="form-input" placeholder="Search members..." id="memSearch" oninput="renderMembers()">
+      </div>
+      <div class="pm-widget" style="padding:0;overflow:hidden">
+        <div style="overflow-x:auto">
+          <table class="pm-table">
+            <thead><tr><th>Employee</th><th>Role</th><th>Team</th><th>Open Tasks</th><th>Allocation</th><th>Status</th><th>Rating</th></tr></thead>
+            <tbody id="memTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--dark-text-secondary)">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ RESOURCES ════════ -->
+    <div class="pm-pane" id="pane-resources">
+      <div class="pm-kpi-grid">
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-users"></i></div></div><div class="pm-kpi-value" id="resTotal">0</div><div class="pm-kpi-label">Total Resources</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-gauge"></i></div></div><div class="pm-kpi-value" id="resUtil">0%</div><div class="pm-kpi-label">Avg Utilization</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div></div><div class="pm-kpi-value" id="resOver">0</div><div class="pm-kpi-label">Overallocated</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-user-clock"></i></div></div><div class="pm-kpi-value" id="resUnder">0</div><div class="pm-kpi-label">Under-utilized</div></div>
+      </div>
+      <div class="pm-widget">
+        <div class="pm-widget-head">
+          <div class="pm-widget-title"><i class="fas fa-users-gear"></i> Resource Capacity &amp; Workload</div>
+        </div>
+        <div class="pm-widget-body">
+          <div class="tk-toolbar">
+            <select class="form-input" id="resTeam" style="max-width:200px" onchange="PMWorkload.loadResources()">
+              <option value="">All teams</option>
+            </select>
+            <input type="date" class="form-input" id="resFrom" style="max-width:160px" onchange="PMWorkload.loadResources()">
+            <input type="date" class="form-input" id="resTo" style="max-width:160px" onchange="PMWorkload.loadResources()">
+            <button class="pm-btn pm-btn-sm" onclick="PMWorkload.loadResources()"><i class="fas fa-rotate"></i> Refresh</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="pm-table">
+              <thead>
+              <tr>
+                <th>Employee</th><th>Team</th><th>Capacity</th><th>Leave</th>
+                <th>Allocated</th><th>Logged</th><th>Utilization</th><th>Status</th>
+              </tr>
+              </thead>
+              <tbody id="resTableBody">
+              <tr><td colspan="8" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ TIMESHEETS ════════ -->
+    <div class="pm-pane" id="pane-timesheets">
+      <div class="pm-kpi-grid">
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon blue"><i class="fas fa-clock"></i></div></div><div class="pm-kpi-value" id="tsTotalHours">0h</div><div class="pm-kpi-label">Hours This Week</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon green"><i class="fas fa-users"></i></div></div><div class="pm-kpi-value" id="tsMembers">0</div><div class="pm-kpi-label">Members Logged</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon orange"><i class="fas fa-hourglass-half"></i></div></div><div class="pm-kpi-value" id="tsPending">0</div><div class="pm-kpi-label">Under 40h</div></div>
+        <div class="pm-kpi"><div class="pm-kpi-top"><div class="pm-kpi-icon red"><i class="fas fa-triangle-exclamation"></i></div></div><div class="pm-kpi-value" id="tsMissing">0</div><div class="pm-kpi-label">No Logs</div></div>
+      </div>
+      <div class="pm-widget">
+        <div class="pm-widget-head">
+          <div class="pm-widget-title"><i class="fas fa-clock"></i> Weekly Timesheets</div>
+        </div>
+        <div class="pm-widget-body">
+          <div class="tk-toolbar">
+            <select class="form-input" id="tsTeam" style="max-width:200px" onchange="PMTimesheet.load()">
+              <option value="">Pick a team…</option>
+            </select>
+            <input type="date" class="form-input" id="tsWeek" style="max-width:160px" onchange="PMTimesheet.load()">
+            <button class="pm-btn pm-btn-sm" onclick="PMTimesheet.load()"><i class="fas fa-rotate"></i> Refresh</button>
+            <button class="pm-btn pm-btn-sm" onclick="PMTimesheet.exportCsv()"><i class="fas fa-file-export"></i> CSV</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="pm-table">
+              <thead>
+              <tr>
+                <th style="width:220px">Employee</th>
+                <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>
+                <th>Total</th>
+              </tr>
+              </thead>
+              <tbody id="tsBody">
+              <tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ PERFORMANCE ════════ -->
+    <div class="pm-pane" id="pane-reviews">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;margin-bottom:1rem">
+        <div class="pm-widget"><div class="pm-widget-body" style="padding:.85rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">Active Cycle</div><div style="font-size:1.6rem;font-weight:700">Q3 2026</div></div></div>
+        <div class="pm-widget"><div class="pm-widget-body" style="padding:.85rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">Completion</div><div style="font-size:1.6rem;font-weight:700">0%</div></div></div>
+        <div class="pm-widget"><div class="pm-widget-body" style="padding:.85rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.35rem">Avg Rating</div><div style="font-size:1.6rem;font-weight:700">—</div></div></div>
+      </div>
+      <div class="tk-toolbar">
+        <input class="form-input" placeholder="Search employee..." id="rvSearch" oninput="renderReviews()">
+        <div style="margin-left:auto;display:flex;gap:.5rem">
+          <button class="pm-btn" onclick="PM.toast('Export reviews PDF','info')"><i class="fas fa-file-export"></i> Export</button>
+          <button class="pm-btn pm-btn-primary" onclick="openStartReview()"><i class="fas fa-plus"></i> Start Review</button>
+        </div>
+      </div>
+      <div class="pm-widget" style="text-align:center;padding:2.5rem;color:var(--dark-text-secondary)">
+        <i class="fas fa-star-half-stroke" style="font-size:2rem;opacity:.35;display:block;margin-bottom:.5rem"></i>
+        <div>No reviews yet</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Create Team modal -->
+<div class="modal-backdrop" id="teamModal" onclick="if(event.target===this)closeTeamModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3><i class="fas fa-users"></i> Create New Team</h3>
+      <button class="pm-btn" style="width:30px;height:30px;padding:0;justify-content:center" onclick="closeTeamModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Team Name <span class="req">*</span></label><input class="form-input" id="fldTeamName" placeholder="e.g. Platform Team"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Department</label><input class="form-input" id="fldTeamDept" placeholder="Engineering"></div>
+        <div class="form-group"><label>Team Lead</label><select class="form-input" id="fldTeamLead"><option value="">Select lead...</option></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Status</label>
+          <select class="form-input" id="fldTeamStatus">
+            <option value="on-track">Active</option>
+            <option value="at-risk">At Risk</option>
+            <option value="available">Available</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Weekly Hours</label><input type="number" class="form-input" id="fldTeamHours" value="40"></div>
+      </div>
+      <div class="form-group"><label>Description</label><textarea class="form-textarea form-input" id="fldTeamDesc" placeholder="What does this team own?"></textarea></div>
+      <div class="form-group">
+        <label>Members</label>
+        <div class="chip-input" id="teamMembersChips"><input id="teamMemberInput" placeholder="Type a name and press Enter"></div>
+        <div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-top:.25rem">Press Enter to add each member</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="pm-btn" onclick="closeTeamModal()">Cancel</button>
+      <button class="pm-btn pm-btn-primary" onclick="submitTeam()"><i class="fas fa-check"></i> Create Team</button>
+    </div>
+  </div>
+</div>
+
+<!-- Start Review modal -->
+<div class="modal-backdrop" id="startReviewModal" onclick="if(event.target===this)document.getElementById('startReviewModal').classList.remove('open')">
+  <div class="modal" style="max-width:520px" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <h3><i class="fas fa-star-half-stroke"></i> Start Performance Review</h3>
+      <button class="pm-btn" style="width:30px;height:30px;padding:0;justify-content:center" onclick="document.getElementById('startReviewModal').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Employee <span class="req">*</span></label>
+        <select class="form-input" id="srEmployee"><option value="">Loading...</option></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Cycle</label><select class="form-input" id="srCycle"><option>Q3 2026</option><option>Q2 2026</option></select></div>
+        <div class="form-group"><label>Review Type</label>
+          <select class="form-input" id="srType"><option>Quarterly</option><option>Annual</option><option>Probation</option><option>Ad-hoc</option></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Reviewer</label>
+          <select class="form-input" id="srReviewer"><option>Rohini Anand</option><option>Priya Menon</option><option>Karan Joshi</option></select>
+        </div>
+        <div class="form-group"><label>Due Date</label><input type="date" class="form-input" id="srDue" value="2026-09-30"></div>
+      </div>
+      <div class="form-group"><label>Notes</label><textarea class="form-textarea form-input" id="srNotes"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="pm-btn" onclick="document.getElementById('startReviewModal').classList.remove('open')">Cancel</button>
+      <button class="pm-btn pm-btn-primary" onclick="submitStartReview()"><i class="fas fa-check"></i> Create Review</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts container -->
+<div class="pm-toasts" id="pmToasts"></div>
+
+<!-- Command palette -->
+<div class="pm-cmd-backdrop" id="pmCmdBackdrop" onclick="if(event.target===this)PM.closeCmd()">
+  <div class="pm-cmd">
+    <div class="pm-cmd-input">
+      <i class="fas fa-search"></i>
+      <input id="pmCmdInput" placeholder="Search pages, projects, tasks…" autocomplete="off">
+      <kbd>Esc</kbd>
+    </div>
+    <div class="pm-cmd-list" id="pmCmdList"></div>
+    <div class="pm-cmd-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> navigate</span>
+      <span><kbd>↵</kbd> open</span>
+      <span><kbd>Esc</kbd> close</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SHARED PM AI ASSISTANT PANEL ============ -->
+<button class="menti-ai-fab" id="mentiAiFab" onclick="toggleMentiAiPanel()" title="Ask Menti PM" aria-label="Open Menti PM AI Assistant">
+  <span class="menti-ai-fab-dot"></span>
+  <i class="fas fa-robot"></i>
+</button>
+
+<div class="menti-ai-overlay" id="mentiAiOverlay" onclick="closeMentiAiPanel()"></div>
+
+<div class="menti-ai-panel" id="mentiAiPanel" role="complementary" aria-label="Menti PM AI Assistant">
+  <div class="menti-ai-chat-header">
+    <div class="menti-ai-hdr-clickable" id="mentiAiHdrToggle" onclick="toggleMentiAiSessionsSidebar()" title="View saved chats">
+      <div class="menti-ai-hdr-avatar">M</div>
+      <div class="menti-ai-hdr-info">
+        <div class="menti-ai-hdr-name">Menti <i class="fas fa-chevron-right menti-ai-hdr-chevron" id="mentiAiHdrChevron"></i></div>
+        <div class="menti-ai-hdr-status">
+          <span class="menti-ai-status-dot"></span>
+          <span id="mentiAiModeLabel">💾 New saved chat</span>
+        </div>
+      </div>
+    </div>
+    <button class="menti-ai-close-btn" onclick="closeMentiAiPanel()" title="Close" aria-label="Close chat"><i class="fas fa-times"></i></button>
+  </div>
+
+  <div class="menti-ai-body">
+    <div class="menti-ai-backdrop" id="mentiAiBackdrop" onclick="toggleMentiAiSessionsSidebar()"></div>
+
+    <div class="menti-ai-sessions-col" id="mentiAiSessionsCol">
+      <div class="menti-ai-sessions-header">
+        <span>Saved Chats</span>
+        <span id="mentiAiSessionCount">0</span>
+      </div>
+      <button class="menti-ai-new-btn" onclick="startNewMentiAiSession()"><i class="fas fa-plus"></i> New Saved Chat</button>
+      <div class="menti-ai-sessions-list" id="mentiAiSessionsList">
+        <div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>
+      </div>
+    </div>
+
+    <div class="menti-ai-chat-col">
+      <div class="menti-ai-messages" id="mentiAiMessages"></div>
+
+      <div class="menti-ai-chips" id="mentiAiSuggestions">
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Who is overallocated this week?')"><i class="fas fa-triangle-exclamation"></i> Overallocated</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Show team utilization trend')"><i class="fas fa-gauge"></i> Utilization</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Which team has the most open tasks?')"><i class="fas fa-list-check"></i> Busiest team</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Summarize timesheets this week')"><i class="fas fa-clock"></i> Timesheets</button>
+        <button class="menti-ai-chip" onclick="sendMentiAiSuggestion('Who is on leave this week?')"><i class="fas fa-umbrella-beach"></i> On leave</button>
+      </div>
+
+      <div class="menti-ai-input-area">
+        <textarea class="menti-ai-input" id="mentiAiInput"
+                  placeholder="Ask me anything about the team…"
+                  rows="1"
+                  onkeydown="handleMentiAiKeydown(event)"
+                  oninput="autoResizeMentiAiInput(this)"
+                  aria-label="Message Menti PM"></textarea>
+        <button class="menti-ai-send-btn" id="mentiAiSendBtn" onclick="sendMentiAiMessage()" aria-label="Send message">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="menti-ai-footer-note">Menti PM may make mistakes · Verify important info</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
+<script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
+<script>
+  window.MENTI_AI_CONFIG = {
+    role: 'PM',
+    roleTag: 'PM',
+    assistantName: 'Menti PM',
+    userInitial: 'U',
+    sendUrl: '/api/chat/pm/send',
+    sessionsUrl: '/api/chat/pm/sessions',
+    historyUrl: '/api/chat/pm/session',
+    deleteUrl: '/api/chat/pm/session'
+  };
+</script>
+
+<script src="/pm/pm-core.js" onerror="this.remove()"></script>
+<script src="/pm/pm-workload.js" onerror="this.remove()"></script>
+
+<script>
+  (function () {
+    if (window.PM && window.PM.bootstrap) return;
+    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD', leadOfTeamIds: [1] };
+    var rules = { creator: true, manage: true, clients: true, lead: true, admin: true, super: true };
+    function toast(msg, type) {
+      var box = document.getElementById('pmToasts'); if (!box) return;
+      var el = document.createElement('div');
+      el.className = 'pm-toast ' + (type || 'info');
+      var icons = { success: 'fa-check-circle', error: 'fa-circle-exclamation', warning: 'fa-triangle-exclamation', info: 'fa-info-circle' };
+      el.innerHTML = '<div class="pm-toast-icon"><i class="fas ' + (icons[type] || 'fa-info-circle') + '"></i></div><div class="pm-toast-msg">' + PM.esc(msg) + '</div>';
+      box.appendChild(el);
+      requestAnimationFrame(function () { el.classList.add('show'); });
+      setTimeout(function () { el.classList.remove('show'); setTimeout(function () { el.remove(); }, 300); }, 3500);
+      el.onclick = function () { el.remove(); };
+    }
+    window.PM = {
+      esc: function (s) { var d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; },
+      fmtDateTime: function (v) { try { return new Date(v).toLocaleString(); } catch (e) { return String(v || ''); } },
+      fmtDate: function (v) { try { return new Date(v).toLocaleDateString(); } catch (e) { return String(v || ''); } },
+      getInitials: function (name) { return String(name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase(); },
+      toast: toast,
+      can: function (r) { return !!rules[r]; },
+      me: function () { return Promise.resolve(me); },
+      bootstrap: function () { return Promise.resolve(me); },
+      meTasks: function () { return Promise.resolve([]); },
+      api: function (method, url, body) {
+        var opts = { method: method, headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' };
+        if (body !== undefined) { opts.headers['Content-Type'] = 'application/json'; opts.body = JSON.stringify(body); }
+        return fetch(url, opts).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.status === 204 ? null : r.json(); });
+      },
+      apiList: function (method, url) { return window.PM.api(method, url).then(function (d) { if (Array.isArray(d)) return d; if (d && Array.isArray(d.content)) return d.content; return []; }); },
+      openCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.add('open'); },
+      closeCmd: function () { var b = document.getElementById('pmCmdBackdrop'); if (b) b.classList.remove('open'); },
+      openIntake: function () { toast('Project intake is not wired in this preview.', 'info'); },
+      openDrawer: function (html, title) { PM.toast(title || 'Preview only', 'info'); },
+      closeDrawer: function () {},
+      toggleTheme: function () {
+        document.body.classList.toggle('pm-light');
+        try { localStorage.setItem('pm.theme', document.body.classList.contains('pm-light') ? 'light' : 'dark'); } catch (e) {}
+      },
+      confirm: function (opts) { return Promise.resolve(window.confirm((opts && opts.message) || 'Are you sure?')); },
+      Form: { open: function () { PM.toast('Form open is not wired in this preview.', 'info'); } }
+    };
+    document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); window.PM.openCmd(); }
+      if (e.key === 'Escape') window.PM.closeCmd();
+    });
+    try { if (localStorage.getItem('pm.theme') === 'light') document.body.classList.add('pm-light'); } catch (e) {}
+  })();
+</script>
+
+<script>
+  /* ============================================================
+     PM TEAM PAGE LOGIC
+     ============================================================ */
+  PM.bootstrap().then(function (me) {
+
+    // Personalise header
+    var userNameEl = document.getElementById('pmUserName');
+    if (userNameEl) userNameEl.textContent = me.name || 'User';
+    var avatarEl = document.getElementById('pmUserAvatar');
+    if (avatarEl) {
+      avatarEl.textContent = (me.name || 'U').trim().charAt(0).toUpperCase();
+      avatarEl.title = me.name || 'User';
+    }
+
+    /* ===== Tab meta ===== */
+    var tabMeta = {
+      teams:      { t: 'Teams',               i: 'fa-people-group',    s: 'Teams · Members · Skill matrix · Workload' },
+      members:    { t: 'Project Members',     i: 'fa-address-book',    s: 'All members · Roles · Allocations' },
+      resources:  { t: 'Resource Management', i: 'fa-users-gear',      s: 'Resources · Heatmap · Capacity' },
+      timesheets: { t: 'Timesheets',          i: 'fa-clock',           s: 'Weekly timesheet entries' },
+      reviews:    { t: 'Performance Reviews', i: 'fa-star-half-stroke', s: 'Review cycles · Ratings · Feedback' }
+    };
+
+    var TAB_OK = {
+      teams:      function () { return true; },
+      members:    function () { return PM.can('manage'); },
+      resources:  function () { return PM.can('manage'); },
+      timesheets: function () { return PM.can('admin') || !!(me.leadOfTeamIds && me.leadOfTeamIds.length); },
+      reviews:    function () { return false; }
+    };
+    function tabAllowed(t) { return !TAB_OK[t] || TAB_OK[t](); }
+    function canCreateTeam() { var u = PM.user || me || {}; return u.canCreateTeam === true; }
+
+    /* ===== Embedded PMTimesheet module ===== */
+    window.PMTimesheet = (function () {
+      function tsBadge(s) {
+        var m = { DRAFT: ['info', 'Draft'], SUBMITTED: ['warning', 'Submitted'], APPROVED: ['success', 'Approved'], REJECTED: ['danger', 'Rejected'] }[s || 'DRAFT'] || ['info', s];
+        return '<span class="pm-badge ' + m[0] + '">' + m[1] + '</span>';
+      }
+      function mondayOf(d) {
+        var day = d.getDay();
+        var diff = day === 0 ? -6 : 1 - day;
+        var mon = new Date(d);
+        mon.setDate(d.getDate() + diff);
+        return mon.toISOString().split('T')[0];
+      }
+      var api = {
+        init: async function () {
+          var w = document.getElementById('tsWeek');
+          if (w && !w.value) w.value = mondayOf(new Date());
+
+          var sel = document.getElementById('tsTeam');
+          if (sel && sel.options.length <= 1) {
+            try {
+              var teams = await PM.api('GET', '/api/pm/teams/dropdown') || [];
+              if (!PM.can('admin')) {
+                var mine = me.leadOfTeamIds || [];
+                teams = teams.filter(function (t) { return mine.indexOf(t.id) >= 0; });
+              }
+              sel.innerHTML = '<option value="">Pick a team…</option>' +
+                teams.map(function (t) { return '<option value="' + t.id + '">' + PM.esc(t.name) + '</option>'; }).join('');
+              if (teams[0]) sel.value = teams[0].id;
+            } catch (e) {}
+          }
+
+          var rsel = document.getElementById('resTeam');
+          if (rsel && rsel.options.length <= 1) {
+            try {
+              var t2 = await PM.api('GET', '/api/pm/teams/dropdown') || [];
+              rsel.innerHTML = '<option value="">All teams</option>' +
+                t2.map(function (t) { return '<option value="' + t.id + '">' + PM.esc(t.name) + '</option>'; }).join('');
+            } catch (e) {}
+          }
+
+          var rf = document.getElementById('resFrom');
+          var rt = document.getElementById('resTo');
+          if (rf && !rf.value) rf.value = mondayOf(new Date());
+          if (rt && !rt.value) { var t0 = new Date(); rt.value = t0.toISOString().split('T')[0]; }
+          await api.load();
+        },
+        load: async function () {
+          var tbody = document.getElementById('tsBody'); if (!tbody) return;
+          var teamId = (document.getElementById('tsTeam') || {}).value;
+          var week = (document.getElementById('tsWeek') || {}).value;
+          if (!teamId) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">Pick a team</td></tr>';
+            return;
+          }
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+          try {
+            var rows = await PM.api('GET', '/api/pm/timesheets/team/' + teamId + (week ? '?week=' + week : '')) || [];
+            var totalH = 0, withLogs = 0, under40 = 0, missing = 0;
+            tbody.innerHTML = rows.map(function (r) {
+              var total = r.totalHours || 0;
+              totalH += total;
+              if (total > 0) withLogs++;
+              if (total > 0 && total < 40) under40++;
+              if (total === 0) missing++;
+              var byDate = {};
+              (r.days || []).forEach(function (d) { byDate[d.date] = d.hours; });
+              var cur = new Date(r.weekStart), end = new Date(r.weekEnd);
+              var cells = '';
+              while (cur <= end) {
+                var ds = cur.toISOString().split('T')[0];
+                var h = byDate[ds];
+                cells += h
+                  ? '<td style="text-align:center"><span class="pm-badge primary">' + h + 'h</span></td>'
+                  : '<td style="text-align:center;color:var(--dark-text-secondary)">—</td>';
+                cur.setDate(cur.getDate() + 1);
+              }
+              return '<tr>' +
+                '<td><div style="display:flex;align-items:center;gap:.5rem">' +
+                  '<div class="av-md">' + PM.getInitials(r.employeeName) + '</div>' +
+                  '<div><div style="font-weight:600">' + PM.esc(r.employeeName) + '</div>' +
+                  '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">' + PM.esc(r.employeeId || '') + ' · ' + tsBadge(r.status) + '</div></div>' +
+                '</div></td>' +
+                cells +
+                '<td style="text-align:right;font-weight:700">' + Math.round(total) + 'h</td>' +
+              '</tr>';
+            }).join('') ||
+              '<tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">No timesheets</td></tr>';
+
+            var e1 = document.getElementById('tsTotalHours'); if (e1) e1.textContent = Math.round(totalH) + 'h';
+            var e2 = document.getElementById('tsMembers');    if (e2) e2.textContent = withLogs;
+            var e3 = document.getElementById('tsPending');    if (e3) e3.textContent = under40;
+            var e4 = document.getElementById('tsMissing');    if (e4) e4.textContent = missing;
+          } catch (e) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:1.25rem;color:var(--danger)">Failed: ' + PM.esc(e.message) + '</td></tr>';
+          }
+        },
+        exportCsv: function () {
+          var teamId = (document.getElementById('tsTeam') || {}).value;
+          var week = (document.getElementById('tsWeek') || {}).value;
+          if (!teamId) { PM.toast('Pick a team first', 'warning'); return; }
+          window.location.href = '/api/pm/timesheets/team/' + teamId + '/export.csv' + (week ? '?week=' + week : '');
+        }
+      };
+      return api;
+    })();
+
+    /* ===== Tab switch ===== */
+    function switchTab(tab, el) {
+      if (!tabAllowed(tab)) tab = 'teams';
+      document.querySelectorAll('#pmTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
+      document.querySelectorAll('.pm-pane').forEach(function (p) { p.classList.remove('active'); });
+      var pane = document.getElementById('pane-' + tab); if (pane) pane.classList.add('active');
+
+      var m = tabMeta[tab];
+      if (m) {
+        document.getElementById('pmPageTitle').textContent = m.t;
+        document.getElementById('pmPageIcon').className = 'fas ' + m.i;
+        document.getElementById('pmPageSub').textContent = m.s;
+        document.getElementById('pmCrumb').textContent = m.t;
+      }
+
+      var acts = {
+        teams:      canCreateTeam() ? '<button class="pm-btn pm-btn-primary" onclick="openTeamModal()"><i class="fas fa-plus"></i> New Team</button>' : '',
+        members:    '',
+        resources:  '<button class="pm-btn" onclick="PMWorkload.loadResources()"><i class="fas fa-rotate"></i> Refresh</button>',
+        timesheets: '<button class="pm-btn" onclick="PMTimesheet.exportCsv()"><i class="fas fa-file-export"></i> Export</button>',
+        reviews:    '<button class="pm-btn pm-btn-primary" onclick="openStartReview()"><i class="fas fa-plus"></i> Start Review</button>'
+      };
+      document.getElementById('pmActions').innerHTML = acts[tab] || '';
+
+      if (tab === 'reviews')    renderReviews();
+      if (tab === 'resources')  setTimeout(function () { PMWorkload.loadResources(); }, 50);
+      if (tab === 'timesheets') setTimeout(function () { PMTimesheet.init(); }, 50);
+    }
+    window.switchTab = switchTab;
+
+    /* ===== Teams ===== */
+    var teams = [];
+    var allEmployees = [];
+
+    function loadEmployees() {
+      return PM.api('GET', '/api/pm/employees/dropdown').then(function (list) {
+        allEmployees = (list || []).map(function (e) { return { id: e.id, name: e.name }; });
+      }).catch(function () { allEmployees = []; });
+    }
+    function employeeName(id) {
+      if (!id) return null;
+      var e = allEmployees.find(function (x) { return x.id === id; });
+      return e ? e.name : ('User #' + id);
+    }
+    function mapBackendTeam(t) {
+      return {
+        id: t.id, name: t.name, icon: t.icon || 'fa-users',
+        leadId: t.leadEmployeeId,
+        lead: t.leadName || employeeName(t.leadEmployeeId) || 'Unassigned',
+        members: t.memberCount || 0,
+        openTasks: 0, util: 0,
+        status: t.status || 'on-track',
+        dept: t.department || 'General',
+        desc: t.description || ''
+      };
+    }
+
+    function loadTeams() {
+      PM.api('GET', '/api/pm/teams/cards').then(function (list) {
+        teams = (list || []).map(mapBackendTeam);
+        renderTeams();
+      }).catch(function (e) {
+        console.warn('teams failed', e);
+        PM.toast('Failed to load teams', 'error');
+      });
+    }
+
+    function renderTeams() {
+      if (!teams.length) {
+        document.getElementById('teamGrid').innerHTML = '<div style="grid-column:1/-1;padding:1.5rem;text-align:center;color:var(--dark-text-secondary)">No teams yet.</div>';
+        return;
+      }
+      document.getElementById('kTeams').textContent = teams.length;
+      document.getElementById('kMembers').textContent = teams.reduce(function (a, t) { return a + t.members; }, 0);
+      document.getElementById('kUtil').textContent = Math.round(teams.reduce(function (a, t) { return a + t.util; }, 0) / teams.length) + '%';
+      document.getElementById('kGaps').textContent = teams.filter(function (t) { return t.util > 90 || t.util < 60; }).length;
+      document.getElementById('teamGrid').innerHTML = teams.map(function (t) {
+        var badgeCls = t.status === 'on-track' ? 'success' : t.status === 'at-risk' ? 'warning' : 'primary';
+        var badgeLabel = t.status === 'on-track' ? 'Active' : t.status === 'at-risk' ? 'At Risk' : 'Available';
+        return '<div class="team-card" onclick="openTeam(' + t.id + ')">' +
+          '<div class="team-head"><div class="team-name"><i class="fas ' + t.icon + '"></i>' + PM.esc(t.name) + '</div><span class="pm-badge ' + badgeCls + '">' + badgeLabel + '</span></div>' +
+          '<div class="team-lead">Lead: ' + PM.esc(t.lead) + ' · ' + PM.esc(t.dept) + '</div>' +
+          '<div class="team-stats"><div><b>' + t.members + '</b>Members</div><div><b>' + t.openTasks + '</b>Open Tasks</div><div><b>' + t.util + '%</b>Util</div></div>' +
+          '<div class="pm-progress" style="margin-bottom:.5rem"><div class="pm-progress-bar ' + (t.util > 90 ? 'danger' : t.util > 70 ? 'warning' : 'success') + '" style="width:' + Math.min(100, t.util) + '%"></div></div>' +
+          (t.desc ? '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">' + PM.esc(t.desc) + '</div>' : '') +
+        '</div>';
+      }).join('');
+    }
+
+    function openTeam(id) {
+      var t = teams.find(function (x) { return x.id === id; }); if (!t) return;
+      var badgeCls = t.status === 'on-track' ? 'success' : t.status === 'at-risk' ? 'warning' : 'primary';
+      var label = t.status === 'on-track' ? 'Active' : t.status === 'at-risk' ? 'At Risk' : 'Available';
+      PM.openDrawer(
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.75rem">' +
+          '<span class="pm-badge ' + badgeCls + '">' + label + '</span>' +
+          '<span class="pm-badge primary">' + PM.esc(t.dept) + '</span>' +
+        '</div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary)">Team Lead</div>' +
+          '<div style="font-weight:600;font-size:var(--fs-md)">' + PM.esc(t.lead) + '</div>' +
+        '</div></div>' +
+        '<div class="pm-widget" style="margin-bottom:.5rem"><div class="pm-widget-body" style="padding:.65rem .9rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);margin-bottom:.25rem">About</div>' +
+          '<div style="font-size:var(--fs-base);color:var(--dark-text-secondary)">' + PM.esc(t.desc || '—') + '</div>' +
+        '</div></div>' +
+        '<div id="teamTasksSection"><div class="pm-widget"><div class="pm-widget-body" style="padding:.75rem 1rem"><div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700;margin-bottom:.4rem"><i class="fas fa-list-check"></i> Tasks</div><div style="text-align:center;padding:.75rem;color:var(--dark-text-secondary);font-size:var(--fs-sm)"><i class="fas fa-spinner fa-spin"></i> Loading tasks...</div></div></div></div>' +
+        '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem">' +
+          '<button class="pm-btn pm-btn-primary" style="flex:1;justify-content:center" onclick="goToTeamTasks(' + t.id + ')"><i class="fas fa-folder-open"></i> Open in Task Board</button>' +
+          '<button class="pm-btn" id="teamMembersBtn" style="display:none" title="Manage members" onclick="PM.openTeamMembers(' + t.id + ')"><i class="fas fa-user-plus"></i></button>' +
+          '<button class="pm-btn pm-btn-danger" id="teamDeleteBtn" style="display:none" onclick="deleteTeam(' + t.id + ')"><i class="fas fa-trash"></i></button>' +
+        '</div>',
+        t.name
+      );
+
+      PM.api('GET', '/api/pm/teams/' + id + '/members/me').then(function (a) {
+        a = a || {};
+        var mb = document.getElementById('teamMembersBtn'); if (mb) mb.style.display = a.canManageMembers ? '' : 'none';
+        var db = document.getElementById('teamDeleteBtn');  if (db) db.style.display  = a.canManage ? '' : 'none';
+      }).catch(function () {});
+
+      PM.api('GET', '/api/pm/teams/' + id + '/tasks?limit=20').then(function (data) {
+        if (!data) { renderTeamTasksEmpty('Failed to load tasks'); return; }
+        renderTeamTasksSection(data);
+      }).catch(function (e) {
+        console.warn('team tasks failed', e);
+        renderTeamTasksEmpty('Failed to load tasks');
+      });
+    }
+    window.openTeam = openTeam;
+
+    function renderTeamTasksSection(data) {
+      var stats = data.stats || {};
+      var tasks = data.tasks || [];
+      var open = stats.openTasks || 0;
+      var done = stats.doneTasks || 0;
+      var total = stats.totalTasks || 0;
+      var pct = total ? Math.round((done / total) * 100) : 0;
+      var html = '<div class="pm-widget"><div class="pm-widget-body" style="padding:.75rem 1rem">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">' +
+          '<div style="font-size:var(--fs-xs);color:var(--dark-text-secondary);text-transform:uppercase;font-weight:700"><i class="fas fa-list-check"></i> Tasks (' + total + ')</div>' +
+          '<span class="pm-badge ' + (open > 0 ? 'warning' : 'success') + '">' + open + ' open · ' + done + ' done</span>' +
+        '</div>' +
+        '<div class="pm-progress" style="margin-bottom:.65rem"><div class="pm-progress-bar success" style="width:' + pct + '%"></div></div>' +
+        (tasks.length ? tasks.map(function (t) { return renderTaskMini(t); }).join('') : '<div style="text-align:center;padding:.75rem;color:var(--dark-text-secondary);font-size:var(--fs-sm)">No tasks yet for this team</div>') +
+        (total > tasks.length ? '<div style="text-align:center;margin-top:.5rem;font-size:var(--fs-xs);color:var(--dark-text-secondary)">Showing ' + tasks.length + ' of ' + total + '</div>' : '') +
+      '</div></div>';
+      document.getElementById('teamTasksSection').innerHTML = html;
+    }
+    function renderTeamTasksEmpty(msg) {
+      var el = document.getElementById('teamTasksSection');
+      if (el) el.innerHTML = '<div class="pm-widget"><div class="pm-widget-body" style="text-align:center;padding:.75rem;color:var(--dark-text-secondary);font-size:var(--fs-sm)"><i class="fas fa-triangle-exclamation"></i> ' + PM.esc(msg) + '</div></div>';
+    }
+    function renderTaskMini(t) {
+      var p = (t.priority || 'MEDIUM').charAt(0) + (t.priority || 'MEDIUM').slice(1).toLowerCase();
+      var statusKey = (t.status || 'TODO').toLowerCase().replace(/_/g, '-');
+      var statusClass = statusKey === 'in-progress' ? 'progress' : statusKey === 'in-review' ? 'review' : statusKey;
+      var statusLabel = { 'todo': 'To Do', 'in-progress': 'In Progress', 'in-review': 'Review', 'blocked': 'Blocked', 'done': 'Done' }[statusKey] || statusKey;
+      var dotClass = p === 'Critical' ? 'p-c' : p === 'High' ? 'p-h' : p === 'Medium' ? 'p-m' : 'p-l';
+      var due = '—';
+      if (t.dueDate) { try { due = PM.fmtDate(t.dueDate); } catch (e) {} }
+      var names = (t.assigneeNames || []).slice(0, 3);
+      var avatars = names.map(function (n) { return '<div class="av-sm">' + PM.getInitials(n) + '</div>'; }).join('');
+      return '<div class="tk-mini-row" onclick="goToTask(' + t.id + ')">' +
+        '<span class="tk-mini-dot ' + dotClass + '"></span>' +
+        '<div class="tk-mini-body">' +
+          '<div class="tk-mini-title">' + PM.esc(t.title) + '</div>' +
+          '<div class="tk-mini-meta">' +
+            '<span><i class="fas fa-layer-group"></i> ' + PM.esc(t.projectName || '—') + '</span>' +
+            '<span><i class="fas fa-calendar"></i> ' + due + '</span>' +
+            (names.length ? '<span><div class="av-stack" style="display:inline-flex;vertical-align:middle">' + avatars + '</div></span>' : '') +
+          '</div>' +
+        '</div>' +
+        '<span class="tk-mini-status ' + statusClass + '">' + PM.esc(statusLabel) + '</span>' +
+      '</div>';
+    }
+    function goToTeamTasks(teamId) { PM.closeDrawer(); location.href = '/pm/06-tasks?teamId=' + teamId; }
+    function goToTask(taskId) { PM.closeDrawer(); location.href = '/pm/06-tasks?open=' + taskId; }
+    function deleteTeam(id) {
+      if (!confirm('Delete this team?')) return;
+      PM.api('DELETE', '/api/pm/teams/' + id).then(function () {
+        teams = teams.filter(function (t) { return t.id !== id; });
+        PM.closeDrawer();
+        renderTeams();
+        PM.toast('Team deleted', 'success');
+      }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+    }
+    window.goToTeamTasks = goToTeamTasks;
+    window.goToTask = goToTask;
+    window.deleteTeam = deleteTeam;
+
+    /* ===== Create team modal ===== */
+    function loadTeamLeadOptions() {
+      var sel = document.getElementById('fldTeamLead'); if (!sel) return;
+      sel.innerHTML = '<option value="">Select lead...</option>' +
+        allEmployees.map(function (e) { return '<option value="' + e.id + '">' + PM.esc(e.name) + '</option>'; }).join('');
+    }
+    function openTeamModal() {
+      document.getElementById('teamModal').classList.add('open');
+      loadTeamLeadOptions();
+      setTimeout(function () { var el = document.getElementById('fldTeamName'); if (el) el.focus(); }, 80);
+    }
+    function closeTeamModal() {
+      document.getElementById('teamModal').classList.remove('open');
+      ['fldTeamName', 'fldTeamDept', 'fldTeamDesc'].forEach(function (id) { var e = document.getElementById(id); if (e) e.value = ''; });
+      var lead = document.getElementById('fldTeamLead'); if (lead) lead.value = '';
+      document.querySelectorAll('#teamMembersChips .chip').forEach(function (c) { c.remove(); });
+      var mi = document.getElementById('teamMemberInput'); if (mi) mi.value = '';
+    }
+    function submitTeam() {
+      var name = (document.getElementById('fldTeamName') || {}).value.trim();
+      if (!name) { PM.toast('Team name required', 'error'); return; }
+      var memberIds = [];
+      document.querySelectorAll('#teamMembersChips .chip').forEach(function (c) {
+        var nm = c.dataset.name || c.textContent.replace('✕', '').trim();
+        var emp = allEmployees.find(function (e) { return e.name.toLowerCase() === nm.toLowerCase(); });
+        if (emp) memberIds.push(emp.id);
+      });
+      var leadVal = (document.getElementById('fldTeamLead') || {}).value;
+      var payload = {
+        name: name, icon: 'fa-users',
+        department: (document.getElementById('fldTeamDept') || {}).value || null,
+        description: (document.getElementById('fldTeamDesc') || {}).value || null,
+        leadEmployeeId: leadVal ? parseInt(leadVal, 10) : null,
+        status: (document.getElementById('fldTeamStatus') || {}).value || 'on-track',
+        weeklyHours: parseInt((document.getElementById('fldTeamHours') || {}).value, 10) || 40,
+        timezone: 'Asia/Kolkata',
+        memberIds: memberIds
+      };
+      PM.api('POST', '/api/pm/teams', payload).then(function (data) {
+        teams.unshift(mapBackendTeam(data));
+        closeTeamModal();
+        renderTeams();
+        PM.toast('✓ Team created', 'success');
+      }).catch(function (err) { PM.toast(err.message || 'Failed', 'error'); });
+    }
+    window.openTeamModal = openTeamModal;
+    window.closeTeamModal = closeTeamModal;
+    window.submitTeam = submitTeam;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var inp = document.getElementById('teamMemberInput');
+      if (!inp) return;
+      inp.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var name = this.value.trim(); if (!name) return;
+        var chip = document.createElement('span'); chip.className = 'chip';
+        chip.dataset.name = name;
+        chip.innerHTML = PM.esc(name) + ' <span class="x">✕</span>';
+        chip.querySelector('.x').addEventListener('click', function () { chip.remove(); });
+        document.getElementById('teamMembersChips').insertBefore(chip, this);
+        this.value = '';
+      });
+    });
+
+    /* ===== Members ===== */
+    function renderMembers() {
+      var q = (document.getElementById('memSearch').value || '').toLowerCase();
+      var list = allEmployees.filter(function (e) { return !q || e.name.toLowerCase().includes(q); });
+      var tb = document.getElementById('memTableBody');
+      if (!list.length) {
+        tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.25rem;color:var(--dark-text-secondary)">No members</td></tr>';
+        return;
+      }
+      tb.innerHTML = list.map(function (e) {
+        return '<tr>' +
+          '<td><div style="display:flex;align-items:center;gap:.5rem"><div class="av-md">' + PM.getInitials(e.name) + '</div><div style="font-weight:600">' + PM.esc(e.name) + '</div></div></td>' +
+          '<td>' + PM.esc(e.role || '—') + '</td>' +
+          '<td>—</td><td>0</td>' +
+          '<td><div class="pm-progress"><div class="pm-progress-bar" style="width:0%"></div></div></td>' +
+          '<td><span class="pm-badge success">Available</span></td>' +
+          '<td><div style="display:flex;gap:2px">' + [1, 2, 3, 4, 5].map(function () { return '<i class="fas fa-star" style="color:var(--dark-border);font-size:.8rem"></i>'; }).join('') + '</div></td>' +
+        '</tr>';
+      }).join('');
+      var rt = document.getElementById('resTotal'); if (rt) rt.textContent = list.length;
+    }
+    window.renderMembers = renderMembers;
+
+    /* ===== Performance ===== */
+    function renderReviews() { /* stub */ }
+    function openStartReview() {
+      document.getElementById('startReviewModal').classList.add('open');
+      var sel = document.getElementById('srEmployee'); if (!sel) return;
+      sel.innerHTML = '<option value="">Select employee...</option>' +
+        allEmployees.map(function (e) { return '<option value="' + e.id + '">' + PM.esc(e.name) + '</option>'; }).join('');
+    }
+    function submitStartReview() {
+      var empId = parseInt((document.getElementById('srEmployee') || {}).value || '0', 10);
+      if (!empId) { PM.toast('Select an employee', 'error'); return; }
+      var emp = allEmployees.find(function (e) { return e.id === empId; });
+      PM.toast('✓ Review started for ' + (emp ? emp.name : 'employee'), 'success');
+      document.getElementById('startReviewModal').classList.remove('open');
+    }
+    window.openStartReview = openStartReview;
+    window.submitStartReview = submitStartReview;
+    window.renderReviews = renderReviews;
+
+    /* ===== Hide disallowed tabs before start-up ===== */
+    Object.keys(TAB_OK).forEach(function (t) {
+      var b = document.querySelector('#pmTabs button[data-tab="' + t + '"]');
+      if (b && !tabAllowed(t)) b.style.display = 'none';
+    });
+
+    /* ===== Boot ===== */
+    Promise.all([loadEmployees()]).then(function () {
+      loadTeams();
+      renderMembers();
+
+      setTimeout(function () {
+        if (tabAllowed('resources') && window.PMWorkload) PMWorkload.loadResources();
+        if (tabAllowed('timesheets')) PMTimesheet.init();
+      }, 400);
+
+      window.pmRefresh = function () {
+        var active = document.querySelector('#pmTabs button.active');
+        if (!active) return;
+        if (active.dataset.tab === 'resources' && window.PMWorkload) PMWorkload.loadResources();
+        if (active.dataset.tab === 'timesheets') PMTimesheet.load();
+        if (active.dataset.tab === 'teams') loadTeams();
+      };
+
+      var q = (location.search || '').match(/tab=(\w+)/);
+      if (q && tabMeta[q[1]]) {
+        switchTab(q[1], document.querySelector('[data-tab="' + q[1] + '"]'));
+      }
+    });
+  }).catch(function (e) {
+    console.error('PM.bootstrap failed:', e);
+    var sub = document.getElementById('pmPageSub');
+    if (sub) sub.textContent = 'Unable to load user context.';
+  });
+</script>
+</body>
+</html>

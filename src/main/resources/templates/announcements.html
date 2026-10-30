@@ -6,117 +6,13 @@
     <title>Announcements Management</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
+
     <style>
-        :root {
-            --dark-bg: #0f172a;
-            --dark-card: #1e293b;
-            --dark-border: #334155;
-            --dark-text: #f8fafc;
-            --primary: #6366f1;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--dark-bg);
-            color: var(--dark-text);
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 280px;
-            height: 100vh;
-            background: var(--dark-bg);
-            box-shadow: 2px 0 10px rgba(0,0,0,.2);
-            z-index: 1000;
-            padding-top: 1.5rem;
-        }
-
-        .sidebar-brand {
-            padding: 0 1.5rem 1.5rem;
-            border-bottom: 1px solid var(--dark-border);
-            color: #fff;
-            font-weight: 600;
-            font-size: 1.25rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .brand-icon {
-            width: 40px;
-            height: 40px;
-            background: #fff;
-            color: var(--dark-bg);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sidebar-content {
-            padding: 1rem 0;
-            max-height: calc(100vh - 100px);
-            overflow-y: auto;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0.65rem 1.5rem;
-            color: #94a3b8;
-            text-decoration: none;
-            transition: all 0.2s;
-            margin: 0.25rem 0.5rem;
-            border-radius: 6px;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            background: #1e293b;
-            color: #fff;
-        }
-
-        .main-content {
-            margin-left: 280px;
-            padding: 1.5rem;
-            min-height: 100vh;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-        }
-
-        .header h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            color: var(--dark-text);
-        }
-
-        .btn-create {
-            background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
-            color: #fff;
-            border: none;
-            padding: 0.65rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s;
-        }
-
-        .btn-create:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(99, 102, 241, .3);
-        }
-
+        /* Page-specific legacy styles preserved; theme covers the rest */
         .announcements-table {
             background: var(--dark-card);
             border: 1px solid var(--dark-border);
@@ -420,80 +316,62 @@
 </head>
 <body>
 
-<!-- SIDEBAR -->
-<div class="sidebar">
-    <div class="sidebar-brand">
-        <div class="brand-icon">
-            <i class="fas fa-building"></i>
-        </div>
-        <span>Menti's IT</span>
-    </div>
-    <div class="sidebar-content">
-        <a href="/dashboard/hr" class="nav-link">
-            <i class="fas fa-home"></i>
-            <span>Overview</span>
-        </a>
-        <a href="/dashboard/hr/announcements" class="nav-link active">
-            <i class="fas fa-bullhorn"></i>
-            <span>Announcements</span>
-        </a>
-        <a href="/dashboard/hr/applications" class="nav-link">
-            <i class="fas fa-briefcase"></i>
-            <span>Applications</span>
-        </a>
-        <a href="/dashboard/hr" class="nav-link">
-            <i class="fas fa-sign-out"></i>
-            <span>Logout</span>
-        </a>
-    </div>
-</div>
+<!-- === SHARED SIDEBAR (announcementshistory active) === -->
+<div th:replace="~{fragments/layout :: sidebar('announcementshistory')}"></div>
 
-<!-- MAIN CONTENT -->
+<!-- === MAIN CONTENT === -->
 <div class="main-content">
-    <!-- HEADER -->
-    <div class="header">
-        <div>
-            <h1><i class="fas fa-bullhorn"></i> Announcements Management</h1>
-            <p style="color: #cbd5e1; margin-top: 0.5rem; font-size: 0.9rem;">
-                Super Admin Only - Create and manage company-wide announcements
-            </p>
+    <header th:replace="~{fragments/layout :: topbar}"></header>
+
+    <div class="content-area">
+        <!-- HEADER -->
+        <div class="pm-page-head">
+            <div>
+                <h1 class="pm-page-title">
+                    <i class="fas fa-bullhorn"></i>
+                    <span>Announcements Management</span>
+                </h1>
+                <div class="pm-page-sub">Super Admin Only - Create and manage company-wide announcements</div>
+            </div>
+            <div class="pm-page-actions">
+                <button class="pm-btn pm-btn-primary" onclick="openCreateModal()">
+                    <i class="fas fa-plus"></i>
+                    Create Announcement
+                </button>
+            </div>
         </div>
-        <button class="btn-create" onclick="openCreateModal()">
-            <i class="fas fa-plus"></i>
-            Create Announcement
-        </button>
-    </div>
 
-    <!-- ALERTS -->
-    <div id="alert-container"></div>
+        <!-- ALERTS -->
+        <div id="alert-container"></div>
 
-    <!-- ANNOUNCEMENTS TABLE -->
-    <div class="announcements-table">
-        <table class="table">
-            <thead>
-            <tr>
-                <th>TITLE</th>
-                <th>CATEGORY</th>
-                <th>TYPE</th>
-                <th>PRIORITY</th>
-                <th>TARGET</th>
-                <th>CREATED</th>
-                <th>EXPIRES</th>
-                <th>STATUS</th>
-                <th>ACTIONS</th>
-            </tr>
-            </thead>
-            <tbody id="announcements-tbody">
-            <tr>
-                <td colspan="9" style="text-align: center; padding: 2rem;">
-                    <div class="empty-state">
-                        <i class="fas fa-spinner fa-spin"></i>
-                        <p>Loading announcements...</p>
-                    </div>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+        <!-- ANNOUNCEMENTS TABLE -->
+        <div class="announcements-table">
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>TITLE</th>
+                    <th>CATEGORY</th>
+                    <th>TYPE</th>
+                    <th>PRIORITY</th>
+                    <th>TARGET</th>
+                    <th>CREATED</th>
+                    <th>EXPIRES</th>
+                    <th>STATUS</th>
+                    <th>ACTIONS</th>
+                </tr>
+                </thead>
+                <tbody id="announcements-tbody">
+                <tr>
+                    <td colspan="9" style="text-align: center; padding: 2rem;">
+                        <div class="empty-state">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading announcements...</p>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -580,6 +458,13 @@
     </div>
 </div>
 
+<!-- === SHARED AI PANEL === -->
+<div th:replace="~{fragments/layout :: aipanel}"></div>
+
+<!-- === SHARED SCRIPTS === -->
+<div th:replace="~{fragments/layout :: common-scripts}"></div>
+
+<!-- === PAGE-SPECIFIC SCRIPTS (unchanged) === -->
 <script>
     // ===== LOAD ANNOUNCEMENTS ON PAGE LOAD =====
     document.addEventListener('DOMContentLoaded', function() {

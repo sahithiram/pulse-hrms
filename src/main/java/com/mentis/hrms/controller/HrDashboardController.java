@@ -919,6 +919,17 @@ public class HrDashboardController {
             employee.setEmployeeName(employeeDTO.getFirstName() + " " + employeeDTO.getLastName());
             employee.setUpdatedDate(LocalDateTime.now());
 
+            String sessionRole = (String) session.getAttribute("userRole"); if (employee.getRole() == UserRole.SUPER_ADMIN && !"SUPER_ADMIN".equals(sessionRole)) { ra.addFlashAttribute("error", "Only a Super Admin can change another Super Admin's role."); return "redirect:/dashboard/hr/edit-employee/" + originalEmployeeId; }
+            UserRole finalRole = employee.getRole() != null ? employee.getRole() : UserRole.EMPLOYEE;
+            if ("SUPER_ADMIN".equals(sessionRole)) {
+                String submitted = employeeDTO.getUserRole();
+                if (submitted != null && !submitted.isBlank()) {
+                    try { finalRole = UserRole.valueOf(submitted.trim().toUpperCase()); }
+                    catch (IllegalArgumentException ignored) { }
+                }
+            }
+            employee.setRole(finalRole);
+
             // Save updated employee
             Employee savedEmployee = employeeService.updateEmployee(employee);
 
@@ -1786,7 +1797,19 @@ public class HrDashboardController {
             employee.setCredentialsCreated(false);
             employee.setActive(true);
             employee.setStatus("Active");
-            employee.setRole(UserRole.EMPLOYEE);
+
+            // C7: only a Super Admin may set a non-EMPLOYEE role; never trust the hidden field.
+            String sessionRole = (String) session.getAttribute("userRole");
+            UserRole finalRole = UserRole.EMPLOYEE;
+            if ("SUPER_ADMIN".equals(sessionRole)) {
+                String submitted = employeeDTO.getUserRole();
+                if (submitted != null && !submitted.isBlank()) {
+                    try { finalRole = UserRole.valueOf(submitted.trim().toUpperCase()); }
+                    catch (IllegalArgumentException ignored) { finalRole = UserRole.EMPLOYEE; }
+                }
+            }
+            employee.setRole(finalRole);
+
             employee.setPresenceStatus("OFFLINE");
 
             // Save employee

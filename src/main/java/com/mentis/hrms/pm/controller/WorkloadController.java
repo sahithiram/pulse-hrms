@@ -25,8 +25,8 @@ public class WorkloadController {
     private final PmAccessService access;
 
     private void requireTeamViewer(Long userId, Long teamId) {
-        if (!access.isAdmin(userId) && !access.isTeamLead(userId, teamId))
-            throw new PmAccessDeniedException("Only admins or the team lead can view this workload.");
+        if (!access.isAdmin(userId) && !access.isPmRole(userId) && !access.isTeamLead(userId, teamId))
+            throw new PmAccessDeniedException("Only admins, project managers or the team lead can view this workload.");
     }
 
     @GetMapping("/me")

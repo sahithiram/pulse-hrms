@@ -141,9 +141,8 @@ public class DashboardController implements WebMvcConfigurer {
         if (loginType == null || "EMPLOYEE".equals(loginType)) {
             return "redirect:/candidate/dashboard/" + empId;
         }
-
-        // Only HR and Super Admin should reach here
-        if (!"HR".equals(role) && !"SUPER_ADMIN".equals(role)) {
+        // Only HR, HR_MANAGER and Super Admin should reach here
+        if (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role)) {
             return "redirect:/candidate/dashboard/" + empId;
         }
 

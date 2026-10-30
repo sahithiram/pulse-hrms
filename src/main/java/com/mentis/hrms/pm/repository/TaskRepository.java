@@ -26,7 +26,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     long countByStatusNot(TaskStatus status);
 
     long countByStatus(TaskStatus status);
-
+    boolean existsByRecurringRuleIdAndRecurringOccurrence(Long ruleId, java.time.LocalDate occurrence);
     List<Task> findByTeamId(Long teamId);
     List<Task> findByProjectIdAndParentTaskIdIsNull(Long projectId);
 
@@ -55,7 +55,9 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT COUNT(t) FROM Task t WHERE t.parentTaskId = :parentId")
     long countSubtasks(@Param("parentId") Long parentId);
-
+    @Query("SELECT DISTINCT t FROM Task t JOIN TaskAssignment a ON a.taskId = t.id " +
+            "WHERE a.employeeId = :empId AND t.status <> com.mentis.hrms.pm.enums.TaskStatus.DONE")
+    List<Task> findOpenByAssigneeId(@Param("empId") Long employeeId);
     @Query("SELECT COUNT(t) FROM Task t WHERE t.parentTaskId = :parentId AND t.status = :status")
     long countSubtasksByStatus(@Param("parentId") Long parentId, @Param("status") TaskStatus status);
 
@@ -104,7 +106,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT t.status, COUNT(t) FROM Task t GROUP BY t.status")
     List<Object[]> countGroupByStatus();
-
+    List<Task> findByProjectIdInAndStatus(Collection<Long> ids, TaskStatus status);
     @Query("SELECT t.status, COUNT(t) FROM Task t WHERE t.projectId = :projectId GROUP BY t.status")
     List<Object[]> countGroupByStatusForProject(@Param("projectId") Long projectId);
 

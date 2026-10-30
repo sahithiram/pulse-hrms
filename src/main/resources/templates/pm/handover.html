@@ -1,0 +1,73 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Handover</title>
+    <style>
+        body{font-family:system-ui;margin:24px;max-width:960px}
+        table{border-collapse:collapse;width:100%;margin:12px 0}
+        td,th{border-bottom:1px solid #ddd;padding:6px;text-align:left}
+        input{padding:5px;margin:0 8px 0 4px}
+    </style></head>
+<body>
+<h2>Handover / bulk reassign</h2>
+<p>
+    <label>From employee ID <input id="from" type="number"></label>
+    <label>Project ID (blank = all projects) <input id="proj" type="number"></label>
+    <button onclick="loadTasks()">Load open tasks</button>
+</p>
+<table id="t"><thead><tr><th><input type="checkbox" onclick="toggleAll(this)"></th>
+    <th>Task</th><th>Project</th><th>Status</th><th>Due</th></tr></thead><tbody></tbody></table>
+<p>
+    <label>To employee ID <input id="to" type="number"></label>
+    <label><input id="rm" type="checkbox"> Remove from project after</label>
+    <label>Reason <input id="why" type="text"></label>
+    <button onclick="go()">Reassign selected</button>
+</p>
+<pre id="out"></pre>
+<script>
+    async function api(url, opts) {
+      const r = await fetch(url, Object.assign(
+        {credentials:'same-origin', headers:{'Content-Type':'application/json'}}, opts||{}));
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.message || ('HTTP ' + r.status));
+      return j;
+    }
+    const val = id => document.getElementById(id).value.trim();
+    function toggleAll(cb){ document.querySelectorAll('#t tbody input').forEach(c => c.checked = cb.checked); }
+
+    async function loadTasks() {
+      const out = document.getElementById('out'); out.textContent = '';
+      try {
+        let url = '/api/pm/handover/open-tasks?employeeId=' + encodeURIComponent(val('from'));
+        if (val('proj')) url += '&projectId=' + encodeURIComponent(val('proj'));
+        const rows = (await api(url)).data || [];
+        const tb = document.querySelector('#t tbody'); tb.innerHTML = '';
+        rows.forEach(r => {
+          const tr = document.createElement('tr');
+          const c = document.createElement('input'); c.type = 'checkbox'; c.checked = true; c.value = r.taskId;
+          const td0 = document.createElement('td'); td0.appendChild(c); tr.appendChild(td0);
+          [r.title, r.projectName, r.status, r.dueDate || ''].forEach(v => {
+            const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+          });
+          tb.appendChild(tr);
+        });
+        out.textContent = rows.length + ' open task(s)';
+      } catch (e) { out.textContent = 'Error: ' + e.message; }
+    }
+
+    async function go() {
+      const out = document.getElementById('out');
+      try {
+        const ids = [...document.querySelectorAll('#t tbody input:checked')].map(c => Number(c.value));
+        const body = {
+          fromEmployeeId: Number(val('from')), toEmployeeId: Number(val('to')),
+          projectId: val('proj') ? Number(val('proj')) : null,
+          taskIds: ids, removeFromProject: document.getElementById('rm').checked,
+          reason: val('why')
+        };
+        const res = (await api('/api/pm/handover/reassign', {method:'POST', body: JSON.stringify(body)})).data;
+        out.textContent = 'Moved ' + res.moved + ' task(s). Member removed: ' + res.memberRemoved
+          + (res.skipped && res.skipped.length ? '\nSkipped:\n- ' + res.skipped.join('\n- ') : '');
+        loadTasks();
+      } catch (e) { out.textContent = 'Error: ' + e.message; }
+    }
+</script>
+</body></html>

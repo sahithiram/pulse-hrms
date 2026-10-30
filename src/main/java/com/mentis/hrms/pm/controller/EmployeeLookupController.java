@@ -1,6 +1,8 @@
 package com.mentis.hrms.pm.controller;
 
 import com.mentis.hrms.pm.dto.response.ApiResponse;
+import com.mentis.hrms.pm.security.CurrentUserId;
+import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +20,15 @@ import java.util.Map;
 public class EmployeeLookupController {
 
     private final EmployeeRepository employeeRepository;
+    private final PmAccessService access;
 
     @GetMapping("/dropdown")
-    public ApiResponse<List<Map<String, Object>>> dropdown() {
+    public ApiResponse<List<Map<String, Object>>> dropdown(@CurrentUserId Long userId) {
+        // C0: only admins, PMs, or anyone with at least one managed project sees the directory
+        if (!access.isAdmin(userId) && !access.isPmRole(userId)
+                && access.managedProjectIds(userId).isEmpty()) {
+            return ApiResponse.ok(List.of());
+        }
         var employees = employeeRepository.findAll();
         List<Map<String, Object>> list = new ArrayList<>();
         int limit = Math.min(employees.size(), 200);

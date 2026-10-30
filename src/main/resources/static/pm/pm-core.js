@@ -29,6 +29,7 @@
  *   PM.guard(rule)               — STEP 7.1: false + "No access" screen when not allowed
  *   PM.gateTabs(map)             — STEP 7.1: hide tab buttons the user can't use
  *   PM.openIntake(tab)           — STEP 7.1: open the project requests / templates drawer
+ *   PM.isTeamLeadOnly(u?)        — check if user is restricted to Team Lead scope
  *
  * Rules for PM.can (all read from /api/pm/me):
  *   admin      Super Admin, HR, HR Manager         (me.admin)
@@ -41,9 +42,22 @@
  *   lead       runs work day to day                (me.leadTier)
  *   manage     admin or lead                       (planning, team, reports pages)
  *   people     HR / HR Manager                     (me.peopleAdmin)
+ *   teamlead   has leadOfTeamIds                   (me.leadOfTeamIds)
  */
 (function () {
   'use strict';
+  try { if (sessionStorage.getItem('pm.tlOnly') === '1') document.documentElement.classList.add('pm-tl'); } catch (e) {}
+  (function () {
+    var st = document.createElement('style');
+    st.textContent =
+      'html.pm-tl .sidebar a[href^="/pm/01-home"],html.pm-tl .sidebar a[href^="/pm/08-clients"],' +
+      'html.pm-tl .sidebar a[href^="/pm/09-budget"],html.pm-tl .sidebar a[href^="/pm/10-insights"],' +
+      'html.pm-tl .sidebar a[href^="/pm/12-reports"],html.pm-tl .sidebar a[href^="/pm/11-settings"],' +
+      'html.pm-tl .dropdown-menu a[href^="/pm/11-settings"],' +
+      'html.pm-tl [onclick*="bulkDelete"],html.pm-tl [onclick*="ctxAction(\'delete\')"],html.pm-tl [onclick*="deleteTask("],' +
+      'html.pm-tl .create-tab[data-mode="import"]{display:none!important}';
+    document.head.appendChild(st);
+  })();
 
   /* ============================================================
      ROLE RULES  (STEP 7.1)
@@ -66,8 +80,17 @@
       case 'lead':      return u.leadTier === true;
       case 'manage':    return u.admin === true || u.leadTier === true;
       case 'people':    return u.peopleAdmin === true;
+      case 'teamlead':  return Array.isArray(u.leadOfTeamIds) && u.leadOfTeamIds.length > 0;
       default:          return false; // unknown rule: deny
     }
+  }
+
+  function isTeamLeadOnly(u) {
+    u = u || (window.PM && window.PM.user);
+    if (!u) return false;
+    if (typeof u.teamLeadOnly === 'boolean') return u.teamLeadOnly;
+    return Array.isArray(u.leadOfTeamIds) && u.leadOfTeamIds.length > 0
+        && !u.admin && !u.superAdmin && !u.pm && !u.financeAccess;
   }
 
   /* ============================================================
@@ -255,7 +278,7 @@
      ============================================================ */
   function logout() {
     PM.toast('Logging out...', 'info', 800);
-    setTimeout(() => { window.location.href = '/candidate/logout'; }, 300);
+    setTimeout(() => { window.location.href = '/candidate/auth/logout'; }, 300);
   }
 
   /* ============================================================
@@ -326,6 +349,14 @@
      ============================================================ */
   const SIDEBAR_NAV = [
     { section: 'DASHBOARD', icon: 'fa-home' },
+    {
+      icon: 'fa-user-tie',
+      label: function (u) { return isTeamLeadOnly(u) ? 'My Team' : 'Team Lead'; },
+      href: '/pm/12-team-lead',
+      requires: 'teamlead'
+    },
+    { icon: 'fa-arrow-left', label: 'Back to HRMS', href: '/candidate/dashboard' },
+    { icon: 'fa-user-clock', label: 'My HR (leave, attendance)', href: '/candidate/dashboard' },
     { icon: 'fa-gauge-high', label: 'Dashboard', href: '/pm/01-home' },
     { icon: 'fa-chart-simple', label: 'Portfolio', href: '/pm/01-home#portfolio' },
     { icon: 'fa-route', label: 'Roadmap', href: '/pm/01-home#roadmap' },
@@ -405,8 +436,12 @@
     if (!nav) return;
     user = user || PM.user;
 
-    // 1) keep only what this person may see
-    const visible = SIDEBAR_NAV.filter(item => item.section || !item.requires || can(item.requires, user));
+    const tl = isTeamLeadOnly(user);
+    const TL_HIDE = ['/pm/01-home', '/pm/08-clients', '/pm/09-budget', '/pm/10-insights', '/pm/12-reports', '/pm/11-settings', '/pm/04-projects?action=', '/pm/04-projects#'];
+    const tlHidden = h => TL_HIDE.some(p => String(h || '').indexOf(p) === 0);
+    const visible = SIDEBAR_NAV.filter(item => item.section ||
+      ((!item.requires || can(item.requires, user)) && !(tl && tlHidden(item.href))));
+
     // 2) drop section headings that ended up with nothing under them
     const shown = visible.filter((item, i) => {
       if (!item.section) return true;
@@ -443,24 +478,26 @@
   }
 
   /* ============================================================
-     COMMAND PALETTE  (STEP 7.1: same rules as the sidebar)
+     COMMAND PALETTE
      ============================================================ */
   const CMDS = [
-    { icon: 'fa-gauge-high', label: 'Dashboard', action: () => location.href = '/pm/01-home' },
+    { icon: 'fa-gauge-high', label: 'Dashboard', tlHide: true, action: () => location.href = '/pm/01-home' },
     { icon: 'fa-inbox', label: 'My Work', action: () => location.href = '/pm/03-my-work' },
     { icon: 'fa-folder-open', label: 'All Projects', action: () => location.href = '/pm/04-projects' },
-    { icon: 'fa-paper-plane', label: 'Project requests', action: () => openIntake('requests') },
-    { icon: 'fa-layer-group', label: 'Project templates', requires: 'templates', action: () => openIntake('templates') },
+    { icon: 'fa-paper-plane', label: 'Project requests', tlHide: true, action: () => openIntake('requests') },
+    { icon: 'fa-layer-group', label: 'Project templates', requires: 'templates', tlHide: true, action: () => openIntake('templates') },
     { icon: 'fa-table-columns', label: 'Task Board', action: () => location.href = '/pm/06-tasks?view=board' },
     { icon: 'fa-list-ul', label: 'Task List', action: () => location.href = '/pm/06-tasks?view=list' },
     { icon: 'fa-calendar-days', label: 'Calendar', action: () => location.href = '/pm/06-tasks?view=calendar' },
     { icon: 'fa-diagram-project', label: 'Dependency Graph', action: () => location.href = '/pm/06b-graph' },
     { icon: 'fa-users', label: 'Teams', action: () => location.href = '/pm/07-team?tab=teams' },
-    { icon: 'fa-address-card', label: 'Clients', requires: 'clients', action: () => location.href = '/pm/08-clients' },
+    { icon: 'fa-address-card', label: 'Clients', requires: 'clients', tlHide: true, action: () => location.href = '/pm/08-clients' },
     { icon: 'fa-bug', label: 'Issues', action: () => location.href = '/pm/09-quality?tab=issues' },
-    { icon: 'fa-chart-line', label: 'Reports', requires: 'manage', action: () => location.href = '/pm/10-insights?tab=reports' },
-    { icon: 'fa-gear', label: 'Settings', requires: 'admin', action: () => location.href = '/pm/11-settings' },
+    { icon: 'fa-chart-line', label: 'Reports', requires: 'manage', tlHide: true, action: () => location.href = '/pm/10-insights?tab=reports' },
+    { icon: 'fa-gear', label: 'Settings', requires: 'admin', tlHide: true, action: () => location.href = '/pm/11-settings' },
     { icon: 'fa-moon', label: 'Toggle theme', action: toggleTheme },
+    { icon: 'fa-arrow-left', label: 'Back to HRMS', action: () => location.href = '/candidate/dashboard' },
+    { icon: 'fa-user-tie', label: 'My Team (Team Lead dashboard)', requires: 'teamlead', action: () => location.href = '/pm/12-team-lead' },
     { icon: 'fa-right-from-bracket', label: 'Logout', action: logout }
   ];
 
@@ -502,7 +539,7 @@
 
   function renderCmd() {
     const q = (document.getElementById('pmCmdInp').value || '').toLowerCase();
-    cmdFiltered = CMDS.filter(c => (!c.requires || can(c.requires)) && c.label.toLowerCase().includes(q));
+    cmdFiltered = CMDS.filter(c => (!c.requires || can(c.requires)) && !(c.tlHide && isTeamLeadOnly()) && c.label.toLowerCase().includes(q));
     cmdIndex = 0;
     const list = document.getElementById('pmCmdList');
     list.innerHTML = cmdFiltered.map((c, i) =>
@@ -536,7 +573,9 @@
     }
   }
 
-  /* ===== SESSION EXPIRY + REALTIME ===== */
+  /* ============================================================
+     REALTIME (WEBSOCKET / STOMP)
+     ============================================================ */
   (function () {
     var nativeFetch = window.fetch.bind(window);
     window.fetch = function () {
@@ -546,37 +585,56 @@
       });
     };
 
-    function setLive(on) {
-      var el = document.querySelector('.pm-live');
-      if (!el) return;
-      el.innerHTML = '<span class="dot"' + (on ? '' : ' style="background:#ef4444"') + '></span> ' +
-        (on ? 'Live' : 'Reconnecting…');
+    function liveEl() {
+      var el = document.querySelector('.pm-live'); if (el) return el;
+      var host = document.querySelector('.top-header-actions'); if (!host) return null;
+      el = document.createElement('span'); el.className = 'pm-live';
+      el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--dark-text-secondary);padding:0 6px';
+      host.insertBefore(el, host.firstChild); return el;
     }
-
+    function setLive(on) {
+      var el = liveEl(); if (!el) return;
+      el.innerHTML = '<span class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' +
+        (on ? '#10b981' : '#ef4444') + '"></span> ' + (on ? 'Live' : 'Reconnecting…');
+    }
+    function loadScript(src) {
+      return new Promise(function (res) {
+        var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = res; document.head.appendChild(s);
+      });
+    }
     var timer;
     window.addEventListener('pm:event', function () {
       clearTimeout(timer);
-      timer = setTimeout(function () {
-        if (typeof window.pmRefresh === 'function') window.pmRefresh();
-      }, 400);
+      timer = setTimeout(function () { if (typeof window.pmRefresh === 'function') window.pmRefresh(); }, 400);
     });
 
-    if (window.StompJs && window.SockJS) {
-      var client = new StompJs.Client({
-        webSocketFactory: function () { return new SockJS('/ws'); },
-        reconnectDelay: 5000,
-        onConnect: function () {
-          setLive(true);
-          client.subscribe('/topic/pm/events', function (m) {
-            window.dispatchEvent(new CustomEvent('pm:event', { detail: JSON.parse(m.body) }));
-          });
-        },
-        onWebSocketClose: function () { setLive(false); }
+    var started = false;
+    window.__pmStartRealtime = function (me) {
+      if (started) return; started = true;
+      var libs = [];
+      if (!window.SockJS)  libs.push(loadScript('https://cdn.jsdelivr.net/npm/sockjs-client@1.5.2/dist/sockjs.min.js'));
+      if (!window.StompJs) libs.push(loadScript('https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js'));
+      Promise.all(libs).then(function () {
+        if (!window.SockJS || !window.StompJs) { console.warn('pm-core: realtime libs failed to load'); return; }
+        var tl = isTeamLeadOnly(me);
+        var topics = tl ? (me.leadOfTeamIds || []).map(function (id) { return '/topic/pm/team/' + id; })
+                        : ['/topic/pm/events'];
+        var client = new StompJs.Client({
+          webSocketFactory: function () { return new SockJS('/ws'); },
+          reconnectDelay: 5000,
+          onConnect: function () {
+            setLive(true);
+            topics.forEach(function (t) {
+              client.subscribe(t, function (m) {
+                try { window.dispatchEvent(new CustomEvent('pm:event', { detail: JSON.parse(m.body) })); } catch (e) {}
+              });
+            });
+          },
+          onWebSocketClose: function () { setLive(false); }
+        });
+        client.activate();
       });
-      client.activate();
-    } else {
-      console.warn('pm-core: SockJS/StompJs not loaded, live updates disabled');
-    }
+    };
   })();
 
   /* ============================================================
@@ -635,7 +693,7 @@
       document.head.appendChild(s);
     });
   }
-  // PHASE 5 — "Health & budget" drawer (pm-finance.js loaded on demand)
+
   async function openProjectFinance(projectId) {
     if (!window.PMFinance) {
       await new Promise(function (resolve) {
@@ -649,6 +707,7 @@
     if (window.PMFinance) window.PMFinance.open(projectId);
     else toast('Could not load the finance panel', 'error');
   }
+
   async function openProjectClosure(projectId) {
     if (!window.PMClosure) {
       await new Promise(function (resolve) {
@@ -668,11 +727,13 @@
     if (window.PMMembers) window.PMMembers.openProject(projectId, name);
     else toast('Could not load the members panel', 'error');
   }
+
   async function openTeamMembers(teamId, name) {
     await loadMembersScript();
     if (window.PMMembers) window.PMMembers.openTeam(teamId, name);
     else toast('Could not load the members panel', 'error');
   }
+
   function fmtMinutes(m) {
     m = m || 0;
     const h = Math.floor(m / 60), r = m % 60;
@@ -681,7 +742,6 @@
 
   /* ============================================================
      PHASE 4 — boot the shared notification client
-     FIX 9 — don't double-load if the page already has the script tag
      ============================================================ */
   async function bootNotifications() {
     const alreadyLoaded = document.querySelector('script[src="/notifications.js"]');
@@ -736,7 +796,7 @@
   }
 
   /* ============================================================
-     PROJECT INTAKE DRAWER  (pm-intake.js is loaded on demand)
+     PROJECT INTAKE DRAWER
      ============================================================ */
   async function openIntake(tab) {
     if (!window.PMIntake) {
@@ -752,10 +812,6 @@
     else toast('Could not load project intake', 'error');
   }
 
-  /**
-   * #requests / #templates in the URL open the drawer. Runs on first page load AND on hashchange.
-   * The hash is cleared afterwards so clicking the same notification link again works.
-   */
   function openIntakeFromHash() {
     var h = (location.hash || '').replace('#', '');
     if (h !== 'templates' && h !== 'requests') return;
@@ -764,21 +820,19 @@
   }
   window.addEventListener('hashchange', function () {
     openIntakeFromHash();
-    if (window.PM && window.PM.user) buildSidebar(window.PM.user); // keep the highlighted entry correct
+    if (window.PM && window.PM.user) buildSidebar(window.PM.user);
   });
 
   /* ============================================================
-     PAGE & TAB GUARDS  (STEP 7.1)
-     One table: a page rule blocks the whole page, a tabs map blocks single tabs.
-     The server still enforces everything — this just stops people landing on a broken page.
-     11-settings is NOT guarded here (everyone reaches it from the user menu).
+     PAGE & TAB GUARDS
      ============================================================ */
   const ROUTES = [
-    { path: '/pm/08-clients',  rule: 'clients' },
-    { path: '/pm/10-insights', rule: 'manage', tabs: { budget: 'finance' } },
-    { path: '/pm/05-planning', tabs: { backlog: 'manage', sprints: 'manage', goals: 'manage' } },
-    { path: '/pm/07-team',     tabs: { members: 'manage', resources: 'manage', reviews: 'manage' } },
-    { path: '/pm/02-inbox',    tabs: { activity: 'manage' } }
+    { path: '/pm/08-clients',   rule: 'clients' },
+    { path: '/pm/12-team-lead', rule: 'teamlead' },
+    { path: '/pm/10-insights',  rule: 'manage', tabs: { budget: 'finance' } },
+    { path: '/pm/05-planning',  tabs: { backlog: 'manage', sprints: 'manage', goals: 'manage' } },
+    { path: '/pm/07-team',      tabs: { members: 'manage', resources: 'manage', reviews: 'manage' } },
+    { path: '/pm/02-inbox',     tabs: { activity: 'manage' } }
   ];
 
   function showNoAccess() {
@@ -796,18 +850,12 @@
     setTimeout(function () { location.replace('/pm/01-home'); }, 2500);
   }
 
-  /** For a page's own code: if (!PM.guard('manage')) return; */
   function guard(rule) {
     if (can(rule)) return true;
     showNoAccess();
     return false;
   }
 
-  /**
-   * Hide tab buttons the user can't use. map = { tabId: rule }.
-   * Looks at buttons / links / role=tab elements carrying data-tab. If the open tab gets hidden,
-   * the first visible one is clicked.
-   */
   function gateTabs(map) {
     if (!map) return;
     let firstOk = null, activeHidden = false;
@@ -824,7 +872,6 @@
     if (activeHidden && firstOk) firstOk.click();
   }
 
-  /** Returns false (and shows "No access") when this page or tab is not for this user. */
   function applyRouteGuard(user) {
     const path = normPath(location.pathname);
     const route = ROUTES.find(r => r.path === path);
@@ -835,12 +882,47 @@
     if (route.tabs) {
       const tab = new URLSearchParams(location.search).get('tab');
       if (tab && route.tabs[tab] && !can(route.tabs[tab], user)) { showNoAccess(); return false; }
-      // tab buttons may render after boot, so apply now and again shortly after
       gateTabs(route.tabs);
       setTimeout(function () { gateTabs(route.tabs); }, 300);
       setTimeout(function () { gateTabs(route.tabs); }, 1000);
     }
     return true;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.PMTimer || document.getElementById('pm-timer-js')) return;
+    var s = document.createElement('script');
+    s.id = 'pm-timer-js';
+    s.src = '/pm/js/pm-timer.js';
+    s.async = true;
+    s.onerror = function () { s.remove(); };
+    document.body.appendChild(s);
+  });
+
+  function applyTeamLeadMode(me) {
+    var tl = isTeamLeadOnly(me);
+    try { sessionStorage.setItem('pm.tlOnly', tl ? '1' : '0'); } catch (e) {}
+    document.documentElement.classList.toggle('pm-tl', tl);
+    if (!tl) return;
+    var empId = (document.getElementById('currentEmployeeId') || {}).value || me.employeeId || '';
+    var back = empId ? '/candidate/dashboard/' + empId : '/candidate/dashboard';
+    function addLink(ulId, href, icon, label, first) {
+      var ul = document.getElementById(ulId);
+      if (!ul || ul.querySelector('[data-pm-tl="' + href + '"]')) return;
+      var li = document.createElement('li');
+      li.innerHTML = '<a class="nav-link" data-pm-tl="' + href + '" href="' + href + '"><i class="fas ' + icon + '"></i> <span>' + label + '</span></a>';
+      if (normPath(location.pathname) === normPath(href)) li.firstChild.classList.add('active');
+      if (first) ul.insertBefore(li, ul.firstChild); else ul.appendChild(li);
+    }
+    addLink('sideGroupWorkspace', '/pm/12-team-lead', 'fa-user-tie', 'My Team', true);
+    addLink('sideGroupDelivery',  '/pm/09-quality', 'fa-shield-halved', 'Quality', false);
+    addLink('sideGroupWorkspace', back, 'fa-arrow-left', 'Back to HRMS', false);
+    document.querySelectorAll('.side-group').forEach(function (g) {
+      var any = Array.prototype.some.call(g.querySelectorAll('a.nav-link'), function (a) {
+        return getComputedStyle(a).display !== 'none';
+      });
+      g.style.display = any ? '' : 'none';
+    });
   }
 
   /* ============================================================
@@ -851,8 +933,14 @@
     try {
       const me = await getMe();
       PM.user = me;
+      applyTeamLeadMode(me);
       buildHeader(me);
       buildSidebar(me);
+
+      // Realtime connection initialization
+      if (window.__pmStartRealtime) {
+        window.__pmStartRealtime(me);
+      }
 
       // Phase 4: start the notification client
       bootNotifications().catch(e => console.warn('notif boot failed', e));
@@ -860,10 +948,10 @@
       // Phase 7: pre-load the approval UI so drawers work everywhere
       loadApprovalsScript().catch(e => console.warn('approvals boot failed', e));
 
-      // STEP 7.1: not allowed here → "No access" screen; the page's own code never continues
+      // STEP 7.1: route check
       if (!applyRouteGuard(me)) return new Promise(function () { });
 
-      // STEP 7.1: #requests / #templates links work on a fresh page load too
+      // STEP 7.1: hash links
       openIntakeFromHash();
 
       return me;
@@ -896,15 +984,13 @@
     // Phase 2
     openProjectMembers, openTeamMembers, openProjectFinance, openProjectClosure,
     // STEP 7.1
-    can, guard, gateTabs, openIntake,
-    // Phase 4 + 7 accessors (evaluated lazily — scripts may not be loaded yet)
+    can, guard, gateTabs, openIntake, isTeamLeadOnly,
+    // Phase 4 + 7 accessors
     get notifications() { return window.Notifications; },
     approvals: () => window.PMApprovals,
-    // user (populated after bootstrap)
+    // user
     user: null,
-    // exposes for pages that want the raw nav list
     _nav: SIDEBAR_NAV,
-    // simple fallback so PM.confirm(...) calls on the projects page work
     confirm: function (o) {
       o = o || {};
       return Promise.resolve(window.confirm((o.title ? o.title + '\n\n' : '') + (o.message || 'Are you sure?')));

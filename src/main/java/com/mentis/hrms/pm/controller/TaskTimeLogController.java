@@ -1,6 +1,7 @@
 package com.mentis.hrms.pm.controller;
 
 import com.mentis.hrms.pm.dto.request.LogTimeRequest;
+import com.mentis.hrms.pm.dto.request.UpdateTimeLogRequest;
 import com.mentis.hrms.pm.dto.response.ApiResponse;
 import com.mentis.hrms.pm.dto.response.TimeLogResponse;
 import com.mentis.hrms.pm.security.CurrentUserId;
@@ -39,10 +40,19 @@ public class TaskTimeLogController {
         return ResponseEntity.ok(ApiResponse.ok(service.list(taskId)));
     }
 
+    /** Change billable / minutes / note of one entry. Ownership + locked week are checked in the service. */
+    @PutMapping("/time/{id}")
+    public ResponseEntity<ApiResponse<TimeLogResponse>> update(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateTimeLogRequest req,
+            @CurrentUserId Long userId) {
+        return ResponseEntity.ok(ApiResponse.ok("Time entry updated", service.update(id, req, userId)));
+    }
+
     @DeleteMapping("/time/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long id, @CurrentUserId Long userId) {
-        service.delete(id, userId);   // ownership is checked inside the service
+        service.delete(id, userId); // ownership is checked inside the service
         return ResponseEntity.ok(ApiResponse.ok("Deleted", null));
     }
 }

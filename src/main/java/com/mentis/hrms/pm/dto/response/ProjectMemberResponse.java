@@ -16,6 +16,7 @@ public class ProjectMemberResponse {
     private String employeeCode;
     private ProjectRole role;
     private Integer allocationPct;
+    private Integer utilizationPct;
     private BigDecimal hourlyRate;     // null unless the caller can manage the project
     private LocalDate startDate;
     private LocalDate endDate;

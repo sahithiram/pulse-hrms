@@ -14,4 +14,6 @@ public class TimeLogResponse {
     private Integer minutes;
     private String note;
     private LocalDateTime createdAt;
+    private Boolean billable;
+    private Boolean overtime;
 }

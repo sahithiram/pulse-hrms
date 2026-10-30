@@ -13,4 +13,6 @@ public interface MilestoneRepository extends JpaRepository<Milestone, Long> {
     List<Milestone> findByProjectIdOrderByDueDateAsc(Long projectId);
     List<Milestone> findByStatus(MilestoneStatus status);
     List<Milestone> findByDueDateBetween(LocalDate from, LocalDate to);
+    List<Milestone> findByProjectIdAndStatusAndDueDateBetween(
+            Long projectId, MilestoneStatus status, LocalDate from, LocalDate to);
 }
