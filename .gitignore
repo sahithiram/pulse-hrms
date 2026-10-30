@@ -43,7 +43,8 @@ node_modules/
 /playwright/.auth/
 
 
-
+# Secrets file — NEVER commit
+application-secrets.properties
 target/
 out/
 .idea/
