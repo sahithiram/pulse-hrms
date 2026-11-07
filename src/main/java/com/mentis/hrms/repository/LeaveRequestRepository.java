@@ -26,7 +26,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Stri
 
     List<LeaveRequest> findByStatus(String status);
     List<LeaveRequest> findByEmployeeIdOrderByCreatedAtDesc(String employeeId);
-
+    // Add this method to find only APPROVED leaves for a specific employee
+    List<LeaveRequest> findByEmployeeIdAndStatus(String employeeId, String status);
     @Query("SELECT l FROM LeaveRequest l WHERE l.employeeId = :employeeId " +
             "AND l.startDate <= :date AND l.endDate >= :date " +
             "AND l.status IN ('PENDING', 'APPROVED')")

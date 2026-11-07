@@ -318,7 +318,10 @@
         .btn-icon { width: 30px; height: 30px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid; cursor: pointer; font-size: 12px; background: transparent; transition: all .2s ease; }
         .btn-icon:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
         .btn-icon-download { color: var(--success); border-color: rgba(16, 185, 129, .3); background: rgba(16, 185, 129, .1); }
+        .btn-icon-download { color: var(--success); border-color: rgba(16, 185, 129, .3); background: rgba(16, 185, 129, .1); }
 
+        /* ADD THIS LINE FOR THE VIEW BUTTON COLOR */
+        .btn-icon-view { color: var(--primary); border-color: rgba(99, 102, 241, .3); background: rgba(99, 102, 241, .1); }
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 15px; }
         .section-header h5 { color: #fff; }
 
@@ -789,6 +792,23 @@
             .notification-dropdown-menu { width: 290px; right: -60px; }
         }
         @media (max-width: 480px) { .mt-kpi-strip { grid-template-columns: 1fr; } .mt-hero h2, .nt-hero h2 { font-size: 1.1rem; } }
+
+
+
+                /* Add this to the calendar styles */
+        .approved-leave-indicator {
+            background-color: rgba(245, 158, 11, 0.2) !important; /* Yellow transparent background */
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            position: relative;
+        }
+        .approved-leave-text {
+            color: #f59e0b;
+            font-size: 0.65rem;
+            font-weight: 700;
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body>
@@ -887,7 +907,15 @@
                 <div class="status-indicator-card active" id="statusIndicatorCard" title="Status: Active"></div>
 
                 <div class="profile-pic-sidebar" id="profilePicBox">
-                    <span class="profile-fallback" id="profileInitials">U</span>
+                    <img th:if="${employee != null and employee.profilePicture != null and !employee.profilePicture.isEmpty()}"
+                         th:src="@{'/uploads/' + ${employee.profilePicture}}"
+                         id="profileImg"
+                         class="profile-img"
+                         alt="Profile"
+                         onerror="this.style.display='none'; var f=document.getElementById('profileInitials'); if(f){f.style.display='flex';}">
+                    <span class="profile-fallback" id="profileInitials"
+                          th:style="${employee != null and employee.profilePicture != null and !employee.profilePicture.isEmpty()} ? 'display:none;' : 'display:flex;'"
+                          th:text="${employee != null ? employee.initials : 'U'}">U</span>
                 </div>
 
                 <div class="profile-hover-icons">
@@ -901,7 +929,8 @@
                 </div>
 
                 <div class="employee-name" id="employeeNameDisplay">Employee Name</div>
-                <div class="employee-designation" id="employeeDesignationDisplay">Employee</div>
+                <div class="employee-designation" id="employeeDesignationDisplay"
+                     th:text="${employee?.designation != null ? employee.designation : 'Employee'}">Employee</div>
                 <div class="employee-id">ID: <span id="employeeIdDisplay">EMP001</span></div>
             </div>
 
@@ -999,46 +1028,145 @@
 
             <div class="sub-tab-content active" id="personal-info">
                 <div class="profile-cards-grid">
+
+                    <!-- ===== PERSONAL DETAILS ===== -->
                     <div class="profile-card">
-                        <div class="card-header"><div class="card-icon"><i class="fas fa-user"></i></div><h3 class="card-title">Personal Details</h3></div>
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-user"></i></div>
+                            <h3 class="card-title">Personal Details</h3>
+                        </div>
                         <div class="info-grid">
-                            <div class="info-row"><span class="info-label">First Name</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Last Name</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Date of Birth</span><span class="info-value">Not provided</span></div>
-                            <div class="info-row"><span class="info-label">Gender</span><span class="info-value">Not specified</span></div>
-                            <div class="info-row"><span class="info-label">Personal Email</span><span class="info-value">-</span></div>
+                            <div class="info-row">
+                                <span class="info-label">First Name</span>
+                                <span class="info-value" th:text="${employee?.firstName != null and !employee.firstName.isEmpty() ? employee.firstName : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Last Name</span>
+                                <span class="info-value" th:text="${employee?.lastName != null and !employee.lastName.isEmpty() ? employee.lastName : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Date of Birth</span>
+                                <span class="info-value"
+                                      th:text="${employee?.dateOfBirth != null ? #temporals.format(employee.dateOfBirth, 'dd MMM yyyy') : 'Not provided'}">Not provided</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Gender</span>
+                                <span class="info-value"
+                                      th:text="${employee?.gender != null and !employee.gender.isEmpty() ? employee.gender : 'Not specified'}">Not specified</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Personal Email</span>
+                                <span class="info-value"
+                                      th:text="${employee?.personalEmail != null and !employee.personalEmail.isEmpty() ? employee.personalEmail : '-'}">-</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- ===== JOB DETAILS ===== -->
                     <div class="profile-card">
-                        <div class="card-header"><div class="card-icon"><i class="fas fa-briefcase"></i></div><h3 class="card-title">Job Details</h3></div>
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-briefcase"></i></div>
+                            <h3 class="card-title">Job Details</h3>
+                        </div>
                         <div class="info-grid">
-                            <div class="info-row"><span class="info-label">Employee ID</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Department</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Designation</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Employment Type</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Start Date</span><span class="info-value">Not set</span></div>
+                            <div class="info-row">
+                                <span class="info-label">Employee ID</span>
+                                <span class="info-value"
+                                      th:text="${employee?.employeeId != null ? employee.employeeId : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Department</span>
+                                <span class="info-value"
+                                      th:text="${employee?.department != null and !employee.department.isEmpty() ? employee.department : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Designation</span>
+                                <span class="info-value"
+                                      th:text="${employee?.designation != null and !employee.designation.isEmpty() ? employee.designation : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Employment Type</span>
+                                <span class="info-value"
+                                      th:text="${employee?.employmentType != null and !employee.employmentType.isEmpty() ? employee.employmentType : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Start Date</span>
+                                <span class="info-value"
+                                      th:text="${employee?.startDate != null ? #temporals.format(employee.startDate, 'dd MMM yyyy') : 'Not set'}">Not set</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- ===== WORK DETAILS ===== -->
                     <div class="profile-card">
-                        <div class="card-header"><div class="card-icon"><i class="fas fa-clock"></i></div><h3 class="card-title">Work Details</h3></div>
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-clock"></i></div>
+                            <h3 class="card-title">Work Details</h3>
+                        </div>
                         <div class="info-grid">
-                            <div class="info-row"><span class="info-label">Salary</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Pay Frequency</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Work Location</span><span class="info-value">-</span></div>
-                            <div class="info-row"><span class="info-label">Work Type</span><span class="info-value">-</span></div>
+                            <div class="info-row">
+                                <span class="info-label">Salary</span>
+                                <span class="info-value"
+                                      th:text="${employee?.salary != null and !employee.salary.isEmpty() ? employee.salary : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Pay Frequency</span>
+                                <span class="info-value"
+                                      th:text="${employee?.payFrequency != null and !employee.payFrequency.isEmpty() ? employee.payFrequency : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Work Location</span>
+                                <span class="info-value"
+                                      th:text="${employee?.workLocation != null and !employee.workLocation.isEmpty() ? employee.workLocation : '-'}">-</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Work Type</span>
+                                <span class="info-value"
+                                      th:text="${employee?.workType != null and !employee.workType.isEmpty() ? employee.workType : '-'}">-</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- ===== CONTACT DETAILS ===== -->
                     <div class="profile-card">
-                        <div class="card-header"><div class="card-icon"><i class="fas fa-address-card"></i></div><h3 class="card-title">Contact Details</h3></div>
+                        <div class="card-header">
+                            <div class="card-icon"><i class="fas fa-address-card"></i></div>
+                            <h3 class="card-title">Contact Details</h3>
+                        </div>
                         <div class="info-grid">
-                            <div class="info-row"><span class="info-label">Permanent Address</span><span class="info-value">Not provided</span></div>
-                            <div class="info-row"><span class="info-label">Phone</span><span class="info-value">Not provided</span></div>
-                            <div class="info-row"><span class="info-label">Emergency Contact</span><span class="info-value">Not provided</span></div>
-                            <div class="info-row"><span class="info-label">Residential</span><span class="info-value">Same as permanent</span></div>
+                            <div class="info-row">
+                                <span class="info-label">Permanent Address</span>
+                                <span class="info-value"
+                                      th:text="${employee?.permanentAddress != null and !employee.permanentAddress.isEmpty()
+                                    ? employee.permanentAddress
+                                      + (employee.permanentCity != null ? ', ' + employee.permanentCity : '')
+                                      + (employee.permanentState != null ? ', ' + employee.permanentState : '')
+                                    : 'Not provided'}">Not provided</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Phone</span>
+                                <span class="info-value"
+                                      th:text="${employee?.phone != null and !employee.phone.isEmpty() ? employee.phone : 'Not provided'}">Not provided</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Emergency Contact</span>
+                                <span class="info-value"
+                                      th:text="${employee?.emergencyContact != null and !employee.emergencyContact.isEmpty() ? employee.emergencyContact : 'Not provided'}">Not provided</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Residential</span>
+                                <span class="info-value"
+                                      th:text="${employee?.addressType == 'same'
+                                    ? 'Same as permanent'
+                                    : (employee?.residentialAddress != null and !employee.residentialAddress.isEmpty()
+                                        ? employee.residentialAddress : 'Not provided')}">Same as permanent</span>
+                            </div>
                         </div>
                     </div>
+
                 </div>
             </div>
+
 
             <div class="sub-tab-content" id="profile-documents">
                 <div class="content-card">
@@ -1078,28 +1206,6 @@
                     <button class="close-success-popup" onclick="closeSuccessPopup()">×</button>
                 </div>
 
-                <div class="calendar-popup-overlay" id="calendarOverlay" onclick="closeCalendarPopup()"></div>
-                <div class="calendar-popup" id="calendarPopup">
-                    <div class="calendar-popup-header">
-                        <h3><i class="fas fa-calendar-alt"></i> Attendance Calendar</h3>
-                        <button class="close-calendar-btn" onclick="closeCalendarPopup()">×</button>
-                    </div>
-                    <div class="calendar-tab-header" style="margin-bottom: 1rem; padding-bottom: 0.75rem;">
-                        <div class="calendar-month-year" id="popup-calendar-month-year">January 2026</div>
-                        <div class="calendar-nav-buttons">
-                            <button class="calendar-nav-btn" onclick="prevCalendarMonthPopup()"><i class="fas fa-chevron-left"></i> Previous</button>
-                            <button class="calendar-nav-btn" onclick="goToTodayPopup()"><i class="fas fa-calendar-day"></i> Today</button>
-                            <button class="calendar-nav-btn" onclick="nextCalendarMonthPopup()">Next <i class="fas fa-chevron-right"></i></button>
-                        </div>
-                    </div>
-                    <div class="calendar-grid-main" id="popup-calendar"></div>
-                    <div class="calendar-legend-main">
-                        <div class="legend-item"><div style="background: var(--success);"></div><span>Present</span></div>
-                        <div class="legend-item"><div style="background: var(--danger);"></div><span>Absent</span></div>
-                        <div class="legend-item"><div style="background: var(--warning);"></div><span>Leave</span></div>
-                        <div class="legend-item"><div style="background: var(--info);"></div><span>Holiday</span></div>
-                    </div>
-                </div>
 
                 <div class="tabs">
                     <button class="tab active" onclick="openAttendanceTab('attendance-dashboard')"><i class="fas fa-th-large"></i>Attendance</button>
@@ -1130,7 +1236,7 @@
                                         <div class="icon-item"><span class="icon-label">Break</span><span class="icon-value">00:00</span></div>
                                         <div class="icon-item"><span class="icon-label">OT</span><span class="icon-value" style="color: var(--primary);" id="overtime-small">0h 0m</span></div>
                                         <button class="icon-btn warning" onclick="takeBreak()" title="Take Break"><i class="fas fa-hourglass-half"></i></button>
-                                        <button class="icon-btn" onclick="toggleCalendarPopup()" title="View Calendar"><i class="fas fa-calendar-alt"></i></button>
+
                                     </div>
                                 </div>
                                 <div class="attendance-content-grid">
@@ -1241,16 +1347,16 @@
                                     <button class="calendar-nav-btn" onclick="prevCalendarMonth()"><i class="fas fa-chevron-left"></i> Previous</button>
                                     <button class="calendar-nav-btn" onclick="goToToday()"><i class="fas fa-calendar-day"></i> Today</button>
                                     <button class="calendar-nav-btn" onclick="nextCalendarMonth()">Next <i class="fas fa-chevron-right"></i></button>
+
+
                                 </div>
                             </div>
                             <div class="calendar-grid-main" id="main-calendar"></div>
                             <div class="calendar-legend-main">
-                                <div class="legend-item"><div style="background: var(--success);"></div><span>Present</span></div>
-                                <div class="legend-item"><div style="background: var(--danger);"></div><span>Absent</span></div>
-                                <div class="legend-item"><div style="background: var(--warning);"></div><span>Leave</span></div>
+                                <div class="legend-item"><div style="background: var(--warning);"></div><span>Approved Leave</span></div>
                                 <div class="legend-item"><div style="background: var(--info);"></div><span>Holiday</span></div>
-                                <div class="legend-item"><div style="background: var(--dark-text-secondary);"></div><span>Weekend</span></div>
-                                <div class="legend-item"><div style="background: var(--primary);"></div><span>Today</span></div>
+                                <div class="legend-item"><div style="background: var(--danger); opacity: 0.2;"></div><span>Sunday</span></div>
+                                <div class="legend-item"><div style="border: 2px solid var(--primary); background: transparent;"></div><span>Today</span></div>
                             </div>
                             <div class="upcoming-holidays-section">
                                 <h3><i class="fas fa-gift"></i> Upcoming Holidays</h3>
@@ -1398,6 +1504,14 @@
                                     </div>
                                     <div class="small-calendar-body">
                                         <div class="small-calendar-grid" id="small-calendar-grid"></div>
+                                    </div>
+
+                                    <!-- ADD THIS LEGEND HERE -->
+                                    <div class="legend-row" style="margin-top: 15px; background: transparent; border: none; padding: 0; justify-content: flex-start; gap: 15px;">
+                                        <div class="legend-item" style="font-size: 11px;"><div style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.5);"></div><span>Approved Leave</span></div>
+                                        <div class="legend-item" style="font-size: 11px;"><div style="background: rgba(14, 165, 233, 0.1); border: 1px solid var(--info);"></div><span>Holiday</span></div>
+                                        <div class="legend-item" style="font-size: 11px;"><div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1);"></div><span>Sunday</span></div>
+                                        <div class="legend-item" style="font-size: 11px;"><div style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4);"></div><span>Selected</span></div>
                                     </div>
                                 </div>
                             </div>
@@ -1558,6 +1672,330 @@
     </div>
 </div>
 
+
+<!-- ================= PREMIUM AI CHAT WIDGET ================= -->
+<button id="aiChatButton" class="ai-chat-fab" title="Ask Menti AI">
+    <i class="fas fa-robot"></i>
+</button>
+
+<div id="aiChatModal" class="ai-chat-modal">
+    <div class="ai-chat-header">
+        <div class="ai-chat-header-info">
+            <div class="ai-avatar">M</div>
+            <div>
+                <div class="ai-chat-title">Menti HR <span class="ai-pro-badge">HR</span></div>
+                <div class="ai-chat-subtitle">
+                    <span class="ai-status-dot"></span> Saved chat
+                </div>
+            </div>
+        </div>
+        <button id="closeAiChat" class="ai-chat-close"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div id="aiChatMessages" class="ai-chat-body">
+        <div class="ai-msg ai-msg-bot">
+            <div class="ai-msg-avatar">M</div>
+            <div class="ai-msg-content">
+                <p>Hi! I'm <strong>Menti HR</strong> <span class="ai-pro-badge" style="background:#6366f1;">HR</span>, your AI assistant.</p>
+                <p style="margin-top: 12px;">I can help you with all HRMS tasks including:</p>
+                <ul style="margin-top: 8px; margin-bottom: 12px; padding-left: 18px;">
+                    <li>Attendance & Check-in/out</li>
+                    <li>Leave Balances & Applications</li>
+                    <li>My Profile & Documents</li>
+                    <li>Holidays & Announcements</li>
+                </ul>
+                <p class="ai-save-note"><i class="fas fa-bookmark"></i> All chats are saved automatically</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="ai-chat-footer">
+        <input type="text" id="aiChatInput" placeholder="Ask me anything about your HRMS..." autocomplete="off">
+        <button id="sendAiChat" class="ai-chat-send"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+<style>
+    /* FAB Button */
+    .ai-chat-fab {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        color: white;
+        border: none;
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.5);
+        font-size: 24px;
+        cursor: pointer;
+        z-index: 9999;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .ai-chat-fab:hover {
+        transform: scale(1.1) translateY(-5px);
+        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.7);
+    }
+
+    /* Chat Modal */
+    .ai-chat-modal {
+        position: fixed;
+        bottom: 90px; /* Adjusted positioning */
+        right: 30px;
+        width: 400px;
+        height: 550px; /* Reduced from 600px */
+        max-height: calc(100vh - 120px); /* Prevents going off-screen */
+        background: #0f172a;
+        border: 1px solid #1e293b;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        display: none;
+        flex-direction: column;
+        z-index: 10000;
+        overflow: hidden;
+        font-family: 'Inter', sans-serif;
+        animation: aiSlideUp 0.3s ease-out;
+    }
+    .ai-chat-modal.active {
+        display: flex;
+    }
+     @keyframes aiSlideUp {
+        from { opacity: 0; transform: translateY(30px) scale(0.95); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Header */
+    .ai-chat-header {
+        background: #0b1120;
+        padding: 16px 20px;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .ai-chat-header-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .ai-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #8b5cf6;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+    }
+    .ai-chat-title {
+        color: white;
+        font-weight: 600;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .ai-pro-badge {
+        background: #8b5cf6;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+    .ai-chat-subtitle {
+        color: #94a3b8;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 2px;
+    }
+    .ai-status-dot {
+        width: 8px;
+        height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .ai-chat-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 18px;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .ai-chat-close:hover { color: white; }
+
+    /* Body */
+   .ai-chat-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        background: #0f172a;
+        /* Added min-height 0 to ensure flex scrolling works correctly */
+        min-height: 0;
+    }
+    .ai-chat-body::-webkit-scrollbar { width: 6px; }
+    .ai-chat-body::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+ .ai-chat-body::-webkit-scrollbar-track { background: transparent; }
+    /* Messages */
+    .ai-msg { display: flex; gap: 10px; max-width: 90%; }
+    .ai-msg-user { align-self: flex-end; flex-direction: row-reverse; }
+    .ai-msg-bot { align-self: flex-start; }
+
+    .ai-msg-avatar {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #8b5cf6;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: bold;
+        flex-shrink: 0;
+    }
+    .ai-msg-user .ai-msg-avatar {
+        background: #6366f1;
+    }
+
+    .ai-msg-content {
+        background: #1e293b;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border-top-left-radius: 4px;
+        color: #e2e8f0;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .ai-msg-user .ai-msg-content {
+        background: #6366f1;
+        color: white;
+        border-top-left-radius: 12px;
+        border-top-right-radius: 4px;
+    }
+    .ai-msg-content p { margin: 0 0 8px 0; }
+    .ai-msg-content p:last-child { margin: 0; }
+    .ai-msg-content ul { margin: 8px 0; padding-left: 20px; }
+    .ai-msg-content li { margin-bottom: 4px; }
+    .ai-save-note { color: #10b981; font-size: 12px; margin-top: 10px !important; display: flex; align-items: center; gap: 4px; }
+
+    /* Footer */
+    .ai-chat-footer {
+        padding: 16px;
+        background: #0b1120;
+        border-top: 1px solid #1e293b;
+        display: flex;
+        gap: 10px;
+    }
+    #aiChatInput {
+        flex: 1;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px 16px;
+        color: white;
+        outline: none;
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+    }
+    #aiChatInput:focus { border-color: #8b5cf6; }
+    #aiChatInput::placeholder { color: #64748b; }
+
+    .ai-chat-send {
+        background: #8b5cf6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        width: 44px;
+        height: 44px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+    .ai-chat-send:hover { background: #7c3aed; }
+    .ai-chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+
+        .small-calendar-day.approved-leave {
+            background-color: rgba(245, 158, 11, 0.2) !important;
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            color: #f59e0b !important;
+            font-weight: 700;
+            cursor: not-allowed;
+        }
+        .small-calendar-day.approved-leave::after {
+            content: "Leave";
+            font-size: 0.5rem;
+            display: block;
+            line-height: 1;
+        }
+
+        /* Footer */
+    .ai-chat-footer {
+        padding: 16px 20px; /* Added horizontal padding */
+        background: #0b1120;
+        border-top: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-shrink: 0; /* Prevents footer from shrinking */
+    }
+    #aiChatInput {
+        flex: 1;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 24px; /* Made it pill-shaped like SA */
+        padding: 12px 20px;
+        color: white;
+        outline: none;
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+        transition: border-color 0.2s;
+    }
+    #aiChatInput:focus { border-color: #8b5cf6; }
+    #aiChatInput::placeholder { color: #64748b; }
+
+    .ai-chat-send {
+        background: #8b5cf6;
+        color: white;
+        border: none;
+        border-radius: 50%; /* Made it round like SA */
+        width: 42px;
+        height: 42px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+        flex-shrink: 0;
+    }
+    .ai-chat-send:hover { background: #7c3aed; transform: scale(1.05); }
+    .ai-chat-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+
+
+
+
+
+
+
+</style>
 <!-- ================= EXTERNAL LIBRARIES ================= -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.2/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
@@ -1641,6 +2079,14 @@
         try {
             return new Date(dateStr).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
         } catch (e) { return dateStr; }
+    }
+        // Helper to get today's date in LOCAL time (YYYY-MM-DD)
+    function getTodayLocalDateString() {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
     function calculateLeaveDuration(startDate, endDate) {
         if (!startDate || !endDate) return '-';
@@ -2005,6 +2451,9 @@
                 btn.classList.add('active');
                 container.querySelectorAll('.sub-tab-content').forEach(el => el.classList.remove('active'));
                 document.getElementById(sub)?.classList.add('active');
+                if (sub === 'profile-documents') {
+                    loadDocuments();
+                }
             }
         });
     });
@@ -2012,7 +2461,7 @@
     /* ═════════════════════════════════════════════════════════════════
        ATTENDANCE TAB SWITCHER
        ═════════════════════════════════════════════════════════════════ */
-    function openAttendanceTab(tabName) {
+       function openAttendanceTab(tabName) {
         const tabContents = document.querySelectorAll('#attendance .attendance-tab-contents > .tab-content');
         const tabButtons = document.querySelectorAll('#attendance .tabs .tab');
         tabContents.forEach(tab => { tab.classList.remove('active'); tab.style.display = 'none'; });
@@ -2026,7 +2475,31 @@
             if (attr && attr.includes(`'${tabName}'`)) btn.classList.add('active');
         });
 
-        if (tabName === 'timesheet') loadTimesheetData();
+        if (tabName === 'timesheet') {
+            // Ensure the dropdowns are set to current month/year if they aren't already
+            const monthSelect = document.getElementById('timesheetMonth');
+            const yearSelect = document.getElementById('timesheetYear');
+            const now = new Date();
+
+            if (monthSelect && (!monthSelect.value || monthSelect.value === "")) {
+                monthSelect.value = now.getMonth() + 1;
+            }
+            if (yearSelect && (!yearSelect.value || yearSelect.value === "")) {
+                yearSelect.value = now.getFullYear();
+            }
+
+            // Add change listeners to reload data when user changes month/year
+            if (monthSelect && !monthSelect.hasAttribute('data-listener')) {
+                monthSelect.setAttribute('data-listener', 'true');
+                monthSelect.addEventListener('change', loadTimesheetData);
+            }
+            if (yearSelect && !yearSelect.hasAttribute('data-listener')) {
+                yearSelect.setAttribute('data-listener', 'true');
+                yearSelect.addEventListener('change', loadTimesheetData);
+            }
+
+            loadTimesheetData();
+        }
         else if (tabName === 'calendar') generateMainCalendar();
         else if (tabName === 'apply-leave') loadEmployeeLeaves();
         else if (tabName === 'attendance-dashboard') { initAttendanceDate(); loadTodayAttendanceFromServer(); loadRecentAttendance(); loadMonthlySummary(); }
@@ -2132,7 +2605,7 @@
                     const dateObj = new Date(entry.date);
                     const formattedDate = dateObj.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
                     const dayName = dateObj.toLocaleDateString('en-US', { weekday:'long' });
-                    const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                   const isWeekend = dateObj.getDay() === 0; // Only Sunday is weekend
 
                     const checkIn = entry.checkInFormatted || '--:--';
                     const checkOut = entry.checkOutFormatted || '--:--';
@@ -2270,6 +2743,30 @@
         document.getElementById('halfDaySelector').classList.toggle('active', d === 'half_day');
         currentLeaveDuration = d;
     }
+
+
+        function openApplyLeaveForDate(dateString) {
+        // 1. Open the existing popup
+        openApplyLeavePopup();
+
+        // 2. Clear any previously selected dates
+        leaveSelectedDates = [];
+
+        // 3. Pre-select the clicked date
+        leaveSelectedDates.push(dateString);
+
+        // 4. Set the duration to Full Day by default
+        const durationSelect = document.getElementById('leaveDuration');
+        if (durationSelect) {
+            durationSelect.value = 'full_day';
+            // Trigger the change event to update UI if necessary
+            handleLeaveDurationChange();
+        }
+
+        // 5. Re-render the small calendar and summary
+        generateSmallCalendar();
+        updateLeaveSummary();
+    }
     function submitLeaveForm(e) { if (e) e.preventDefault(); submitLeaveFormFromPopup(); }
     function submitLeaveFormFromPopup() {
         const type = document.getElementById('leaveType').value;
@@ -2289,7 +2786,7 @@
             startDate, endDate, totalDays: leaveSelectedDates.length,
             leaveDuration: duration, reason,
             status: 'PENDING',
-            appliedDate: new Date().toISOString().split('T')[0]
+                        appliedDate: getTodayLocalDateString()
         };
 
         fetch('/api/leaves/apply', {
@@ -2312,7 +2809,7 @@
     let smallCalendarMonth = new Date().getMonth();
     let smallCalendarYear = new Date().getFullYear();
 
-    function generateSmallCalendar() {
+      function generateSmallCalendar() {
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         document.getElementById('smallCalendarMonthYear').textContent = `${monthNames[smallCalendarMonth]} ${smallCalendarYear}`;
 
@@ -2322,7 +2819,7 @@
 
         ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((d,i) => {
             const h = document.createElement('div');
-            h.className = 'small-calendar-day-header' + (i === 0 || i === 6 ? ' weekend' : '');
+            h.className = 'small-calendar-day-header' + (i === 0 ? ' weekend' : '');
             h.textContent = d;
             grid.appendChild(h);
         });
@@ -2337,19 +2834,30 @@
             const dateStr = `${smallCalendarYear}-${String(smallCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
             const dateObj = new Date(smallCalendarYear, smallCalendarMonth, day);
             const isPast = dateObj < today;
-            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+            const isWeekend = dateObj.getDay() === 0; // Only Sunday
             const isHoliday = isHolidayDate(dateStr);
             const isSelected = leaveSelectedDates.includes(dateStr);
+
+            // Check if this date is already an approved leave
+            const isApprovedLeave = approvedLeaveDates.some(leave => {
+                return dateStr >= leave.startDate && dateStr <= leave.endDate;
+            });
 
             const el = document.createElement('div');
             el.className = 'small-calendar-day';
             if (isSelected) el.classList.add('selected');
             if (isWeekend) el.classList.add('weekend');
             if (isHoliday) el.classList.add('holiday');
-            if (isPast || isWeekend || isHoliday) el.classList.add('non-selectable');
+            if (isApprovedLeave) el.classList.add('approved-leave'); // New yellow style
+
+            // Disable click if past, weekend, holiday, OR already approved leave
+            if (isPast || isWeekend || isHoliday || isApprovedLeave) {
+                el.classList.add('non-selectable');
+            }
+
             el.textContent = day;
 
-            if (!isPast && !isWeekend && !isHoliday) {
+            if (!isPast && !isWeekend && !isHoliday && !isApprovedLeave) {
                 el.style.cursor = 'pointer';
                 el.onclick = () => {
                     const dur = document.getElementById('leaveDuration').value;
@@ -2410,11 +2918,29 @@
     let mainCalendarYear = new Date().getFullYear();
     let dashCalMonth = new Date().getMonth();
     let dashCalYear = new Date().getFullYear();
+     let approvedLeaveDates = [];
+    async function loadApprovedLeavesForCalendar() {
+        const employeeId = document.getElementById('currentEmployeeId')?.value;
+        if (!employeeId) return;
 
-    async function generateMainCalendar() {
+        try {
+            const response = await fetch(`/api/leaves/approved/${encodeURIComponent(employeeId)}`);
+            const data = await response.json();
+            if (data.success && data.leaves) {
+                approvedLeaveDates = data.leaves;
+            }
+        } catch (error) {
+            console.error("Error loading approved leaves for calendar:", error);
+            approvedLeaveDates = [];
+        }
+    }
+              async function generateMainCalendar() {
         const grid = document.getElementById('main-calendar');
         const label = document.getElementById('calendar-month-year');
         if (!grid || !label) return;
+
+        // Fetch latest approved leaves before rendering the calendar
+        await loadApprovedLeavesForCalendar();
 
         const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
         label.textContent = `${monthNames[mainCalendarMonth]} ${mainCalendarYear}`;
@@ -2422,7 +2948,8 @@
         grid.innerHTML = '';
         ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach((d,i) => {
             const h = document.createElement('div');
-            h.className = 'calendar-day-header' + (i === 0 || i === 6 ? ' weekend' : '');
+            // Only Sunday (i===0) gets the weekend class
+            h.className = 'calendar-day-header' + (i === 0 ? ' weekend' : '');
             h.textContent = d;
             grid.appendChild(h);
         });
@@ -2430,27 +2957,70 @@
         const firstDay = new Date(mainCalendarYear, mainCalendarMonth, 1).getDay();
         const daysInMonth = new Date(mainCalendarYear, mainCalendarMonth+1, 0).getDate();
         const today = new Date(); today.setHours(0,0,0,0);
-        const todayStr = today.toISOString().split('T')[0];
+                const todayStr = getTodayLocalDateString();
 
         for (let i = 0; i < firstDay; i++) grid.appendChild(document.createElement('div'));
 
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${mainCalendarYear}-${String(mainCalendarMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
             const dateObj = new Date(mainCalendarYear, mainCalendarMonth, day);
-            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+
+            // FIX: Only Sunday is a weekend (removed the '|| dateObj.getDay() === 6' for Saturday)
+            const isWeekend = dateObj.getDay() === 0;
+            const isPast = dateObj < today;
             const isToday = dateStr === todayStr;
             const isHoliday = isHolidayDate(dateStr);
+
+            // Check if this date falls within any approved leave range
+            const isApprovedLeave = approvedLeaveDates.some(leave => {
+                return dateStr >= leave.startDate && dateStr <= leave.endDate;
+            });
 
             const el = document.createElement('div');
             el.className = 'calendar-day-main';
             if (isWeekend) el.classList.add('weekend');
             if (isHoliday) el.classList.add('holiday');
             if (isToday) el.classList.add('today');
+            if (isApprovedLeave) el.classList.add('approved-leave-indicator');
+
+            // Setup flexbox to align number and plus icon
+            el.style.display = 'flex';
+            el.style.justifyContent = 'space-between';
+            el.style.alignItems = 'flex-start';
 
             const numDiv = document.createElement('div');
             numDiv.className = 'calendar-day-number';
             numDiv.textContent = day;
             el.appendChild(numDiv);
+
+            // ADD THE PLUS ICON BACK (Only for present/future weekdays that are not Sundays or holidays)
+                       // ADD THE PLUS ICON BACK (Only for present/future weekdays that are not Sundays, Holidays, or already Approved leaves)
+            if (!isWeekend && !isPast && !isHoliday && !isApprovedLeave) {
+                const plusBtn = document.createElement('button');
+                plusBtn.className = 'calendar-day-plus-icon';
+                plusBtn.innerHTML = '<i class="fas fa-plus"></i>';
+                plusBtn.title = 'Apply for Leave';
+                plusBtn.style.background = 'transparent';
+                plusBtn.style.border = 'none';
+                plusBtn.style.color = 'var(--primary)';
+                plusBtn.style.cursor = 'pointer';
+                plusBtn.style.fontSize = '12px';
+                plusBtn.style.padding = '2px';
+
+                plusBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    openApplyLeaveForDate(dateStr);
+                };
+                el.appendChild(plusBtn);
+            }
+
+            // If it's an approved leave, add the "Leave" text
+            if (isApprovedLeave) {
+                const leaveText = document.createElement('div');
+                leaveText.className = 'approved-leave-text';
+                leaveText.textContent = 'Leave';
+                el.appendChild(leaveText);
+            }
 
             if (isHoliday) {
                 const h = (window.allHolidays || []).find(x => x.holidayDate === dateStr);
@@ -2657,27 +3227,149 @@
         setTimeout(closeSuccessPopup, 5000);
     }
     function closeSuccessPopup() { document.getElementById('successPopup').classList.remove('show'); }
-
-    function uploadProfilePic(input) {
+    async function uploadProfilePic(input) {
         if (!input.files || !input.files[0]) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            const box = document.getElementById('profilePicBox');
+
+        const file = input.files[0];
+
+        // Client-side validation
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File is too large. Maximum 5 MB allowed.');
+            input.value = '';
+            return;
+        }
+        if (!/^image\/(jpeg|jpg|png|gif|webp)$/i.test(file.type)) {
+            alert('Please select an image file (JPG, PNG, GIF, or WEBP).');
+            input.value = '';
+            return;
+        }
+
+        const employeeId = document.getElementById('currentEmployeeId')?.value;
+        if (!employeeId) {
+            alert('Employee ID not found. Please refresh the page.');
+            return;
+        }
+
+        // Show instant preview while uploading
+        const box = document.getElementById('profilePicBox');
+        const objectUrl = URL.createObjectURL(file);
+        const prevImg = box.querySelector('img');
+        if (prevImg) prevImg.src = objectUrl;
+
+        const form = new FormData();
+        form.append('profilePicture', file);   // name must match @RequestParam in controller
+
+        try {
+            const response = await fetch(
+                `/candidate/profile-picture/upload/${encodeURIComponent(employeeId)}`,
+                {
+                    method: 'POST',
+                    body: form,
+                    credentials: 'same-origin'
+                }
+            );
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || ('HTTP ' + response.status));
+            }
+
+            // Rebuild the box with the SERVER's saved path (cache-busted)
+            const serverPath = data.profilePicturePath;   // e.g. "employee-profiles/1712345_photo.jpg"
+            const imgSrc = `/uploads/${serverPath}?t=${Date.now()}`;
+
             box.innerHTML = '';
             const img = document.createElement('img');
-            img.src = e.target.result;
+            img.id = 'profileImg';
             img.className = 'profile-img';
+            img.alt = 'Profile';
+            img.src = imgSrc;
+            img.onerror = function () {
+                img.style.display = 'none';
+                const ini = document.getElementById('currentEmployeeId')?.getAttribute('data-initials') || 'U';
+                const span = document.createElement('span');
+                span.id = 'profileInitials';
+                span.className = 'profile-fallback';
+                span.style.display = 'flex';
+                span.textContent = ini;
+                box.appendChild(span);
+            };
             box.appendChild(img);
-        };
-        reader.readAsDataURL(input.files[0]);
+
+            if (typeof showSuccessPopup === 'function') {
+                showSuccessPopup('Profile Picture Updated', 'Your new picture has been saved.');
+            }
+        } catch (err) {
+            console.error('Profile picture upload failed:', err);
+            alert('Upload failed: ' + err.message);
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+            input.value = '';
+        }
     }
-    function deleteProfilePic() {
-        const box = document.getElementById('profilePicBox');
-        const ini = document.getElementById('currentEmployeeId')?.getAttribute('data-initials') || 'U';
-        box.innerHTML = '<span class="profile-fallback" id="profileInitials">' + ini + '</span>';
+        async function deleteProfilePic() {
+        if (!confirm('Remove your profile picture? This cannot be undone.')) return;
+
+        const employeeId = document.getElementById('currentEmployeeId')?.value;
+        if (!employeeId) {
+            alert('Employee ID not found.');
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/candidate/profile-picture/delete/${encodeURIComponent(employeeId)}`,
+                { method: 'POST', credentials: 'same-origin' }
+            );
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.error || 'Delete failed');
+            }
+
+            const box = document.getElementById('profilePicBox');
+            const ini = data.initials ||
+                document.getElementById('currentEmployeeId')?.getAttribute('data-initials') || 'U';
+            box.innerHTML = '<span class="profile-fallback" id="profileInitials" style="display:flex;">'
+                          + ini + '</span>';
+
+            if (typeof showSuccessPopup === 'function') {
+                showSuccessPopup('Profile Picture Removed', 'Your profile picture has been deleted.');
+            }
+        } catch (err) {
+            console.error('Delete failed:', err);
+            alert('Delete failed: ' + err.message);
+        }
     }
     function activateProfileTab() {
         document.querySelector('[data-tab="profile"]').click();
+    }
+
+
+        /* ═════════════════════════════════════════════════════════════════
+       LOAD DOCUMENTS FOR PROFILE TAB
+       ═════════════════════════════════════════════════════════════════ */
+    async function loadDocuments() {
+        const tbody = document.getElementById('documentsTableBody');
+        const employeeId = document.getElementById('currentEmployeeId')?.value;
+        if (!tbody || !employeeId) return;
+
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;"><i class="fas fa-spinner fa-spin"></i> Loading documents...</td></tr>';
+
+        try {
+            // This calls the endpoint you already have in CandidateOnboardingController
+            const response = await fetch(`/candidate/dashboard/${employeeId}/documents-fragment`);
+            const html = await response.text();
+
+            if (html && html.trim().length > 0) {
+                tbody.innerHTML = html;
+            } else {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--dark-text-secondary);">No documents found.</td></tr>';
+            }
+        } catch (error) {
+            console.error("Error loading documents:", error);
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--danger);">Failed to load documents.</td></tr>';
+        }
     }
     function markAllNotificationsRead() {
         if (window.Notifications) window.Notifications.markAllRead();
@@ -2695,8 +3387,47 @@
             window.location.href = '/candidate/logout';
         }
     }
-    function viewDocument(id, type) { window.open(`/candidate/download/${id}`, '_blank'); }
-    function closePreview() { document.getElementById('previewModal').style.display = 'none'; }
+function viewDocument(id, type) {
+        const modal = document.getElementById('previewModal');
+        const content = document.getElementById('previewContent');
+        const downloadBtn = document.getElementById('previewDownloadBtn');
+        const title = document.getElementById('previewTitle');
+
+        // Set the title
+        title.textContent = type.replace(/_/g, ' ') + ' Preview';
+
+        // Set the download button link
+        downloadBtn.href = `/candidate/download/${id}`;
+
+        // We are fetching from the new inline endpoint we created
+        const fileUrl = `/candidate/view/${id}`;
+
+        // Check if it's a PDF or Image to display properly
+        if (type.includes('PDF') || type.includes('DOC')) {
+            content.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:100%; border:none; border-radius:8px;"></iframe>`;
+        } else if (type.includes('IMAGE') || type.includes('JPG') || type.includes('PNG') || type.includes('CARD') || type.includes('PHOTO')) {
+            content.innerHTML = `<img src="${fileUrl}" style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;" alt="Document Preview">`;
+        } else {
+            // Fallback for unknown file types
+            content.innerHTML = `<iframe src="${fileUrl}" style="width:100%; height:100%; border:none; border-radius:8px;"></iframe>`;
+        }
+
+        // Show the modal
+        modal.style.display = 'flex';
+    }
+
+
+// Download Document (Forces download)
+function downloadDocument(id) {
+    window.location.href = `/candidate/download/${id}`;
+}
+
+   function closePreview() {
+        const modal = document.getElementById('previewModal');
+        const content = document.getElementById('previewContent');
+        modal.style.display = 'none';
+        content.innerHTML = ''; // Clear the iframe so it stops loading in the background
+    }
 
     /* ═════════════════════════════════════════════════════════════════
        INIT
@@ -3372,6 +4103,148 @@
       }
       tryNext(0);
     })();
+</script>
+<!-- ================= AI CHAT SCRIPT ================= -->
+<!-- ================= PREMIUM AI CHAT SCRIPT ================= -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chatButton = document.getElementById('aiChatButton');
+        const chatModal = document.getElementById('aiChatModal');
+        const closeBtn = document.getElementById('closeAiChat');
+        const inputField = document.getElementById('aiChatInput');
+        const sendBtn = document.getElementById('sendAiChat');
+        const messagesContainer = document.getElementById('aiChatMessages');
+
+        // Get Employee ID dynamically from the hidden input
+        const employeeId = document.getElementById('currentEmployeeId')?.value || 'EMP011';
+
+        // Toggle Modal
+        chatButton.addEventListener('click', () => {
+            chatModal.classList.toggle('active');
+            if (chatModal.classList.contains('active')) {
+                inputField.focus();
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        });
+
+        closeBtn.addEventListener('click', () => {
+            chatModal.classList.remove('active');
+        });
+
+        // Send Message Function
+        async function sendMessage() {
+            const text = inputField.value.trim();
+            if (!text) return;
+
+            // 1. Append User Message
+            appendMessage(text, 'user');
+            inputField.value = '';
+
+            // 2. Disable input while waiting
+            inputField.disabled = true;
+            sendBtn.disabled = true;
+
+            // 3. Show "typing" indicator
+            const typingId = appendTypingIndicator();
+
+            try {
+                // 4. Send to the CORRECT Backend Endpoint (/api/ai/chat)
+                const response = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        employeeId: employeeId,
+                        message: text,
+                        temporary: true // Set to true so it doesn't clutter the DB with simple queries
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove typing indicator
+                removeTypingIndicator(typingId);
+
+                if (data.success) {
+                    appendMessage(data.reply || "I received your message but didn't get a reply.", 'bot');
+                } else {
+                    appendMessage("Sorry, I encountered an error: " + (data.error || "Unknown error"), 'bot');
+                }
+
+            } catch (error) {
+                removeTypingIndicator(typingId);
+                appendMessage("Sorry, I'm having trouble connecting to the server.", 'bot');
+                console.error("Chat error:", error);
+            } finally {
+                inputField.disabled = false;
+                sendBtn.disabled = false;
+                inputField.focus();
+            }
+        }
+
+        // Helper: Append message to UI
+        function appendMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `ai-msg ai-msg-${sender}`;
+
+            if (sender === 'bot') {
+                msgDiv.innerHTML = `<div class="ai-msg-avatar">M</div>`;
+            } else {
+                msgDiv.innerHTML = `<div class="ai-msg-avatar">U</div>`;
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'ai-msg-content';
+
+            // Basic formatting for bold, lists, and newlines
+            let formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br>')
+                .replace(/- (.*?)(<br>|$)/g, '<li>$1</li>'); // Convert dashes to list items
+
+            // Wrap list items in <ul> if any exist
+            if (formattedText.includes('<li>')) {
+                formattedText = formattedText.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+            }
+
+            contentDiv.innerHTML = formattedText;
+            msgDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(msgDiv);
+
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Helper: Typing Indicator
+        function appendTypingIndicator() {
+            const id = 'typing-' + Date.now();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'ai-msg ai-msg-bot';
+            msgDiv.id = id;
+
+            msgDiv.innerHTML = `
+                <div class="ai-msg-avatar">M</div>
+                <div class="ai-msg-content" style="color: #94a3b8; font-style: italic;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Thinking...
+                </div>
+            `;
+
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        // Event Listeners
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    });
 </script>
 </body>
 </html>

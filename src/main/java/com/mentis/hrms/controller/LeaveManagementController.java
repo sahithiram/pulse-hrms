@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/leaves")
@@ -84,7 +85,9 @@ public class LeaveManagementController {
     }
 
     // ========== SINGLE getAllLeaves METHOD - handles all cases ==========
+    // ========== SINGLE getAllLeaves METHOD - handles all cases ==========
     @GetMapping("/all")
+    @Transactional(readOnly = true) // FIX: Optimizes the database session for reads
     public ResponseEntity<?> getAllLeaves(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String employeeId) {
@@ -93,12 +96,12 @@ public class LeaveManagementController {
             List<LeaveRequest> leaves;
             List<Map<String, Object>> enrichedLeaves = new ArrayList<>();
 
+            // Fetch leaves based on filters
             if (status != null && !status.isEmpty()) {
                 leaves = leaveRequestRepository.findByStatus(status.toUpperCase());
             } else if (employeeId != null && !employeeId.isEmpty()) {
                 leaves = leaveRequestRepository.findByEmployeeIdOrderByCreatedAtDesc(employeeId);
             } else {
-                // Get ALL leaves for HR dashboard
                 leaves = leaveRequestRepository.findAll();
                 leaves.sort((a, b) -> {
                     if (a.getCreatedAt() == null || b.getCreatedAt() == null) return 0;
@@ -106,11 +109,23 @@ public class LeaveManagementController {
                 });
             }
 
-            // Enrich leaves with employee details
+            // FIX: Fetch all employees ONCE and store them in a Map cache.
+            // This stops the database from being called 50+ times in a loop.
+            Map<String, Employee> employeeCache = new HashMap<>();
+            for (LeaveRequest leave : leaves) {
+                String empId = leave.getEmployeeId();
+                if (!employeeCache.containsKey(empId)) {
+                    Employee emp = attendanceService.findEmployeeById(empId);
+                    if (emp != null) {
+                        employeeCache.put(empId, emp);
+                    }
+                }
+            }
+
+            // Build the response using the cached employee data
             for (LeaveRequest leave : leaves) {
                 Map<String, Object> enrichedLeave = new HashMap<>();
 
-                // Copy all leave properties
                 enrichedLeave.put("id", leave.getId());
                 enrichedLeave.put("employeeId", leave.getEmployeeId());
                 enrichedLeave.put("startDate", leave.getStartDate());
@@ -123,9 +138,9 @@ public class LeaveManagementController {
                 enrichedLeave.put("createdAt", leave.getCreatedAt());
                 enrichedLeave.put("rejectionReason", leave.getRejectionReason());
                 enrichedLeave.put("approvalRemarks", leave.getApprovalRemarks());
+                enrichedLeave.put("totalDays", leave.getTotalDays()); // Added to fix frontend table display
 
-                // Get employee details
-                Employee employee = attendanceService.findEmployeeById(leave.getEmployeeId());
+                Employee employee = employeeCache.get(leave.getEmployeeId());
                 if (employee != null) {
                     enrichedLeave.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
                     enrichedLeave.put("department", employee.getDepartment());
@@ -151,6 +166,31 @@ public class LeaveManagementController {
                     "success", false,
                     "error", e.getMessage()
             ));
+        }
+    }
+
+    // NEW: Fetch only APPROVED leaves for the employee calendar
+    @GetMapping("/approved/{employeeId}")
+    public ResponseEntity<?> getApprovedLeaves(@PathVariable String employeeId) {
+        try {
+            List<LeaveRequest> approvedLeaves = leaveRequestRepository
+                    .findByEmployeeIdAndStatus(employeeId, "APPROVED");
+
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (LeaveRequest leave : approvedLeaves) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("startDate", leave.getStartDate());
+                map.put("endDate", leave.getEndDate());
+                result.add(map);
+            }
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "leaves", result
+            ));
+        } catch (Exception e) {
+            logger.error("Error fetching approved leaves: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("success", false, "error", e.getMessage()));
         }
     }
 

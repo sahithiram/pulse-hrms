@@ -173,12 +173,17 @@ public class LeaveBalanceService {
         Integer currentYear = LocalDate.now().getYear();
         Double requestedDays = calculateLeaveDays(startDate, endDate, leaveDuration, halfDayType);
 
-        // Convert leave type to lowercase for consistency
         String normalizedLeaveType = leaveType.toLowerCase();
 
-        // If it's earned leave, always return true (unlimited)
         if ("earned".equals(normalizedLeaveType)) {
             return true;
+        }
+
+        // FIX: Check if the employee has any leave balances for the current year
+        List<LeaveBalance> balances = leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear);
+        if (balances.isEmpty()) {
+            // Initialize default balances if none exist
+            initializeEmployeeBalance(employeeId, currentYear);
         }
 
         Boolean hasBalance = leaveBalanceRepository.hasSufficientBalance(

@@ -402,7 +402,6 @@ public class CandidateOnboardingController {
                 ? "redirect:/candidate/login?error=Please+login+first"
                 : "redirect:/candidate/dashboard/" + id;
     }
-    /*  ==================== 7. PROFILE PICTURE ====================  */
     @PostMapping("/profile-picture/upload/{employeeId}")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> uploadProfilePicture(
@@ -411,27 +410,54 @@ public class CandidateOnboardingController {
             HttpSession session) {
 
         Map<String, Object> response = new HashMap<>();
+
+        // Accept either session key — some flows set candidateEmployeeId, others userId
         String sessionEmployeeId = (String) session.getAttribute("candidateEmployeeId");
+        if (sessionEmployeeId == null) sessionEmployeeId = (String) session.getAttribute("userId");
+
         if (sessionEmployeeId == null || !sessionEmployeeId.equals(employeeId)) {
             response.put("success", false);
             response.put("error", "Session expired. Please login again.");
             return ResponseEntity.status(401).body(response);
         }
 
+        if (file == null || file.isEmpty()) {
+            response.put("success", false);
+            response.put("error", "Please select a file to upload.");
+            return ResponseEntity.badRequest().body(response);
+        }
+
         try {
-            String profilePicturePath = profilePictureService.uploadProfilePicture(employeeId, file);
+            // 1. Delegate to service (must save file + update Employee.profilePicture + flush)
+            String relativePath = profilePictureService.uploadProfilePicture(employeeId, file);
+
+            // 2. Re-read the employee to confirm the DB value
             Optional<Employee> employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId);
+            if (employeeOpt.isEmpty()) {
+                response.put("success", false);
+                response.put("error", "Employee not found.");
+                return ResponseEntity.badRequest().body(response);
+            }
+            Employee emp = employeeOpt.get();
+
+            // 3. Safety net — if the service didn't persist the path, force it now
+            if (emp.getProfilePicture() == null || emp.getProfilePicture().trim().isEmpty()) {
+                emp.setProfilePicture(relativePath);
+                employeeService.updateEmployee(emp);   // saves + flushes
+                emp = employeeService.getEmployeeByEmployeeId(employeeId).orElse(emp);
+            }
 
             response.put("success", true);
             response.put("message", "Profile picture uploaded successfully!");
-            response.put("profilePicturePath", profilePicturePath);
+            response.put("profilePicturePath", emp.getProfilePicture());
             response.put("hasProfilePicture", true);
-            response.put("initials", employeeOpt.map(Employee::getInitials).orElse("U"));
+            response.put("initials", emp.getInitials());
 
+            logger.info("Profile picture saved for {}: {}", employeeId, emp.getProfilePicture());
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            logger.error("Profile picture upload failed: {}", e.getMessage());
+            logger.error("Profile picture upload failed for {}: {}", employeeId, e.getMessage(), e);
             response.put("success", false);
             response.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(response);
@@ -514,7 +540,55 @@ public class CandidateOnboardingController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+    /*  ==================== 8.1 VIEW DOCUMENT IN BROWSER ====================  */
+    @GetMapping("/view/{documentId}")
+    @ResponseBody
+    public ResponseEntity<byte[]> viewDocument(@PathVariable Long documentId, HttpSession session) {
+        try {
+            String sessionEmployeeId = (String) session.getAttribute("candidateEmployeeId");
+            if (sessionEmployeeId == null) {
+                sessionEmployeeId = (String) session.getAttribute("userId");
+            }
+            if (sessionEmployeeId == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+            }
 
+            OnboardingDocument doc = documentService.getDocumentById(documentId);
+            if (doc == null || !doc.getEmployee().getEmployeeId().equals(sessionEmployeeId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+            }
+
+            Path file = Paths.get(basePath).resolve(doc.getFilePath()).normalize();
+            if (!Files.exists(file)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] bytes = Files.readAllBytes(file);
+            String fileName = file.getFileName().toString();
+            String contentType = Files.probeContentType(file);
+
+            // Fallback for content type
+            if (contentType == null) {
+                String ext = fileName.toLowerCase();
+                if (ext.endsWith(".pdf")) contentType = "application/pdf";
+                else if (ext.endsWith(".png")) contentType = "image/png";
+                else if (ext.endsWith(".jpg") || ext.endsWith(".jpeg")) contentType = "image/jpeg";
+                else contentType = "application/octet-stream";
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(contentType));
+            // Use INLINE to view in browser
+            headers.setContentDisposition(ContentDisposition.inline().filename(fileName).build());
+            headers.setContentLength(bytes.length);
+
+            return new ResponseEntity<>(bytes, headers, HttpStatus.OK);
+
+        } catch (Exception e) {
+            logger.error("View error doc {}: {}", documentId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
     /*  ==================== 9. LOGOUT ====================  */
     @GetMapping("/logout")
     public String logout(HttpSession session, RedirectAttributes ra) {
@@ -651,7 +725,7 @@ public class CandidateOnboardingController {
                             .append("' class='btn-icon btn-icon-upload' title='Upload'><i class='fas fa-upload'></i></a>");
                 }
 
-                // Download button (if file exists)
+                // Download button (Forces download)
                 if (hasFile) {
                     html.append("<a href='/candidate/download/").append(doc.getId())
                             .append("' class='btn-icon btn-icon-download' download title='Download'><i class='fas fa-download'></i></a>");

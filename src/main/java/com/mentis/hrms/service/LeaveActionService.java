@@ -26,6 +26,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import org.springframework.scheduling.annotation.Async;
 
 @Service
 public class LeaveActionService {
@@ -152,10 +153,10 @@ public class LeaveActionService {
 
             LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
 
-            createAttendanceForApprovedLeave(saved);
+            createAttendanceForApprovedLeaveAsync(saved);
 
             // GAP 4 FIX: Trigger Notification safely AFTER save
-            notifyProjectManagersOfLeave(saved, false);
+            notifyProjectManagersOfLeaveAsync(saved, false);
 
             result.put("success", true);
             result.put("message", "Leave approved successfully");
@@ -468,5 +469,17 @@ public class LeaveActionService {
         } catch (Exception ex) {
             logger.warn("Leave-impact notification failed for leave {}: {}", leave.getId(), ex.getMessage());
         }
+
     }
+
+    @Async
+    public void createAttendanceForApprovedLeaveAsync(LeaveRequest leave) {
+        createAttendanceForApprovedLeave(leave);
+    }
+
+    @Async
+    public void notifyProjectManagersOfLeaveAsync(LeaveRequest leave, boolean cancelled) {
+        notifyProjectManagersOfLeave(leave, cancelled);
+    }
+
 }

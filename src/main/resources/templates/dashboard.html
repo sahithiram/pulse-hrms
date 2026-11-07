@@ -1336,23 +1336,39 @@
         return okDept && (noStatus || st === status.toLowerCase());
       });
     }
-    function renderAttendanceRows(tbodyId, rows) {
+          function renderAttendanceRows(tbodyId, rows) {
       var tbody = document.getElementById(tbodyId);
       if (!tbody) return;
       if (!rows || !rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--dark-text-secondary);padding:1.5rem;">No attendance records found</td></tr>';
+        // Change colspan to 7 to match the 7 columns in your <thead>
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--dark-text-secondary);padding:1.5rem;">No attendance records found</td></tr>';
         return;
       }
       tbody.innerHTML = rows.map(function (r) {
-        var status = getAttendanceStatus(r);
+        var status = r.statusText || r.displayStatus || getAttendanceStatus(r);
+        var checkIn  = r.checkInFormatted  || r.checkIn  || '—';
+        var checkOut = r.checkOutFormatted || r.checkOut || '—';
+        var hours    = r.workingHours      || r.workHours || r.hours || r.currentWorkingTime || '—';
+        var name     = r.employeeName      || r.name || '—';
+        var dept     = r.department        || '—';
+        var empId    = r.employeeId        || '—';
+
         return '<tr>' +
+          // 1. Employee ID
           '<td><div class="employee-id-with-status">' +
           '<span class="status-indicator" style="background:' + statusDotColor(status) + ';"></span>' +
-          '<span>' + escapeHtml(r.employeeName || r.name || '—') + '</span></div></td>' +
-          '<td>' + escapeHtml(r.department || '—') + '</td>' +
-          '<td>' + escapeHtml(r.checkIn || '—') + '</td>' +
-          '<td>' + escapeHtml(r.checkOut || '—') + '</td>' +
-          '<td>' + escapeHtml(r.workHours || r.hours || '—') + '</td>' +
+          '<span>' + escapeHtml(empId) + '</span></div></td>' +
+          // 2. Name
+          '<td>' + escapeHtml(name) + '</td>' +
+          // 3. Department
+          '<td>' + escapeHtml(dept) + '</td>' +
+          // 4. Check-in
+          '<td>' + escapeHtml(checkIn) + '</td>' +
+          // 5. Check-out
+          '<td>' + escapeHtml(checkOut) + '</td>' +
+          // 6. Working Hours
+          '<td>' + escapeHtml(hours) + '</td>' +
+          // 7. Status
           '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span></td>' +
           '</tr>';
       }).join('');
@@ -1404,40 +1420,44 @@
     function filterDailyAttendance() {
       renderDailyAttendanceTable(applyFilters(dailyAttendanceData, 'dailyDepartmentFilter', 'dailyStatusFilter'));
     }
-    async function loadDailyAttendanceData() {
+
+
+       async function loadDailyAttendanceData() {
       var picker = document.getElementById('dailyDatePicker');
       var date = (picker && picker.value) ? picker.value : new Date().toISOString().slice(0, 10);
       showDailyLoading(true);
       var data = [];
       try {
         var res = await fetch('/api/attendance/daily?date=' + encodeURIComponent(date));
-        if (res.ok) data = await res.json();
-      } catch (err) { /* server unreachable — fall through to sample data */ }
-      if (!Array.isArray(data) || !data.length) data = getSampleDailyData();
+        if (res.ok) {
+          var raw = await res.json();
+          // Accept either a plain array OR { attendances: [...] }
+          data = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.attendances) ? raw.attendances : []);
+        }
+      } catch (err) { /* server unreachable — leave data empty */ }
+
+      // No sample fallback — show real (possibly empty) data only
       dailyAttendanceData = data;
       showDailyLoading(false);
       filterDailyAttendance();
     }
+
     function refreshDailyAttendance() { loadDailyAttendanceData(); }
-    function getSampleDailyData() {
-      return [
-        { employeeName: 'Ravi Kumar', department: 'Engineering', checkIn: '09:02', checkOut: '18:05', workHours: '9h 03m' },
-        { employeeName: 'Priya Sharma', department: 'HR', checkIn: '09:47', checkOut: '18:30', workHours: '8h 43m' },
-        { employeeName: 'Arjun Mehta', department: 'Sales', checkIn: null, checkOut: null, workHours: '0h 00m' },
-        { employeeName: 'Neha Verma', department: 'Engineering', checkIn: '09:12', checkOut: '17:58', workHours: '8h 46m' },
-        { employeeName: 'Karan Singh', department: 'Marketing', checkIn: null, checkOut: null, workHours: '0h 00m' }
-      ];
-    }
+       // Intentionally empty. Kept only so any stale reference doesn't throw.
+    function getSampleDailyData() { return []; }
 
     /* ============ Live attendance monitor ============ */
     class HrAttendanceMonitor {
-      async loadLiveAttendance() {
+         async loadLiveAttendance() {
         var data = [];
         try {
           var res = await fetch('/api/attendance/live');
-          if (res.ok) data = await res.json();
-        } catch (e) { /* fall back to sample data */ }
-        this.data = (Array.isArray(data) && data.length) ? data : getSampleDailyData();
+          if (res.ok) {
+            var raw = await res.json();
+            data = Array.isArray(raw) ? raw : (raw && Array.isArray(raw.attendances) ? raw.attendances : []);
+          }
+        } catch (e) { /* leave data empty */ }
+        this.data = data;   // no sample fallback
         this.updateAttendanceTable();
         await this.updateStats();
       }
@@ -1681,12 +1701,14 @@
       initHRLeaveSystem._done = true;
       loadAllLeaveRequestsHR();
     }
-    function loadAllLeaveRequestsHR() {
+          function loadAllLeaveRequestsHR() {
       return fetch('/api/leaves/all')
-        .then(function (r) { return r.ok ? r.json() : []; })
-        .catch(function () { return []; })
-        .then(function (list) {
-          allLeaveRequestsHR = Array.isArray(list) && list.length ? list : getSampleLeaveRequests();
+        .then(function (r) { return r.ok ? r.json() : {}; })
+        .catch(function () { return {}; })
+        .then(function (data) {
+          // FIX: Extract the leaves array from the wrapped object and remove sample fallback
+          var leaves = Array.isArray(data) ? data : (data.leaves || []);
+          allLeaveRequestsHR = leaves;
           updateFilterCounts();
           filterLeaveRequestsHR(currentLeaveFilter);
         });
@@ -1705,7 +1727,7 @@
       if (s === 'rejected') return 'badge-sm rejected';
       return 'badge-sm pending';
     }
-    function renderLeaveRequestsHR(list) {
+      function renderLeaveRequestsHR(list) {
       var tbody = document.getElementById('hrLeaveRequestsBody');
       var empty = document.getElementById('noLeaveRequestsHR');
       var table = document.getElementById('hrLeaveRequestsTable');
@@ -1722,17 +1744,20 @@
       tbody.innerHTML = list.map(function (r) {
         var actions = canManage
           ? '<div class="action-buttons">' +
-            '<button class="attendance-btn action-approve" onclick="approveLeaveRequest(' + r.id + ')" title="Approve"><i class="fas fa-check"></i></button>' +
-            '<button class="attendance-btn action-reject" onclick="rejectLeaveRequest(' + r.id + ')" title="Reject"><i class="fas fa-times"></i></button>' +
-            '<button class="attendance-btn action-view" onclick="viewLeaveDetails(' + r.id + ')" title="View"><i class="fas fa-eye"></i></button>' +
+            '<button class="attendance-btn action-approve" onclick="approveLeaveRequest(\'' + r.id + '\')" title="Approve"><i class="fas fa-check"></i></button>' +
+            '<button class="attendance-btn action-reject" onclick="rejectLeaveRequest(\'' + r.id + '\')" title="Reject"><i class="fas fa-times"></i></button>' +
+            '<button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button>' +
             '</div>'
-          : '<div class="action-buttons"><button class="attendance-btn action-view" onclick="viewLeaveDetails(' + r.id + ')" title="View"><i class="fas fa-eye"></i></button></div>';
+          : '<div class="action-buttons"><button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button></div>';
         return '<tr>' +
-          '<td><strong>' + escapeHtml(r.employeeName || '—') + '</strong></td>' +
+          '<td><strong>' + escapeHtml(r.id || '—') + '</strong></td>' +
+          '<td>' + escapeHtml(r.employeeName || '—') + '</td>' +
+          '<td>' + escapeHtml(r.department || '—') + '</td>' +
           '<td>' + escapeHtml(r.leaveType || '—') + '</td>' +
           '<td>' + escapeHtml(r.startDate || '—') + ' → ' + escapeHtml(r.endDate || '—') + '</td>' +
-          '<td>' + escapeHtml(String(r.days || '—')) + '</td>' +
-          '<td>' + escapeHtml(r.appliedOn || '—') + '</td>' +
+          '<td>' + escapeHtml(String(r.totalDays || r.days || '—')) + '</td>' +
+          '<td>' + escapeHtml(r.reason || '—') + '</td>' +
+          '<td>' + escapeHtml(r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : (r.appliedOn || '—')) + '</td>' +
           '<td><span class="' + leaveBadgeClass(r.status) + '">' + escapeHtml((r.status || 'PENDING')) + '</span></td>' +
           '<td>' + actions + '</td>' +
           '</tr>';
@@ -1763,20 +1788,47 @@
       loadAllLeaveRequestsHR();
       showNotification('Leave requests refreshed', 'info');
     }
-    async function decideLeaveRequest(id, decision) {
+        async function decideLeaveRequest(id, decision) {
       try {
-        await fetch('/api/leaves/' + id + '/status', {
-          method: 'PUT',
+        let endpoint = '';
+        let bodyData = {};
+
+        if (decision === 'APPROVED') {
+            endpoint = '/api/leaves/' + id + '/approve';
+            bodyData = { remarks: 'Approved by HR' };
+        } else if (decision === 'REJECTED') {
+            endpoint = '/api/leaves/' + id + '/reject';
+            const reason = prompt("Please enter a rejection reason:");
+            if (reason === null) return; // User cancelled the prompt
+            if (!reason.trim()) { alert("Rejection reason is required."); return; }
+            bodyData = { reason: reason };
+        }
+
+        // Call the correct backend endpoint
+        const response = await fetch(endpoint, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: decision })
+          body: JSON.stringify(bodyData)
         });
-      } catch (e) { /* local update only */ }
-      allLeaveRequestsHR = allLeaveRequestsHR.map(function (r) {
-        return r.id === id ? Object.assign({}, r, { status: decision }) : r;
-      });
-      updateFilterCounts();
-      filterLeaveRequestsHR(currentLeaveFilter);
-      showNotification('Leave request ' + decision.toLowerCase(), decision === 'APPROVED' ? 'success' : 'warning');
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || "Failed to update leave status");
+        }
+
+        // If successful, update the local UI
+        allLeaveRequestsHR = allLeaveRequestsHR.map(function (r) {
+          return r.id === id ? Object.assign({}, r, { status: decision }) : r;
+        });
+        updateFilterCounts();
+        filterLeaveRequestsHR(currentLeaveFilter);
+        showNotification('Leave request ' + decision.toLowerCase() + ' successfully', decision === 'APPROVED' ? 'success' : 'warning');
+
+      } catch (e) {
+        console.error("Error updating leave:", e);
+        showNotification(e.message, "error");
+      }
     }
     function approveLeaveRequest(id) { decideLeaveRequest(id, 'APPROVED'); }
     function rejectLeaveRequest(id) { decideLeaveRequest(id, 'REJECTED'); }

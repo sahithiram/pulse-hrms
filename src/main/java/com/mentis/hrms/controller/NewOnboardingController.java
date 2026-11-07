@@ -214,92 +214,121 @@ public class NewOnboardingController {
     }
 
     /* ---------- UPLOAD DOCUMENT (Handles both Form and AJAX) ---------- */
+
+
+
+    /* ---------- UPLOAD DOCUMENT (Handles both Form and AJAX) ---------- */
     @PostMapping("/employee/{employeeId}/upload/{documentType}")
     public Object uploadDocument(@PathVariable String employeeId,
                                  @PathVariable String documentType,
                                  @RequestParam("documentFile") MultipartFile file,
                                  @RequestParam(value = "notes", required = false) String notes,
                                  HttpSession session,
+                                 HttpServletRequest request,
                                  RedirectAttributes ra) {
 
         logger.info("=== UPLOAD DOCUMENT REQUEST ===");
         logger.info("Employee ID: {}, Document Type: {}, File Size: {} bytes",
                 employeeId, documentType, file.getSize());
 
-        // Check if this is an AJAX request
-        String requestedWith = session.getAttribute("requestedWith") != null ?
-                (String) session.getAttribute("requestedWith") : "";
+        // Correct AJAX detection using HTTP request header
+        String requestedWith = request.getHeader("X-Requested-With");
         boolean isAjax = "XMLHttpRequest".equals(requestedWith);
 
         try {
             if (file == null || file.isEmpty()) {
                 logger.warn("No file selected for upload");
+
                 if (isAjax) {
                     return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
                             "error", "Please select a file to upload"
                     ));
                 }
+
                 ra.addFlashAttribute("error", "Please select a file to upload");
-                return "redirect:/onboarding/employee/" + employeeId + "/upload/" + documentType;
+                return "redirect:/onboarding/employee/" + employeeId
+                        + "/upload/" + documentType;
             }
 
             if (file.getSize() > 5 * 1024 * 1024) {
-                logger.warn("File size {} exceeds 5MB limit", file.getSize());
+                logger.warn("File size exceeds 5MB limit");
+
                 if (isAjax) {
                     return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
                             "error", "File size exceeds 5MB limit"
                     ));
                 }
-                ra.addFlashAttribute("error", "File size exceeds 5MB limit. Please select a smaller file.");
-                return "redirect:/onboarding/employee/" + employeeId + "/upload/" + documentType;
+
+                ra.addFlashAttribute("error",
+                        "File size exceeds 5MB limit. Please select a smaller file.");
+
+                return "redirect:/onboarding/employee/" + employeeId
+                        + "/upload/" + documentType;
             }
 
             String fileName = file.getOriginalFilename();
+
             if (fileName != null) {
-                String fileExtension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-                List<String> allowedExtensions = Arrays.asList("pdf", "jpg", "jpeg", "png");
+                String fileExtension = fileName.substring(
+                        fileName.lastIndexOf(".") + 1
+                ).toLowerCase();
+
+                List<String> allowedExtensions =
+                        Arrays.asList("pdf", "jpg", "jpeg", "png");
 
                 if (!allowedExtensions.contains(fileExtension)) {
-                    logger.warn("Invalid file extension: {}", fileExtension);
+
                     if (isAjax) {
                         return ResponseEntity.badRequest().body(Map.of(
                                 "success", false,
                                 "error", "Invalid file format. Only PDF, JPG, JPEG, PNG allowed."
                         ));
                     }
-                    ra.addFlashAttribute("error", "Invalid file format. Only PDF, JPG, JPEG, PNG files are allowed.");
-                    return "redirect:/onboarding/employee/" + employeeId + "/upload/" + documentType;
+
+                    ra.addFlashAttribute("error",
+                            "Invalid file format. Only PDF, JPG, JPEG, PNG files are allowed.");
+
+                    return "redirect:/onboarding/employee/" + employeeId
+                            + "/upload/" + documentType;
                 }
             }
 
-            Optional<Employee> employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId);
+            Optional<Employee> employeeOpt =
+                    employeeService.getEmployeeByEmployeeId(employeeId);
+
             if (employeeOpt.isEmpty()) {
-                logger.error("Employee not found: {}", employeeId);
+
                 if (isAjax) {
                     return ResponseEntity.badRequest().body(Map.of(
                             "success", false,
                             "error", "Employee not found: " + employeeId
                     ));
                 }
-                ra.addFlashAttribute("error", "Employee not found: " + employeeId);
+
+                ra.addFlashAttribute("error",
+                        "Employee not found: " + employeeId);
+
                 return "redirect:/onboarding";
             }
 
             String hrUserName = (String) session.getAttribute("hrUserName");
+
             if (hrUserName == null) {
                 logger.warn("HR user not found in session, using default");
                 hrUserName = "SYSTEM_HR";
             }
 
+            // Existing service logic preserved
             OnboardingDocument document = documentService.hrUploadDocument(
-                    employeeId, documentType, file, notes, hrUserName);
+                    employeeId, documentType, file, notes, hrUserName
+            );
 
-            logger.info("✅ Document uploaded and auto-verified: ID={}, Type={}",
+            logger.info("Document uploaded and auto-verified: ID={}, Type={}",
                     document.getId(), documentType);
 
-            // Return AJAX response or redirect
+            // AJAX response
             if (isAjax) {
                 return ResponseEntity.ok(Map.of(
                         "success", true,
@@ -310,22 +339,32 @@ public class NewOnboardingController {
                 ));
             }
 
+            // Normal form submission
             ra.addFlashAttribute("success",
                     "Document uploaded and verified by " + hrUserName + "!");
-            return "redirect:/onboarding/employee/" + employeeId;
+
+            return "redirect:/dashboard/hr/onboarding/employee/" + employeeId;
 
         } catch (Exception e) {
+
             logger.error("Upload failed: {}", e.getMessage(), e);
+
             if (isAjax) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                        "success", false,
-                        "error", e.getMessage()
-                ));
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of(
+                                "success", false,
+                                "error", e.getMessage()
+                        ));
             }
-            ra.addFlashAttribute("error", "Upload failed: " + e.getMessage());
-            return "redirect:/onboarding/employee/" + employeeId + "/upload/" + documentType;
+
+            ra.addFlashAttribute("error",
+                    "Upload failed: " + e.getMessage());
+
+            return "redirect:/onboarding/employee/" + employeeId
+                    + "/upload/" + documentType;
         }
     }
+
 
     /* ---------- DEBUG ENDPOINTS ---------- */
     @GetMapping("/debug/employees")

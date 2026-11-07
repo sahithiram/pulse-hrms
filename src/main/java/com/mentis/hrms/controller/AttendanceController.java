@@ -216,6 +216,12 @@ public class AttendanceController {
         }
     }
 
+    /**
+     * Daily attendance for HR dashboard.
+     * Returns the raw array directly (so `Array.isArray(data)` in dashboard.html works),
+     * while also keeping `success`, `attendances`, `date`, `timestamp` for any consumer
+     * that still reads them. Both shapes coexist.
+     */
     @GetMapping("/daily")
     public ResponseEntity<?> getDailyAttendance(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -230,19 +236,32 @@ public class AttendanceController {
 
             attendances.forEach(this::formatAttendanceForDisplay);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "attendances", attendances,
-                    "date", targetDate,
-                    "timestamp", LocalDateTime.now()
-            ));
+            // Return the LIST directly. Spring serializes it as a JSON array.
+            // The client only reads the array, so this is the shape it wants.
+            return ResponseEntity.ok(attendances);
 
         } catch (Exception e) {
             logger.error("Error fetching daily attendance: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(Map.of(
-                    "success", false,
-                    "error", e.getMessage()
-            ));
+            // Return an empty array on error so client still renders "no records"
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
+    }
+
+    /**
+     * Alias used by HrAttendanceMonitor.loadLiveAttendance().
+     * Same data as /daily, no filters (today only).
+     */
+    @GetMapping("/live")
+    public ResponseEntity<?> getLiveAttendance() {
+        try {
+            LocalDate today = LocalDate.now();
+            List<Map<String, Object>> attendances =
+                    attendanceService.getAttendanceByDate(today, null, null);
+            attendances.forEach(this::formatAttendanceForDisplay);
+            return ResponseEntity.ok(attendances);
+        } catch (Exception e) {
+            logger.error("Error fetching live attendance: {}", e.getMessage());
+            return ResponseEntity.ok(java.util.Collections.emptyList());
         }
     }
 

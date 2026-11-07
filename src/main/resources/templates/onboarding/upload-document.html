@@ -193,9 +193,9 @@
         </div>
 
         <div class="d-flex justify-content-between pt-2">
-            <a th:href="@{/onboarding/employee/{empId}(empId=${employee.employeeId})}"
-               class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Cancel
+            <a th:href="@{/dashboard/hr/onboarding/employee/{employeeId}(employeeId=${employee.employeeId})}"
+               class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back
             </a>
             <button type="submit" class="btn btn-primary px-4" id="submitBtn">
                 <i class="fas fa-upload me-2"></i>Upload & Verify

@@ -1,5 +1,12 @@
 package com.mentis.hrms.controller;
 
+
+import com.mentis.hrms.dto.ChatRequestDto;
+import com.mentis.hrms.dto.ChatResponseDto;
+import com.mentis.hrms.service.ChatService;
+import org.springframework.beans.factory.annotation.Autowired;
+
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +24,10 @@ import java.util.Map;
 public class AIAssistantController {
 
     private static final Logger logger = LoggerFactory.getLogger(AIAssistantController.class);
+    @Autowired
+    private ChatService chatService;
+
+
 
     @Value("${groq.api.key}")
     private String apiKey;
@@ -338,5 +349,24 @@ public class AIAssistantController {
         if (lower.contains("hr") || lower.contains("policy") || lower.contains("holiday") || lower.contains("appointed")) return "HR";
         if (lower.contains("maintenance")) return "Maintenance";
         return "Corporate";
+    }
+
+
+
+
+    // ========== NEW CHAT ENDPOINT ==========
+    @PostMapping("/chat")
+    public ResponseEntity<ChatResponseDto> chat(@RequestBody ChatRequestDto request) {
+        logger.info("💬 Received chat request from employee: {}", request.getEmployeeId());
+        try {
+            ChatResponseDto response = chatService.sendMessage(request);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("❌ Chat processing failed: {}", e.getMessage(), e);
+            ChatResponseDto errorResponse = new ChatResponseDto();
+            errorResponse.setSuccess(false);
+            errorResponse.setError("An error occurred while processing your request.");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
     }
 }

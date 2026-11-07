@@ -27,6 +27,6 @@ public interface OnboardingDocumentRepository extends JpaRepository<OnboardingDo
     @Query("SELECT od FROM OnboardingDocument od WHERE od.employee.employeeId = :employeeId AND od.status = :status")
     List<OnboardingDocument> findByEmployeeIdAndStatus(@Param("employeeId") String employeeId, @Param("status") String status);
 
-
+    boolean existsByEmployee(Employee employee);
 
 }
