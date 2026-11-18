@@ -747,6 +747,17 @@
       <div class="cp-wrap">
         <div class="cp-main" id="cpForm">
 
+          <!-- 0 · TEMPLATE -->
+          <section class="cp-card">
+            <div class="cp-card-h">
+              <span class="ic"><i class="fas fa-copy"></i></span>
+              <div><h2>Start from a template</h2><p>Pick a ready-made plan, or start with a blank project.</p></div>
+              <span class="tag">optional</span>
+            </div>
+            <div class="cp-types" id="tplGrid"></div>
+            <div id="tplInfo"></div>
+          </section>
+
           <!-- 1 · BASICS -->
           <section class="cp-card">
             <div class="cp-card-h">
@@ -781,10 +792,7 @@
               </div>
               <div class="cp-f">
                 <label class="cp-l" for="fldCode"><span>Project code <span class="req">*</span></span></label>
-                <div class="cp-pre">
-                  <input class="cp-in cp-in-xl" style="font-size:var(--fs-lg);padding-right:2.4rem" id="fldCode" placeholder="PRJ-1051" oninput="onChange('fldCode')">
-                  <button type="button" class="post" title="Generate a new code" onclick="genCode();onChange('fldCode')"><i class="fas fa-rotate"></i></button>
-                </div>
+                <input class="cp-in cp-in-xl" style="font-size:var(--fs-lg)" id="fldCode" placeholder="Generating…" autocomplete="off" oninput="onCodeInput()">
                 <div class="cp-err" data-err="fldCode"><i class="fas fa-circle-exclamation"></i><span></span></div>
               </div>
             </div>
@@ -856,7 +864,7 @@
           <section class="cp-card">
             <div class="cp-card-h"><span class="ic"><i class="fas fa-users"></i></span><div><h2>People</h2><p>You'll be the project manager. Add a team and members.</p></div><span class="tag">optional</span></div>
             <div class="cp-f">
-              <div class="cp-l"><span>Team</span><span class="opt">pick one</span></div>
+              <div class="cp-l"><span>Team</span><span class="opt">pick one or more</span></div>
               <div class="cp-teams" id="teamPills"><span style="font-size:var(--fs-sm);color:var(--dark-text-secondary)">Loading teams…</span></div>
             </div>
             <div class="cp-f cp-gap">
@@ -1316,6 +1324,7 @@
     var projects = [];
     var employees = [];
     var allTeams = [];
+    var templates = [];
 
     function mapBackendProject(p) {
       var budgetRupees = p.budgetTotal ? Number(p.budgetTotal) : 0;
@@ -1323,7 +1332,7 @@
       return {
         id: p.id, code: p.code, name: p.name, clientId: p.clientId,
         client: p.clientName || (p.clientId ? ('Client #' + p.clientId) : 'Internal'),
-        teamId: p.teamId, ownerId: p.ownerId,
+        teamId: p.teamId, teamIds: p.teamIds || (p.teamId ? [p.teamId] : []), ownerId: p.ownerId,
         manager: p.ownerName || (p.ownerId ? ('User #' + p.ownerId) : '—'),
         status: (function (s) {
           s = (s || 'PLANNING').toLowerCase().replace(/_/g, '-');
@@ -1365,6 +1374,86 @@
       return PM.api('GET', '/api/pm/teams/cards').then(function (list) {
         allTeams = (list || []).map(function (t) { return { id: t.id, name: t.name, icon: t.icon || 'fa-users', memberCount: t.memberCount || 0 }; });
       }).catch(function () { allTeams = []; });
+    }
+
+    function loadTemplates() {
+      return PM.api('GET', '/api/pm/project-templates').then(function (list) { templates = list || []; })
+        .catch(function () { templates = []; });
+    }
+
+    /* ===== Start from a template ===== */
+    function currentTemplate() {
+      if (F.templateId == null) return null;
+      return templates.filter(function (t) { return t.id === F.templateId; })[0] || null;
+    }
+    function plusDays(startStr, n) { var d = new Date(startStr + 'T00:00:00'); d.setDate(d.getDate() + n); return iso(d); }
+    /* How many days after the start date the template's plan ends (same rule the server uses). */
+    function planSpan(pl) {
+      var max = 0; pl = pl || {};
+      (pl.milestones || []).forEach(function (m) { max = Math.max(max, m.dueOffsetDays || 0); });
+      (pl.sprints || []).forEach(function (x) { max = Math.max(max, (x.startOffsetDays || 0) + (x.durationDays || 1) - 1); });
+      (pl.phases || []).forEach(function (x) { max = Math.max(max, (x.startOffsetDays || 0) + (x.durationDays || 1) - 1); });
+      return max;
+    }
+    function pickTemplate(id) {
+      F.templateId = (id == null || F.templateId === id) ? null : id;
+      var t = currentTemplate();
+      if (t) {
+        var pl = t.payload || {}, pj = pl.project || {};
+        var pri = String(pj.priority || '').toLowerCase();
+        if (['low', 'medium', 'high', 'critical'].indexOf(pri) > -1) F.priority = pri;
+        if (!$('fldName').value.trim() && pj.name) { $('fldName').value = pj.name; validateField('fldName'); }
+        var span = planSpan(pl);
+        if (span > 0) {
+          if (!$('fldStart').value) $('fldStart').value = iso(new Date());
+          $('fldEnd').value = plusDays($('fldStart').value, span);
+          validateField('fldEnd');
+        }
+        paintSegs(); syncDurChips();
+      }
+      renderTemplates(); refresh();
+    }
+    function renderTemplates() {
+      var grid = $('tplGrid'), info = $('tplInfo');
+      if (!grid) return;
+      var icons = { SCRUM: 'fa-arrows-rotate', KANBAN: 'fa-table-columns', WATERFALL: 'fa-layer-group', HYBRID: 'fa-shuffle' };
+      var h = '<button type="button" class="cp-type' + (F.templateId == null ? ' on' : '') + '" onclick="pickTemplate(null)">' +
+        '<span class="ti"><i class="fas fa-file"></i></span><span><b>Blank project</b><small>Start from scratch</small></span>' +
+        '<i class="fas fa-circle-check chk"></i></button>';
+      templates.forEach(function (t) {
+        var bits = [];
+        if (t.sprintCount) bits.push(t.sprintCount + ' sprint' + (t.sprintCount > 1 ? 's' : ''));
+        if (t.milestoneCount) bits.push(t.milestoneCount + ' milestones');
+        bits.push(t.taskCount + ' tasks');
+        h += '<button type="button" class="cp-type' + (F.templateId === t.id ? ' on' : '') + '" onclick="pickTemplate(' + t.id + ')">' +
+          '<span class="ti"><i class="fas ' + (icons[t.type] || 'fa-copy') + '"></i></span>' +
+          '<span><b>' + PM.esc(t.name) + '</b><small>' + PM.esc(bits.join(' · ')) + '</small></span>' +
+          '<i class="fas fa-circle-check chk"></i></button>';
+      });
+      grid.innerHTML = h;
+
+      var t = currentTemplate();
+      if (!t) { info.innerHTML = ''; return; }
+      var pl = t.payload || {};
+      function list(label, arr, key) {
+        if (!arr || !arr.length) return '';
+        return '<div style="margin-top:.35rem"><b>' + label + ':</b> ' +
+          PM.esc(arr.map(function (x) { return x[key]; }).join(', ')) + '</div>';
+      }
+      var parts = [];
+      if ((pl.phases || []).length) parts.push(pl.phases.length + ' phases');
+      if (t.sprintCount) parts.push(t.sprintCount + ' sprints');
+      if (t.milestoneCount) parts.push(t.milestoneCount + ' milestones');
+      parts.push(t.taskCount + ' tasks');
+      info.innerHTML = '<div style="margin-top:.8rem;padding:.8rem 1rem;border-radius:10px;background:rgba(99,102,241,.08);font-size:var(--fs-sm);line-height:1.55">' +
+        '<b>' + PM.esc(t.name) + '</b> will add ' + PM.esc(parts.join(', ')) + ' to the new project. ' +
+        'Dates are counted from your start date, and the end date has been set to match the plan. ' +
+        'Tasks meant for team members are shared among the members you add below.' +
+        (t.description ? '<div style="color:var(--dark-text-secondary);margin-top:.25rem">' + PM.esc(t.description) + '</div>' : '') +
+        '<details style="margin-top:.4rem"><summary style="cursor:pointer">What is included</summary>' +
+        list('Phases', pl.phases, 'name') + list('Sprints', pl.sprints, 'name') +
+        list('Milestones', pl.milestones, 'name') + list('Tasks', pl.tasks, 'title') +
+        '</details></div>';
     }
 
     /* ===== List views ===== */
@@ -1733,7 +1822,7 @@
 
     /* ===== Create project ===== */
     var DRAFT_KEY = 'pm-project-draft-v3';
-    var F = { type: 'it', priority: 'medium', teamId: null, members: [] };
+    var F = { type: 'it', priority: 'medium', teamIds: [], members: [], templateId: null };
     var mHl = 0, saveT = null, creating = false;
     var typeLabel = { it: 'IT / Software', nonit: 'Non-IT', ops: 'Operations' };
     var typePlaceholder = { it: 'e.g. HRMS Cloud Migration', nonit: 'e.g. Q4 Marketing Campaign', ops: 'e.g. Office Relocation' };
@@ -1746,10 +1835,22 @@
       return iso(d);
     }
     function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000); }
-    function genCode() {
+    /* The code is filled in automatically from the server every time the form opens (or resets).
+       If the person types their own code we stop overwriting it. */
+    var codeTouched = false;
+    function onCodeInput() { codeTouched = true; onChange('fldCode'); }
+    function localNextCode() {   // fallback only, used when the server call fails
       var max = 1000;
-      projects.forEach(function (p) { var m = /(\d+)\s*$/.exec(p.code || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
-      $('fldCode').value = 'PRJ-' + (max + 1);
+      projects.forEach(function (p) { var m = /^PRJ-(\d+)$/i.exec(p.code || ''); if (m) max = Math.max(max, parseInt(m[1], 10)); });
+      return 'PRJ-' + (max + 1);
+    }
+    function genCode() {
+      return PM.api('GET', '/api/pm/projects/next-code').then(function (r) { return r && r.code; })
+        .catch(function () { return localNextCode(); })
+        .then(function (code) {
+          if (!codeTouched) { $('fldCode').value = code; validateField('fldCode'); refresh(); }
+          return code;
+        });
     }
 
     function setCrumb(creating) {
@@ -1760,7 +1861,7 @@
     function openCreate() {
       resetForm();
       $('listView').hidden = true; $('createView').hidden = false; setCrumb(true); window.scrollTo(0, 0);
-      loadFormClients(); renderTeamPills();
+      loadFormClients(); renderTeamPills(); renderTemplates(); loadTemplates().then(renderTemplates);
       var d = loadDraft();
       if (d && (d.fldName || d.fldDesc)) { applyDraft(d); $('draftChip').classList.add('show'); }
       refresh();
@@ -1774,15 +1875,16 @@
       } else showList();
     }
     function resetForm() {
-      F = { type: 'it', priority: 'medium', teamId: null, members: [] };
+      F = { type: 'it', priority: 'medium', teamIds: [], members: [], templateId: null };
       $('fldName').value = ''; $('fldDesc').value = ''; $('fldBudget').value = ''; $('fldClient').value = '';
       $('fldStart').value = iso(new Date()); $('fldEnd').value = addDur($('fldStart').value, '3m');
+      codeTouched = false; $('fldCode').value = '';
       genCode();
       document.querySelectorAll('[data-rule]').forEach(function (cb) { cb.checked = ['behindSchedule', 'pastDue', 'budgetRisk', 'notifyWatchers'].indexOf(cb.dataset.rule) > -1; });
       document.querySelectorAll('.cp-err').forEach(function (e) { e.classList.remove('show'); });
       $('draftChip').classList.remove('show'); $('advBox').open = false; $('memberSearch').value = '';
       $('footNote').innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type';
-      paintSegs(); renderMembers(); syncDurChips();
+      paintSegs(); renderMembers(); syncDurChips(); renderTemplates();
     }
     function isDirty() { return !!($('fldName').value.trim() || $('fldDesc').value.trim()); }
 
@@ -1796,6 +1898,8 @@
     function onStartChange() {
       var s = $('fldStart').value, e = $('fldEnd').value;
       if (s && e && e <= s) $('fldEnd').value = addDur(s, '1m');
+      var tp = currentTemplate(), sp = tp ? planSpan(tp.payload) : 0;
+      if (s && sp > 0) $('fldEnd').value = plusDays(s, sp);   // keep the template's plan length
       validateField('fldStart'); validateField('fldEnd'); refresh();
     }
     function setDuration(code) {
@@ -1839,10 +1943,22 @@
       var host = $('teamPills');
       if (!allTeams.length) { host.innerHTML = '<span style="font-size:var(--fs-sm);color:var(--dark-text-secondary)">No teams yet.</span>'; return; }
       host.innerHTML = allTeams.map(function (t) {
-        return '<button type="button" class="cp-team' + (F.teamId === t.id ? ' on' : '') + '" onclick="pickTeam(' + t.id + ')"><i class="fas ' + PM.esc(t.icon) + '"></i>' + PM.esc(t.name) + ' <small>' + t.memberCount + '</small></button>';
+        return '<button type="button" class="cp-team' + (F.teamIds.indexOf(t.id) > -1 ? ' on' : '') + '" onclick="pickTeam(' + t.id + ')"><i class="fas ' + PM.esc(t.icon) + '"></i>' + PM.esc(t.name) + ' <small>' + t.memberCount + '</small></button>';
       }).join('');
     }
-    function pickTeam(id) { F.teamId = (F.teamId === id ? null : id); renderTeamPills(); refresh(); }
+    /* Teams are multi-select. Choosing a team also adds its people to the member list (you can still remove any of them). */
+    function pickTeam(id) {
+      var i = F.teamIds.indexOf(id);
+      if (i > -1) { F.teamIds.splice(i, 1); renderTeamPills(); refresh(); return; }
+      F.teamIds.push(id); renderTeamPills(); refresh();
+      PM.api('GET', '/api/pm/teams/' + id + '/members').then(function (ids) {
+        var added = 0;
+        (ids || []).forEach(function (eid) {
+          if (eid !== me.id && F.members.indexOf(eid) === -1 && employees.some(function (e) { return e.id === eid; })) { F.members.push(eid); added++; }
+        });
+        if (added) { renderMembers(); refresh(); PM.toast('Added ' + added + ' member' + (added > 1 ? 's' : '') + ' from the team', 'info'); }
+      }).catch(function () { /* the team list still works without auto-adding people */ });
+    }
     function memberMatches() {
       var q = ($('memberSearch').value || '').trim().toLowerCase();
       return employees.filter(function (e) { return F.members.indexOf(e.id) === -1 && (!q || e.name.toLowerCase().indexOf(q) > -1 || (e.role || '').toLowerCase().indexOf(q) > -1); }).slice(0, 30);
@@ -1901,10 +2017,10 @@
       $('pvPM').textContent = (me.name || 'You') + ' (you)';
       $('pvDates').textContent = (s ? PM.fmtDate(s) : '—') + ' → ' + (e ? PM.fmtDate(e) : '—');
       $('pvBudget').textContent = b ? ('₹' + Number(b).toLocaleString('en-IN')) : '—';
-      var t = allTeams.find(function (x) { return x.id === F.teamId; });
-      if (F.members.length || t) {
+      var teamNames = F.teamIds.map(function (id) { var t = allTeams.find(function (x) { return x.id === id; }); return t ? t.name : null; }).filter(Boolean);
+      if (F.members.length || teamNames.length) {
         var av = F.members.slice(0, 5).map(function (id) { var em = employees.find(function (x) { return x.id === id; }); return '<span title="' + PM.esc(em ? em.name : '') + '">' + PM.getInitials(em ? em.name : '?') + '</span>'; }).join('');
-        $('pvTeam').innerHTML = (t ? '<div>' + PM.esc(t.name) + '</div>' : '') + (av ? '<div class="cp-avs">' + av + (F.members.length > 5 ? '<span style="background:var(--dark-text-secondary)">+' + (F.members.length - 5) + '</span>' : '') + '</div>' : '');
+        $('pvTeam').innerHTML = (teamNames.length ? '<div>' + PM.esc(teamNames.join(', ')) + '</div>' : '') + (av ? '<div class="cp-avs">' + av + (F.members.length > 5 ? '<span style="background:var(--dark-text-secondary)">+' + (F.members.length - 5) + '</span>' : '') + '</div>' : '');
       } else $('pvTeam').textContent = '—';
       $('previewCard').classList.toggle('empty', !name);
 
@@ -1913,7 +2029,7 @@
         { ok: !!code, label: 'Unique project code' },
         { ok: !!(s && e && e > s), label: 'Valid schedule' },
         { ok: !!b, label: 'Budget set' },
-        { ok: !!(F.teamId || F.members.length), label: 'Team or members added' },
+        { ok: !!(F.teamIds.length || F.members.length), label: 'Team or members added' },
         { ok: !!$('fldDesc').value.trim(), label: 'Description written' }
       ];
       var done = checks.filter(function (c) { return c.ok; }).length, pct = Math.round(done / checks.length * 100);
@@ -1925,7 +2041,7 @@
     }
 
     function collect() {
-      return { fldName: $('fldName').value, fldCode: $('fldCode').value, fldDesc: $('fldDesc').value, fldStart: $('fldStart').value, fldEnd: $('fldEnd').value, fldBudget: $('fldBudget').value, fldClient: $('fldClient').value, type: F.type, priority: F.priority, teamId: F.teamId, members: F.members };
+      return { fldName: $('fldName').value, fldCode: $('fldCode').value, fldDesc: $('fldDesc').value, fldStart: $('fldStart').value, fldEnd: $('fldEnd').value, fldBudget: $('fldBudget').value, fldClient: $('fldClient').value, type: F.type, priority: F.priority, teamIds: F.teamIds, members: F.members };
     }
     function saveDraft() { try { if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(collect())); } catch (e) {} }
     function autoSaveDraft() {
@@ -1935,8 +2051,8 @@
     }
     function loadDraft() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return null; } }
     function applyDraft(d) {
-      ['fldName', 'fldCode', 'fldDesc', 'fldStart', 'fldEnd', 'fldBudget', 'fldClient'].forEach(function (id) { if (d[id] != null) $(id).value = d[id]; });
-      F.type = d.type || 'it'; F.priority = d.priority || 'medium'; F.teamId = d.teamId || null; F.members = d.members || [];
+      ['fldName', 'fldDesc', 'fldStart', 'fldEnd', 'fldBudget', 'fldClient'].forEach(function (id) { if (d[id] != null) $(id).value = d[id]; });
+      F.type = d.type || 'it'; F.priority = d.priority || 'medium'; F.teamIds = d.teamIds || (d.teamId ? [d.teamId] : []); F.members = d.members || [];
       paintSegs(); renderMembers(); renderTeamPills(); refresh();
     }
     function clearDraft() { clearTimeout(saveT); try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
@@ -1950,20 +2066,28 @@
         name: $('fldName').value.trim(), code: $('fldCode').value.trim(),
         description: $('fldDesc').value || '',
         ownerId: me.id,
-        departmentId: null, clientId: c ? parseInt(c, 10) : null, teamId: F.teamId || null,
+        departmentId: null, clientId: c ? parseInt(c, 10) : null, teamId: F.teamIds[0] || null, teamIds: F.teamIds.slice(),
         priority: (F.priority || 'medium').toUpperCase(),
         startDate: $('fldStart').value || null, endDate: $('fldEnd').value || null,
         budgetTotal: b ? parseInt(b, 10) : null,
         memberIds: F.members.slice(), autoRules: rules
       };
     }
-    function submitCreate(after) {
+    /* Blank project -> normal create. A template -> create-from-template (adds its phases, sprints, milestones and tasks). */
+    function createRequest() {
+      var b = buildPayload(), t = currentTemplate();
+      if (!t) return PM.api('POST', '/api/pm/projects', b);
+      delete b.autoRules;
+      return PM.api('POST', '/api/pm/projects/from-template/' + t.id, b);
+    }
+    function submitCreate(after, isRetry) {
       $('createMenu').classList.remove('open');
       if (creating) return;
       if (!validateAll()) return;
       creating = true;
       var btn = $('createBtn'); btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…';
-      PM.api('POST', '/api/pm/projects', buildPayload()).then(function (data) {
+      var retryWithNewCode = false;
+      createRequest().then(function (data) {
         clearDraft();
         projects.unshift(mapBackendProject(data)); render();
         if (after === 'another') {
@@ -1978,10 +2102,12 @@
           if (after === 'open') setTimeout(function () { location.href = '/pm/06-tasks?view=board&projectId=' + data.id; }, 350);
         }
       }).catch(function (err) {
+        if (err.status === 409 && !codeTouched && !isRetry) { retryWithNewCode = true; return; }  // someone took the auto code
         console.error('Create project failed', err);
         PM.toast(err.message || 'Failed to create project', 'error');
       }).finally(function () {
         creating = false; btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Create Project';
+        if (retryWithNewCode) genCode().then(function () { submitCreate(after, true); });
       });
     }
     function toggleCreateMenu(e) { e && e.stopPropagation(); $('createMenu').classList.toggle('open'); }
@@ -2052,7 +2178,7 @@
       bulkDelete: bulkDelete, clearSelection: clearSelection,
       changeStatus: changeStatus, archiveProject: archiveProject, deleteProject: deleteProject, openDetail: openDetail, openCtx: openCtx, ctxAction: ctxAction,
       requestProjectApproval: requestProjectApproval,
-      openCreate: openCreate, closeCreate: closeCreate, setSeg: setSeg, onChange: onChange, onStartChange: onStartChange, setDuration: setDuration, setBudget: setBudget, genCode: genCode,
+      openCreate: openCreate, closeCreate: closeCreate, setSeg: setSeg, onChange: onChange, onStartChange: onStartChange, setDuration: setDuration, setBudget: setBudget, genCode: genCode, onCodeInput: onCodeInput, pickTemplate: pickTemplate,
       pickTeam: pickTeam, renderMemberDd: renderMemberDd, memberKey: memberKey, addMember: addMember, removeMember: removeMember,
       loadReviewSwitch: loadReviewSwitch, setReviewRequired: setReviewRequired,
       discardDraft: discardDraft, saveAsDraftAndClose: saveAsDraftAndClose, submitCreate: submitCreate, toggleCreateMenu: toggleCreateMenu, exportProjects: exportProjects

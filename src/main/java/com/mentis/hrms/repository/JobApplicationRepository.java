@@ -6,11 +6,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
+
+    /* --- duplicate-check (case-insensitive) --- */
+
+
 
     /* --- duplicate-check (case-insensitive) --- */
     @Query("SELECT COUNT(a) > 0 FROM JobApplication a " +
@@ -21,8 +26,18 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     /* --- top-5 recent --- */
     List<JobApplication> findTop5ByOrderByApplicationDateDesc();
 
-    /* --- counter by status --- */
-    long countByStatus(String status);
+            /* --- counter by status --- */
+            long countByStatus(String status);
+
+            /* --- case-insensitive counter by status --- */
+            long countByStatusIgnoreCase(String status);
+
+            /* --- monthly counters using application_date --- */
+            long countByApplicationDateBetween(LocalDateTime start, LocalDateTime end);
+
+            long countByStatusIgnoreCaseAndApplicationDateBetween(String status,
+                                                                  LocalDateTime start,
+                                                                  LocalDateTime end);
 
     /* --- Find by ID --- */
     Optional<JobApplication> findById(Long id);

@@ -20,9 +20,10 @@
     <div class="sidebar" id="sidebar">
         <div class="sidebar-brand">
             <div class="brand-icon" id="sidebarBrandIcon">
-                <img id="sidebarLogo" src="https://placehold.co/64/215c89/ffffff?text=MIS"
-                     alt="logo" style="display:none;">
-                <i id="sidebarIcon" class="fas fa-building"></i>
+                <img id="sidebarLogo" th:src="@{/images/logo.jpg}" src="/images/logo.jpg"
+                     alt="Menti's IT Solutions Logo"
+                     onerror="this.style.display='none'; var i=document.getElementById('sidebarIcon'); if(i) i.style.display='inline-block';">
+                <i id="sidebarIcon" class="fas fa-building" style="display:none;"></i>
             </div>
             <span id="sidebarCompanyName">Menti's IT Solutions</span>
         </div>
@@ -74,11 +75,18 @@
                             </a>
                         </li>
                         <li>
+                            <a class="nav-link" th:classappend="${activeTab=='posted-jobs'}?'active':''"
+                               href="/dashboard/hr/jobs">
+                                <i class="fas fa-list-ul"></i><span>Posted Jobs</span>
+                            </a>
+                        </li>
+                        <li>
                             <a class="nav-link" th:classappend="${activeTab=='applications'}?'active':''"
                                href="/dashboard/hr/applications">
                                 <i class="fas fa-file-alt"></i><span>Applications</span>
                             </a>
                         </li>
+
                         <li>
                             <a class="nav-link" th:classappend="${activeTab=='interview-schedule'}?'active':''"
                                href="/dashboard/hr/interview-schedule">

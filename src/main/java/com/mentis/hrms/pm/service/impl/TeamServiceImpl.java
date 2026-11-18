@@ -19,6 +19,7 @@ import com.mentis.hrms.pm.repository.TaskAssignmentRepository;
 import com.mentis.hrms.pm.repository.TaskRepository;
 import com.mentis.hrms.pm.repository.TeamMemberRepository;
 import com.mentis.hrms.pm.repository.TeamRepository;
+import com.mentis.hrms.pm.service.ProjectTeamService;             // NEW
 import com.mentis.hrms.pm.service.TeamService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,12 +33,14 @@ import java.util.stream.Collectors;
 import com.mentis.hrms.pm.dto.request.AddTeamMemberRequest;
 import com.mentis.hrms.pm.dto.request.UpdateTeamMemberRequest;
 import com.mentis.hrms.pm.dto.response.TeamMemberResponse;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class TeamServiceImpl implements TeamService {
 
     private final TeamRepository teamRepository;
+    private final ProjectTeamService projectTeamService;             // NEW
     private final TeamMemberRepository teamMemberRepository;
     private final TaskRepository taskRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
@@ -45,6 +48,7 @@ public class TeamServiceImpl implements TeamService {
     private final TeamMapper teamMapper;
     private final com.mentis.hrms.repository.EmployeeRepository employeeRepository;
     private final com.mentis.hrms.pm.security.PmAccessService access;
+
     @Override
     @Transactional
     public TeamResponse createTeam(CreateTeamRequest req, Long userId) {
@@ -68,7 +72,6 @@ public class TeamServiceImpl implements TeamService {
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + id));
         return toResponseWithMembers(t);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -118,13 +121,13 @@ public class TeamServiceImpl implements TeamService {
         if (!teamRepository.existsById(id))
             throw new ResourceNotFoundException("Team not found: " + id);
 
-        // GAP 3: Safety Check
         long activeTasks = taskRepository.countByTeamIdAndStatusNot(id, TaskStatus.DONE);
         if (activeTasks > 0) {
             throw new BusinessRuleException("Cannot delete team. It has " + activeTasks + " active tasks attached.");
         }
 
         teamMemberRepository.deleteByTeamId(id);
+        projectTeamService.removeTeam(id);   // NEW: drop project↔team links
         teamRepository.deleteById(id);
     }
 
@@ -152,7 +155,6 @@ public class TeamServiceImpl implements TeamService {
         for (Task t : taskRepository.findByTeamId(teamId)) {
             if (seen.add(t.getId())) combined.add(t);
         }
-
         if (!memberIds.isEmpty()) {
             for (Task t : taskRepository.findAllByAssigneeIn(memberIds)) {
                 if (seen.add(t.getId())) combined.add(t);
@@ -175,7 +177,7 @@ public class TeamServiceImpl implements TeamService {
         long open = combined.stream().filter(t -> t.getStatus() != TaskStatus.DONE).count();
         long done = combined.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
 
-        Map<Long, Boolean> visible = new HashMap<>();   // one permission check per project, not per task
+        Map<Long, Boolean> visible = new HashMap<>();
         List<TaskSummaryResponse> summaries = combined.stream()
                 .limit(limit > 0 ? limit : 100)
                 .map(t -> toTaskSummary(t, viewerId, visible))
@@ -189,6 +191,7 @@ public class TeamServiceImpl implements TeamService {
                 team.getLeadEmployeeId(), leadName,
                 memberIds, open, done, summaries);
     }
+
     @Override
     @Transactional(readOnly = true)
     public List<TeamMemberResponse> listTeamMembers(Long teamId) {
@@ -251,7 +254,6 @@ public class TeamServiceImpl implements TeamService {
                 .lead(team.getLeadEmployeeId() != null && team.getLeadEmployeeId().equals(m.getEmployeeId()))
                 .build();
     }
-    // ── helpers ──
 
     private TeamResponse toResponseWithMembers(Team t) {
         List<Long> ids = teamMemberRepository.findByTeamId(t.getId())
@@ -272,16 +274,10 @@ public class TeamServiceImpl implements TeamService {
 
         List<String> names = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            try {
-                names.add(resolveEmployeeName(id));
-            } catch (Exception ex) {
-                log.warn("Failed to resolve employee name for id={}: {}", id, ex.getMessage());
-                names.add("Employee #" + id);
-            }
+            try { names.add(resolveEmployeeName(id)); }
+            catch (Exception ex) { log.warn("Failed to resolve employee name for id={}: {}", id, ex.getMessage()); names.add("Employee #" + id); }
         }
 
-        // GAP 4: hide title and project when the viewer can't open that project.
-        // Status, dates and assignees stay, so workload numbers remain correct.
         boolean hidden = viewerId != null && t.getProjectId() != null
                 && !visible.computeIfAbsent(t.getProjectId(), pid -> access.canViewProject(viewerId, pid));
 
@@ -301,9 +297,6 @@ public class TeamServiceImpl implements TeamService {
                 .assigneeIds(ids).assigneeNames(names)
                 .build();
     }
-
-
-
 
     private String resolveEmployeeName(Long id) {
         if (id == null) return null;

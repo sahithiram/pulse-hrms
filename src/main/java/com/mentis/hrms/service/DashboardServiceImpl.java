@@ -16,6 +16,9 @@ import java.util.List;
 // ADD THESE MISSING IMPORTS
 import java.util.ArrayList;
 import java.util.List;
+
+import org.springframework.data.domain.Page;
+
 @Service
 public class DashboardServiceImpl implements DashboardService {
     private static final Logger logger = LoggerFactory.getLogger(DashboardServiceImpl.class);
@@ -32,18 +35,26 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private OfferService offerService;
 
+    private static final int OVERVIEW_JOBS_PAGE_SIZE = 5;
+
     @Override
     public void loadDashboardData(Model model) {
+        loadDashboardData(model, 0);
+    }
+
+    @Override
+    public void loadDashboardData(Model model, int jobPage) {
         try {
-            List<Job> jobs = jobService.getAllJobs();
+            Page<Job> overviewJobsPage = jobService.getActiveJobsPage(jobPage, OVERVIEW_JOBS_PAGE_SIZE);
             List<Department> departments = departmentService.getAllDepartments();
 
             // FIX: Get recent applications here
             List<JobApplication> recentApplications = applicationService.getRecentApplicationsByStatus("Applied");
 
-            model.addAttribute("jobs", jobs);
+            model.addAttribute("jobs", overviewJobsPage.getContent());
+            model.addAttribute("overviewJobsPage", overviewJobsPage);
             model.addAttribute("departments", departments);
-            model.addAttribute("recentApplications", recentApplications);  // Add this line
+            model.addAttribute("recentApplications", recentApplications);
             model.addAttribute("totalCandidates", calculateTotalCandidatesSafely());
             model.addAttribute("interviewsScheduled", calculateInterviewsScheduledSafely());
             model.addAttribute("hiredThisMonth", calculateHiredThisMonthSafely());
@@ -55,8 +66,10 @@ public class DashboardServiceImpl implements DashboardService {
         } catch (Exception e) {
             logger.error("Failed to load dashboard data: {}", e.getMessage(), e);
             model.addAttribute("error", "Failed to load dashboard data.");
+            model.addAttribute("jobs", new ArrayList<>());
+            model.addAttribute("overviewJobsPage", Page.empty());
             model.addAttribute("offerCount", 0);
-            model.addAttribute("recentApplications", new ArrayList<>());  // Add empty list on error
+            model.addAttribute("recentApplications", new ArrayList<>());
         }
     }
 

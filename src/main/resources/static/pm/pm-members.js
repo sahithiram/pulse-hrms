@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
- var ROLES = ['MANAGER', 'LEAD', 'MEMBER', 'VIEWER'];
+  var ROLES = ['MANAGER', 'LEAD', 'MEMBER', 'VIEWER'];
   var ROLE_CLS = { MANAGER: 'primary', LEAD: 'purple', MEMBER: 'info', VIEWER: 'warning' };
   var people = null;
 
@@ -44,11 +44,69 @@
     return '<div style="font-size:var(--fs-xs);color:var(--tx3);text-transform:uppercase;font-weight:700;margin-bottom:8px"><i class="fas ' + icon + '"></i> ' + text + '</div>';
   }
 
+  /* ───────── multi-select people picker (used by both "Add member" boxes) ───────── */
+  function pickerHtml(pfx) {
+    return '<input class="pm-input" id="' + pfx + 'Search" placeholder="Search people…" autocomplete="off" style="width:100%;margin-bottom:6px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;font-size:var(--fs-xs);color:var(--tx3);margin-bottom:4px">' +
+      '<span id="' + pfx + 'Count">0 selected</span>' +
+      '<span><a href="javascript:void(0)" id="' + pfx + 'All">Select all shown</a> · <a href="javascript:void(0)" id="' + pfx + 'None">Clear</a></span></div>' +
+      '<div id="' + pfx + 'List" style="max-height:220px;overflow:auto;border:1px solid var(--bd,rgba(128,128,128,.25));border-radius:8px"></div>';
+  }
+  /** sel is a Set of employee ids that survives searching; onChange(n) is called whenever the count changes. */
+  function pickerInit(pfx, usedIds, sel, onChange) {
+    var search = document.getElementById(pfx + 'Search');
+    var list = document.getElementById(pfx + 'List');
+    var count = document.getElementById(pfx + 'Count');
+    function visible() {
+      var q = (search.value || '').trim().toLowerCase();
+      return (people || []).filter(function (p) {
+        return usedIds.indexOf(p.id) === -1 && (!q || String(p.name).toLowerCase().indexOf(q) > -1);
+      });
+    }
+    function tick() { count.textContent = sel.size + ' selected'; onChange(sel.size); }
+    function paint() {
+      var v = visible();
+      list.innerHTML = v.length ? v.map(function (p) {
+        return '<label style="display:flex;align-items:center;gap:8px;padding:6px 10px;cursor:pointer">' +
+          '<input type="checkbox" data-pid="' + p.id + '"' + (sel.has(p.id) ? ' checked' : '') + '>' +
+          avatar(p.name) + '<span>' + PM.esc(p.name) + '</span></label>';
+      }).join('') : '<div style="padding:12px;text-align:center;color:var(--tx3)">' +
+        ((people || []).length ? 'No matches' : 'No people available') + '</div>';
+      tick();
+    }
+    list.onchange = function (ev) {
+      var cb = ev.target;
+      if (!cb || !cb.dataset || !cb.dataset.pid) return;
+      var id = Number(cb.dataset.pid);
+      if (cb.checked) sel.add(id); else sel.delete(id);
+      tick();
+    };
+    search.oninput = paint;
+    document.getElementById(pfx + 'All').onclick = function () { visible().forEach(function (p) { sel.add(p.id); }); paint(); };
+    document.getElementById(pfx + 'None').onclick = function () { sel.clear(); paint(); };
+    paint();
+  }
+  function addLabel(n) { return '<i class="fas fa-plus"></i> ' + (n ? 'Add ' + n + (n === 1 ? ' person' : ' people') : 'Add'); }
+  function reportBulk(r) {
+    r = r || {};
+    var added = (r.addedIds || []).length, skipped = r.skipped || [];
+    if (added) PM.toast(added + (added === 1 ? ' person' : ' people') + ' added', 'success');
+    if (skipped.length) {
+      var lines = skipped.slice(0, 3).map(function (s) {
+        var p = (people || []).filter(function (x) { return x.id === s.employeeId; })[0];
+        return (p ? p.name : '#' + s.employeeId) + ' — ' + s.reason;
+      });
+      PM.toast('Not added: ' + lines.join('; ') + (skipped.length > 3 ? ' … and ' + (skipped.length - 3) + ' more' : ''), 'warning', 8000);
+    }
+    if (!added && !skipped.length) PM.toast('Nothing to add', 'info');
+  }
+
   /* ═════════════════ PROJECT MEMBERS ═════════════════ */
-  var P = { id: null, name: '', access: {}, members: [] };
+  var P = { id: null, name: '', access: {}, members: [], sel: new Set() };
 
   function openProject(projectId, name) {
     P.id = projectId;
+    P.sel = new Set();
     P.name = name || ('Project #' + projectId);
     PM.openDrawer(spinner(), 'Members · ' + P.name);
     loadProject().catch(fail);
@@ -61,7 +119,7 @@
   }
 
   function renderProject() {
-       var can = !!P.access.canAdminister;   // STEP 1: only owner / MANAGER / Super Admin change members and see rates
+    var can = !!P.access.canAdminister;
     var h = '<div class="pm-card" style="display:flex;gap:8px;align-items:center;justify-content:space-between">' +
       '<div><div style="font-weight:600">' + PM.esc(P.name) + '</div>' +
       '<div style="font-size:var(--fs-xs);color:var(--tx3)">Your access: ' + PM.esc(P.access.label || '—') + '</div></div>' +
@@ -69,16 +127,16 @@
 
     if (can) {
       var used = P.members.map(function (m) { return m.employeeId; });
-      h += '<div class="pm-card">' + sectionTitle('fa-user-plus', 'Add member') +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        '<select class="pm-select" id="pmmEmp"><option value="">Select person…</option>' + personOptions(used) + '</select>' +
-        '<select class="pm-select" id="pmmRole">' +
+      h += '<div class="pm-card">' + sectionTitle('fa-user-plus', 'Add members') +
+        pickerHtml('pmmPick') +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">' +
+        '<select class="pm-select" id="pmmRole" title="Role for everyone selected">' +
         ROLES.map(function (r) { return '<option value="' + r + '"' + (r === 'MEMBER' ? ' selected' : '') + '>' + r + '</option>'; }).join('') +
         '</select>' +
-        '<input class="pm-input" id="pmmAlloc" type="number" min="0" max="100" value="100" placeholder="Allocation %">' +
+        '<input class="pm-input" id="pmmAlloc" type="number" min="0" max="100" value="100" placeholder="Allocation %" title="Allocation for everyone selected">' +
         '<input class="pm-input" id="pmmRate" type="number" min="0" step="0.01" placeholder="Hourly rate (optional)">' +
         '</div><div style="margin-top:8px;text-align:right">' +
-        '<button class="pm-btn pm-btn-primary" id="pmmAdd"><i class="fas fa-plus"></i> Add</button></div></div>';
+        '<button class="pm-btn pm-btn-primary" id="pmmAdd" disabled><i class="fas fa-plus"></i> Add</button></div></div>';
     }
 
     if (!P.members.length) {
@@ -126,19 +184,24 @@
     function oops(e) { PM.toast(e.message || 'Failed', 'error'); loadProject().catch(fail); }
 
     var add = document.getElementById('pmmAdd');
-    if (add) add.onclick = function () {
-      var emp = toInt(document.getElementById('pmmEmp').value, 0);
-      if (!emp) { PM.toast('Pick a person first', 'warning'); return; }
-      var alloc = toInt(document.getElementById('pmmAlloc').value, 100);
-      if (alloc < 0 || alloc > 100) { PM.toast('Allocation must be 0–100', 'warning'); return; }
-      var rate = document.getElementById('pmmRate').value;
-      PM.api('POST', base, {
-        employeeId: emp,
-        role: document.getElementById('pmmRole').value,
-        allocationPct: alloc,
-        hourlyRate: rate === '' ? null : Number(rate)
-      }).then(function () { return done('Member added'); }).catch(oops);
-    };
+    if (add) {
+      var used = P.members.map(function (m) { return m.employeeId; });
+      pickerInit('pmmPick', used, P.sel, function (n) { add.disabled = n === 0; add.innerHTML = addLabel(n); });
+      add.onclick = function () {
+        var ids = Array.from(P.sel);
+        if (!ids.length) { PM.toast('Tick at least one person', 'warning'); return; }
+        var alloc = toInt(document.getElementById('pmmAlloc').value, 100);
+        if (alloc < 0 || alloc > 100) { PM.toast('Allocation must be 0–100', 'warning'); return; }
+        var rate = document.getElementById('pmmRate').value;
+        add.disabled = true;
+        PM.api('POST', base + '/bulk', {
+          employeeIds: ids,
+          role: document.getElementById('pmmRole').value,
+          allocationPct: alloc,
+          hourlyRate: rate === '' ? null : Number(rate)
+        }).then(function (r) { P.sel = new Set(); reportBulk(r); return loadProject(); }).catch(oops);
+      };
+    }
 
     bodyEl().querySelectorAll('tr[data-id]').forEach(function (tr) {
       var id = tr.dataset.id;
@@ -164,10 +227,11 @@
   }
 
   /* ═════════════════ TEAM MEMBERS ═════════════════ */
-  var T = { id: null, name: '', can: false, members: [] };
+  var T = { id: null, name: '', can: false, members: [], sel: new Set() };
 
   function openTeam(teamId, name) {
     T.id = teamId;
+    T.sel = new Set();
     T.name = name || ('Team #' + teamId);
     PM.openDrawer(spinner(), 'Team members · ' + T.name);
     loadTeam().catch(fail);
@@ -186,14 +250,13 @@
       '<span class="pm-badge ' + (can ? 'primary' : 'info') + '">' + (can ? 'Can manage' : 'View only') + '</span></div>';
 
     if (can) {
-      var used = T.members.map(function (m) { return m.employeeId; });
-      h += '<div class="pm-card">' + sectionTitle('fa-user-plus', 'Add member') +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        '<select class="pm-select" id="pmtEmp"><option value="">Select person…</option>' + personOptions(used) + '</select>' +
-        '<input class="pm-input" id="pmtRole" value="Developer" maxlength="80" placeholder="Role in team">' +
-        '<input class="pm-input" id="pmtAlloc" type="number" min="0" max="100" value="100" placeholder="Allocation %">' +
-        '<div></div></div><div style="margin-top:8px;text-align:right">' +
-        '<button class="pm-btn pm-btn-primary" id="pmtAdd"><i class="fas fa-plus"></i> Add</button></div></div>';
+      h += '<div class="pm-card">' + sectionTitle('fa-user-plus', 'Add members') +
+        pickerHtml('pmtPick') +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">' +
+        '<input class="pm-input" id="pmtRole" value="Developer" maxlength="80" placeholder="Role in team" title="Role for everyone selected">' +
+        '<input class="pm-input" id="pmtAlloc" type="number" min="0" max="100" value="100" placeholder="Allocation %" title="Allocation for everyone selected">' +
+        '</div><div style="margin-top:8px;text-align:right">' +
+        '<button class="pm-btn pm-btn-primary" id="pmtAdd" disabled><i class="fas fa-plus"></i> Add</button></div></div>';
     }
 
     if (!T.members.length) {
@@ -226,17 +289,22 @@
     function oops(e) { PM.toast(e.message || 'Failed', 'error'); loadTeam().catch(fail); }
 
     var add = document.getElementById('pmtAdd');
-    if (add) add.onclick = function () {
-      var emp = toInt(document.getElementById('pmtEmp').value, 0);
-      if (!emp) { PM.toast('Pick a person first', 'warning'); return; }
-      var alloc = toInt(document.getElementById('pmtAlloc').value, 100);
-      if (alloc < 0 || alloc > 100) { PM.toast('Allocation must be 0–100', 'warning'); return; }
-      PM.api('POST', base, {
-        employeeId: emp,
-        roleInTeam: document.getElementById('pmtRole').value,
-        allocationPct: alloc
-      }).then(function () { return done('Member added'); }).catch(oops);
-    };
+    if (add) {
+      var used = T.members.map(function (m) { return m.employeeId; });
+      pickerInit('pmtPick', used, T.sel, function (n) { add.disabled = n === 0; add.innerHTML = addLabel(n); });
+      add.onclick = function () {
+        var ids = Array.from(T.sel);
+        if (!ids.length) { PM.toast('Tick at least one person', 'warning'); return; }
+        var alloc = toInt(document.getElementById('pmtAlloc').value, 100);
+        if (alloc < 0 || alloc > 100) { PM.toast('Allocation must be 0–100', 'warning'); return; }
+        add.disabled = true;
+        PM.api('POST', base + '/bulk', {
+          employeeIds: ids,
+          roleInTeam: document.getElementById('pmtRole').value,
+          allocationPct: alloc
+        }).then(function (r) { T.sel = new Set(); reportBulk(r); return loadTeam(); }).catch(oops);
+      };
+    }
 
     bodyEl().querySelectorAll('tr[data-emp]').forEach(function (tr) {
       var emp = tr.dataset.emp;

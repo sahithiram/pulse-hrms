@@ -245,7 +245,11 @@ public class AdminAIController {
                 List<Map<String, Object>> leaveBalances = new ArrayList<>();
                 for (Employee emp : allEmployees) {
                     try {
-                        Map<String, Object> bal = leaveBalanceService.getEmployeeLeaveBalance(emp.getEmployeeId());
+                        Map<String, Object> bal = leaveBalanceService.getMonthlyBalance(
+                                emp.getEmployeeId(),
+                                java.time.LocalDate.now().getYear(),
+                                java.time.LocalDate.now().getMonthValue()
+                        );
                         bal.put("employeeId", emp.getEmployeeId());
                         bal.put("employeeName", emp.getFirstName() + " " + emp.getLastName());
                         leaveBalances.add(bal);

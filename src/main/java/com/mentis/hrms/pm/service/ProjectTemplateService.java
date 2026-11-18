@@ -115,7 +115,7 @@ public class ProjectTemplateService {
         ProjectResponse project = projectService.createProject(CreateProjectRequest.builder()
                 .name(name).code(req.getCode()).description(req.getDescription())
                 .ownerId(ownerId).departmentId(req.getDepartmentId()).clientId(req.getClientId())
-                .teamId(req.getTeamId()).priority(priority)
+                .teamId(req.getTeamId()).teamIds(req.getTeamIds()).priority(priority)
                 .startDate(start).endDate(end).budgetTotal(req.getBudgetTotal())
                 .memberIds(req.getMemberIds()).build(), userId);
         Long pid = project.getId();

@@ -26,6 +26,7 @@ import com.mentis.hrms.pm.repository.TeamMemberRepository;
 import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.pm.service.HandoverService;
 import com.mentis.hrms.pm.service.PmParticipantService;
+import com.mentis.hrms.pm.service.ProjectTeamService;
 import com.mentis.hrms.pm.service.TaskEventNotifier;
 import com.mentis.hrms.pm.service.WorkloadBalanceService;
 import com.mentis.hrms.pm.service.WorkloadService;
@@ -74,6 +75,7 @@ public class WorkloadBalanceServiceImpl implements WorkloadBalanceService {
     private final HandoverService handover;
     private final PmParticipantService participants;
     private final PmAccessService access;
+    private final ProjectTeamService projectTeamService;
     private final TaskRepository taskRepo;
     private final TaskAssignmentRepository assignmentRepo;
     private final ProjectRepository projectRepo;
@@ -314,8 +316,8 @@ public class WorkloadBalanceServiceImpl implements WorkloadBalanceService {
         for (ProjectMember m : memberRepo.findByProjectId(pid)) {
             if (m.getRole() != ProjectRole.VIEWER) pool.add(m.getEmployeeId());
         }
-        if (p.getTeamId() != null) {
-            teamMemberRepo.findByTeamId(p.getTeamId()).forEach(tm -> pool.add(tm.getEmployeeId()));
+        for (Long tid : projectTeamService.teamIdsOf(pid)) {
+            teamMemberRepo.findByTeamId(tid).forEach(tm -> pool.add(tm.getEmployeeId()));
         }
         for (Task t : taskRepo.findByProjectId(pid)) {
             for (TaskAssignment a : assignmentRepo.findByTaskId(t.getId())) pool.add(a.getEmployeeId());
@@ -375,9 +377,10 @@ public class WorkloadBalanceServiceImpl implements WorkloadBalanceService {
             } catch (RuntimeException denied) {
                 // not an administrator of the project: fall through to the team-lead check
             }
-            Long teamId = t.getTeamId() != null ? t.getTeamId()
-                    : projectRepo.findById(t.getProjectId()).map(Project::getTeamId).orElse(null);
-            return teamId != null && access.isTeamLead(actorPk, teamId);
+            java.util.Collection<Long> teamIds = t.getTeamId() != null
+                    ? java.util.List.of(t.getTeamId())
+                    : projectTeamService.teamIdsOf(t.getProjectId());
+            return teamIds.stream().anyMatch(teamId -> access.isTeamLead(actorPk, teamId));
         });
     }
 

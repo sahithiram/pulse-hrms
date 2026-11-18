@@ -2,7 +2,10 @@ package com.mentis.hrms.controller;
 
 import com.mentis.hrms.model.Department;
 import com.mentis.hrms.model.Designation;
+import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.service.DepartmentService;
+import com.mentis.hrms.service.EmployeeService;
+import com.mentis.hrms.service.OfferService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,9 +15,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 public class DepartmentController {
@@ -23,6 +26,12 @@ public class DepartmentController {
 
     @Autowired
     private DepartmentService departmentService;
+
+    @Autowired
+    private OfferService offerService;
+
+    @Autowired
+    private EmployeeService employeeService;
 
     // ==================== VIEW METHODS (HTML Pages) ====================
 
@@ -37,7 +46,29 @@ public class DepartmentController {
         }
 
         model.addAttribute("isSuperAdmin", true);
+        model.addAttribute("isHR", true);
+        model.addAttribute("userRole", userRole);
         model.addAttribute("userName", session.getAttribute("userName"));
+
+        // Add sidebar attributes so Thymeleaf doesn't crash
+        try {
+            model.addAttribute("offerCount", offerService.getOfferCount());
+            List<Employee> allEmployees = employeeService.getAllEmployees();
+            int totalPending = allEmployees.stream()
+                    .filter(emp -> {
+                        String status = emp.getOnboardingStatus();
+                        return status != null && (status.equals("NOT_STARTED") ||
+                                status.equals("DOCUMENTS_PENDING") ||
+                                status.equals("DOCUMENTS_SUBMITTED"));
+                    })
+                    .collect(Collectors.toList()).size();
+            model.addAttribute("totalPending", totalPending);
+        } catch (Exception e) {
+            logger.warn("Could not load sidebar counts: {}", e.getMessage());
+            model.addAttribute("offerCount", 0);
+            model.addAttribute("totalPending", 0);
+        }
+
         return "departments";
     }
 
@@ -53,6 +84,13 @@ public class DepartmentController {
         model.addAttribute("isSuperAdmin", true);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("designations", departmentService.getAllDesignations());
+
+        // Add sidebar attributes
+        try {
+            model.addAttribute("offerCount", offerService.getOfferCount());
+            model.addAttribute("totalPending", 0);
+        } catch (Exception e) {}
+
         return "roles";
     }
 
@@ -68,6 +106,13 @@ public class DepartmentController {
         model.addAttribute("isSuperAdmin", true);
         model.addAttribute("userName", session.getAttribute("userName"));
         model.addAttribute("departments", departmentService.getAllDepartments());
+
+        // Add sidebar attributes
+        try {
+            model.addAttribute("offerCount", offerService.getOfferCount());
+            model.addAttribute("totalPending", 0);
+        } catch (Exception e) {}
+
         return "categories";
     }
 
@@ -122,7 +167,6 @@ public class DepartmentController {
         }
     }
 
-    // UPDATED: Now uses ID instead of Name
     @GetMapping("/api/departments/{id}/designations")
     @ResponseBody
     public ResponseEntity<?> getDesignationsByDepartment(@PathVariable Long id) {
@@ -135,7 +179,6 @@ public class DepartmentController {
         }
     }
 
-    // UPDATED: Now uses ID instead of Name
     @PostMapping("/api/departments/{id}/add-designation")
     @ResponseBody
     public ResponseEntity<?> addDesignation(@PathVariable Long id, @RequestBody Map<String, String> request) {
@@ -163,7 +206,6 @@ public class DepartmentController {
         }
     }
 
-    // UPDATED: Now uses ID instead of Name
     @DeleteMapping("/api/departments/{id}/delete")
     @ResponseBody
     public ResponseEntity<?> deleteDepartment(@PathVariable Long id) {
@@ -175,7 +217,6 @@ public class DepartmentController {
         }
     }
 
-    // UPDATED: Now uses Department ID and Designation ID
     @DeleteMapping("/api/departments/{id}/designations/{designationId}/delete")
     @ResponseBody
     public ResponseEntity<?> deleteDesignation(@PathVariable Long id, @PathVariable Long designationId) {
@@ -197,7 +238,6 @@ public class DepartmentController {
         }
     }
 
-    // UPDATED: Now uses ID instead of Name
     @PutMapping("/api/departments/{id}/update")
     @ResponseBody
     public ResponseEntity<?> updateDepartment(@PathVariable Long id, @RequestBody Map<String, String> request) {

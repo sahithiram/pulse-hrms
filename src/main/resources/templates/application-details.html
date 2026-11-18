@@ -111,10 +111,26 @@
         }
         .preview-unavailable i { font-size: 3rem; margin-bottom: 1rem; opacity: .5; }
 
-        .no-resume-msg {
+      .no-resume-msg {
             color: var(--dark-text-secondary);
             font-style: italic; display: flex; gap: .5rem; align-items: center;
         }
+
+        #statusModal .modal-content {
+            background: var(--dark-card);
+            color: var(--dark-text);
+            border: 1px solid var(--dark-border);
+        }
+        #statusModal .modal-header {
+            border-bottom: 1px solid var(--dark-border);
+        }
+        #statusModal .modal-footer {
+            border-top: 1px solid var(--dark-border);
+        }
+        #statusModal .modal-title {
+            color: var(--dark-text);
+        }
+    </style>
     </style>
 </head>
 <body>
@@ -339,6 +355,15 @@
                         <div>
                             <span id="currentStatusBadgeMirror"
                                   class="status-badge"
+                                  th:classappend="${application != null && application.status != null} ? (
+                                      ${application.status == 'Applied'} ? 'status-applied' :
+                                      (${application.status == 'In Review'} ? 'status-in-review' :
+                                      (${application.status == 'Interview'} ? 'status-interview' :
+                                      (${application.status == 'Interviewed'} ? 'status-interviewed' :
+                                      (${application.status == 'On Hold'} ? 'status-onhold' :
+                                      (${application.status == 'Selected'} ? 'status-selected' :
+                                      (${application.status == 'Hired'} ? 'status-hired' : 'status-rejected'))))))
+                                  ) : 'status-applied'"
                                   th:text="${application != null && application.status != null ? application.status : 'Applied'}">Applied</span>
                         </div>
                     </div>

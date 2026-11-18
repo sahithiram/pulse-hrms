@@ -36,6 +36,9 @@ public class ChangeRequestService {
     private static final Set<ProjectStatus> CLOSED = EnumSet.of(ProjectStatus.COMPLETED, ProjectStatus.ARCHIVED);
 
     private final ProjectRepository projectRepository;
+
+    private final ProjectTeamService projectTeamService;   // NEW
+
     private final TeamRepository teamRepository;
     private final ProjectService projectService;
     private final ProjectBaselineHistoryRepository historyRepository;
@@ -55,9 +58,8 @@ public class ChangeRequestService {
     public String apply(Long projectId, JsonNode payload, Long approvalId, Long actorId) {
         Project pr = find(projectId);
         ChangeRequestPayload p = ChangeRequestPayload.from(payload);
-        check(pr, p); // re-check: the project may have changed since the request was filed
+        check(pr, p);
 
-        // 1) change the live plan; saveBaseline archives the previous snapshot if one exists.
         LocalDate oldEnd = pr.getEndDate();
         BigDecimal oldBudget = pr.getBudgetTotal();
         StringBuilder summary = new StringBuilder();
@@ -73,7 +75,6 @@ public class ChangeRequestService {
         }
         projectRepository.save(pr);
 
-        // 2) record the new baseline (same method as the "Save baseline" button; writes history)
         if (pr.getStartDate() != null && pr.getEndDate() != null) {
             projectService.saveBaseline(projectId, actorId, p.getReason());
         } else {
@@ -83,14 +84,15 @@ public class ChangeRequestService {
         return summary + " (" + p.getReason() + ")";
     }
 
-    /** Project owner + lead of the project's team: the people to keep informed. */
+    /** Project owner + lead of every one of the project's teams: the people to keep informed. */
     @Transactional(readOnly = true)
     public Set<Long> stakeholders(Long projectId) {
         Set<Long> pks = new LinkedHashSet<>();
         projectRepository.findById(projectId).ifPresent(p -> {
             if (p.getOwnerId() != null) pks.add(p.getOwnerId());
-            if (p.getTeamId() != null) {
-                teamRepository.findById(p.getTeamId()).map(Team::getLeadEmployeeId).ifPresent(pks::add);
+            // CHANGED: multi-team — every team lead, not just the primary team's lead
+            for (Long tid : projectTeamService.teamIdsOf(p.getId())) {
+                teamRepository.findById(tid).map(Team::getLeadEmployeeId).ifPresent(pks::add);
             }
         });
         return pks;

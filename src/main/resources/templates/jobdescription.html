@@ -112,9 +112,9 @@
                         <div class="meta-label">EXPERIENCE LEVEL</div>
                         <div class="meta-value" th:text="${job.experienceLevel} ?: 'Not specified'">Senior Level</div>
                     </div>
-                    <div class="meta-item" th:if="${job.salaryRange}">
+                    <div class="meta-item" th:if="${job.salaryRange != null and !#strings.isEmpty(job.salaryRange)}">
                         <div class="meta-label">SALARY RANGE</div>
-                        <div class="meta-value salary-range" th:text="${job.salaryRange}">₹8,00,000 - ₹12,00,000</div>
+                        <div class="meta-value salary-range" th:text="${job.formattedSalaryRange}">₹8,00,000 - ₹12,00,000</div>
                     </div>
                     <div class="meta-item" th:if="${job.applicationDeadline}">
                         <div class="meta-label">APPLICATION DEADLINE</div>

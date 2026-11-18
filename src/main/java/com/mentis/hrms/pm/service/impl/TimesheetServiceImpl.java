@@ -26,6 +26,8 @@ import com.mentis.hrms.pm.repository.TeamMemberRepository;
 import com.mentis.hrms.pm.repository.TeamRepository;
 import com.mentis.hrms.pm.repository.TimesheetWeekRepository;
 import com.mentis.hrms.pm.service.ApprovalService;
+import com.mentis.hrms.pm.service.ProjectFinanceService;
+import com.mentis.hrms.pm.service.ProjectTeamService;
 import com.mentis.hrms.pm.service.TimesheetService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.repository.LeaveRequestRepository;
@@ -33,7 +35,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.mentis.hrms.pm.service.ProjectFinanceService;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -47,6 +48,7 @@ import java.util.stream.Collectors;
 public class TimesheetServiceImpl implements TimesheetService {
 
     private final TaskTimeLogRepository timeLogRepository;
+    private final ProjectTeamService projectTeamService;
     private final TaskRepository taskRepository;
     private final ProjectRepository projectRepository;
     private final TeamRepository teamRepository;
@@ -195,7 +197,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                 .collect(Collectors.toList());
     }
 
-    /** STEP 6: a copy of one person's week that keeps ONLY the hours logged on this project. */
     /** STEP 6: a copy of one person's week that keeps ONLY the hours logged on this project. */
     private TimesheetResponse onlyThisProject(TimesheetResponse r, Long projectId) {
         List<TimesheetResponse.Day> days = new ArrayList<>();
@@ -387,8 +388,8 @@ public class TimesheetServiceImpl implements TimesheetService {
             Project p = projectRepository.findById(pid).orElse(null);
             if (p == null) continue;
 
-            if (p.getTeamId() != null) {
-                teamRepository.findById(p.getTeamId()).map(Team::getLeadEmployeeId).ifPresent(cands::add);
+            for (Long tid : projectTeamService.teamIdsOf(p.getId())) {
+                teamRepository.findById(tid).map(Team::getLeadEmployeeId).ifPresent(cands::add);
             }
             // STEP 6: explicit project LEADs run the day to day, so they come before owner / managers
             projectMemberRepository.findByProjectId(pid).stream()

@@ -20,6 +20,7 @@ import com.mentis.hrms.pm.repository.TaskRepository;
 import com.mentis.hrms.pm.repository.TaskWatcherRepository;
 import com.mentis.hrms.pm.repository.TeamMemberRepository;
 import com.mentis.hrms.pm.repository.TeamRepository;
+import com.mentis.hrms.pm.service.ProjectTeamService;              // NEW
 import com.mentis.hrms.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,9 @@ import com.mentis.hrms.pm.repository.TimesheetWeekRepository;
 public class PmAccessService {
 
     private final ProjectRepository projectRepository;
+
+    private final ProjectTeamService projectTeamService;   // NEW: the single source of truth for a project's teams
+
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
@@ -197,10 +201,9 @@ public class PmAccessService {
     public boolean isProjectLead(Long userId, Long projectId) {
         if (userId == null || projectId == null) return false;
         if (isProjectLeadRole(userId, projectId)) return true;
-        return projectRepository.findById(projectId)
-                .map(Project::getTeamId)
-                .map(tid -> isTeamLead(userId, tid))
-                .orElse(false);
+        // CHANGED: multi-team — lead of ANY of the project's teams counts.
+        return projectTeamService.teamIdsOf(projectId).stream()
+                .anyMatch(tid -> isTeamLead(userId, tid));
     }
 
     @Transactional(readOnly = true)
@@ -238,8 +241,10 @@ public class PmAccessService {
         if (isAdmin(userId)) return true;
         if (canManageProject(userId, projectId)) return true;
         if (isProjectMember(userId, projectId)) return true;
-        Long teamId = projectRepository.findById(projectId).map(Project::getTeamId).orElse(null);
-        if (isTeamMember(userId, teamId) || isTeamLead(userId, teamId)) return true;
+        // CHANGED: multi-team — member or lead of ANY of the project's teams counts.
+        for (Long teamId : projectTeamService.teamIdsOf(projectId)) {
+            if (isTeamMember(userId, teamId) || isTeamLead(userId, teamId)) return true;
+        }
         return taskAssignmentRepository.existsByProjectAndEmployee(projectId, userId);
     }
 

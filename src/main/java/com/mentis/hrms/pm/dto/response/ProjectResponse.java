@@ -33,7 +33,8 @@ public class ProjectResponse {
     private Integer progressPct;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private Long teamId;
+    private Long teamId;           // primary (first) team
+    private java.util.List<Long> teamIds;
 
     // Phase 5
     private LocalDate baselineStart;

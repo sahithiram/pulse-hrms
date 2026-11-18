@@ -12,7 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import com.mentis.hrms.pm.dto.request.BulkAddMembersRequest;
+import com.mentis.hrms.pm.dto.response.BulkAddResult;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,7 +77,23 @@ public class ProjectMemberController {
         access.requireCanAdminister(userId, projectId);
         return ResponseEntity.ok(ApiResponse.ok(service.update(projectId, memberId, req, userId)));
     }
-
+    /** Add several people in one request. Each person is checked on their own; failures are reported, not fatal. */
+    @PostMapping("/bulk")
+    public ResponseEntity<ApiResponse<BulkAddResult>> addMany(
+            @PathVariable Long projectId,
+            @Valid @RequestBody BulkAddMembersRequest req,
+            @CurrentUserId Long userId) {
+        access.requireCanAdminister(userId, projectId);
+        BulkAddResult out = new BulkAddResult();
+        for (Long empId : new LinkedHashSet<>(req.getEmployeeIds())) {
+            if (empId == null) continue;
+            out.attempt(empId, () -> service.add(projectId, AddMemberRequest.builder()
+                    .employeeId(empId).role(req.getRole()).allocationPct(req.getAllocationPct())
+                    .hourlyRate(req.getHourlyRate()).startDate(req.getStartDate()).endDate(req.getEndDate())
+                    .build(), userId));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(out.summary(), out));
+    }
     @DeleteMapping("/{memberId}")
     public ResponseEntity<ApiResponse<Void>> remove(
             @PathVariable Long projectId,

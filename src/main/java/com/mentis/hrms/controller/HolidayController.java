@@ -120,26 +120,44 @@ public class HolidayController {
         return ResponseEntity.ok(response);
     }
 
-    // Create new holiday
     @PostMapping("/create")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> createHoliday(@RequestBody Map<String, String> request) {
         Map<String, Object> response = new HashMap<>();
         try {
-            String holidayName = request.get("holidayName");
-            String holidayDateStr = request.get("holidayDate");
-            String holidayType = request.get("holidayType");
+            // Accept BOTH naming conventions (frontend may send name/holidayName)
+            String holidayName = firstNonBlank(request.get("holidayName"), request.get("name"));
+            String holidayDateStr = firstNonBlank(request.get("holidayDate"), request.get("date"));
+            String holidayType = firstNonBlank(request.get("holidayType"), request.get("type"));
             String description = request.get("description");
-            String createdBy = request.get("createdBy");
+            String createdBy = firstNonBlank(request.get("createdBy"), "HR Manager");
 
-            LocalDate holidayDate = LocalDate.parse(holidayDateStr);
+            if (holidayName == null || holidayName.isBlank()) {
+                response.put("success", false);
+                response.put("error", "Holiday name is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+            if (holidayDateStr == null || holidayDateStr.isBlank()) {
+                response.put("success", false);
+                response.put("error", "Holiday date is required");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            LocalDate holidayDate;
+            try {
+                holidayDate = LocalDate.parse(holidayDateStr);
+            } catch (Exception ex) {
+                response.put("success", false);
+                response.put("error", "Invalid date format: " + holidayDateStr);
+                return ResponseEntity.badRequest().body(response);
+            }
 
             Holiday holiday = new Holiday();
             holiday.setHolidayName(holidayName);
             holiday.setHolidayDate(holidayDate);
-            holiday.setHolidayType(holidayType);
+            holiday.setHolidayType(holidayType != null ? holidayType : "public");
             holiday.setDescription(description);
-            holiday.setCreatedBy(createdBy != null ? createdBy : "HR Manager");
+            holiday.setCreatedBy(createdBy);
 
             Holiday savedHoliday = holidayService.createHoliday(holiday);
 
@@ -158,6 +176,15 @@ public class HolidayController {
             response.put("error", e.getMessage());
         }
         return ResponseEntity.ok(response);
+    }
+
+    // Add this private helper INSIDE HolidayController class
+    private String firstNonBlank(String... values) {
+        if (values == null) return null;
+        for (String v : values) {
+            if (v != null && !v.trim().isEmpty()) return v.trim();
+        }
+        return null;
     }
 
     // Delete holiday

@@ -603,14 +603,15 @@
         employeeIdToDelete = null;
     }
 
-    function performDelete() {
+  function performDelete() {
         if (!employeeIdToDelete) return;
+        var deletedId = employeeIdToDelete;
         var btn = document.getElementById('confirmDeleteBtn');
         var original = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
 
-        fetch('/dashboard/hr/delete-employee/' + employeeIdToDelete, { method: 'DELETE' })
+        fetch('/dashboard/hr/delete-employee/' + deletedId, { method: 'DELETE' })
             .then(function (r) {
                 return r.text().then(function (text) {
                     var data;
@@ -621,19 +622,15 @@
             })
             .then(function (data) {
                 closeDeleteModal();
-                var row = document.querySelector('button[data-employee-id="' + employeeIdToDelete + '"]');
-                if (row) {
-                    var tr = row.closest('tr');
+                var rowBtn = document.querySelector('button[data-employee-id="' + deletedId + '"]');
+                if (rowBtn) {
+                    var tr = rowBtn.closest('tr');
                     if (tr) tr.remove();
                 }
-                // recalc stats + pagination
-                var totalEl = document.querySelector('.stat-card .stat-value');
-                if (totalEl) {
-                    var n = parseInt(totalEl.textContent, 10) || 0;
-                    if (n > 0) totalEl.textContent = n - 1;
-                }
-                setupFiltersAndPagination();
                 showPmToast(data.message || 'Employee deleted successfully', 'success');
+                setTimeout(function () {
+                    window.location.reload();
+                }, 600);
             })
             .catch(function (err) {
                 showPmToast(err.message || 'Failed to delete employee', 'error');

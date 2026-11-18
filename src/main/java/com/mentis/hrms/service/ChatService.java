@@ -282,15 +282,31 @@ public class ChatService {
         sb.append("🏖️ LEAVE BALANCE\n");
         sb.append("─────────────────────────────────────────────────────────\n");
         try {
-            Map<String, Object> leaveData = leaveBalanceService.getEmployeeLeaveBalance(employeeId);
+            Map<String, Object> leaveData = leaveBalanceService.getMonthlyBalance(
+                    employeeId,
+                    java.time.LocalDate.now().getYear(),
+                    java.time.LocalDate.now().getMonthValue()
+            );
             Object balancesObj = leaveData.get("balances");
             if (balancesObj instanceof Map) {
                 Map<String, Object> balances = (Map<String, Object>) balancesObj;
                 appendLeaveLine(sb, "Sick", balances.get("sick"));
                 appendLeaveLine(sb, "Casual", balances.get("casual"));
                 appendLeaveLine(sb, "Earned", balances.get("earned"));
-                sb.append("Total used: ").append(leaveData.getOrDefault("usedLeaves", "N/A")).append("\n");
-                sb.append("Total available: ").append(leaveData.getOrDefault("availableLeaves", "N/A")).append("\n");
+// Since we calculate per-month now, we read the totals from the maps directly
+                Map<String, Object> sickMap = (Map<String, Object>) balances.get("sick");
+                Map<String, Object> casualMap = (Map<String, Object>) balances.get("casual");
+                Map<String, Object> earnedMap = (Map<String, Object>) balances.get("earned");
+
+                if (sickMap != null && casualMap != null && earnedMap != null) {
+                    double totalUsed = ((Number) sickMap.getOrDefault("used", 0)).doubleValue() +
+                            ((Number) casualMap.getOrDefault("used", 0)).doubleValue();
+                    double totalAvailable = ((Number) sickMap.getOrDefault("remaining", 0)).doubleValue() +
+                            ((Number) casualMap.getOrDefault("remaining", 0)).doubleValue();
+
+                    sb.append("Total used (Sick+Casual): ").append(totalUsed).append("\n");
+                    sb.append("Total available (Sick+Casual): ").append(totalAvailable).append("\n");
+                }
             }
         } catch (Exception e) {
             sb.append("(Leave balance temporarily unavailable)\n");

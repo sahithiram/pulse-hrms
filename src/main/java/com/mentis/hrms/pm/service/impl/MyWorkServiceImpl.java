@@ -13,6 +13,7 @@ import com.mentis.hrms.pm.mapper.TaskMapper;
 import com.mentis.hrms.pm.repository.*;
 import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.pm.service.MyWorkService;
+import com.mentis.hrms.pm.service.ProjectTeamService;   // NEW
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,9 @@ import java.util.stream.Collectors;
 public class MyWorkServiceImpl implements MyWorkService {
 
     private final TaskRepository taskRepository;
+
+    private final ProjectTeamService projectTeamService;   // NEW
+
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final TaskWatcherRepository taskWatcherRepository;
     private final TaskTimeLogRepository taskTimeLogRepository;
@@ -46,7 +50,6 @@ public class MyWorkServiceImpl implements MyWorkService {
     public List<TaskSummaryResponse> listMyTasks(Long userId) {
         if (userId == null) return List.of();
 
-        // 1) task ids from assignment + watcher
         Set<Long> taskIds = new LinkedHashSet<>();
         taskAssignmentRepository.findByEmployeeId(userId)
                 .forEach(a -> taskIds.add(a.getTaskId()));
@@ -55,13 +58,10 @@ public class MyWorkServiceImpl implements MyWorkService {
 
         if (taskIds.isEmpty()) return List.of();
 
-        // 2) load and map
         List<Task> tasks = taskRepository.findAllById(taskIds);
 
-        // 3) hide subtasks from the list — they show inside their parent drawer
         tasks.removeIf(t -> t.getParentTaskId() != null);
 
-        // 4) order: open first, then due date asc, then created desc
         tasks.sort((a, b) -> {
             boolean aDone = a.getStatus() == TaskStatus.DONE;
             boolean bDone = b.getStatus() == TaskStatus.DONE;
@@ -96,6 +96,8 @@ public class MyWorkServiceImpl implements MyWorkService {
             projectRepository.findAll().stream()
                     .filter(p -> p.getTeamId() != null && myTeamIds.contains(p.getTeamId()))
                     .forEach(p -> projectIds.add(p.getId()));
+            // NEW: multi-team membership
+            projectIds.addAll(projectTeamService.projectIdsOfTeams(myTeamIds));
         }
 
         // 3) projects where I have at least one task
@@ -116,11 +118,6 @@ public class MyWorkServiceImpl implements MyWorkService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * STEP 7.0b: the review queue. Every task In Review that this person may review
-     * (Super Admin, owner, MANAGER, LEAD role, or lead of the task's team).
-     * HR and plain members get an empty list. Oldest first, so nothing waits forever.
-     */
     @Override
     @Transactional(readOnly = true)
     public List<TaskSummaryResponse> listReviewQueue(Long userId) {
@@ -139,7 +136,6 @@ public class MyWorkServiceImpl implements MyWorkService {
         if (userId == null)
             return new MyWorkKpi(0, 0, 0, 0, 0);
 
-        // Gather task ids once
         Set<Long> taskIds = new LinkedHashSet<>();
         taskAssignmentRepository.findByEmployeeId(userId)
                 .forEach(a -> taskIds.add(a.getTaskId()));
@@ -171,7 +167,6 @@ public class MyWorkServiceImpl implements MyWorkService {
             }
         }
 
-        // sum minutes logged by this employee
         long minutes = 0;
         for (Long tid : taskIds) {
             minutes += taskTimeLogRepository.findByTaskIdOrderByLogDateDesc(tid).stream()

@@ -31,7 +31,8 @@ public class ProjectSummaryResponse {
 
     // fields consumed by the frontend's mapBackendProject()
     private Long ownerId;
-    private Long teamId;
+    private Long teamId;           // primary (first) team
+    private java.util.List<Long> teamIds;
 
     // STEP 1b: false when budget fields were hidden for this viewer
     private Boolean financeVisible;

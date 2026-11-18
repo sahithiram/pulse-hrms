@@ -23,10 +23,12 @@ import com.mentis.hrms.pm.repository.ProjectRepository;
 import com.mentis.hrms.pm.repository.TaskRepository;
 import com.mentis.hrms.pm.service.ProjectClosureService;
 import com.mentis.hrms.pm.service.ProjectService;
+import com.mentis.hrms.pm.service.ProjectTeamService;          // NEW
 import com.mentis.hrms.pm.service.ProjectVarianceService;
 import com.mentis.hrms.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;   // CHANGED (was fully-qualified inline)
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,11 +39,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.LinkedHashSet;   // NEW
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -50,6 +52,7 @@ import java.util.stream.Collectors;
 public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectTeamService projectTeamService;   // NEW
     private final ProjectMapper projectMapper;
     private final ClientRepository clientRepository;
     private final TaskRepository taskRepository;
@@ -68,7 +71,7 @@ public class ProjectServiceImpl implements ProjectService {
         FLOW.put(ProjectStatus.ON_HOLD, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.ARCHIVED));
         FLOW.put(ProjectStatus.AT_RISK, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.DELAYED, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
         FLOW.put(ProjectStatus.DELAYED, EnumSet.of(ProjectStatus.ACTIVE, ProjectStatus.AT_RISK, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED));
-        FLOW.put(ProjectStatus.COMPLETED, EnumSet.of(ProjectStatus.ARCHIVED)); // STEP 8: reopening has its own endpoint
+        FLOW.put(ProjectStatus.COMPLETED, EnumSet.of(ProjectStatus.ARCHIVED));
         FLOW.put(ProjectStatus.ARCHIVED, EnumSet.of(ProjectStatus.PLANNING));
     }
 
@@ -78,22 +81,58 @@ public class ProjectServiceImpl implements ProjectService {
         validateDates(req.getStartDate(), req.getEndDate());
         validateClient(req.getClientId());
 
-        String code = req.getCode();
-        if (code == null || code.isBlank()) {
-            code = "PRJ-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        // CHANGED: auto-generate PRJ-NNNN instead of a random UUID suffix
+        String code = req.getCode() == null ? "" : req.getCode().trim();
+        if (code.isEmpty()) {
+            code = nextProjectCode();
         }
         if (projectRepository.existsByCode(code)) {
             throw new DuplicateResourceException("Project code already exists: " + code);
         }
+
         Project project = projectMapper.toEntity(req, currentUserId);
         project.setCode(code);
-        Project saved = projectRepository.save(project);
+
+        Project saved;
+        try {
+            saved = projectRepository.save(project);
+        } catch (DataIntegrityViolationException e) {
+            // CHANGED: only treat as duplicate when the unique index on "code" fired.
+            // A bad ownerId / teamId also throws DataIntegrityViolationException; do not
+            // misreport those as "Project code already exists".
+            String msg = e.getMostSpecificCause() == null ? null : e.getMostSpecificCause().getMessage();
+            if (msg != null && msg.toLowerCase().contains("code")) {
+                throw new DuplicateResourceException("Project code already exists: " + code);
+            }
+            throw e;
+        }
+
+        // NEW: multi-team. If teamIds was supplied, honour it; otherwise fall back to teamId.
+        List<Long> wantedTeams = (req.getTeamIds() != null && !req.getTeamIds().isEmpty())
+                ? req.getTeamIds()
+                : (req.getTeamId() != null ? List.of(req.getTeamId()) : List.of());
+        projectTeamService.replace(saved, wantedTeams);
+
         addInitialMembers(saved, currentUserId, req.getMemberIds());
         logActivity(saved.getId(), "CREATED", currentUserId, null, saved.getStatus().name(),
                 "created project " + saved.getName());
         log.info("Project created id={} code={}", saved.getId(), saved.getCode());
-        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+        return respond(saved);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String nextProjectCode() {                              // NEW
+        long n = projectRepository.findMaxNumericCode().longValue() + 1;
+        String code = "PRJ-" + n;
+        // Defensive: covers the (rare) case where a code outside the numeric pattern
+        // was inserted between the MAX query and this loop.
+        while (projectRepository.existsByCode(code)) {
+            code = "PRJ-" + (++n);
+        }
+        return code;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<BaselineHistoryResponse> baselineHistory(Long id) {
@@ -103,6 +142,7 @@ public class ProjectServiceImpl implements ProjectService {
                         h.getSupersededAt(), h.getChangeRequestId(), h.getReason()))
                 .collect(Collectors.toList());
     }
+
     @Override
     @Transactional
     public ProjectResponse updateProject(Long id, UpdateProjectRequest req, Long currentUserId) {
@@ -116,7 +156,6 @@ public class ProjectServiceImpl implements ProjectService {
         if (req.getLessonsLearned() != null) project.setLessonsLearned(req.getLessonsLearned().trim());
         ProjectStatus oldStatus = project.getStatus();
         if (req.getStatus() != null && req.getStatus() != oldStatus) {
-            // STEP 3: the kick-off gate looks at the dates this same request is about to save
             checkTransition(project, oldStatus, req.getStatus(), newStart, newEnd);
         }
 
@@ -125,19 +164,33 @@ public class ProjectServiceImpl implements ProjectService {
         if (req.getOwnerId() != null) project.setOwnerId(req.getOwnerId());
         if (req.getDepartmentId() != null) project.setDepartmentId(req.getDepartmentId());
         if (req.getClientId() != null) project.setClientId(req.getClientId());
-        if (req.getTeamId() != null) project.setTeamId(req.getTeamId() == 0L ? null : req.getTeamId());
+
+        // CHANGED: multi-team update. If teamIds is present (even empty), it replaces
+        // the team set. Otherwise, an older single-team client's teamId is added
+        // without dropping the others; teamId=0 clears the set.
+        if (req.getTeamIds() != null) {
+            projectTeamService.replace(project, req.getTeamIds());
+        } else if (req.getTeamId() != null) {
+            if (req.getTeamId() == 0L) {
+                projectTeamService.replace(project, List.of());
+            } else {
+                LinkedHashSet<Long> all = new LinkedHashSet<>();
+                all.add(req.getTeamId());
+                all.addAll(projectTeamService.teamIdsOf(project.getId()));
+                projectTeamService.replace(project, all);
+            }
+        }
+
         if (req.getStatus() != null) project.setStatus(req.getStatus());
         if (oldStatus != ProjectStatus.COMPLETED && project.getStatus() == ProjectStatus.COMPLETED) {
-            project.setCompletedAt(LocalDateTime.now()); // STEP 8
+            project.setCompletedAt(LocalDateTime.now());
             project.setCompletedBy(currentUserId);
         }
-        // 2b: activation hook. Any transition INTO ACTIVE from any state (PLANNING, ON_HOLD,
-        // AT_RISK, DELAYED) captures the baseline if one doesn't exist yet.
         if (project.getStatus() == ProjectStatus.ACTIVE && oldStatus != ProjectStatus.ACTIVE
                 && project.getBaselinedAt() == null && newStart != null && newEnd != null) {
             project.setStartDate(newStart);
             project.setEndDate(newEnd);
-            applyBaseline(project, currentUserId, false);   // false = never overwrite
+            applyBaseline(project, currentUserId, false);
         }
         if (req.getHealth() != null) {
             if (req.getHealth() != project.getHealth()) project.setHealthMode(HealthMode.MANUAL);
@@ -152,11 +205,9 @@ public class ProjectServiceImpl implements ProjectService {
         if (project.getStatus() == ProjectStatus.COMPLETED) project.setProgressPct(100);
         Project saved = projectRepository.save(project);
         if (req.getOwnerId() != null) ensureManager(saved.getId(), saved.getOwnerId());
-        // STEP 8: every project that starts gets the closure checklist (no-op when it already has items)
         if (oldStatus != saved.getStatus() && saved.getStatus() == ProjectStatus.ACTIVE) {
             closureService.ensureDefaults(saved.getId(), currentUserId);
         }
-        // STEP 8: tell the team the project is done
         if (oldStatus != ProjectStatus.COMPLETED && saved.getStatus() == ProjectStatus.COMPLETED) {
             closureService.notifyCompleted(saved, currentUserId);
         }
@@ -166,7 +217,7 @@ public class ProjectServiceImpl implements ProjectService {
         } else {
             logActivity(id, "UPDATED", currentUserId, null, null, "updated project " + saved.getName());
         }
-        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+        return respond(saved);
     }
 
     @Override
@@ -174,7 +225,7 @@ public class ProjectServiceImpl implements ProjectService {
     public ProjectResponse getProject(Long id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Project not found: " + id));
-        return projectMapper.toResponse(project, resolveClientName(project.getClientId()));
+        return respond(project);
     }
 
     @Override
@@ -200,9 +251,21 @@ public class ProjectServiceImpl implements ProjectService {
                         Client::getId,
                         c -> c.getName() == null ? "" : c.getName(),
                         (existing, replacement) -> existing));
-        Page<ProjectSummaryResponse> mapped = page.map(p ->
-                projectMapper.toSummary(p, clientNameMap.get(p.getClientId())));
+        // NEW: batch-load all teams for the whole page in one query
+        Map<Long, List<Long>> teamsByProject = projectTeamService.teamIdsByProject(page.getContent());
+        Page<ProjectSummaryResponse> mapped = page.map(p -> {
+            ProjectSummaryResponse r = projectMapper.toSummary(p, clientNameMap.get(p.getClientId()));
+            r.setTeamIds(teamsByProject.getOrDefault(p.getId(), List.of()));
+            return r;
+        });
         return PageResponse.of(mapped);
+    }
+
+    /** NEW: Project -> response, including all of its teams. */
+    private ProjectResponse respond(Project p) {
+        ProjectResponse r = projectMapper.toResponse(p, resolveClientName(p.getClientId()));
+        r.setTeamIds(new ArrayList<>(projectTeamService.teamIdsOf(p.getId())));
+        return r;
     }
 
     @Override
@@ -215,7 +278,7 @@ public class ProjectServiceImpl implements ProjectService {
         project.setStatus(ProjectStatus.ARCHIVED);
         Project saved = projectRepository.save(project);
         logActivity(id, "STATUS_CHANGED", currentUserId, old.name(), "ARCHIVED", "archived project " + saved.getName());
-        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+        return respond(saved);
     }
 
     @Override
@@ -228,15 +291,15 @@ public class ProjectServiceImpl implements ProjectService {
             throw new IllegalArgumentException("Cannot delete a project that has " + tasks
                     + " task(s). Archive it instead.");
         }
-        // FIX 11 — log BEFORE delete so the activity row references a live project
         logActivity(id, "DELETED", currentUserId, null, null, "deleted project " + project.getName());
+        // NEW: remove project-team links (avoid orphan rows)
+        projectTeamService.replace(project, List.of());
         closureService.deleteForProject(id);
         projectMemberRepository.deleteByProjectId(id);
         projectRepository.deleteById(id);
         log.info("Project deleted id={}", id);
     }
 
-    /** STEP 8: Super Admin only (the controller checks). Needs a reason; leaves a trail and tells the team. */
     @Override
     @Transactional
     public ProjectResponse reopenProject(Long id, String reason, Long currentUserId) {
@@ -258,17 +321,15 @@ public class ProjectServiceImpl implements ProjectService {
         logActivity(id, "REOPENED", currentUserId, "COMPLETED", "ACTIVE",
                 "reopened project " + saved.getName() + ": " + why);
         closureService.notifyReopened(saved, currentUserId, why);
-        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+        return respond(saved);
     }
 
     // ---------------------------------------------------------------- rules
 
-    /** Status move check using the project's saved dates (archive and other callers). */
     private void checkTransition(Project project, ProjectStatus from, ProjectStatus to) {
         checkTransition(project, from, to, project.getStartDate(), project.getEndDate());
     }
 
-    /** STEP 3: status move check; the dates are the ones that will be saved with this move. */
     private void checkTransition(Project project, ProjectStatus from, ProjectStatus to,
                                  LocalDate startDate, LocalDate endDate) {
         if (from == ProjectStatus.COMPLETED && to == ProjectStatus.ACTIVE) {
@@ -278,8 +339,6 @@ public class ProjectServiceImpl implements ProjectService {
         if (!FLOW.getOrDefault(from, EnumSet.noneOf(ProjectStatus.class)).contains(to)) {
             throw new IllegalArgumentException("A project cannot move from " + from + " to " + to + ".");
         }
-        // 2c: kick-off gate on every first activation, not just PLANNING → ACTIVE.
-        // (PLANNING → ON_HOLD → ACTIVE must also pass the gate.)
         if (to == ProjectStatus.ACTIVE && project.getBaselinedAt() == null) {
             checkKickoff(project, startDate, endDate);
         }
@@ -291,11 +350,6 @@ public class ProjectServiceImpl implements ProjectService {
         }
     }
 
-    /**
-     * STEP 3 — kick-off gate. A project may only start when it has dates and somebody to do the work.
-     * The baseline is saved automatically right after this check passes (see updateProject), so
-     * having dates guarantees a baseline.
-     */
     private void checkKickoff(Project project, LocalDate startDate, LocalDate endDate) {
         List<String> missing = new ArrayList<>();
         if (startDate == null || endDate == null) {
@@ -311,7 +365,6 @@ public class ProjectServiceImpl implements ProjectService {
         }
     }
 
-    /** Owner + creator become MANAGER; people picked in the create form become MEMBER. */
     private void addInitialMembers(Project saved, Long creatorPk, List<Long> memberIds) {
         ensureManager(saved.getId(), saved.getOwnerId());
         if (creatorPk != null && !creatorPk.equals(saved.getOwnerId())) ensureManager(saved.getId(), creatorPk);
@@ -367,7 +420,6 @@ public class ProjectServiceImpl implements ProjectService {
         return saveBaseline(id, currentUserId, null);
     }
 
-    /** First capture: no reason needed. Already baselined: reason required, history row written. */
     @Override
     @Transactional
     public ProjectResponse saveBaseline(Long id, Long currentUserId, String reason) {
@@ -392,7 +444,7 @@ public class ProjectServiceImpl implements ProjectService {
             throw new BusinessRuleException("Please say why you are re-baselining (at least 10 characters).");
         if (why.length() > 1000) why = why.substring(0, 1000);
         assertBaselineEditable(project);
-        archiveCurrentBaseline(project, why, null);          // writes ProjectBaselineHistory version N+1
+        archiveCurrentBaseline(project, why, null);
         return doSaveBaseline(project, currentUserId, why);
     }
 
@@ -403,12 +455,9 @@ public class ProjectServiceImpl implements ProjectService {
             throw new IllegalArgumentException("Set the start and end dates before saving a baseline.");
     }
 
-    /** Single place that writes the baseline and ONE activity row. */
     private ProjectResponse doSaveBaseline(Project project, Long userId, String reason) {
         assertBaselineEditable(project);
         boolean replacing = project.getBaselinedAt() != null;
-        // 2a: applyBaseline now returns the number of task baselines written, so we can
-        // report it in the activity log.
         int n = applyBaseline(project, userId, true);
         Project saved = projectRepository.save(project);
         logActivity(saved.getId(), replacing ? "REBASELINED" : "BASELINED", userId, null, null,
@@ -416,19 +465,9 @@ public class ProjectServiceImpl implements ProjectService {
                         + " (" + saved.getStartDate() + " → " + saved.getEndDate()
                         + ", budget " + saved.getBudgetTotal() + ", " + n + " task(s))"
                         + (reason == null ? "" : ": " + reason));
-        return projectMapper.toResponse(saved, resolveClientName(saved.getClientId()));
+        return respond(saved);
     }
 
-    /**
-     * Project dates/budget snapshot, then task snapshot via {@link ProjectVarianceService#captureBaseline}.
-     * First capture never overwrites existing task baselines (tasks added later stay "added after baseline").
-     * Re-baseline archives the previous snapshot into {@link ProjectBaselineHistory}.
-     *
-     * Note: history rows are written by callers that need them (e.g. {@code rebaseline},
-     * {@code ChangeRequestService}) — not here — to avoid duplicate rows.
-     *
-     * 2a: returns the number of task baselines written.
-     */
     private int applyBaseline(Project p, Long userId, boolean overwriteTasks) {
         p.setBaselineStart(p.getStartDate());
         p.setBaselineEnd(p.getEndDate());

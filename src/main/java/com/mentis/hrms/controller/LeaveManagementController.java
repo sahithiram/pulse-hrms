@@ -13,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.mentis.hrms.service.HolidayService;
+import java.util.Set;
 
 import java.security.Principal;
 import java.time.LocalDate;
@@ -43,6 +45,9 @@ public class LeaveManagementController {
 
     @Autowired
     private com.mentis.hrms.service.LeaveActionService leaveActionService;
+
+    @Autowired
+    private HolidayService holidayService;
 
     @GetMapping("/conflicts")
     public ResponseEntity<?> conflicts(@RequestParam String employeeId,
@@ -239,6 +244,25 @@ public class LeaveManagementController {
     @PostMapping("/apply")
     public ResponseEntity<?> applyForLeave(@RequestBody LeaveRequest leaveRequest, Principal principal) {
         logger.info("Applying for leave: {}", leaveRequest);
+
+        // --- START: NEW VALIDATION LOGIC ---
+        // 1. Fetch all holidays
+        java.util.Set<LocalDate> holidayDates = holidayService.getAllHolidays().stream()
+                .map(com.mentis.hrms.model.Holiday::getHolidayDate)
+                .collect(Collectors.toSet());
+
+        // 2. Check if any requested leave date falls on a holiday
+        LocalDate currentDate = leaveRequest.getStartDate();
+        while (!currentDate.isAfter(leaveRequest.getEndDate())) {
+            if (holidayDates.contains(currentDate)) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "error", "Leave cannot be applied on a holiday: " + currentDate
+                ));
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+        // --- END: NEW VALIDATION LOGIC ---
 
         Map<String, Object> result = leaveActionService.applyLeave(leaveRequest);
         boolean ok = Boolean.TRUE.equals(result.get("success"));

@@ -11,8 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,98 +59,107 @@ public class LeaveBalanceService {
     /**
      * Get leave balance for an employee - UPDATED: Shows sick+casual total = 19
      */
-    public Map<String, Object> getEmployeeLeaveBalance(String employeeId) {
+
+    // ═════════════════════════════════════════════════════════════════
+    // MONTHLY leave balance — SL/CL = 1 each per month, EL = Unlimited
+    // ═════════════════════════════════════════════════════════════════
+    private static final int MONTHLY_SL_QUOTA = 1;
+    private static final int MONTHLY_CL_QUOTA = 1;
+
+    /**
+     * Balance for ONE calendar month.
+     * year/month are 1-based. Null = current month.
+     *
+     * Decision A / Option 1: a leave that spans two months contributes
+     *   only its in-month portion to each month's "used".
+     * Decision B: half-day counts as 0.5.
+     */
+    public Map<String, Object> getMonthlyBalance(String employeeId, Integer year, Integer month) {
+        if (year  == null) year  = LocalDate.now().getYear();
+        if (month == null) month = LocalDate.now().getMonthValue();
+
         Map<String, Object> result = new HashMap<>();
-        Integer currentYear = LocalDate.now().getYear();
-
         try {
-            List<LeaveBalance> balances = leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear);
+            LocalDate monthStart = LocalDate.of(year, month, 1);
+            LocalDate monthEnd   = monthStart.withDayOfMonth(monthStart.lengthOfMonth());
 
-            if (balances.isEmpty()) {
-                initializeEmployeeBalance(employeeId, currentYear);
-                balances = leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear);
-            }
+            List<LeaveRequest> approved =
+                    leaveRequestRepository.findByEmployeeIdAndStatus(employeeId, "APPROVED");
 
-            // Format response for UI
-            Map<String, Map<String, Object>> leaveTypes = new HashMap<>();
+            double usedSick = 0.0, usedCasual = 0.0, usedEarned = 0.0;
 
-            for (LeaveBalance balance : balances) {
-                if (DISPLAY_LEAVE_TYPES.contains(balance.getLeaveType())) {
-                    Map<String, Object> leaveData = new HashMap<>();
+            for (LeaveRequest lr : approved) {
+                if (lr.getStartDate() == null || lr.getEndDate() == null) continue;
+                String type = lr.getLeaveType() == null ? "" : lr.getLeaveType().toLowerCase();
+                if (lr.getEndDate().isBefore(monthStart) || lr.getStartDate().isAfter(monthEnd)) continue;
 
-                    // For earned leaves, show balance as remaining days (can be negative or very high)
-                    if ("earned".equals(balance.getLeaveType())) {
-                        leaveData.put("total", 999); // Display as unlimited
-                        leaveData.put("used", balance.getUsedDays());
-                        leaveData.put("balance", 999 - balance.getUsedDays()); // Still calculate for display
-                    } else {
-                        leaveData.put("total", balance.getTotalDays());
-                        leaveData.put("used", balance.getUsedDays());
-                        leaveData.put("balance", balance.getRemainingDays());
-                    }
-
-                    leaveTypes.put(balance.getLeaveType(), leaveData);
-
-                    logger.debug("Balance for {} - {}: Total={}, Used={}, Balance={}",
-                            employeeId, balance.getLeaveType(),
-                            balance.getTotalDays(), balance.getUsedDays(), balance.getRemainingDays());
+                double days = daysInMonth(lr, monthStart, monthEnd);
+                switch (type) {
+                    case "sick"   -> usedSick   += days;
+                    case "casual" -> usedCasual += days;
+                    case "earned" -> usedEarned += days;
+                    default -> { }
                 }
             }
 
-            result.put("success", true);
+            Map<String, Object> sick = new HashMap<>();
+            sick.put("total",     MONTHLY_SL_QUOTA);
+            sick.put("used",      round2(usedSick));
+            sick.put("remaining", round2(MONTHLY_SL_QUOTA - usedSick));
+            sick.put("unlimited", false);
+            sick.put("yearlyCap", 12);
+
+            Map<String, Object> casual = new HashMap<>();
+            casual.put("total",     MONTHLY_CL_QUOTA);
+            casual.put("used",      round2(usedCasual));
+            casual.put("remaining", round2(MONTHLY_CL_QUOTA - usedCasual));
+            casual.put("unlimited", false);
+            casual.put("yearlyCap", 12);
+
+            Map<String, Object> earned = new HashMap<>();
+            earned.put("total",     "Unlimited");
+            earned.put("used",      round2(usedEarned));
+            earned.put("remaining", "Unlimited");
+            earned.put("unlimited", true);
+
+            Map<String, Map<String, Object>> balances = new HashMap<>();
+            balances.put("sick",   sick);
+            balances.put("casual", casual);
+            balances.put("earned", earned);
+
+            result.put("success",    true);
             result.put("employeeId", employeeId);
-            result.put("year", currentYear);
-            result.put("balances", leaveTypes);
+            result.put("year",       year);
+            result.put("month",      month);
+            result.put("monthLabel", monthStart.getMonth().name());
+            result.put("balances",   balances);
 
-            // Calculate summary - sick + casual = 19 total
-            Double sickTotal = 12.0;
-            Double casualTotal = 7.0;
-            Double totalSickCasual = sickTotal + casualTotal; // 19
-
-            // Get used days from balances
-            Double sickUsed = 0.0;
-            Double casualUsed = 0.0;
-            Double earnedUsed = 0.0;
-
-            for (LeaveBalance balance : balances) {
-                if ("sick".equals(balance.getLeaveType())) {
-                    sickUsed = balance.getUsedDays();
-                } else if ("casual".equals(balance.getLeaveType())) {
-                    casualUsed = balance.getUsedDays();
-                } else if ("earned".equals(balance.getLeaveType())) {
-                    earnedUsed = balance.getUsedDays();
-                }
-            }
-
-            Double usedSickCasual = sickUsed + casualUsed;
-            Double availableSickCasual = totalSickCasual - usedSickCasual;
-
-            result.put("totalSickCasual", totalSickCasual);
-            result.put("usedSickCasual", usedSickCasual);
-            result.put("availableSickCasual", availableSickCasual);
-
-            // Add earned leave info
-            result.put("earnedTotal", 999);
-            result.put("earnedUsed", earnedUsed);
-            result.put("earnedAvailable", 999 - earnedUsed);
-
-            // For backward compatibility
-            result.put("totalLeaves", totalSickCasual);
-            result.put("usedLeaves", usedSickCasual);
-            result.put("availableLeaves", availableSickCasual);
-
-            logger.info("Leave balance summary for {}: Sick+Casual Used={}/{} Available={}",
-                    employeeId, usedSickCasual, totalSickCasual, availableSickCasual);
+            logger.info("Monthly balance {} {}/{}: SL used={}, CL used={}, EL used={}",
+                    employeeId, year, month, usedSick, usedCasual, usedEarned);
 
         } catch (Exception e) {
-            logger.error("Error fetching leave balance for employee {}: {}", employeeId, e.getMessage());
+            logger.error("Error fetching monthly balance for {}: {}", employeeId, e.getMessage(), e);
             result.put("success", false);
-            result.put("error", e.getMessage());
+            result.put("error",   e.getMessage());
         }
-
         return result;
     }
 
+    /** Days of one leave that overlap [from, to], half-day aware. */
+    private double daysInMonth(LeaveRequest lr, LocalDate from, LocalDate to) {
+        LocalDate start = lr.getStartDate().isBefore(from) ? from : lr.getStartDate();
+        LocalDate end   = lr.getEndDate().isAfter(to)     ? to   : lr.getEndDate();
+        if (end.isBefore(start)) return 0.0;
+
+        if ("half_day".equalsIgnoreCase(lr.getLeaveDuration())
+                && lr.getStartDate().equals(lr.getEndDate())) {
+            return 0.5;
+        }
+        long days = ChronoUnit.DAYS.between(start, end) + 1;
+        return (double) days;
+    }
+
+    private double round2(double d) { return Math.round(d * 100.0) / 100.0; }
     /**
      * Initialize default leave balances for an employee - UPDATED: Earned = 999
      */
@@ -167,30 +178,55 @@ public class LeaveBalanceService {
      * UPDATED: For sick/casual, check their specific balance
      * For earned, ALWAYS return true (unlimited)
      */
+    /**
+     * Monthly balance check before applying.
+     * SL / CL validated month-by-month. EL always passes.
+     */
     public boolean hasSufficientBalance(String employeeId, String leaveType,
                                         LocalDate startDate, LocalDate endDate,
                                         String leaveDuration, String halfDayType) {
-        Integer currentYear = LocalDate.now().getYear();
-        Double requestedDays = calculateLeaveDays(startDate, endDate, leaveDuration, halfDayType);
+        String type = leaveType == null ? "" : leaveType.toLowerCase();
+        if ("earned".equals(type)) return true;
+        if (startDate == null || endDate == null) return false;
+        if (endDate.isBefore(startDate)) return false;
 
-        String normalizedLeaveType = leaveType.toLowerCase();
-
-        if ("earned".equals(normalizedLeaveType)) {
-            return true;
+        Map<YearMonth, Double> requestedByMonth = new LinkedHashMap<>();
+        LocalDate cursor = startDate;
+        while (!cursor.isAfter(endDate)) {
+            double day = ("half_day".equalsIgnoreCase(leaveDuration)
+                    && startDate.equals(endDate)) ? 0.5 : 1.0;
+            requestedByMonth.merge(YearMonth.from(cursor), day, Double::sum);
+            cursor = cursor.plusDays(1);
         }
 
-        // FIX: Check if the employee has any leave balances for the current year
-        List<LeaveBalance> balances = leaveBalanceRepository.findByEmployeeIdAndYear(employeeId, currentYear);
-        if (balances.isEmpty()) {
-            // Initialize default balances if none exist
-            initializeEmployeeBalance(employeeId, currentYear);
+        List<LeaveRequest> approved =
+                leaveRequestRepository.findByEmployeeIdAndStatus(employeeId, "APPROVED");
+
+        for (Map.Entry<YearMonth, Double> e : requestedByMonth.entrySet()) {
+            YearMonth ym = e.getKey();
+            double want  = e.getValue();
+            LocalDate mStart = ym.atDay(1);
+            LocalDate mEnd   = ym.atEndOfMonth();
+
+            double used = 0.0;
+            for (LeaveRequest lr : approved) {
+                if (lr.getStartDate() == null) continue;
+                String t = lr.getLeaveType() == null ? "" : lr.getLeaveType().toLowerCase();
+                if (!t.equals(type)) continue;
+                if (lr.getEndDate().isBefore(mStart) || lr.getStartDate().isAfter(mEnd)) continue;
+                used += daysInMonth(lr, mStart, mEnd);
+            }
+
+            double cap = "sick".equals(type) ? MONTHLY_SL_QUOTA : MONTHLY_CL_QUOTA;
+            if (used + want > cap + 1e-9) {
+                logger.info("Monthly cap exceeded for {} {} / {}: used={} + want={} > cap={}",
+                        employeeId, type, ym, used, want, cap);
+                return false;
+            }
         }
-
-        Boolean hasBalance = leaveBalanceRepository.hasSufficientBalance(
-                employeeId, normalizedLeaveType, currentYear, requestedDays);
-
-        return hasBalance != null && hasBalance;
+        return true;
     }
+
 
     /**
      * Update leave balance when leave is approved - UPDATED: Auto-use earned when sick/casual exhausted

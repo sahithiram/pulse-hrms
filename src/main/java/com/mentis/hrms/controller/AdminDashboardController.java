@@ -15,6 +15,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.web.bind.annotation.RequestParam;
+
 @Controller
 @RequestMapping("/dashboard/admin")
 public class AdminDashboardController {
@@ -35,7 +37,8 @@ public class AdminDashboardController {
     private OfferService offerService;
 
     @GetMapping
-    public String adminDashboard(Model model, HttpSession session, RedirectAttributes ra) {
+    public String adminDashboard(@RequestParam(value = "jobPage", defaultValue = "0") int jobPage,
+                                 Model model, HttpSession session, RedirectAttributes ra) {
         // Verify authentication
         if (session.getAttribute("userId") == null) {
             ra.addFlashAttribute("error", "Session expired. Please login again.");
@@ -51,14 +54,7 @@ public class AdminDashboardController {
             return "redirect:/candidate/login?error=Unauthorized";
         }
 
-        // FIX: the shared "dashboard" template (also used by HrDashboardController) reads
-        // jobs / departments / recentApplications / interviewsScheduled / inOnboarding /
-        // offerCount via th:each and th:text. AdminDashboardController never populated these,
-        // so Thymeleaf hit a null collection mid-render and the response (already streaming
-        // as chunked HTTP) died with a "chunked encoding" error in the browser console instead
-        // of showing a clean error page. Loading the same base dashboard data HrDashboardController
-        // already uses fixes that, without touching any other feature.
-        dashboardService.loadDashboardData(model);
+        dashboardService.loadDashboardData(model, jobPage);
 
         // Load comprehensive system statistics (super-admin-only widgets)
         loadSuperAdminStats(model);

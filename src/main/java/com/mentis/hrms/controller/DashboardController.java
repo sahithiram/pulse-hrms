@@ -29,8 +29,8 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.mentis.hrms.model.Department;
-import com.mentis.hrms.model.Designation;
+
+
 @Controller
 @RequestMapping("/dashboard")
 public class DashboardController implements WebMvcConfigurer {
@@ -627,91 +627,9 @@ public class DashboardController implements WebMvcConfigurer {
     }
     /* ========== DEPARTMENT API ENDPOINTS ========== */
 
-    @GetMapping("/api/departments/all")
-    @ResponseBody
-    public ResponseEntity<?> getAllDepartmentsApi() {
-        try {
-            logger.info("Fetching all departments with designations");
-            List<Department> departments = departmentService.getAllDepartmentsWithDesignations();
 
-            // Transform to a simpler format for frontend
-            List<Map<String, Object>> deptList = departments.stream().map(dept -> {
-                Map<String, Object> deptMap = new HashMap<>();
-                deptMap.put("id", dept.getId());
-                deptMap.put("name", dept.getName());
 
-                // Get designations
-                List<Map<String, Object>> desList = dept.getDesignations().stream().map(des -> {
-                    Map<String, Object> desMap = new HashMap<>();
-                    desMap.put("id", des.getId());
-                    desMap.put("name", des.getName());
-                    return desMap;
-                }).collect(Collectors.toList());
 
-                deptMap.put("designations", desList);
-                return deptMap;
-            }).collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "departments", deptList
-            ));
-        } catch (Exception e) {
-            logger.error("Error fetching departments: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "error", e.getMessage()
-            ));
-        }
-    }
-
-    @PostMapping("/api/departments/create")
-    @ResponseBody
-    public ResponseEntity<?> createDepartmentApi(@RequestBody Map<String, Object> request) {
-        try {
-            String departmentName = (String) request.get("departmentName");
-            String designationName = (String) request.get("designationName");
-
-            if (departmentName == null || departmentName.trim().isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of(
-                        "success", false,
-                        "error", "Department name is required"
-                ));
-            }
-
-            Department existingDept = departmentService.getDepartmentByName(departmentName);
-            if (existingDept != null) {
-                return ResponseEntity.ok(Map.of(
-                        "success", false,
-                        "error", "Department already exists"
-                ));
-            }
-
-            Department department = new Department();
-            department.setName(departmentName);
-
-            if (designationName != null && !designationName.trim().isEmpty()) {
-                Designation designation = new Designation();
-                designation.setName(designationName);
-                designation.setDepartment(department);
-                department.getDesignations().add(designation);
-            }
-
-            Department savedDept = departmentService.saveDepartment(department);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "Department created successfully",
-                    "department", savedDept
-            ));
-        } catch (Exception e) {
-            logger.error("Error creating department: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "error", e.getMessage()
-            ));
-        }
-    }
     // ===== EMPLOYEE ANNOUNCEMENTS TAB =====
     @GetMapping("/announcements")
     public String employeeAnnouncementsPage(Model model, HttpSession session, RedirectAttributes ra) {
@@ -770,41 +688,6 @@ public class DashboardController implements WebMvcConfigurer {
 
         logger.info("✅ Announcements history page loaded for SUPER_ADMIN");
         return "announcementshistory";
-    }
-
-    @GetMapping("/api/departments/{departmentName}/designations")
-    @ResponseBody
-    public ResponseEntity<?> getDesignationsByDepartmentApi(@PathVariable String departmentName) {
-        try {
-            logger.info("Fetching designations for department: {}", departmentName);
-
-            Department department = departmentService.getDepartmentByNameWithDesignations(departmentName);
-
-            if (department == null) {
-                return ResponseEntity.ok(Map.of(
-                        "success", false,
-                        "error", "Department not found: " + departmentName
-                ));
-            }
-
-            List<Map<String, Object>> designations = department.getDesignations().stream().map(des -> {
-                Map<String, Object> desMap = new HashMap<>();
-                desMap.put("id", des.getId());
-                desMap.put("name", des.getName());
-                return desMap;
-            }).collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "designations", designations
-            ));
-        } catch (Exception e) {
-            logger.error("Error fetching designations: {}", e.getMessage(), e);
-            return ResponseEntity.ok(Map.of(
-                    "success", false,
-                    "error", e.getMessage()
-            ));
-        }
     }
 
 

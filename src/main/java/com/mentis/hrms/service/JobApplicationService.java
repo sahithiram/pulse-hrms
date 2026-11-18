@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -431,20 +432,35 @@ public class JobApplicationService {
     ========================================================= */
     public long getApplicationsCountByStatus(String status) {
         try {
-            long count = repo.countByStatus(status);
-
-            // If count is 0, try case-insensitive count
-            if (count == 0 && status != null) {
-                List<JobApplication> allApplications = repo.findAll();
-                count = allApplications.stream()
-                        .filter(app -> app.getStatus() != null && app.getStatus().equalsIgnoreCase(status))
-                        .count();
+            if (status == null || status.trim().isEmpty()) {
+                return 0;
             }
-
+            long count = repo.countByStatusIgnoreCase(status.trim());
             logger.info("Applications count for status '{}': {}", status, count);
             return count;
         } catch (Exception e) {
             logger.error("Error counting applications by status: {}", e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    public long getApplicationsCountBetween(LocalDateTime start, LocalDateTime end) {
+        try {
+            return repo.countByApplicationDateBetween(start, end);
+        } catch (Exception e) {
+            logger.error("Error counting applications between {} and {}: {}", start, end, e.getMessage(), e);
+            return 0;
+        }
+    }
+
+    public long getApplicationsCountByStatusBetween(String status, LocalDateTime start, LocalDateTime end) {
+        try {
+            if (status == null || status.trim().isEmpty()) {
+                return 0;
+            }
+            return repo.countByStatusIgnoreCaseAndApplicationDateBetween(status.trim(), start, end);
+        } catch (Exception e) {
+            logger.error("Error counting '{}' applications between {} and {}: {}", status, start, end, e.getMessage(), e);
             return 0;
         }
     }

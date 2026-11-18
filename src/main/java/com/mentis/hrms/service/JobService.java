@@ -10,6 +10,14 @@ import java.util.List;
 import java.util.List;
 import java.util.Optional;        // ← ADD THIS IMPORT
 import java.util.ArrayList;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import java.time.LocalDate;
+
+
 @Service
 public class JobService {
 
@@ -29,6 +37,89 @@ public class JobService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to retrieve jobs: " + e.getMessage(), e);
         }
+
+    }
+
+        public Page<Job> getFilteredJobsPage(String search, String status, String department, int page, int size) {
+            try {
+                int safePage = Math.max(0, page);
+                int safeSize = (size <= 0 || size > 100) ? 5 : size;
+
+                String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+                String cleanDept = (department != null && !department.trim().isEmpty() && !"all".equalsIgnoreCase(department))
+                        ? department.trim() : null;
+
+                Boolean activeFilter = null;
+                if ("active".equalsIgnoreCase(status)) {
+                    activeFilter = Boolean.TRUE;
+                } else if ("inactive".equalsIgnoreCase(status)) {
+                    activeFilter = Boolean.FALSE;
+                }
+
+                Pageable pageable = PageRequest.of(
+                        safePage,
+                        safeSize,
+                        Sort.by(Sort.Order.desc("postedDate"), Sort.Order.desc("id"))
+                );
+
+                Page<Job> result = jobRepository.findFilteredJobs(cleanSearch, activeFilter, cleanDept, pageable);
+
+                if (result.getTotalPages() > 0 && safePage >= result.getTotalPages()) {
+                    Pageable lastPage = PageRequest.of(
+                            result.getTotalPages() - 1,
+                            safeSize,
+                            Sort.by(Sort.Order.desc("postedDate"), Sort.Order.desc("id"))
+                    );
+                    result = jobRepository.findFilteredJobs(cleanSearch, activeFilter, cleanDept, lastPage);
+                }
+
+                result.getContent().forEach(this::initializeJobLists);
+                return result;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to retrieve paginated jobs: " + e.getMessage(), e);
+            }
+        }
+
+        public Page<Job> getActiveJobsPage(int page, int size) {
+            try {
+                int safePage = Math.max(0, page);
+                int safeSize = (size <= 0 || size > 50) ? 5 : size;
+
+                Pageable pageable = PageRequest.of(
+                        safePage,
+                        safeSize,
+                        Sort.by(Sort.Order.desc("postedDate"), Sort.Order.desc("id"))
+                );
+
+                LocalDate today = LocalDate.now();
+                Page<Job> result = jobRepository.findActiveJobsForOverview(today, pageable);
+
+                if (result.getTotalPages() > 0 && safePage >= result.getTotalPages()) {
+                    Pageable lastPage = PageRequest.of(
+                            result.getTotalPages() - 1,
+                            safeSize,
+                            Sort.by(Sort.Order.desc("postedDate"), Sort.Order.desc("id"))
+                    );
+                    result = jobRepository.findActiveJobsForOverview(today, lastPage);
+                }
+
+                result.getContent().forEach(this::initializeJobLists);
+                return result;
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to retrieve active jobs page: " + e.getMessage(), e);
+            }
+        }
+
+        public List<String> getDistinctDepartments() {
+            return jobRepository.findDistinctDepartments();
+        }
+
+        public long getTotalJobsCount() {
+            return jobRepository.count();
+        }
+
+    public long getActiveJobsCount() {
+        return jobRepository.countActiveJobs();
     }
 
     public List<Job> getActiveJobs() {

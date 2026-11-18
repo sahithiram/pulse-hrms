@@ -16,7 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.mentis.hrms.pm.security.PmAccessService;
-
+import com.mentis.hrms.pm.dto.request.BulkAddTeamMembersRequest;
+import com.mentis.hrms.pm.dto.response.BulkAddResult;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,7 +77,22 @@ public class TeamController {
         Set<Long> scope = access.canSeeAllTeams(userId) ? null : access.myTeamIds(userId);
         return ResponseEntity.ok(ApiResponse.ok(teamService.listForDropdown(scope)));
     }
-
+    /** Add several people in one request. Each person is checked on their own; failures are reported, not fatal. */
+    @PostMapping("/{id}/members/bulk")
+    public ResponseEntity<ApiResponse<BulkAddResult>> addMembers(
+            @PathVariable Long id,
+            @Valid @RequestBody BulkAddTeamMembersRequest req,
+            @CurrentUserId Long userId) {
+        access.requireCanManageTeamMembers(userId, id);
+        BulkAddResult out = new BulkAddResult();
+        for (Long empId : new java.util.LinkedHashSet<>(req.getEmployeeIds())) {
+            if (empId == null) continue;
+            out.attempt(empId, () -> teamService.addMember(id, AddTeamMemberRequest.builder()
+                    .employeeId(empId).roleInTeam(req.getRoleInTeam()).allocationPct(req.getAllocationPct())
+                    .build(), userId));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(out.summary(), out));
+    }
     // ✅ PHASE 4 (F-P7 + F-P15): delete now goes through canManageTeam (SA + creator), not requireAdmin.
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable Long id, @CurrentUserId Long userId) {

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpSession;
 import java.security.Principal;
 import java.time.LocalDate;
 import java.util.Map;
@@ -23,20 +24,32 @@ public class LeaveBalanceController {
     /**
      * Get leave balance for current logged-in employee
      */
+    /**
+     * Balance for current logged-in employee — CURRENT MONTH.
+     * Falls back to session.userId because this app uses session auth, not Spring Security.
+     */
     @GetMapping("/my-balance")
-    public ResponseEntity<?> getMyLeaveBalance(Principal principal) {
+    public ResponseEntity<?> getMyLeaveBalance(Principal principal, HttpSession session) {
         try {
-            // Get employee ID from principal (you may need to adjust based on your auth system)
-            String employeeId = principal != null ? principal.getName() : null;
-
-            if (employeeId == null || employeeId.isEmpty()) {
+            String employeeId = null;
+            if (principal != null && principal.getName() != null
+                    && !"anonymousUser".equals(principal.getName())) {
+                employeeId = principal.getName();
+            }
+            if (employeeId == null) {
+                Object s = session.getAttribute("userId");
+                if (s != null) employeeId = s.toString();
+            }
+            if (employeeId == null || employeeId.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
                         "error", "Employee not authenticated"
                 ));
             }
 
-            Map<String, Object> result = leaveBalanceService.getEmployeeLeaveBalance(employeeId);
+            LocalDate now = LocalDate.now();
+            Map<String, Object> result = leaveBalanceService.getMonthlyBalance(
+                    employeeId, now.getYear(), now.getMonthValue());
             return ResponseEntity.ok(result);
 
         } catch (Exception e) {
@@ -51,16 +64,39 @@ public class LeaveBalanceController {
     /**
      * Get leave balance for a specific employee (HR use) - UPDATED
      */
+    /**
+     * Monthly balance — used by the Employee Dashboard calendar card.
+     * GET /api/leave-balance/employee/EMP001/monthly?year=2026&month=11
+     */
+    @GetMapping("/employee/{employeeId}/monthly")
+    public ResponseEntity<?> getMonthlyBalance(
+            @PathVariable String employeeId,
+            @RequestParam(value = "year",  required = false) Integer year,
+            @RequestParam(value = "month", required = false) Integer month) {
+        try {
+            Map<String, Object> result =
+                    leaveBalanceService.getMonthlyBalance(employeeId, year, month);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            logger.error("Error fetching monthly balance for {}: {}", employeeId, e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
+    /**
+     * Backward-compatible non-monthly path — returns CURRENT month's data.
+     */
     @GetMapping("/employee/{employeeId}")
     public ResponseEntity<?> getEmployeeLeaveBalance(@PathVariable String employeeId) {
         try {
-            Map<String, Object> result = leaveBalanceService.getEmployeeLeaveBalance(employeeId);
-
-            // Log the response for debugging
+            LocalDate now = LocalDate.now();
+            Map<String, Object> result = leaveBalanceService.getMonthlyBalance(
+                    employeeId, now.getYear(), now.getMonthValue());
             logger.info("Leave balance response for {}: {}", employeeId, result);
-
             return ResponseEntity.ok(result);
-
         } catch (Exception e) {
             logger.error("Error fetching leave balance for {}: {}", employeeId, e.getMessage());
             return ResponseEntity.status(500).body(Map.of(

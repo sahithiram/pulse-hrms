@@ -9,8 +9,8 @@ import com.mentis.hrms.pm.exception.ResourceNotFoundException;
 import com.mentis.hrms.pm.mapper.TaskMapper;
 import com.mentis.hrms.pm.realtime.PmEventPublisher;
 import com.mentis.hrms.pm.repository.*;
-import com.mentis.hrms.pm.service.TaskService;
-import com.mentis.hrms.pm.service.WorkloadService;
+import com.mentis.hrms.pm.service.*;
+import com.mentis.hrms.pm.service.ProjectTeamService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -25,9 +25,7 @@ import java.util.stream.Collectors;
 import com.mentis.hrms.pm.security.PmCurrentUserHolder;
 import com.mentis.hrms.pm.security.PmUserProvider;
 import com.mentis.hrms.pm.enums.ProjectRole;
-import com.mentis.hrms.pm.service.TaskWorkflow;
 import com.mentis.hrms.pm.security.PmAccessService;
-import com.mentis.hrms.pm.service.TaskEventNotifier;
 import com.mentis.hrms.model.Employee;
 @Service
 @RequiredArgsConstructor
@@ -35,6 +33,7 @@ import com.mentis.hrms.model.Employee;
 public class TaskServiceImpl implements TaskService {
 
     private final TaskRepository taskRepository;
+    private final ProjectTeamService projectTeamService;
     private final TaskAssignmentRepository taskAssignmentRepository;
     private final TaskCommentRepository taskCommentRepository;
     private final TaskChecklistItemRepository checklistItemRepository;
@@ -49,7 +48,6 @@ public class TaskServiceImpl implements TaskService {
     private final TaskAttachmentRepository taskAttachmentRepository;
     private final PmEventPublisher publisher;
     private final NotificationEmitter notificationEmitter;
-
     private final SprintRepository sprintRepository;
     private final MilestoneRepository milestoneRepository;
     private final ApprovalRequestRepository approvalRequestRepository;
@@ -490,12 +488,14 @@ public class TaskServiceImpl implements TaskService {
 
         List<String> warnings = new ArrayList<>();
 
-        Long checkTeamId = task.getTeamId() != null ? task.getTeamId()
-                : projectRepository.findById(task.getProjectId()).map(Project::getTeamId).orElse(null);
+        java.util.Collection<Long> checkTeamIds = task.getTeamId() != null
+                ? java.util.List.of(task.getTeamId())
+                : projectTeamService.teamIdsOf(task.getProjectId());
         for (Long empId : added) {
             try {
-                boolean inTeam = checkTeamId != null && teamMemberRepository.findByTeamId(checkTeamId).stream()
-                        .anyMatch(tm -> tm.getEmployeeId().equals(empId));
+                boolean inTeam = checkTeamIds.stream().anyMatch(tid ->
+                        teamMemberRepository.findByTeamId(tid).stream()
+                                .anyMatch(tm -> tm.getEmployeeId().equals(empId)));
                 var pm = projectMemberRepository.findByProjectIdAndEmployeeId(task.getProjectId(), empId);
                 if (!inTeam && pm.isEmpty())
                     warnings.add(resolveEmployeeName(empId)
@@ -742,9 +742,10 @@ public class TaskServiceImpl implements TaskService {
                 .forEach(pm -> memberIds.add(pm.getEmployeeId()));
         projectRepository.findById(projectId).ifPresent(p -> {
             if (p.getOwnerId() != null) memberIds.add(p.getOwnerId());
-            if (p.getTeamId() != null)
-                teamMemberRepository.findByTeamId(p.getTeamId())
+            for (Long tid : projectTeamService.teamIdsOf(p.getId())) {
+                teamMemberRepository.findByTeamId(tid)
                         .forEach(tm -> memberIds.add(tm.getEmployeeId()));
+            }
         });
 
         List<String> matched = new ArrayList<>();

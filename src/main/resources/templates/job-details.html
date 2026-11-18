@@ -128,7 +128,7 @@
                 </div>
                 <div class="info-item">
                     <label><i class="fas fa-money-bill-wave me-2"></i>Salary Range:</label>
-                    <span th:text="${job.salaryRange}">—</span>
+                    <span th:text="${job.salaryRange != null and !#strings.isEmpty(job.salaryRange) ? job.formattedSalaryRange : '—'}">—</span>
                 </div>
                 <div class="info-item">
                     <label><i class="fas fa-calendar-alt me-2"></i>Posted Date:</label>
@@ -147,12 +147,6 @@
             </div>
 
             <div class="actions">
-                <!-- Edit Button (Requires 'edit' access on 'job_postings') -->
-                <a th:if="${@permissionChecker.hasAccess(isSuperAdmin, 'recruitment', 'job_postings', 'edit')}"
-                   th:href="@{/dashboard/hr/job-form(id=${job.id})}" class="btn-custom btn-edit">
-                    <i class="fas fa-edit me-2"></i> Edit Job
-                </a>
-
                 <a th:href="@{/dashboard/hr}" class="btn-custom btn-back">
                     <i class="fas fa-arrow-left me-2"></i> Back to Dashboard
                 </a>

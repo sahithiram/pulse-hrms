@@ -186,7 +186,7 @@ public class Employee {
     // BENEFITS
     // ============================================
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "employee_benefits", joinColumns = @JoinColumn(name = "employee_id"))
     @Column(name = "benefit")
     private List<String> benefits = new ArrayList<>();
@@ -481,6 +481,14 @@ public class Employee {
 
     public List<String> getBenefits() { return benefits; }
     public void setBenefits(List<String> benefits) { this.benefits = benefits; }
+
+    @Transient
+    public String getBenefitsAsText() {
+        if (benefits == null || benefits.isEmpty()) {
+            return "";
+        }
+        return String.join("||", benefits);
+    }
 
     // ============================================
     // GETTERS AND SETTERS - PROFILE

@@ -25,6 +25,11 @@ import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import com.mentis.hrms.pm.dto.request.ReopenProjectRequest;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+
 @RestController
 @RequestMapping("/api/pm/projects")
 @RequiredArgsConstructor
@@ -80,7 +85,14 @@ public class ProjectController {
         // STEP 1b: budget fields are hidden unless the viewer can administer this project
         return ResponseEntity.ok(ApiResponse.ok(masker.mask(projectService.getProject(id), userId)));
     }
-
+    /** Pre-fills the "Project code" box when the create form opens. */
+    @GetMapping("/next-code")
+    public ResponseEntity<ApiResponse<Map<String, String>>> nextCode(@CurrentUserId Long userId) {
+        access.requireCanCreateProject(userId);
+        Map<String, String> out = new LinkedHashMap<>();
+        out.put("code", projectService.nextProjectCode());
+        return ResponseEntity.ok(ApiResponse.ok(out));
+    }
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<ProjectSummaryResponse>>> list(
             @RequestParam(required = false) String search,

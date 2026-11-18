@@ -338,10 +338,13 @@
             <div class="pm-page-head">
                 <div>
                     <h1 class="pm-page-title" id="pageTitle">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Add New Employee</span>
+                        <i class="fas" th:classappend="${isEditMode == true ? 'fa-user-edit' : 'fa-user-plus'}"></i>
+                        <span th:text="${isEditMode == true ? 'Edit Employee' : 'Add New Employee'}">Add New Employee</span>
                     </h1>
-                    <div class="pm-page-sub">Complete the multi-step form to create a new employee</div>
+                    <div class="pm-page-sub"
+                         th:text="${isEditMode == true ? 'Update employee details and save changes' : 'Complete the multi-step form to create a new employee'}">
+                        Complete the multi-step form to create a new employee
+                    </div>
                 </div>
             </div>
 
@@ -364,7 +367,9 @@
                 </div>
             </div>
 
-            <form id="employeeForm" method="POST" action="/dashboard/hr/save-employee" enctype="multipart/form-data">
+        <form id="employeeForm" method="POST"
+              th:action="${isEditMode == true ? '/dashboard/hr/update-employee' : '/dashboard/hr/save-employee'}"
+              enctype="multipart/form-data">
                 <input type="hidden" name="originalEmployeeId"
                        th:value="${employee != null ? employee.employeeId : ''}"
                        id="originalEmployeeId">
@@ -390,6 +395,7 @@
                             <div class="form-group">
                                 <label for="employeeId" class="form-label required">Employee ID</label>
                                 <input type="text" class="form-control" id="employeeId" name="employeeId"
+                                       th:value="${employee != null ? employee.employeeId : ''}"
                                        placeholder="Auto-generated" readonly>
                             </div>
                             <div class="form-group">
@@ -410,15 +416,16 @@
                                 <label for="workLocation" class="form-label required">Work Location</label>
                                 <select class="form-select" id="workLocation" name="workLocation" required>
                                     <option value="">Select Location</option>
-                                    <option>Hyderabad Office</option>
-                                    <option>Bangalore Office</option>
-                                    <option>Singapore Office</option>
-                                    <option>London Office</option>
-                                    <option>New York Office</option>
-                                    <option>San Francisco Office</option>
-                                    <option>Remote</option>
-                                    <option>Hybrid</option>
+                                    <option value="Hyderabad Office" th:selected="${employee != null and employee.workLocation == 'Hyderabad Office'}">Hyderabad Office</option>
+                                    <option value="Bangalore Office" th:selected="${employee != null and employee.workLocation == 'Bangalore Office'}">Bangalore Office</option>
+                                    <option value="Singapore Office" th:selected="${employee != null and employee.workLocation == 'Singapore Office'}">Singapore Office</option>
+                                    <option value="London Office" th:selected="${employee != null and employee.workLocation == 'London Office'}">London Office</option>
+                                    <option value="New York Office" th:selected="${employee != null and employee.workLocation == 'New York Office'}">New York Office</option>
+                                    <option value="San Francisco Office" th:selected="${employee != null and employee.workLocation == 'San Francisco Office'}">San Francisco Office</option>
+                                    <option value="Remote" th:selected="${employee != null and employee.workLocation == 'Remote'}">Remote</option>
+                                    <option value="Hybrid" th:selected="${employee != null and employee.workLocation == 'Hybrid'}">Hybrid</option>
                                 </select>
+                                <input type="hidden" id="prefillWorkLocation" th:value="${employee != null ? employee.workLocation : prefillWorkLocation}">
                             </div>
                             <div class="form-group">
                                 <label for="employmentType" class="form-label required">Employment Type</label>
@@ -434,33 +441,35 @@
                                 <label for="workType" class="form-label required">Work Type</label>
                                 <select class="form-select" id="workType" name="workType" required>
                                     <option value="">Select Work Type</option>
-                                    <option>Remote</option>
-                                    <option>On-site</option>
-                                    <option>Hybrid</option>
+                                    <option value="Remote" th:selected="${employee != null and employee.workType == 'Remote'}">Remote</option>
+                                    <option value="On-site" th:selected="${employee != null and employee.workType == 'On-site'}">On-site</option>
+                                    <option value="Hybrid" th:selected="${employee != null and employee.workType == 'Hybrid'}">Hybrid</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="startDate" class="form-label required">Start Date</label>
-                                <input type="date" class="form-control" id="startDate" name="startDate" required>
+                                <input type="date" class="form-control" id="startDate" name="startDate"
+                                       th:value="${employee != null and employee.startDate != null ? employee.startDate : ''}" required>
                             </div>
                             <div class="form-group">
                                 <label for="manager" class="form-label required">Reporting Manager</label>
                                 <select class="form-select" id="manager" name="manager" required>
                                     <option value="">Select Manager</option>
-                                    <option>Vijay</option>
-                                    <option>Sireesha</option>
-                                    <option>Rohini</option>
-                                    <option>David Wilson</option>
+                                    <option value="Vijay" th:selected="${employee != null and employee.manager == 'Vijay'}">Vijay</option>
+                                    <option value="Sireesha" th:selected="${employee != null and employee.manager == 'Sireesha'}">Sireesha</option>
+                                    <option value="Rohini" th:selected="${employee != null and employee.manager == 'Rohini'}">Rohini</option>
+                                    <option value="David Wilson" th:selected="${employee != null and employee.manager == 'David Wilson'}">David Wilson</option>
                                 </select>
+                                <input type="hidden" id="prefillManager" th:value="${employee != null ? employee.manager : prefillManager}">
                             </div>
                             <div class="form-group" th:if="${isSuperAdmin}">
                                 <label for="userRole" class="form-label">System Role</label>
                                 <select class="form-select" id="userRole" name="userRole">
-                                    <option value="EMPLOYEE" selected>EMPLOYEE</option>
-                                    <option value="PM">PM</option>
-                                    <option value="HR">HR</option>
-                                    <option value="HR_MANAGER">HR_MANAGER</option>
-                                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                                    <option value="EMPLOYEE" th:selected="${employee == null or employee.role == null or employee.role.name() == 'EMPLOYEE'}">EMPLOYEE</option>
+                                    <option value="PM" th:selected="${employee != null and employee.role != null and employee.role.name() == 'PM'}">PM</option>
+                                    <option value="HR" th:selected="${employee != null and employee.role != null and employee.role.name() == 'HR'}">HR</option>
+                                    <option value="HR_MANAGER" th:selected="${employee != null and employee.role != null and employee.role.name() == 'HR_MANAGER'}">HR_MANAGER</option>
+                                    <option value="SUPER_ADMIN" th:selected="${employee != null and employee.role != null and employee.role.name() == 'SUPER_ADMIN'}">SUPER_ADMIN</option>
                                 </select>
                                 <small style="color: var(--dark-text-secondary); font-size: .75rem;">
                                     Only a Super Admin may assign a non-EMPLOYEE role.
@@ -491,27 +500,30 @@
                                 <div class="form-group">
                                     <label for="currency" class="form-label required">Currency</label>
                                     <select class="form-select" id="currency" name="currency" required>
-                                        <option value="USD">USD ($)</option>
-                                        <option value="EUR">EUR (€)</option>
-                                        <option value="GBP">GBP (£)</option>
-                                        <option value="INR">INR (₹)</option>
+                                        <option value="USD" th:selected="${employee != null and employee.currency == 'USD'}">USD ($)</option>
+                                        <option value="EUR" th:selected="${employee != null and employee.currency == 'EUR'}">EUR (€)</option>
+                                        <option value="GBP" th:selected="${employee != null and employee.currency == 'GBP'}">GBP (£)</option>
+                                        <option value="INR" th:selected="${employee != null and employee.currency == 'INR'}">INR (₹)</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label for="salary" class="form-label required">Annual Salary</label>
                                     <input type="number" class="form-control" id="salary" name="salary"
-                                           placeholder="50000" min="0" step="1000" required>
+                                           th:value="${employee != null ? employee.salary : ''}"
+                                           placeholder="50000" min="0" step="any" required>
                                 </div>
                                 <div class="form-group">
                                     <label for="payFrequency" class="form-label required">Pay Frequency</label>
                                     <select class="form-select" id="payFrequency" name="payFrequency" required>
                                         <option value="">Select Frequency</option>
-                                        <option>Monthly</option>
-                                        <option>Bi-weekly</option>
-                                        <option>Weekly</option>
+                                        <option value="Monthly" th:selected="${employee != null and employee.payFrequency == 'Monthly'}">Monthly</option>
+                                        <option value="Bi-weekly" th:selected="${employee != null and employee.payFrequency == 'Bi-weekly'}">Bi-weekly</option>
+                                        <option value="Weekly" th:selected="${employee != null and employee.payFrequency == 'Weekly'}">Weekly</option>
                                     </select>
                                 </div>
                             </div>
+                            <input type="hidden" id="savedBenefitsVal"
+                                   th:value="${employee != null ? employee.benefitsAsText : ''}">
                             <div class="form-group full-width">
                                 <label class="form-label">Department Benefits</label>
                                 <div id="benefitsContainer" class="benefits-grid">
@@ -549,7 +561,12 @@
                                        class="profile-file-input">
                                 <div class="avatar-shell" id="profileAvatarContainer">
                                     <div class="avatar-inner" id="profileAvatar">
-                                        <span class="avatar-placeholder"><i class="fas fa-user"></i></span>
+                                        <img th:if="${employee != null and employee.profilePicture != null and !employee.profilePicture.isEmpty()}"
+                                             th:src="@{'/uploads/' + ${employee.profilePicture}}"
+                                             alt="Profile"
+                                             style="width:100%; height:100%; object-fit:cover;">
+                                        <span th:unless="${employee != null and employee.profilePicture != null and !employee.profilePicture.isEmpty()}"
+                                              class="avatar-placeholder"><i class="fas fa-user"></i></span>
                                     </div>
                                     <div class="avatar-actions">
                                         <button type="button" class="avatar-delete-btn" id="removePhotoBtn" style="display:none;">
@@ -566,44 +583,52 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="firstName" class="form-label required">First Name</label>
-                                <input type="text" class="form-control" id="firstName" name="firstName" required readonly>
+                                <input type="text" class="form-control" id="firstName" name="firstName"
+                                       th:value="${employee != null ? employee.firstName : ''}" required readonly>
                             </div>
                             <div class="form-group">
                                 <label for="lastNamePersonal" class="form-label required">Last Name</label>
-                                <input type="text" class="form-control" id="lastNamePersonal" name="lastName" required readonly>
+                                <input type="text" class="form-control" id="lastNamePersonal" name="lastName"
+                                       th:value="${employee != null ? employee.lastName : ''}" required readonly>
                             </div>
                             <div class="form-group">
                                 <label for="personalEmail" class="form-label required">Personal Email</label>
                                 <input type="email" class="form-control" id="personalEmail" name="personalEmail"
+                                       th:value="${employee != null ? (employee.personalEmail != null and !employee.personalEmail.isEmpty() ? employee.personalEmail : employee.email) : ''}"
                                        placeholder="Enter personal email" required>
                             </div>
                             <div class="form-group">
                                 <label class="form-label required">Phone Number</label>
                                 <input type="tel" id="phone" name="phone" class="form-control"
+                                       th:value="${employee != null ? employee.phone : ''}"
                                        placeholder="Enter phone number">
                             </div>
                             <div class="form-group">
                                 <label for="dateOfBirth" class="form-label">Date of Birth</label>
-                                <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth">
+                                <input type="date" class="form-control" id="dateOfBirth" name="dateOfBirth"
+                                       th:value="${employee != null and employee.dateOfBirth != null ? employee.dateOfBirth : ''}">
                             </div>
                             <div class="form-group">
                                 <label for="gender" class="form-label">Gender</label>
                                 <select class="form-select" id="gender" name="gender">
                                     <option value="">Select Gender</option>
-                                    <option>Male</option>
-                                    <option>Female</option>
-                                    <option>Other</option>
-                                    <option>Prefer not to say</option>
+                                    <option value="Male" th:selected="${employee != null and employee.gender == 'Male'}">Male</option>
+                                    <option value="Female" th:selected="${employee != null and employee.gender == 'Female'}">Female</option>
+                                    <option value="Other" th:selected="${employee != null and employee.gender == 'Other'}">Other</option>
+                                    <option value="Prefer not to say" th:selected="${employee != null and employee.gender == 'Prefer not to say'}">Prefer not to say</option>
                                 </select>
                             </div>
                             <div class="form-group">
                                 <label for="emergencyContact" class="form-label">Emergency Contact</label>
                                 <input type="text" class="form-control" id="emergencyContact"
-                                       name="emergencyContact" placeholder="Name & phone">
+                                       name="emergencyContact"
+                                       th:value="${employee != null ? employee.emergencyContact : ''}"
+                                       placeholder="Name & phone">
                             </div>
                             <div class="form-group">
                                 <label for="linkedin" class="form-label">LinkedIn Profile</label>
                                 <input type="url" class="form-control" id="linkedin" name="linkedin"
+                                       th:value="${employee != null ? employee.linkedin : ''}"
                                        placeholder="https://linkedin.com/in/username">
                             </div>
                         </div>
@@ -613,11 +638,15 @@
                                 <i class="fas fa-home"></i> Permanent Address
                             </h4>
                         </div>
+                        <input type="hidden" id="savedPermanentCountry" th:value="${employee != null ? employee.permanentCountry : ''}">
+                        <input type="hidden" id="savedPermanentState" th:value="${employee != null ? employee.permanentState : ''}">
+                        <input type="hidden" id="savedPermanentCity" th:value="${employee != null ? employee.permanentCity : ''}">
                         <div class="form-grid">
                             <div class="form-group full-width">
                                 <label for="permanentAddress" class="form-label">Address</label>
                                 <textarea class="form-textarea" id="permanentAddress" name="permanentAddress"
-                                          rows="3" placeholder="Enter permanent address"></textarea>
+                                          rows="3" placeholder="Enter permanent address"
+                                          th:text="${employee != null ? employee.permanentAddress : ''}"></textarea>
                             </div>
                             <div class="form-group">
                                 <label for="permanentCountry" class="form-label">Country</label>
@@ -640,33 +669,42 @@
                             <div class="form-group">
                                 <label for="permanentZipCode" class="form-label">ZIP Code</label>
                                 <input type="text" class="form-control" id="permanentZipCode"
-                                       name="permanentZipCode" placeholder="Enter ZIP">
+                                       name="permanentZipCode"
+                                       th:value="${employee != null ? employee.permanentZipCode : ''}"
+                                       placeholder="Enter ZIP">
                             </div>
                         </div>
 
                         <div class="address-type-selection">
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="addressType" id="sameAddress" value="same" checked>
+                                <input class="form-check-input" type="radio" name="addressType" id="sameAddress" value="same"
+                                       th:checked="${employee == null or employee.addressType == null or employee.addressType != 'different'}">
                                 <label class="form-check-label" for="sameAddress">
                                     <i class="fas fa-home"></i> Same as Permanent Address
                                 </label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input" type="radio" name="addressType" id="differentAddress" value="different">
+                                <input class="form-check-input" type="radio" name="addressType" id="differentAddress" value="different"
+                                       th:checked="${employee != null and employee.addressType == 'different'}">
                                 <label class="form-check-label" for="differentAddress">
                                     <i class="fas fa-building"></i> Different Residential Address
                                 </label>
                             </div>
                         </div>
 
-                        <div id="residentialAddressSection">
+                        <input type="hidden" id="savedResidentialCountry" th:value="${employee != null ? employee.residentialCountry : ''}">
+                        <input type="hidden" id="savedResidentialState" th:value="${employee != null ? employee.residentialState : ''}">
+                        <input type="hidden" id="savedResidentialCity" th:value="${employee != null ? employee.residentialCity : ''}">
+                        <div id="residentialAddressSection"
+                             th:classappend="${employee != null and employee.addressType == 'different'} ? 'show' : ''">
                             <h4 class="residential-fields-title">
                                 <i class="fas fa-building"></i> Residential Address
                             </h4>
                             <div class="form-group full-width">
                                 <label for="residentialAddress" class="form-label">Address</label>
                                 <textarea class="form-textarea" id="residentialAddress" name="residentialAddress"
-                                          rows="3" placeholder="Enter residential address"></textarea>
+                                          rows="3" placeholder="Enter residential address"
+                                          th:text="${employee != null ? employee.residentialAddress : ''}"></textarea>
                             </div>
                             <div class="form-group">
                                 <label for="residentialCountry" class="form-label">Country</label>
@@ -689,7 +727,9 @@
                             <div class="form-group">
                                 <label for="residentialZipCode" class="form-label">ZIP Code</label>
                                 <input type="text" class="form-control" id="residentialZipCode"
-                                       name="residentialZipCode" placeholder="Enter ZIP">
+                                       name="residentialZipCode"
+                                       th:value="${employee != null ? employee.residentialZipCode : ''}"
+                                       placeholder="Enter ZIP">
                             </div>
                         </div>
 
@@ -724,7 +764,8 @@
                                     <i class="fas fa-times"></i> Cancel
                                 </button>
                                 <button type="submit" class="pm-btn pm-btn-success" id="submitEmployeeBtn">
-                                    <i class="fas fa-check"></i> Save Employee
+                                    <i class="fas fa-check"></i>
+                                    <span th:text="${isEditMode == true ? 'Update Employee' : 'Save Employee'}">Save Employee</span>
                                 </button>
                             </div>
                         </div>
@@ -786,19 +827,94 @@
         ]
     };
 
-    var currencySymbols = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+  var currencySymbols = { USD: '$', EUR: '€', GBP: '£', INR: '₹' };
+    var fallbackCountries = [
+        { id: '101', name: 'India' },
+        { id: '231', name: 'United States' },
+        { id: '230', name: 'United Kingdom' },
+        { id: '38',  name: 'Canada' },
+        { id: '13',  name: 'Australia' },
+        { id: '229', name: 'United Arab Emirates' },
+        { id: '192', name: 'Singapore' },
+        { id: '82',  name: 'Germany' }
+    ];
+    var fallbackStates = [
+        { id: '2',   name: 'Andhra Pradesh', country_id: '101' },
+        { id: '36',  name: 'Telangana',      country_id: '101' },
+        { id: '17',  name: 'Karnataka',      country_id: '101' },
+        { id: '31',  name: 'Tamil Nadu',     country_id: '101' },
+        { id: '22',  name: 'Maharashtra',    country_id: '101' },
+        { id: '10',  name: 'Delhi',          country_id: '101' },
+        { id: '12',  name: 'Gujarat',        country_id: '101' },
+        { id: '19',  name: 'Kerala',         country_id: '101' },
+        { id: '38',  name: 'Uttar Pradesh',  country_id: '101' },
+        { id: '41',  name: 'West Bengal',    country_id: '101' },
+        { id: '1416', name: 'California',    country_id: '231' },
+        { id: '1452', name: 'New York',      country_id: '231' },
+        { id: '1456', name: 'Texas',         country_id: '231' },
+        { id: '2336', name: 'England',       country_id: '230' },
+        { id: '871',  name: 'Ontario',       country_id: '38' },
+        { id: '250',  name: 'New South Wales', country_id: '13' },
+        { id: '3392', name: 'Dubai',         country_id: '229' },
+        { id: '4651', name: 'Singapore',     country_id: '192' }
+    ];
+    var fallbackCities = [
+        { id: '1',  name: 'Guntur',        state_id: '2' },
+        { id: '2',  name: 'Bapatla',       state_id: '2' },
+        { id: '3',  name: 'Vijayawada',    state_id: '2' },
+        { id: '4',  name: 'Visakhapatnam', state_id: '2' },
+        { id: '5',  name: 'Tirupati',      state_id: '2' },
+        { id: '6',  name: 'Hyderabad',     state_id: '36' },
+        { id: '7',  name: 'Warangal',      state_id: '36' },
+        { id: '8',  name: 'Bengaluru',     state_id: '17' },
+        { id: '9',  name: 'Mysuru',        state_id: '17' },
+        { id: '10', name: 'Chennai',       state_id: '31' },
+        { id: '11', name: 'Coimbatore',    state_id: '31' },
+        { id: '12', name: 'Mumbai',        state_id: '22' },
+        { id: '13', name: 'Pune',          state_id: '22' },
+        { id: '14', name: 'New Delhi',     state_id: '10' },
+        { id: '15', name: 'Ahmedabad',     state_id: '12' },
+        { id: '16', name: 'Kochi',         state_id: '19' },
+        { id: '17', name: 'Kolkata',       state_id: '41' },
+        { id: '18', name: 'San Francisco', state_id: '1416' },
+        { id: '19', name: 'New York City', state_id: '1452' },
+        { id: '20', name: 'Austin',        state_id: '1456' },
+        { id: '21', name: 'London',        state_id: '2336' },
+        { id: '22', name: 'Toronto',       state_id: '871' },
+        { id: '23', name: 'Sydney',        state_id: '250' },
+        { id: '24', name: 'Dubai',         state_id: '3392' },
+        { id: '25', name: 'Singapore',     state_id: '4651' }
+    ];
+
     var locationManager = {
-        countries: [], states: [], cities: [],
+        countries: [], states: [], cities: [], _promise: null,
         async init() {
             if (this.countries.length) return;
-            try {
-                var r = await Promise.all([
-                    fetch('/data/countries.json').then(function (x) { return x.json(); }),
-                    fetch('/data/states.json').then(function (x) { return x.json(); }),
-                    fetch('/data/cities.json').then(function (x) { return x.json(); })
-                ]);
-                this.countries = r[0]; this.states = r[1]; this.cities = r[2];
-            } catch (e) { console.error('Location data load failed', e); }
+            if (this._promise) return this._promise;
+            var self = this;
+            var safeFetch = function (url) {
+                return fetch(url)
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (d) {
+                        if (Array.isArray(d)) return d;
+                        if (d && Array.isArray(d.countries)) return d.countries;
+                        if (d && Array.isArray(d.states)) return d.states;
+                        if (d && Array.isArray(d.cities)) return d.cities;
+                        if (d && Array.isArray(d.data)) return d.data;
+                        return [];
+                    })
+                    .catch(function (e) { console.warn('Location file failed: ' + url, e); return []; });
+            };
+            this._promise = Promise.all([
+                safeFetch('/data/countries.json'),
+                safeFetch('/data/states.json'),
+                safeFetch('/data/cities.json')
+            ]).then(function (r) {
+                self.countries = (r[0] && r[0].length) ? r[0] : fallbackCountries;
+                self.states    = (r[1] && r[1].length) ? r[1] : fallbackStates;
+                self.cities    = (r[2] && r[2].length) ? r[2] : fallbackCities;
+            });
+            return this._promise;
         },
         getStates: function (id) { return this.states.filter(function (s) { return String(s.country_id) === String(id); }); },
         getCities: function (id) { return this.cities.filter(function (c) { return String(c.state_id) === String(id); }); }
@@ -813,12 +929,26 @@
         });
     }
 
+   function selectMatchingOption(selectEl, savedVal) {
+        if (!selectEl || !savedVal) return false;
+        var target = String(savedVal).trim().toLowerCase();
+        for (var i = 0; i < selectEl.options.length; i++) {
+            var opt = selectEl.options[i];
+            if (String(opt.value).trim().toLowerCase() === target || opt.textContent.trim().toLowerCase() === target) {
+                opt.selected = true;
+                return true;
+            }
+        }
+        return false;
+    }
+
     async function initAddress(type) {
         await locationManager.init();
         var country = document.getElementById(type + 'Country');
         var state = document.getElementById(type + 'State');
         var city = document.getElementById(type + 'City');
         fillSelect(country, locationManager.countries, 'id', 'name', 'Select Country');
+
         country.onchange = function () {
             state.disabled = true; city.disabled = true;
             fillSelect(state, locationManager.getStates(country.value), 'id', 'name', 'Select State');
@@ -828,6 +958,37 @@
             fillSelect(city, locationManager.getCities(state.value), 'id', 'name', 'Select City');
             city.disabled = false;
         };
+
+        var capType = type.charAt(0).toUpperCase() + type.slice(1);
+        var savedCountry = (document.getElementById('saved' + capType + 'Country') || {}).value || '';
+        var savedState = (document.getElementById('saved' + capType + 'State') || {}).value || '';
+        var savedCity = (document.getElementById('saved' + capType + 'City') || {}).value || '';
+
+       if (savedCountry) {
+            if (!selectMatchingOption(country, savedCountry)) {
+                var cOpt = document.createElement('option');
+                cOpt.value = savedCountry; cOpt.textContent = savedCountry; cOpt.selected = true;
+                country.appendChild(cOpt);
+            }
+            fillSelect(state, locationManager.getStates(country.value), 'id', 'name', 'Select State');
+            state.disabled = false;
+
+            if (savedState) {
+                if (!selectMatchingOption(state, savedState)) {
+                    var sOpt = document.createElement('option');
+                    sOpt.value = savedState; sOpt.textContent = savedState; sOpt.selected = true;
+                    state.appendChild(sOpt);
+                }
+                fillSelect(city, locationManager.getCities(state.value), 'id', 'name', 'Select City');
+                city.disabled = false;
+
+                if (savedCity && !selectMatchingOption(city, savedCity)) {
+                    var ciOpt = document.createElement('option');
+                    ciOpt.value = savedCity; ciOpt.textContent = savedCity; ciOpt.selected = true;
+                    city.appendChild(ciOpt);
+                }
+            }
+        }
     }
 
     function initPhoneInput() {
@@ -845,10 +1006,9 @@
         });
     }
 
-    function generateEmployeeId() {
-        var isEdit = /*[[${isEditMode != null ? isEditMode : false}]]*/ false;
-        var existing = /*[[${employee != null ? employee.employeeId : ''}]]*/ '';
-        if (isEdit && existing) {
+  function generateEmployeeId() {
+        var existing = (document.getElementById('originalEmployeeId') || {}).value || '';
+        if (existing) {
             document.getElementById('employeeId').value = existing;
             return;
         }
@@ -876,24 +1036,44 @@
             var dept = document.getElementById('department');
             var prefill = (document.getElementById('prefillDepartment') || {}).value || '';
             dept.innerHTML = '<option value="">Select Department</option>';
+          var deptMatched = false;
             departmentsData.forEach(function (d) {
                 var o = document.createElement('option');
                 o.value = d.name; o.textContent = d.name;
                 o.dataset.id = d.id || '';
-                if (d.name === prefill) o.selected = true;
+                if (d.name === prefill) {
+                    o.selected = true;
+                    deptMatched = true;
+                }
                 dept.appendChild(o);
             });
+            if (prefill && !deptMatched) {
+                var extraDept = document.createElement('option');
+                extraDept.value = prefill; extraDept.textContent = prefill; extraDept.selected = true;
+                dept.appendChild(extraDept);
+            }
             if (prefill) dept.dispatchEvent(new Event('change'));
         } catch (e) { console.error('Department load failed', e); }
     }
 
     function populateDesignationDropdown(list, sel) {
+        var prefillDesig = (document.getElementById('prefillDesignation') || {}).value || '';
         sel.innerHTML = '<option value="">Select Designation</option>';
+        var matched = false;
         list.forEach(function (d) {
             var o = document.createElement('option');
             o.value = d.name; o.textContent = d.name;
+            if (prefillDesig && d.name === prefillDesig) {
+                o.selected = true;
+                matched = true;
+            }
             sel.appendChild(o);
         });
+        if (prefillDesig && !matched) {
+            var extra = document.createElement('option');
+            extra.value = prefillDesig; extra.textContent = prefillDesig; extra.selected = true;
+            sel.appendChild(extra);
+        }
         sel.disabled = false;
     }
 
@@ -925,17 +1105,28 @@
         populateDesignationDropdown(list, sel);
     }
 
-    function updateBenefits(dept) {
+  function updateBenefits(dept) {
         var box = document.getElementById('benefitsContainer');
-        if (!dept || !departmentBenefits[dept]) {
+        var isEdit = !!((document.getElementById('originalEmployeeId') || {}).value);
+        var savedRaw = (document.getElementById('savedBenefitsVal') || {}).value || '';
+        var savedList = savedRaw ? savedRaw.split('||').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+
+        var list = (dept && departmentBenefits[dept]) ? departmentBenefits[dept] : [];
+        if (!list.length && isEdit && savedList.length) {
+            list = savedList.map(function (name, idx) {
+                return { id: 'saved_ben_' + idx, name: name, default: true };
+            });
+        }
+        if (!list.length) {
             box.innerHTML = '<div style="text-align:center; color:var(--dark-text-secondary); padding:1rem;"><i class="fas fa-info-circle"></i><p>Select a department to view benefits</p></div>';
             return;
         }
-        box.innerHTML = departmentBenefits[dept].map(function (b) {
+        box.innerHTML = list.map(function (b) {
+            var checked = isEdit ? (savedList.indexOf(b.name) !== -1) : !!b.default;
             return '<div class="benefit-toggle-item">' +
                 '<div style="display:flex; align-items:center; gap:.65rem;">' +
                 '<div class="toggle-switch">' +
-                '<input type="checkbox" class="benefit-toggle" id="' + b.id + '" name="benefits" value="' + b.name + '"' + (b.default ? ' checked' : '') + '>' +
+                '<input type="checkbox" class="benefit-toggle" id="' + b.id + '" name="benefits" value="' + b.name + '"' + (checked ? ' checked' : '') + '>' +
                 '<label for="' + b.id + '" class="toggle-label"></label>' +
                 '</div>' +
                 '<label for="' + b.id + '" style="flex:1; margin:0; color:var(--dark-text);">' + b.name + '</label>' +
@@ -1129,13 +1320,17 @@
         var sym = currencySymbols[currency] || currency;
         var salaryHtml = salary ? '<span class="currency-display"><span>' + sym + '</span>' + Number(salary).toLocaleString() + '</span>' : '';
         var sdFmt = sd ? new Date(sd).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
-
-        var benefits = [];
+var benefits = [];
         document.querySelectorAll('.benefit-toggle:checked').forEach(function (c) { benefits.push(c.value); });
+
+        var avatarImg = document.querySelector('#profileAvatar img');
+        var avatarHtml = (avatarImg && avatarImg.src)
+            ? '<img src="' + avatarImg.src + '" alt="Profile" class="profile-preview-small">'
+            : '<div style="width:56px; height:56px; border-radius:50%; background:var(--dark-bg); border:2px solid var(--dark-border); display:flex; align-items:center; justify-content:center; color:var(--dark-text-secondary); font-size:1.4rem;"><i class="fas fa-user"></i></div>';
 
         box.innerHTML =
             '<div class="overview-header">' +
-            '<div style="width:56px; height:56px; border-radius:50%; background:var(--dark-bg); border:2px solid var(--dark-border); display:flex; align-items:center; justify-content:center; color:var(--dark-text-secondary); font-size:1.4rem;"><i class="fas fa-user"></i></div>' +
+            avatarHtml +
             '<div><div class="overview-name">' + fn + ' ' + ln + '</div><div class="overview-id">Employee ID: ' + empId + '</div></div>' +
             '</div>' +
             row('Employee ID', empId) + row('Email', email) + row('Phone', phone) +
@@ -1197,10 +1392,30 @@
         if (lj && lj.value && lp) lp.value = lj.value;
     }
 
+   function ensureSelectValue(selectId, prefillInputId) {
+        var sel = document.getElementById(selectId);
+        var val = (document.getElementById(prefillInputId) || {}).value || '';
+        if (!sel || !val) return;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === val || sel.options[i].textContent.trim() === val) {
+                sel.options[i].selected = true;
+                return;
+            }
+        }
+        var opt = document.createElement('option');
+        opt.value = val; opt.textContent = val; opt.selected = true;
+        sel.appendChild(opt);
+    }
+
     function initForm() {
         generateEmployeeId();
-        var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
-        document.getElementById('startDate').valueAsDate = tomorrow;
+        var startDateEl = document.getElementById('startDate');
+        if (startDateEl && !startDateEl.value) {
+            var tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+            startDateEl.valueAsDate = tomorrow;
+        }
+        ensureSelectValue('workLocation', 'prefillWorkLocation');
+        ensureSelectValue('manager', 'prefillManager');
         var today = new Date();
         var maxDOB = new Date(today); maxDOB.setFullYear(maxDOB.getFullYear() - 18);
         document.getElementById('dateOfBirth').max = maxDOB.toISOString().split('T')[0];

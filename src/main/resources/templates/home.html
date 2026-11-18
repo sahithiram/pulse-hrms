@@ -854,8 +854,8 @@
                     </div>
                     <div class="job-description">
                         <p th:text="${#strings.abbreviate(job.description, 150)}">Job description</p>
-                        <div th:if="${job.salaryRange != null}">
-                            <p><strong>Salary:</strong> <span th:text="${job.salaryRange}">Salary Range</span></p>
+                        <div th:if="${job.salaryRange != null and !#strings.isEmpty(job.salaryRange)}">
+                            <p><strong>Salary:</strong> <span th:text="${job.formattedSalaryRange}">Salary Range</span></p>
                         </div>
                     </div>
                     <div class="job-footer">

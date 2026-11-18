@@ -16,7 +16,7 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     boolean existsByName(String name);
 
-    @Query("SELECT d FROM Department d LEFT JOIN FETCH d.designations")
+    @Query("SELECT DISTINCT d FROM Department d LEFT JOIN FETCH d.designations ORDER BY d.name")
     List<Department> findAllWithDesignations();
 
     @Query("SELECT d FROM Department d LEFT JOIN FETCH d.designations WHERE d.name = :name")

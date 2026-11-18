@@ -58,6 +58,8 @@ import java.util.Optional;
 import com.mentis.hrms.model.OnboardingDocument;
 import com.mentis.hrms.service.DocumentService;
 import org.springframework.beans.factory.annotation.Value;
+
+import org.springframework.data.domain.Page;
 @Controller
 @RequestMapping("/dashboard/hr")
 public class HrDashboardController {
@@ -82,15 +84,20 @@ public class HrDashboardController {
 
     @Autowired
     private DepartmentService departmentService;
+
+    @Autowired
+    private com.mentis.hrms.service.LocationService locationService;
     @Autowired
     private DocumentService documentService;
     /* ========== HR DASHBOARD HOME ========== */
+    /* ========== HR DASHBOARD HOME ========== */
     @GetMapping
-    public String hrDashboard(Model model, HttpSession session, RedirectAttributes ra) {
+    public String hrDashboard(@RequestParam(value = "jobPage", defaultValue = "0") int jobPage,
+                              Model model, HttpSession session, RedirectAttributes ra) {
         if (!isAuthorized(session, ra)) {
             return "redirect:/candidate/login";
         }
-        dashboardService.loadDashboardData(model);  // This now includes recentApplications
+        dashboardService.loadDashboardData(model, jobPage);
         addHRAttributes(model, session);
 
         return "dashboard";
@@ -488,7 +495,6 @@ public class HrDashboardController {
         }
     }
 
-    /* ========== JOB MANAGEMENT ========== */
     @GetMapping("/job-form")
     public String hrJobForm(Model model, HttpSession session, RedirectAttributes ra,
                             @RequestParam(value = "id", required = false) Long jobId) {
@@ -499,8 +505,15 @@ public class HrDashboardController {
         }
 
         try {
-            // CRITICAL: Always pass departments and HR attributes so the page doesn't crash
+            // CRITICAL: Always pass departments, locations and HR attributes so the page doesn't crash
             model.addAttribute("departments", departmentService.getAllDepartments());
+            model.addAttribute("locations", locationService.getAllLocations());
+
+            // Ensure the permission checker doesn't crash
+            String role = (String) session.getAttribute("userRole");
+            model.addAttribute("isSuperAdmin", "SUPER_ADMIN".equals(role));
+            model.addAttribute("isHR", true);
+
             addHRAttributes(model, session);
 
             // If editing, load the existing job
@@ -513,7 +526,7 @@ public class HrDashboardController {
             return "job-form";
 
         } catch (Exception e) {
-            logger.error("Error loading job form: {}", e.getMessage());
+            logger.error("Error loading job form: {}", e.getMessage(), e);
             ra.addFlashAttribute("error", "Failed to load job form.");
             return "redirect:/dashboard/hr";
         }
@@ -547,9 +560,6 @@ public class HrDashboardController {
     }
 // Add this method to HrDashboardController.java
 
-    /**
-     * DELETE JOB - POST Method (Matches form submission)
-     */
     @PostMapping("/deleteJob/{id}")
     public String deleteJob(@PathVariable Long id, RedirectAttributes ra, HttpSession session) {
         logger.info("=== DELETE JOB REQUESTED: {} ===", id);
@@ -565,7 +575,7 @@ public class HrDashboardController {
             if (job == null) {
                 logger.warn("Job not found with ID: {}", id);
                 ra.addFlashAttribute("error", "Job not found with ID: " + id);
-                return "redirect:/dashboard/hr";
+                return "redirect:/dashboard/hr/jobs";
             }
 
             // Delete the job
@@ -580,7 +590,7 @@ public class HrDashboardController {
             ra.addFlashAttribute("error", "Failed to delete job: " + e.getMessage());
         }
 
-        return "redirect:/dashboard/hr";
+        return "redirect:/dashboard/hr/jobs";
     }
     /* ========== OFFER MANAGEMENT ========== */
     @GetMapping("/offer-candidates")
@@ -1188,13 +1198,13 @@ public class HrDashboardController {
             return "employees";
         }
     }
-    /* ========== POST JOB WITH SUCCESS POPUP ========== */
     @PostMapping("/post-job")
     public String postJobWithPopup(@RequestParam("title") String title,
                                    @RequestParam("department") String department,
                                    @RequestParam("jobType") String jobType,
                                    @RequestParam("location") String location,
                                    @RequestParam("experienceLevel") String experienceLevel,
+                                   @RequestParam(value = "currency", required = false) String currency,
                                    @RequestParam(value = "salaryRange", required = false) String salaryRange,
                                    @RequestParam("description") String description,
                                    @RequestParam("requirements") String requirements,
@@ -1220,6 +1230,7 @@ public class HrDashboardController {
             job.setJobType(jobType);
             job.setLocation(location);
             job.setExperienceLevel(experienceLevel);
+            job.setCurrency(currency);
             job.setSalaryRange(salaryRange);
             job.setDescription(description);
             job.setRequirements(requirements);
@@ -1243,10 +1254,9 @@ public class HrDashboardController {
             ra.addFlashAttribute("jobTitle", savedJob.getTitle());
             ra.addFlashAttribute("jobId", savedJob.getId());
             ra.addFlashAttribute("success", "Job posted successfully!");
-
             logger.info("✅ Job posted successfully with ID: {}", savedJob.getId());
 
-            return "redirect:/dashboard/hr/job-form";
+            return "redirect:/dashboard/hr/jobs";
 
         } catch (Exception e) {
             logger.error("Error posting job: {}", e.getMessage(), e);
@@ -1436,39 +1446,42 @@ public class HrDashboardController {
     }
     /* ========== ALL JOB POSTINGS (VIEW ALL) ========== */
     @GetMapping("/jobs")
-    public String hrAllJobs(Model model, HttpSession session, RedirectAttributes ra) {
-        logger.info("=== HR ALL JOBS PAGE REQUESTED ===");
+    public String hrAllJobs(
+            @RequestParam(value = "page", defaultValue = "0") int page,
+            @RequestParam(value = "size", defaultValue = "5") int size,
+            @RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "status", defaultValue = "all") String status,
+            @RequestParam(value = "department", defaultValue = "all") String department,
+            Model model, HttpSession session, RedirectAttributes ra) {
+        logger.info("=== HR ALL JOBS PAGE REQUESTED (page={}, size={}) ===", page, size);
 
         if (!isAuthorized(session, ra)) {
             return "redirect:/candidate/login";
         }
 
         try {
-            List<Job> allJobs = jobService.getAllJobs();
+            Page<Job> jobsPage = jobService.getFilteredJobsPage(search, status, department, page, size);
 
-            // Newest posted first
-            allJobs.sort((a, b) -> {
-                if (a.getPostedDate() == null && b.getPostedDate() == null) return 0;
-                if (a.getPostedDate() == null) return 1;
-                if (b.getPostedDate() == null) return -1;
-                return b.getPostedDate().compareTo(a.getPostedDate());
-            });
+            long totalJobs = jobService.getTotalJobsCount();
+            long activeCount = jobService.getActiveJobsCount();
+            long inactiveCount = totalJobs - activeCount;
 
-            long activeCount = allJobs.stream()
-                    .filter(j -> Boolean.TRUE.equals(j.getActive()))
-                    .count();
-            long inactiveCount = allJobs.size() - activeCount;
+            model.addAttribute("allJobs", jobsPage.getContent());
+            model.addAttribute("jobsPage", jobsPage);
+            model.addAttribute("departments", jobService.getDistinctDepartments());
+            model.addAttribute("searchTerm", search != null ? search : "");
+            model.addAttribute("selectedStatus", status != null ? status : "all");
+            model.addAttribute("selectedDepartment", department != null ? department : "all");
 
-            model.addAttribute("allJobs", allJobs);
-            model.addAttribute("totalJobs", allJobs.size());
+            model.addAttribute("totalJobs", totalJobs);
             model.addAttribute("activeJobsCount", activeCount);
             model.addAttribute("inactiveJobsCount", inactiveCount);
             model.addAttribute("offerCount", offerService.getOfferCount());
 
             addHRAttributes(model, session);
 
-            logger.info("✅ Loaded {} job postings ({} active, {} inactive)",
-                    allJobs.size(), activeCount, inactiveCount);
+            logger.info("✅ Loaded page {} of {} ({} total job postings)",
+                    jobsPage.getNumber() + 1, jobsPage.getTotalPages(), totalJobs);
             return "all-jobs";
 
         } catch (Exception e) {
@@ -2034,17 +2047,21 @@ public class HrDashboardController {
         logger.info("=== API: FETCHING LIVE RECRUITMENT STATS ===");
         Map<String, Object> response = new HashMap<>();
 
+        String userId = (String) session.getAttribute("userId");
+        String role = (String) session.getAttribute("userRole");
+        if (userId == null || (!"HR".equals(role) && !"HR_MANAGER".equals(role) && !"SUPER_ADMIN".equals(role))) {
+            response.put("success", false);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
         try {
-            // 1. Fetch all applications
-            List<JobApplication> allApps = applicationService.getAllApplications();
-
-            // 2. Calculate Pipeline (Funnel) Stats
-            long totalApplications = allApps.size();
-            long screenings = allApps.stream().filter(a -> "In Review".equalsIgnoreCase(a.getStatus())).count();
-            long interviews = allApps.stream().filter(a -> "Interview".equalsIgnoreCase(a.getStatus()) || "Interviewed".equalsIgnoreCase(a.getStatus())).count();
-            long finalRound = allApps.stream().filter(a -> "Selected".equalsIgnoreCase(a.getStatus()) || "On Hold".equalsIgnoreCase(a.getStatus())).count();
-
-            // For Offers, we can use actual generated offers count, or "Hired" status
+            // 1. Pipeline (Funnel) Stats from database COUNT queries
+            long totalApplications = applicationService.getTotalApplicationsCount();
+            long screenings = applicationService.getApplicationsCountByStatus("In Review");
+            long interviews = applicationService.getApplicationsCountByStatus("Interview")
+                    + applicationService.getApplicationsCountByStatus("Interviewed");
+            long finalRound = applicationService.getApplicationsCountByStatus("Selected")
+                    + applicationService.getApplicationsCountByStatus("On Hold");
             long offers = offerService.getOfferCount();
 
             Map<String, Long> pipeline = new HashMap<>();
@@ -2054,35 +2071,23 @@ public class HrDashboardController {
             pipeline.put("finalRound", finalRound);
             pipeline.put("offers", offers);
 
-            // 3. Calculate Monthly Chart Stats (Last 6 Months)
+            // 2. Monthly Chart Stats (Last 6 Months including current month)
             List<String> labels = new ArrayList<>();
             List<Long> monthlyApplications = new ArrayList<>();
             List<Long> monthlyHired = new ArrayList<>();
 
-            LocalDate now = LocalDate.now();
-            java.time.format.DateTimeFormatter monthFormatter = java.time.format.DateTimeFormatter.ofPattern("MMM");
+            java.time.YearMonth currentMonth = java.time.YearMonth.now();
+            java.time.format.DateTimeFormatter monthFormatter =
+                    java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
 
             for (int i = 5; i >= 0; i--) {
-                LocalDate targetMonth = now.minusMonths(i);
+                java.time.YearMonth targetMonth = currentMonth.minusMonths(i);
+                LocalDateTime start = targetMonth.atDay(1).atStartOfDay();
+                LocalDateTime end = targetMonth.atEndOfMonth().atTime(23, 59, 59, 999999999);
+
                 labels.add(targetMonth.format(monthFormatter));
-
-                // Count apps for this specific month/year
-                long monthApps = allApps.stream()
-                        .filter(a -> a.getApplicationDate() != null &&
-                                a.getApplicationDate().getMonth() == targetMonth.getMonth() &&
-                                a.getApplicationDate().getYear() == targetMonth.getYear())
-                        .count();
-
-                // Count hired for this specific month/year
-                long monthHired = allApps.stream()
-                        .filter(a -> "Hired".equalsIgnoreCase(a.getStatus()) &&
-                                a.getApplicationDate() != null &&
-                                a.getApplicationDate().getMonth() == targetMonth.getMonth() &&
-                                a.getApplicationDate().getYear() == targetMonth.getYear())
-                        .count();
-
-                monthlyApplications.add(monthApps);
-                monthlyHired.add(monthHired);
+                monthlyApplications.add(applicationService.getApplicationsCountBetween(start, end));
+                monthlyHired.add(applicationService.getApplicationsCountByStatusBetween("Hired", start, end));
             }
 
             Map<String, Object> chartData = new HashMap<>();
@@ -2097,7 +2102,7 @@ public class HrDashboardController {
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
-            logger.error("Error fetching live recruitment stats: {}", e.getMessage());
+            logger.error("Error fetching live recruitment stats: {}", e.getMessage(), e);
             response.put("success", false);
             return ResponseEntity.ok(response);
         }

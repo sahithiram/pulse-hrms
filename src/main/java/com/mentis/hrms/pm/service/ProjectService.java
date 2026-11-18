@@ -15,6 +15,9 @@ public interface ProjectService {
 
     ProjectResponse createProject(CreateProjectRequest req, Long currentUserId);
 
+    /** The next free project code (PRJ-1001, PRJ-1002, ...). Used to pre-fill the create form. */
+    String nextProjectCode();
+
     ProjectResponse updateProject(Long id, UpdateProjectRequest req, Long currentUserId);
     ProjectResponse rebaseline(Long id, String reason, Long currentUserId);
     ProjectResponse getProject(Long id);

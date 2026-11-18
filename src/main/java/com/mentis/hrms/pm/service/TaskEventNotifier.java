@@ -46,6 +46,8 @@ import java.util.Set;
 public class TaskEventNotifier {
 
     private final ProjectRepository projectRepository;
+
+    private final ProjectTeamService projectTeamService;
     private final ProjectMemberRepository projectMemberRepository;
     private final TeamRepository teamRepository;
     private final TaskAssignmentRepository taskAssignmentRepository;
@@ -158,7 +160,7 @@ public class TaskEventNotifier {
                 if (r.equals("MANAGER") || r.equals("LEAD")) out.add(m.getEmployeeId());
             }
         }
-        addTeamLead(out, p != null ? p.getTeamId() : null);
+        if (projectId != null) projectTeamService.teamIdsOf(projectId).forEach(tid -> addTeamLead(out, tid));
         addTeamLead(out, taskTeamId);
         return out;
     }

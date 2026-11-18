@@ -39,13 +39,25 @@ public class DepartmentService {
     /**
      * Get all departments with their designations
      */
+    /**
+     * Get all departments with their designations.
+     * IMPORTANT: does NOT silently fall back to findAll() because open-in-view is false,
+     * and lazy proxies would fail Jackson serialization downstream.
+     */
     public List<Department> getAllDepartmentsWithDesignations() {
-        try {
-            return departmentRepository.findAllWithDesignations();
-        } catch (Exception e) {
-            logger.error("Error fetching departments with designations: {}", e.getMessage());
-            return departmentRepository.findAll(); // fallback
+        List<Department> departments = departmentRepository.findAllWithDesignations();
+        // Force-initialize the collection inside this method so Jackson has a fully loaded graph.
+        // (Even though the query is LEFT JOIN FETCH, this guard prevents surprises.)
+        for (Department d : departments) {
+            if (d.getDesignations() != null) {
+                d.getDesignations().size(); // triggers init if proxy
+                // Detach the back-reference so Jackson does not try to re-serialize it.
+                for (Designation des : d.getDesignations()) {
+                    des.setDepartment(null);
+                }
+            }
         }
+        return departments;
     }
 
     /**

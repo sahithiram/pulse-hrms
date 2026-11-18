@@ -8,6 +8,7 @@ import lombok.*;
 import java.util.List;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -33,10 +34,12 @@ public class CreateProjectRequest {
 
     @NotNull
     private ProjectPriority priority;
-
+    private Long teamId;
+    /** All teams of the project (multi-select). When empty, teamId (if given) is used. */
+    private List<Long> teamIds;
     private LocalDate startDate;
     private LocalDate endDate;
-    private Long teamId;
+
     private BigDecimal budgetTotal;
     /** Optional. Null means the default (ON). */
     private Boolean reviewRequired;

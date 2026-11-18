@@ -26,12 +26,14 @@ public class Job {
 
     @ManyToOne
     @JoinColumn(name = "location_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore // <-- ADD THIS LINE
     private Location jobLocation; // New relationship field
 
     @Transient
     private String locationDisplayName;
     private String experienceLevel;
     private String salaryRange;
+    private String currency;
     private LocalDate applicationDeadline;
 
     @Column(length = 2000)
@@ -163,6 +165,58 @@ public class Job {
         this.salaryRange = salaryRange;
     }
 
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public String getCurrencySymbol() {
+        if (currency == null || currency.trim().isEmpty()) {
+            return "";
+        }
+        return switch (currency.trim().toUpperCase()) {
+            case "USD", "$" -> "$";
+            case "EUR", "€" -> "€";
+            case "GBP", "£" -> "£";
+            case "INR", "₹" -> "₹";
+            case "AED", "د.إ" -> "د.إ ";
+            default -> currency.trim() + " ";
+        };
+    }
+
+    public String getFormattedSalaryRange() {
+        if (salaryRange == null || salaryRange.trim().isEmpty()) {
+            return "";
+        }
+        String trimmed = salaryRange.trim();
+        String symbol = getCurrencySymbol();
+
+        // If existing job has NULL/empty currency, return salaryRange safely as stored
+        if (symbol.isEmpty()) {
+            return trimmed;
+        }
+
+        // Avoid double-prefixing if salaryRange already starts with a symbol
+        if (trimmed.startsWith("$") || trimmed.startsWith("€")
+                || trimmed.startsWith("£") || trimmed.startsWith("₹")
+                || trimmed.startsWith("د.إ")) {
+            return trimmed;
+        }
+
+        if (trimmed.contains("-")) {
+            String[] parts = trimmed.split("-", 2);
+            String min = parts[0].trim();
+            String max = parts[1].trim();
+            if (!min.isEmpty() && !max.isEmpty()) {
+                return symbol + min + " - " + symbol + max;
+            }
+        }
+        return symbol + trimmed;
+    }
+
     public LocalDate getApplicationDeadline() {
         return applicationDeadline;
     }
@@ -242,6 +296,13 @@ public class Job {
             responsibilities = new ArrayList<>();
         }
         return responsibilities;
+    }
+
+    public String getResponsibilitiesAsText() {
+        if (responsibilities == null || responsibilities.isEmpty()) {
+            return "";
+        }
+        return String.join("\n", responsibilities);
     }
 
     public void setResponsibilities(List<String> responsibilities) {

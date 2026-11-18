@@ -17,6 +17,7 @@ public class FromTemplateRequest {
     private Long departmentId;
     private Long clientId;
     private Long teamId;
+    private List<Long> teamIds;        // several teams; the first is the primary team
     private LocalDate startDate;       // anchor for every offset; default: today
     private LocalDate endDate;         // default: the last milestone/sprint of the template
     private ProjectPriority priority;  // default: template.project.priority, else MEDIUM

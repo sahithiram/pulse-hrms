@@ -29,4 +29,8 @@ public class UpdateProjectRequest {
     private Long teamId;
     private Boolean reviewRequired;
     private String lessonsLearned;
+
+
+    /** When present (even empty) it replaces the project's teams. Absent = leave the teams alone. */
+    private java.util.List<Long> teamIds;
 }

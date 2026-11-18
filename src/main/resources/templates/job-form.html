@@ -208,12 +208,13 @@
                                     <label for="jobType" class="form-label required">Job Type</label>
                                     <select class="form-select" id="jobType" name="jobType" required>
                                         <option value="">Select Job Type</option>
-                                        <option value="Full-time" th:selected="${job != null && job.jobType == 'Full-time'}">Full-time</option>
-                                        <option value="Part-time" th:selected="${job != null && job.jobType == 'Part-time'}">Part-time</option>
-                                        <option value="Contract" th:selected="${job != null && job.jobType == 'Contract'}">Contract</option>
-                                        <option value="Internship" th:selected="${job != null && job.jobType == 'Internship'}">Internship</option>
-                                        <option value="Remote" th:selected="${job != null && job.jobType == 'Remote'}">Remote</option>
-                                        <option value="Hybrid" th:selected="${job != null && job.jobType == 'Hybrid'}">Hybrid</option>
+                                        <option value="Full-time" th:selected="${job?.jobType == 'Full-time'}">Full-time</option>
+                                        <option value="Part-time" th:selected="${job?.jobType == 'Part-time'}">Part-time</option>
+                                        <option value="Contract" th:selected="${job?.jobType == 'Contract'}">Contract</option>
+                                        <option value="Internship" th:selected="${job?.jobType == 'Internship'}">Internship</option>
+                                        <option value="Remote" th:selected="${job?.jobType == 'Remote'}">Remote</option>
+                                        <option value="Hybrid" th:selected="${job?.jobType == 'Hybrid'}">Hybrid</option>
+
                                     </select>
                                     <div class="error-message" id="jobTypeError" style="display: none;">
                                         <i class="fas fa-exclamation-circle"></i> Please select a job type
@@ -227,7 +228,7 @@
                                         <option th:each="loc : ${locations}"
                                                 th:value="${loc.id}"
                                                 th:text="${loc.name + ' (' + (loc.city != null ? loc.city : '') + (loc.city != null && loc.country != null ? ', ' : '') + (loc.country != null ? loc.country : '') + ')'}"
-                                                th:selected="${job != null and job.jobLocation != null and job.jobLocation.id == loc.id}">
+                                                th:selected="${job?.jobLocation?.id == loc.id}">
                                         </option>
                                     </select>
                                     <div class="error-message" id="locationError" style="display: none;">
@@ -242,11 +243,11 @@
                                             <label for="experienceLevel" class="form-label required">Experience Level</label>
                                             <select class="form-select" id="experienceLevel" name="experienceLevel" required>
                                                 <option value="">Select Experience</option>
-                                                <option value="Entry Level" th:selected="${job != null && job.experienceLevel == 'Entry Level'}">Entry Level (0-2 years)</option>
-                                                <option value="Mid Level" th:selected="${job != null && job.experienceLevel == 'Mid Level'}">Mid Level (3-5 years)</option>
-                                                <option value="Senior Level" th:selected="${job != null && job.experienceLevel == 'Senior Level'}">Senior Level (6-9 years)</option>
-                                                <option value="Lead" th:selected="${job != null && job.experienceLevel == 'Lead'}">Lead (10+ years)</option>
-                                                <option value="Manager" th:selected="${job != null && job.experienceLevel == 'Manager'}">Manager</option>
+                                                <option value="Entry Level" th:selected="${job?.experienceLevel == 'Entry Level'}">Entry Level (0-2 years)</option>
+                                                <option value="Mid Level" th:selected="${job?.experienceLevel == 'Mid Level'}">Mid Level (3-5 years)</option>
+                                                <option value="Senior Level" th:selected="${job?.experienceLevel == 'Senior Level'}">Senior Level (6-9 years)</option>
+                                                <option value="Lead" th:selected="${job?.experienceLevel == 'Lead'}">Lead (10+ years)</option>
+                                                <option value="Manager" th:selected="${job?.experienceLevel == 'Manager'}">Manager</option>
                                             </select>
                                             <div class="error-message" id="experienceError" style="display: none;">
                                                 <i class="fas fa-exclamation-circle"></i> Please select experience level
@@ -256,11 +257,11 @@
                                             <label for="currency" class="form-label required">Currency</label>
                                             <select class="form-select" id="currency" name="currency" required>
                                                 <option value="">Select</option>
-                                                <option value="USD" th:selected="${job != null && job.currency == 'USD'}">USD ($)</option>
-                                                <option value="EUR" th:selected="${job != null && job.currency == 'EUR'}">EUR (€)</option>
-                                                <option value="GBP" th:selected="${job != null && job.currency == 'GBP'}">GBP (£)</option>
-                                                <option value="INR" th:selected="${job != null && job.currency == 'INR'}">INR (₹)</option>
-                                                <option value="AED" th:selected="${job != null && job.currency == 'AED'}">AED (د.إ)</option>
+                                                <option value="USD" th:selected="${job?.currency == 'USD'}">USD ($)</option>
+                                                <option value="EUR" th:selected="${job?.currency == 'EUR'}">EUR (€)</option>
+                                                <option value="GBP" th:selected="${job?.currency == 'GBP'}">GBP (£)</option>
+                                                <option value="INR" th:selected="${job?.currency == 'INR'}">INR (₹)</option>
+                                                <option value="AED" th:selected="${job?.currency == 'AED'}">AED (د.إ)</option>
                                             </select>
                                             <div class="error-message" id="currencyError" style="display: none;">
                                                 <i class="fas fa-exclamation-circle"></i> Select currency
@@ -324,11 +325,11 @@
                                 <div class="form-group">
                                     <label for="responsibilities" class="form-label">Responsibilities</label>
                                     <div style="position: relative;">
-                                        <textarea class="form-textarea" id="responsibilities" name="responsibilities" rows="4"
-                                                  placeholder="e.g., Develop and maintain web applications&#10;Collaborate with cross-functional teams..."
-                                                  maxlength="1500"
-                                                  th:text="${job != null and job.responsibilities != null ? #strings.join(job.responsibilities, '&#10;') : ''}"
-                                                  style="padding-bottom: 30px;"></textarea>
+                                       <textarea class="form-textarea" id="responsibilities" name="responsibilities" rows="4"
+                                                 placeholder="e.g., Develop and maintain web applications&#10;Collaborate with cross-functional teams..."
+                                                 maxlength="1500"
+                                                 th:text="${job != null ? job.responsibilitiesAsText : ''}"
+                                                 style="padding-bottom: 30px;"></textarea>
                                         <div class="char-count" id="respCount">0/1500</div>
                                     </div>
                                     <small style="color: var(--dark-text-secondary); font-size: .75rem; margin-top: .25rem;">
@@ -405,7 +406,7 @@
 <div th:replace="~{fragments/layout :: common-scripts}"></div>
 
 <!-- === PAGE-SPECIFIC SCRIPTS (unchanged) === -->
-<script>
+<script th:inline="none">
     'use strict';
 
     var departmentsData = [];
@@ -511,20 +512,20 @@
         else { el.classList.add('is-invalid'); err.style.display = 'flex'; }
     }
 
-    async function loadLocationsForDropdown() {
+   async function loadLocationsForDropdown() {
         try {
+            var sel = document.getElementById('jobLocationId');
+            var prevVal = sel ? sel.value : '';
             var res = await fetch('/api/locations/list');
             var data = await res.json();
-            if (data.success) {
-                var sel = document.getElementById('jobLocationId');
-                if (sel) {
-                    sel.innerHTML = '<option value="">Select Location</option>';
-                    (data.locations || []).forEach(function (l) {
-                        var o = document.createElement('option');
-                        o.value = l.id; o.textContent = l.displayName || l.name;
-                        sel.appendChild(o);
-                    });
-                }
+            if (data.success && sel) {
+                sel.innerHTML = '<option value="">Select Location</option>';
+                (data.locations || []).forEach(function (l) {
+                    var o = document.createElement('option');
+                    o.value = l.id; o.textContent = l.displayName || l.name;
+                    if (prevVal && String(l.id) === String(prevVal)) o.selected = true;
+                    sel.appendChild(o);
+                });
             }
         } catch (e) { console.error('Locations load failed', e); }
     }

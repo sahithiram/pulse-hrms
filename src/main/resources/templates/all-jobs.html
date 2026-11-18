@@ -45,17 +45,95 @@
         .filter-select:focus { outline: none; border-color: var(--primary); }
 
         .row-hidden { display: none !important; }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        .jobs-pagination-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: .75rem;
+            padding: .85rem 1.25rem;
+            border-top: 1px solid var(--dark-border);
+            background: rgba(255, 255, 255, .01);
+        }
+        .jobs-pagination-info {
+            font-size: .8rem;
+            color: var(--dark-text-secondary);
+        }
+        .jobs-pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            flex-wrap: wrap;
+        }
+        .pg-btn {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 .65rem;
+            border-radius: 8px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .8rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .35rem;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .pg-btn:hover:not(.disabled):not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .pg-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            font-weight: 600;
+        }
+        .pg-btn.disabled {
+            opacity: .45;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
 <!-- === SHARED SIDEBAR (job-postings active) === -->
-<div th:replace="~{fragments/layout :: sidebar('job-postings')}"></div>
+<div th:replace="~{fragments/layout :: sidebar('posted-jobs')}"></div>
 
 <div class="main-content">
     <header th:replace="~{fragments/layout :: topbar}"></header>
 
     <div class="content-area">
+
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" style="margin-bottom:1rem;">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}">Job posted successfully!</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" style="margin-bottom:1rem;">
+            <i class="fas fa-exclamation-circle me-2"></i>
+            <span th:text="${error}">Error</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
 
         <div class="pm-page-head">
             <div>
@@ -113,15 +191,20 @@
                     <div class="search-box" style="flex: 1; min-width: 240px; width: auto;">
                         <i class="fas fa-search"></i>
                         <input type="text" id="jobSearchInput"
+                               th:value="${searchTerm}"
                                placeholder="Search by title, department, location...">
                     </div>
                     <select id="statusFilter" class="filter-select">
-                        <option value="all">All Statuses</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="all" th:selected="${selectedStatus == 'all'}">All Statuses</option>
+                        <option value="active" th:selected="${selectedStatus == 'active'}">Active</option>
+                        <option value="inactive" th:selected="${selectedStatus == 'inactive'}">Inactive</option>
                     </select>
                     <select id="departmentFilter" class="filter-select">
-                        <option value="all">All Departments</option>
+                        <option value="all" th:selected="${selectedDepartment == 'all'}">All Departments</option>
+                        <option th:each="dept : ${departments}"
+                                th:value="${dept}"
+                                th:text="${dept}"
+                                th:selected="${selectedDepartment == dept}">Engineering</option>
                     </select>
                 </div>
             </div>
@@ -152,7 +235,8 @@
                                  data-status=${job.active ? 'active' : 'inactive'}">
                         <td class="job-title-cell">
                             <span th:text="${job.title}">Frontend Developer</span>
-                            <small th:if="${job.salaryRange}" th:text="${job.salaryRange}">$60k - $80k</small>
+                            <small th:if="${job.salaryRange != null and !#strings.isEmpty(job.salaryRange)}"
+                                   th:text="${job.formattedSalaryRange}">$60k - $80k</small>
                         </td>
                         <td th:text="${job.department}">Engineering</td>
                         <td><span class="job-type-pill" th:text="${job.jobType}">Full-time</span></td>
@@ -197,6 +281,40 @@
                     </tbody>
                 </table>
             </div>
+
+            <div class="jobs-pagination-bar"
+                 th:if="${jobsPage != null and jobsPage.totalPages > 1}">
+                <div class="jobs-pagination-info">
+                    Showing
+                    <strong th:text="${jobsPage.number * jobsPage.size + 1}">1</strong>–<strong
+                        th:text="${jobsPage.number * jobsPage.size + jobsPage.numberOfElements}">10</strong>
+                    of <strong th:text="${jobsPage.totalElements}">12</strong> postings
+                </div>
+
+                <div class="jobs-pagination-controls">
+                    <a class="pg-btn"
+                       th:classappend="${jobsPage.first} ? 'disabled'"
+                       th:href="@{/dashboard/hr/jobs(page=${jobsPage.number - 1}, size=${jobsPage.size}, search=${searchTerm}, status=${selectedStatus}, department=${selectedDepartment})}">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </a>
+
+                    <th:block th:each="i : ${#numbers.sequence(0, jobsPage.totalPages - 1)}">
+                        <a class="pg-btn"
+                           th:if="${i == 0 or i == jobsPage.totalPages - 1 or (i >= jobsPage.number - 2 and i <= jobsPage.number + 2)}"
+                           th:classappend="${i == jobsPage.number} ? 'active'"
+                           th:href="@{/dashboard/hr/jobs(page=${i}, size=${jobsPage.size}, search=${searchTerm}, status=${selectedStatus}, department=${selectedDepartment})}"
+                           th:text="${i + 1}">1</a>
+                        <span class="pg-btn disabled"
+                              th:if="${(i == 1 and jobsPage.number > 3) or (i == jobsPage.totalPages - 2 and jobsPage.number < jobsPage.totalPages - 4)}">...</span>
+                    </th:block>
+
+                    <a class="pg-btn"
+                       th:classappend="${jobsPage.last} ? 'disabled'"
+                       th:href="@{/dashboard/hr/jobs(page=${jobsPage.number + 1}, size=${jobsPage.size}, search=${searchTerm}, status=${selectedStatus}, department=${selectedDepartment})}">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
         </div>
 
         <!-- Hidden delete form -->
@@ -215,40 +333,42 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Populate department filter from table rows
-        var rows = document.querySelectorAll('#jobsTable tbody tr[data-department]');
-        var deptSel = document.getElementById('departmentFilter');
-        var seen = new Set();
-        rows.forEach(function (row) {
-            var dept = row.getAttribute('data-department');
-            if (dept && !seen.has(dept)) {
-                seen.add(dept);
-                var opt = document.createElement('option');
-                opt.value = dept;
-                opt.textContent = row.children[1].textContent.trim();
-                deptSel.appendChild(opt);
-            }
-        });
+        var searchInput = document.getElementById('jobSearchInput');
+        var statusFilter = document.getElementById('statusFilter');
+        var deptFilter = document.getElementById('departmentFilter');
+        var debounceTimer = null;
 
-        function applyFilters() {
-            var term = document.getElementById('jobSearchInput').value.trim().toLowerCase();
-            var status = document.getElementById('statusFilter').value;
-            var dept = document.getElementById('departmentFilter').value;
-            document.querySelectorAll('#jobsTable tbody tr[data-title]').forEach(function (row) {
-                var t = row.getAttribute('data-title') || '';
-                var d = row.getAttribute('data-department') || '';
-                var l = row.getAttribute('data-location') || '';
-                var s = row.getAttribute('data-status') || '';
-                var ok = (!term || t.indexOf(term) !== -1 || d.indexOf(term) !== -1 || l.indexOf(term) !== -1) &&
-                         (status === 'all' || s === status) &&
-                         (dept === 'all' || d === dept);
-                row.classList.toggle('row-hidden', !ok);
+        function navigateWithFilters() {
+            var params = new URLSearchParams();
+            params.set('page', '0');
+
+            var term = searchInput ? searchInput.value.trim() : '';
+            var status = statusFilter ? statusFilter.value : 'all';
+            var dept = deptFilter ? deptFilter.value : 'all';
+
+            if (term) params.set('search', term);
+            if (status && status !== 'all') params.set('status', status);
+            if (dept && dept !== 'all') params.set('department', dept);
+
+            window.location.href = '/dashboard/hr/jobs?' + params.toString();
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(navigateWithFilters, 450);
+            });
+            searchInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    clearTimeout(debounceTimer);
+                    navigateWithFilters();
+                }
             });
         }
 
-        document.getElementById('jobSearchInput').addEventListener('input', applyFilters);
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-        document.getElementById('departmentFilter').addEventListener('change', applyFilters);
+        if (statusFilter) statusFilter.addEventListener('change', navigateWithFilters);
+        if (deptFilter) deptFilter.addEventListener('change', navigateWithFilters);
     });
 
     function confirmDeleteJob(jobId, jobTitle) {

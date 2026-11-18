@@ -350,6 +350,75 @@
             .attendance-card.print-target .pm-table th { background: #f0f0f0 !important; }
             .attendance-export-print-buttons, .attendance-filter-bar, .attendance-refresh-btn { display: none !important; }
         }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        /* Overview Active Job Postings pagination */
+        .overview-jobs-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .5rem;
+            flex-wrap: wrap;
+            padding: .65rem 1rem;
+            border-top: 1px solid var(--dark-border);
+            background: rgba(255, 255, 255, .01);
+        }
+        .overview-jobs-pagination .pg-info {
+            font-size: .75rem;
+            color: var(--dark-text-secondary);
+        }
+        .overview-jobs-pagination .pg-controls {
+            display: flex;
+            align-items: center;
+            gap: .25rem;
+            flex-wrap: wrap;
+        }
+        .overview-jobs-pagination .pg-link {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 .5rem;
+            border-radius: 6px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .25rem;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .overview-jobs-pagination .pg-link:hover:not(.disabled):not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .overview-jobs-pagination .pg-link.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            font-weight: 600;
+        }
+        .overview-jobs-pagination .pg-link.disabled {
+            opacity: .45;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
@@ -432,7 +501,6 @@
                     <div class="stat-card"><div class="stat-card-body"><div><div class="stat-value" id="pmKWait">0</div><div class="stat-title">Waiting for my approval</div></div><div class="stat-icon cyan"><i class="fas fa-stamp"></i></div></div></div>
                 </div></div>
             </div>
-
             <div class="two-col-grid">
                 <div class="content-card">
                     <div class="card-header">
@@ -463,17 +531,16 @@
                         <h5 class="card-title"><i class="fas fa-briefcase"></i> Active Job Postings</h5>
                         <div style="display:flex; gap:14px; align-items:center;">
                             <a href="/dashboard/hr/jobs" class="view-link">View All</a>
-                            <a href="/dashboard/hr/job-form" class="view-link">Manage</a>
                         </div>
                     </div>
                     <div class="card-body p-0">
-                        <div class="jobs-scroll-container" style="max-height:320px; overflow-y:auto;">
-                            <table class="table" style="min-width:500px;">
-                                <thead style="position:sticky; top:0; z-index:5;">
+                        <div class="jobs-scroll-container" style="overflow-x:auto;">
+                            <table class="table" style="min-width:500px; margin-bottom:0;">
+                                <thead>
                                 <tr><th>Job Title</th><th>Department</th><th>Location</th><th>Posted Date</th><th>Status</th></tr>
                                 </thead>
                                 <tbody>
-                                <tr th:each="job : ${jobs}" th:if="${job.active}">
+                                <tr th:each="job : ${jobs}">
                                     <td th:text="${job.title}">Frontend Developer</td>
                                     <td th:text="${job.department}">Engineering</td>
                                     <td th:text="${job.location}">Remote</td>
@@ -485,6 +552,36 @@
                                 </tr>
                                 </tbody>
                             </table>
+                        </div>
+
+                        <div class="overview-jobs-pagination"
+                             th:if="${overviewJobsPage != null and overviewJobsPage.totalPages > 1}">
+                            <div class="pg-info">
+                                Page <strong th:text="${overviewJobsPage.number + 1}">1</strong>
+                                of <strong th:text="${overviewJobsPage.totalPages}">2</strong>
+                                (<span th:text="${overviewJobsPage.totalElements}">11</span> active)
+                            </div>
+                            <div class="pg-controls">
+                                <a class="pg-link"
+                                   th:classappend="${overviewJobsPage.first} ? 'disabled'"
+                                   th:href="'?jobPage=' + ${overviewJobsPage.number - 1}">
+                                    <i class="fas fa-chevron-left"></i> Prev
+                                </a>
+                                <th:block th:each="i : ${#numbers.sequence(0, overviewJobsPage.totalPages - 1)}">
+                                    <a class="pg-link"
+                                       th:if="${i == 0 or i == overviewJobsPage.totalPages - 1 or (i >= overviewJobsPage.number - 1 and i <= overviewJobsPage.number + 1)}"
+                                       th:classappend="${i == overviewJobsPage.number} ? 'active'"
+                                       th:href="'?jobPage=' + ${i}"
+                                       th:text="${i + 1}">1</a>
+                                    <span class="pg-link disabled"
+                                          th:if="${(i == 1 and overviewJobsPage.number > 2) or (i == overviewJobsPage.totalPages - 2 and overviewJobsPage.number < overviewJobsPage.totalPages - 3)}">...</span>
+                                </th:block>
+                                <a class="pg-link"
+                                   th:classappend="${overviewJobsPage.last} ? 'disabled'"
+                                   th:href="'?jobPage=' + ${overviewJobsPage.number + 1}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1559,18 +1656,25 @@
     /* ============ Holidays ============ */
     window.allHolidays = [];
 
-    function loadAllHolidays() {
-      return fetch('/api/holidays/all')
-        .then(function (r) { return r.ok ? r.json() : []; })
-        .catch(function () { return []; })
-        .then(function (list) {
-          window.allHolidays = Array.isArray(list) && list.length ? list : getSampleHolidays();
-          seedCalendarHolidays();
-          populateAllHolidaysTable();
-          checkExistingHolidays();
-          return window.allHolidays;
+   function loadAllHolidays() {
+    return fetch('/api/holidays/all')
+        .then(function (r) { return r.ok ? r.json() : { success: false, holidays: [] }; })
+        .catch(function () { return { success: false, holidays: [] }; })
+        .then(function (resp) {
+            // Backend returns { success: true, holidays: [...] }
+            var list = [];
+            if (Array.isArray(resp)) {
+                list = resp;
+            } else if (resp && Array.isArray(resp.holidays)) {
+                list = resp.holidays;
+            }
+            window.allHolidays = list;   // NO SAMPLE FALLBACK — real DB data only
+            seedCalendarHolidays();
+            populateAllHolidaysTable();
+            checkExistingHolidays();
+            return window.allHolidays;
         });
-    }
+}
     function getSampleHolidays() {
       var y = new Date().getFullYear();
       return [
@@ -1580,15 +1684,17 @@
         { id: 4, name: 'Christmas', date: y + '-12-25', type: 'PUBLIC', description: 'National holiday' }
       ];
     }
-    function seedCalendarHolidays() {
-      calendarAttendanceData = {};
-      (window.allHolidays || []).forEach(function (h) {
-        var iso = String(h.date || '').slice(0, 10);
+   function seedCalendarHolidays() {
+    calendarAttendanceData = {};
+    (window.allHolidays || []).forEach(function (h) {
+        var iso = String(h.holidayDate || h.date || '').slice(0, 10);
+        var name = h.holidayName || h.name || '';
+        var type = h.holidayType || h.type || '';
         if (!iso) return;
         if (!calendarAttendanceData[iso]) calendarAttendanceData[iso] = { holidays: [] };
-        calendarAttendanceData[iso].holidays.push(h.name + (h.type ? ' (' + h.type + ')' : ''));
-      });
-    }
+        calendarAttendanceData[iso].holidays.push(name + (type ? ' (' + type + ')' : ''));
+    });
+}
     function openHolidayModal() {
       var m = document.getElementById('holidayModal');
       if (!m) return;
@@ -1631,22 +1737,106 @@
       checkExistingHolidays();
     }
     function populateAllHolidaysTable() {
-      var tbody = document.getElementById('allHolidaysTableBody');
-      if (!tbody) return;
-      var list = (window.allHolidays || []).slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
-      if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--dark-text-secondary);padding:1.5rem;">No holidays configured</td></tr>';
+    var tbody = document.getElementById('allHolidaysTableBody');
+    if (!tbody) return;
+
+    // The DB returns holiday DTOs with keys: id, holidayName, holidayDate, holidayType, description
+    var list = (window.allHolidays || []).slice().sort(function (a, b) {
+        return String(a.holidayDate || a.date || '').localeCompare(String(b.holidayDate || b.date || ''));
+    });
+
+    if (!list.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--dark-text-secondary);padding:1.5rem;">No holidays configured</td></tr>';
         return;
-      }
-      tbody.innerHTML = list.map(function (h) {
-        return '<tr>' +
-          '<td><strong>' + escapeHtml(h.name) + '</strong></td>' +
-          '<td>' + escapeHtml(String(h.date).slice(0, 10)) + '</td>' +
-          '<td><span class="pm-badge info">' + escapeHtml(h.type || 'PUBLIC') + '</span></td>' +
-          '<td>' + escapeHtml(h.description || '—') + '</td>' +
-          '</tr>';
-      }).join('');
     }
+
+    tbody.innerHTML = list.map(function (h, idx) {
+        // Support both field naming conventions coming from DB vs. local fallback
+        var hId = h.id;
+        var hName = h.holidayName || h.name || '';
+        var hDate = String(h.holidayDate || h.date || '').slice(0, 10);
+        var hType = h.holidayType || h.type || 'PUBLIC';
+        var hDesc = h.description || '';
+
+        var dayName = '—';
+        try {
+            var d = new Date(hDate + 'T00:00:00');
+            if (!isNaN(d.getTime())) {
+                dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+            }
+        } catch (e) {}
+
+        return '<tr>' +
+            '<td>' + (idx + 1) + '</td>' +
+            '<td>' + escapeHtml(hDate) + '</td>' +
+            '<td><strong>' + escapeHtml(hName) + '</strong></td>' +
+            '<td><span class="pm-badge info" style="text-transform:capitalize;">' + escapeHtml(hType) + '</span></td>' +
+            '<td>' + escapeHtml(dayName) + '</td>' +
+            '<td>' +
+                '<button class="attendance-btn action-view" title="View" onclick="viewHolidayDetails(\'' + hId + '\')"><i class="fas fa-eye"></i></button> ' +
+                '<button class="attendance-btn action-reject" title="Delete" onclick="confirmDeleteHoliday(\'' + hId + '\', \'' + escapeHtml(hName).replace(/'/g, "\\'") + '\')"><i class="fas fa-trash"></i></button>' +
+            '</td>' +
+            '</tr>';
+    }).join('');
+}
+
+
+function viewHolidayDetails(holidayId) {
+    var h = (window.allHolidays || []).find(function (x) { return String(x.id) === String(holidayId); });
+    if (!h) return;
+    var hName = h.holidayName || h.name || '';
+    var hDate = String(h.holidayDate || h.date || '').slice(0, 10);
+    var hType = h.holidayType || h.type || 'PUBLIC';
+    var hDesc = h.description || '—';
+    var dayName = '';
+    try {
+        dayName = new Date(hDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+    } catch (e) {}
+
+    var old = document.getElementById('holidayDetailsModal');
+    if (old) old.remove();
+    var modal = document.createElement('div');
+    modal.id = 'holidayDetailsModal';
+    modal.className = 'attendance-modal';
+    modal.style.display = 'block';
+    modal.innerHTML =
+        '<div class="attendance-modal-content" style="max-width:520px;">' +
+        '<div class="attendance-modal-header"><h3><i class="fas fa-calendar-check"></i> Holiday Details</h3>' +
+        '<button class="close-attendance-modal" onclick="document.getElementById(\'holidayDetailsModal\').remove()">&times;</button></div>' +
+        '<div class="attendance-modal-body" style="padding:1rem 0;">' +
+        '<p><strong>Name:</strong> ' + escapeHtml(hName) + '</p>' +
+        '<p><strong>Date:</strong> ' + escapeHtml(hDate) + ' (' + escapeHtml(dayName) + ')</p>' +
+        '<p><strong>Type:</strong> ' + escapeHtml(hType) + '</p>' +
+        '<p><strong>Description:</strong> ' + escapeHtml(hDesc) + '</p>' +
+        '</div>' +
+        '<div class="attendance-modal-footer"><button class="attendance-btn btn-secondary-attendance" onclick="document.getElementById(\'holidayDetailsModal\').remove()">Close</button></div>' +
+        '</div>';
+    document.body.appendChild(modal);
+}
+
+function confirmDeleteHoliday(holidayId, holidayName) {
+    if (!confirm('Delete holiday "' + holidayName + '"? This cannot be undone.')) return;
+    fetch('/api/holidays/delete/' + encodeURIComponent(holidayId), { method: 'DELETE' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data && data.success) {
+                showNotification('Holiday "' + holidayName + '" deleted successfully', 'success');
+                // Reload from DB to stay in sync
+                loadAllHolidays().then(function () {
+                    seedCalendarHolidays();
+                    generateMainCalendar();
+                });
+            } else {
+                showNotification('Failed to delete: ' + (data && data.error ? data.error : 'Unknown error'), 'error');
+            }
+        })
+        .catch(function (e) {
+            showNotification('Error deleting holiday: ' + e.message, 'error');
+        });
+}
+
+window.viewHolidayDetails = viewHolidayDetails;
+window.confirmDeleteHoliday = confirmDeleteHoliday;
 
     var holidayFormEl = document.getElementById('holidayForm');
     if (holidayFormEl) {
@@ -1656,33 +1846,56 @@
         var ok = document.getElementById('holidaySuccessMessage');
         var err = document.getElementById('holidayErrorMessage');
         var payload = {
-          name: document.getElementById('holidayName').value.trim(),
-          date: document.getElementById('holidayDate').value,
-          type: document.getElementById('holidayType').value,
-          description: document.getElementById('holidayDesc').value.trim()
-        };
+    holidayName: document.getElementById('holidayName').value.trim(),
+    holidayDate: document.getElementById('holidayDate').value,
+    holidayType: document.getElementById('holidayType').value,
+    description: document.getElementById('holidayDesc').value.trim()
+};
         if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...'; }
-        var success = false;
-        try {
-          var res = await fetch('/api/holidays/create', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          success = res.ok;
-        } catch (e) { success = false; }
+      var success = false;
+var serverHoliday = null;
+try {
+    var res = await fetch('/api/holidays/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    var data = await res.json();
+    // Check BOTH HTTP status AND the server's success flag
+    if (res.ok && data && data.success) {
+        success = true;
+        serverHoliday = data.holiday || null;
+    } else {
+        success = false;
+        console.error('Holiday create failed:', data);
+        if (err) {
+            var errSpan = document.getElementById('holidayErrorText');
+            if (errSpan) errSpan.textContent = (data && data.error) ? data.error : 'Failed to create holiday';
+        }
+    }
+} catch (e) {
+    success = false;
+    console.error('Holiday create error:', e);
+}
         if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus"></i> Add Holiday'; }
         if (ok) ok.style.display = success ? 'block' : 'none';
         if (err) err.style.display = success ? 'none' : 'block';
         if (success) {
-          window.allHolidays.push(Object.assign({ id: Date.now() }, payload));
-          seedCalendarHolidays();
-          populateAllHolidaysTable();
-          checkExistingHolidays();
-          generateMainCalendar();
-          holidayFormEl.reset();
-          showNotification('Holiday added successfully', 'success');
-        } else {
+    // Use the REAL saved holiday from the DB (has real ID)
+    if (serverHoliday) {
+        window.allHolidays.push(serverHoliday);
+    } else {
+        // Fallback: reload from DB
+        await loadAllHolidays();
+    }
+    seedCalendarHolidays();
+    populateAllHolidaysTable();
+    checkExistingHolidays();
+    generateMainCalendar();
+    holidayFormEl.reset();
+    showNotification('Holiday added successfully', 'success');
+}
+        else {
           showNotification('Could not save holiday — check the server connection', 'error');
         }
       });
@@ -2056,26 +2269,46 @@
     function showAnnouncementToast(message, type) { showNotification(message, type || 'info'); }
 
     /* ============ Recruitment chart + funnel ============ */
+  /* ============ Recruitment chart + funnel ============ */
     var recruitmentChart = null;
     var recruitmentChartType = 'bar';
-    var recruitmentMetrics = { labels: ['Applications', 'Screenings', 'Interviews', 'Offers'], values: [120, 64, 28, 12] };
+    var pipelineMetrics = { applications: 0, screenings: 0, interviews: 0, offers: 0 };
+    var monthlyChartData = { labels: [], applications: [], hired: [] };
 
     async function fetchLiveRecruitmentMetrics() {
       try {
-        var res = await fetch('/dashboard/hr/api/recruitment-metrics');
+        var res = await fetch('/dashboard/hr/api/recruitment-stats', { credentials: 'same-origin' });
         if (res.ok) {
           var d = await res.json();
-          if (d && Array.isArray(d.values) && d.values.length >= 4) {
-            recruitmentMetrics = { labels: d.labels || recruitmentMetrics.labels, values: d.values };
+          if (d && d.success) {
+            if (d.pipeline) {
+              pipelineMetrics = {
+                applications: d.pipeline.applications || 0,
+                screenings: d.pipeline.screenings || 0,
+                interviews: d.pipeline.interviews || 0,
+                offers: d.pipeline.offers || 0
+              };
+            }
+            if (d.chart && Array.isArray(d.chart.labels)) {
+              monthlyChartData = {
+                labels: d.chart.labels,
+                applications: d.chart.applications || [],
+                hired: d.chart.hired || []
+              };
+            }
             return true;
           }
         }
-      } catch (e) { /* keep sample metrics when server is unreachable */ }
+      } catch (e) { /* keep zero defaults if server is unreachable */ }
       return false;
     }
     function updateFunnelDisplay() {
-      var values = recruitmentMetrics.values;
-      if (!values || values.length < 4) return;
+      var values = [
+        pipelineMetrics.applications,
+        pipelineMetrics.screenings,
+        pipelineMetrics.interviews,
+        pipelineMetrics.offers
+      ];
       var cells = document.querySelectorAll('.funnel-step .funnel-value');
       for (var i = 0; i < 4 && i < cells.length; i++) cells[i].textContent = values[i];
     }
@@ -2093,25 +2326,46 @@
       recruitmentChart = new Chart(ctx, {
         type: recruitmentChartType,
         data: {
-          labels: recruitmentMetrics.labels,
-          datasets: [{
-            label: 'This month',
-            data: recruitmentMetrics.values,
-            backgroundColor: 'rgba(139,92,246,.55)',
-            borderColor: '#8b5cf6',
-            borderWidth: 2,
-            borderRadius: 6,
-            tension: .35,
-            fill: recruitmentChartType === 'line'
-          }]
+          labels: monthlyChartData.labels,
+          datasets: [
+            {
+              label: 'Applications',
+              data: monthlyChartData.applications,
+              backgroundColor: 'rgba(139,92,246,.6)',
+              borderColor: '#8b5cf6',
+              borderWidth: 2,
+              borderRadius: 6,
+              tension: .35,
+              fill: recruitmentChartType === 'line'
+            },
+            {
+              label: 'Hired',
+              data: monthlyChartData.hired,
+              backgroundColor: 'rgba(16,185,129,.6)',
+              borderColor: '#10b981',
+              borderWidth: 2,
+              borderRadius: 6,
+              tension: .35,
+              fill: recruitmentChartType === 'line'
+            }
+          ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
+          plugins: {
+            legend: {
+              display: true,
+              labels: { color: '#cbd5e1', usePointStyle: true, boxWidth: 8 }
+            }
+          },
           scales: {
             x: { grid: { color: 'rgba(51,65,85,.5)' } },
-            y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,.5)' } }
+            y: {
+              beginAtZero: true,
+              ticks: { precision: 0 },
+              grid: { color: 'rgba(51,65,85,.5)' }
+            }
           }
         }
       });
@@ -2375,19 +2629,15 @@
       if (name && companyData && companyData.companyName) name.textContent = companyData.companyName;
       setSidebarBrandLogo(((companyData || {}).branding || {}).logoUrl);
     }
-    function setSidebarBrandLogo(url) {
+   function setSidebarBrandLogo(url) {
       var img = document.getElementById('sidebarLogo');
       var icon = document.getElementById('sidebarIcon');
       if (!img || !icon) return;
-      if (url) {
-        img.style.display = 'block';
-        icon.style.display = 'none';
-        img.onerror = function () { img.style.display = 'none'; icon.style.display = 'flex'; };
-        img.src = url;
-      } else {
-        img.style.display = 'none';
-        icon.style.display = 'flex';
-      }
+      var logoSrc = url || '/images/logo.jpg';
+      img.style.display = 'block';
+      icon.style.display = 'none';
+      img.onerror = function () { img.style.display = 'none'; icon.style.display = 'flex'; };
+      img.src = logoSrc;
     }
     async function updateCompanyStats() {
       var fallback = (companyData || {}).stats || {};

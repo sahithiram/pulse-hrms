@@ -8,6 +8,7 @@ import com.mentis.hrms.model.JobApplication;
 
 public interface DashboardService {
     void loadDashboardData(Model model);
+    void loadDashboardData(Model model, int jobPage);
     List<Job> getAllJobs();
     List<Department> getAllDepartments();
     List<JobApplication> getRecentApplicationsByStatus(String status);
