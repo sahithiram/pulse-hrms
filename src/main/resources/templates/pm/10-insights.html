@@ -123,7 +123,7 @@
           <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
         <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
         </ul>
       </div>
 
@@ -135,7 +135,7 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link active" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -392,8 +392,8 @@
 <script>
   (function () {
     if (window.PM && window.PM.bootstrap) return;
-    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD' };
-    var rules = { creator: true, manage: true, clients: true, lead: true, admin: true, super: true, finance: true };
+    var me = { name: 'Guest', employeeId: '', admin: false, superAdmin: false, leadTier: null };
+    var rules = { creator: false, manage: false, clients: false, lead: false, admin: false, super: false, finance: false };
     function toast(msg, type) {
       var box = document.getElementById('pmToasts'); if (!box) return;
       var el = document.createElement('div');
@@ -697,12 +697,12 @@
       }
       PM.toast('Preparing CSV…', 'info');
       var url;
-      if (kind === 'budget') url = '/api/pm/reports/budget.csv?projectId=' + pid;
-      else if (kind === 'velocity') url = '/api/pm/reports/velocity.csv?projectId=' + pid;
-      else if (kind === 'quality') url = '/api/pm/reports/quality.csv?projectId=' + pid;
-      else if (kind === 'risk') url = '/api/pm/reports/risk.csv?projectId=' + pid;
-      else if (kind === 'utilization') url = '/api/pm/reports/utilization.csv';
-      else if (kind === 'budgetAll') url = '/api/pm/reports/budget-all.csv';
+      if (kind === 'budget') url = '/api/pm/reports/budget/export.csv?projectId=' + pid;
+      else if (kind === 'velocity') url = '/api/pm/reports/velocity/export.csv?projectId=' + pid;
+      else if (kind === 'quality') url = '/api/pm/reports/quality/export.csv?projectId=' + pid;
+      else if (kind === 'risk') url = '/api/pm/reports/risk/export.csv?projectId=' + pid;
+      else if (kind === 'utilization') url = '/api/pm/reports/utilization/export.csv';
+      else if (kind === 'budgetAll') url = '/api/pm/reports/budget/export.csv';
       else { PM.toast('Unknown export', 'error'); return; }
       var a = document.createElement('a');
       a.href = url; a.download = '';

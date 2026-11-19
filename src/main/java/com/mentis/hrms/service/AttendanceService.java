@@ -93,9 +93,19 @@ public class AttendanceService {
         List<Attendance> todayAttendances = attendanceRepository
                 .findByEmployeeIdAndAttendanceDate(employeeId, today);
 
+        // Remove any stale "LEAVE" placeholder row (checkInTime == null) if leave was withdrawn
+        int existingSessions = 0;
+        for (Attendance existing : todayAttendances) {
+            if ("LEAVE".equalsIgnoreCase(existing.getStatus()) && existing.getCheckInTime() == null) {
+                attendanceRepository.delete(existing);
+                logger.info("Removed stale LEAVE placeholder for {} on {} before check-in", employeeId, today);
+            } else {
+                existingSessions++;
+            }
+        }
+
         // Get session count for numbering
-        long sessionCount = attendanceRepository.countByEmployeeIdAndAttendanceDate(employeeId, today);
-        int sessionNumber = (int) sessionCount + 1;
+        int sessionNumber = existingSessions + 1;
 
         // Create new attendance record
         Attendance attendance = new Attendance();
@@ -240,9 +250,7 @@ public class AttendanceService {
                 latestPerEmployee.put(empId, att);
             } else {
                 Attendance existing = latestPerEmployee.get(empId);
-                // If this attendance is more recent, replace
-                if (att.getCheckInTime() != null && existing.getCheckInTime() != null &&
-                        att.getCheckInTime().isAfter(existing.getCheckInTime())) {
+                if (isMoreRecentSession(att, existing)) {
                     latestPerEmployee.put(empId, att);
                 }
             }
@@ -272,16 +280,21 @@ public class AttendanceService {
             if (att.getCheckOutTime() != null) {
                 map.put("checkOutFormatted", att.getCheckOutTime().format(timeFormatter));
                 map.put("displayStatus", "Checked Out");
+                map.put("statusForDisplay", "Checked Out");
                 map.put("statusText", "Checked Out");
+                map.put("statusColor", "red");
             } else {
                 map.put("checkOutFormatted", "--:--");
-                map.put("displayStatus", att.getStatus());
-                map.put("statusText", getStatusDisplay(att.getStatus()));
+                String displayStatus = getStatusDisplayForNoCheckout(att);
+                map.put("displayStatus", displayStatus);
+                map.put("statusForDisplay", displayStatus);
+                map.put("statusText", displayStatus);
+                map.put("statusColor", getStatusColor(att.getStatus()));
             }
 
             // Calculate working hours
             calculateCurrentSessionTime(att);
-            map.put("currentWorkingTime", att.getCurrentSessionTime());
+            map.put("currentWorkingTime", att.getCurrentSessionTime() != null ? att.getCurrentSessionTime() : "0h 00m");
             map.put("workingHours", att.getTotalWorkingHours() != null ?
                     att.getTotalWorkingHours() : calculateWorkingHoursDisplay(att));
 
@@ -401,8 +414,7 @@ public class AttendanceService {
                 latestPerEmployee.put(empId, att);
             } else {
                 Attendance existing = latestPerEmployee.get(empId);
-                if (att.getCheckInTime() != null && existing.getCheckInTime() != null &&
-                        att.getCheckInTime().isAfter(existing.getCheckInTime())) {
+                if (isMoreRecentSession(att, existing)) {
                     latestPerEmployee.put(empId, att);
                 }
             }
@@ -445,7 +457,7 @@ public class AttendanceService {
                         map.put("statusColor", "red");
                     } else {
                         map.put("checkOutFormatted", "--:--");
-                        String displayStatus = getStatusDisplay(att.getStatus());
+                        String displayStatus = getStatusDisplayForNoCheckout(att);
                         map.put("displayStatus", displayStatus);
                         map.put("statusForDisplay", displayStatus);
                         map.put("statusText", displayStatus);
@@ -454,7 +466,7 @@ public class AttendanceService {
 
                     // Calculate working hours
                     calculateCurrentSessionTime(att);
-                    map.put("currentWorkingTime", att.getCurrentSessionTime());
+                    map.put("currentWorkingTime", att.getCurrentSessionTime() != null ? att.getCurrentSessionTime() : "0h 00m");
                     map.put("workingHours", att.getTotalWorkingHours() != null ?
                             att.getTotalWorkingHours() : calculateWorkingHoursDisplay(att));
 
@@ -738,47 +750,79 @@ public class AttendanceService {
 
 // ========== HELPER METHODS ==========
 
+    private boolean isMoreRecentSession(Attendance candidate, Attendance existing) {
+        if (candidate == null) return false;
+        if (existing == null) return true;
+        if (candidate.getCheckInTime() != null && existing.getCheckInTime() == null) {
+            return true;
+        }
+        if (candidate.getCheckInTime() == null && existing.getCheckInTime() != null) {
+            return false;
+        }
+        if (candidate.getCheckInTime() != null && existing.getCheckInTime() != null) {
+            if (candidate.getCheckInTime().isAfter(existing.getCheckInTime())) {
+                return true;
+            }
+            if (candidate.getCheckInTime().isBefore(existing.getCheckInTime())) {
+                return false;
+            }
+        }
+        if (candidate.getUpdatedAt() != null && existing.getUpdatedAt() != null) {
+            return candidate.getUpdatedAt().isAfter(existing.getUpdatedAt());
+        }
+        return candidate.getId() != null && existing.getId() != null && candidate.getId() > existing.getId();
+    }
+
+    private String getStatusDisplayForNoCheckout(Attendance att) {
+        String st = att.getStatus() != null ? att.getStatus().trim().toUpperCase() : "";
+        if ("LEAVE".equals(st)) return "On Leave";
+        if ("BREAK".equals(st)) return "On Break";
+        if ("ACTIVE".equals(st) || "PRESENT".equals(st)) return "Present";
+        if ("OFFLINE".equals(st) || "ABSENT".equals(st) || att.getCheckInTime() == null) return "Absent";
+        return getStatusDisplay(att.getStatus());
+    }
+
     private String getDisplayStatusForFilter(Attendance att) {
         if (att.getCheckOutTime() != null) {
             return "Checked Out";
         }
-        if ("ACTIVE".equals(att.getStatus())) {
+        if ("ACTIVE".equalsIgnoreCase(att.getStatus())) {
             return "Present";
         }
-        if ("BREAK".equals(att.getStatus())) {
+        if ("BREAK".equalsIgnoreCase(att.getStatus())) {
             return "On Break";
         }
-        if ("OFFLINE".equals(att.getStatus())) {
+        if ("OFFLINE".equalsIgnoreCase(att.getStatus()) || "ABSENT".equalsIgnoreCase(att.getStatus())) {
             return "Absent";
         }
-        if ("LEAVE".equals(att.getStatus())) {
+        if ("LEAVE".equalsIgnoreCase(att.getStatus())) {
             return "On Leave";
         }
         return att.getStatus();
     }
 
     private String getStatusDisplay(String status) {
-        if ("ACTIVE".equals(status)) return "Present";
-        if ("BREAK".equals(status)) return "On Break";
-        if ("OFFLINE".equals(status)) return "Offline";
-        if ("ABSENT".equals(status)) return "Absent";
-        if ("LEAVE".equals(status)) return "On Leave";
+        if ("ACTIVE".equalsIgnoreCase(status)) return "Present";
+        if ("BREAK".equalsIgnoreCase(status)) return "On Break";
+        if ("OFFLINE".equalsIgnoreCase(status)) return "Absent";
+        if ("ABSENT".equalsIgnoreCase(status)) return "Absent";
+        if ("LEAVE".equalsIgnoreCase(status)) return "On Leave";
         return status;
     }
 
     private String getBadgeClass(String status) {
-        if ("ACTIVE".equals(status)) return "present";
-        if ("BREAK".equals(status)) return "break";
-        if ("OFFLINE".equals(status)) return "absent";
-        if ("LEAVE".equals(status)) return "leave";
+        if ("ACTIVE".equalsIgnoreCase(status)) return "present";
+        if ("BREAK".equalsIgnoreCase(status)) return "break";
+        if ("OFFLINE".equalsIgnoreCase(status) || "ABSENT".equalsIgnoreCase(status)) return "absent";
+        if ("LEAVE".equalsIgnoreCase(status)) return "leave";
         return "present";
     }
 
     private String getStatusColor(String status) {
-        if ("ACTIVE".equals(status)) return "green";
-        if ("BREAK".equals(status)) return "orange";
-        if ("OFFLINE".equals(status)) return "red";
-        if ("LEAVE".equals(status)) return "purple";
+        if ("ACTIVE".equalsIgnoreCase(status)) return "green";
+        if ("BREAK".equalsIgnoreCase(status)) return "orange";
+        if ("OFFLINE".equalsIgnoreCase(status) || "ABSENT".equalsIgnoreCase(status)) return "red";
+        if ("LEAVE".equalsIgnoreCase(status)) return "purple";
         return "green";
     }
 
@@ -839,7 +883,10 @@ public class AttendanceService {
     }
 
     private void calculateCurrentSessionTime(Attendance attendance) {
-        if (attendance.getCheckInTime() == null) return;
+        if (attendance.getCheckInTime() == null) {
+            attendance.setCurrentSessionTime("0h 00m");
+            return;
+        }
 
         LocalDateTime now = LocalDateTime.now();
         long totalMinutes;
@@ -855,6 +902,7 @@ public class AttendanceService {
                     - (attendance.getTotalBreakMinutes() != null ? attendance.getTotalBreakMinutes() : 0);
         }
 
+        totalMinutes = Math.max(0, totalMinutes);
         long hours = totalMinutes / 60;
         long minutes = totalMinutes % 60;
         attendance.setCurrentSessionTime(String.format("%dh %02dm", hours, minutes));
@@ -1229,6 +1277,33 @@ public class AttendanceService {
         } catch (Exception e) {
             logger.error("Error creating attendance for leave: {}", e.getMessage());
             throw new RuntimeException("Failed to create attendance record for leave", e);
+        }
+    }
+
+    public void removeLeaveAttendance(String employeeId, LocalDate startDate, LocalDate endDate) {
+        if (employeeId == null || startDate == null || endDate == null) return;
+        try {
+            LocalDate current = startDate;
+            while (!current.isAfter(endDate)) {
+                List<Attendance> existing = attendanceRepository.findByEmployeeIdAndAttendanceDate(employeeId, current);
+                if (existing != null && !existing.isEmpty()) {
+                    for (Attendance att : existing) {
+                        if ("LEAVE".equalsIgnoreCase(att.getStatus()) && att.getCheckInTime() == null) {
+                            attendanceRepository.delete(att);
+                            logger.info("Deleted LEAVE attendance placeholder for {} on {}", employeeId, current);
+                        } else if ("LEAVE".equalsIgnoreCase(att.getStatus())) {
+                            att.setStatus(att.getCheckOutTime() != null ? "OFFLINE" : "ACTIVE");
+                            att.setUpdatedAt(LocalDateTime.now());
+                            attendanceRepository.save(att);
+                            logger.info("Reverted LEAVE status on attendance record for {} on {}", employeeId, current);
+                        }
+                    }
+                }
+                current = current.plusDays(1);
+            }
+        } catch (Exception e) {
+            logger.error("Error removing attendance for withdrawn leave: {}", e.getMessage());
+            throw new RuntimeException("Failed to remove leave attendance record", e);
         }
     }
 

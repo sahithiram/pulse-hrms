@@ -144,6 +144,7 @@ public class LeaveManagementController {
                 enrichedLeave.put("rejectionReason", leave.getRejectionReason());
                 enrichedLeave.put("approvalRemarks", leave.getApprovalRemarks());
                 enrichedLeave.put("totalDays", leave.getTotalDays()); // Added to fix frontend table display
+                enrichedLeave.put("cancelReason", leave.getCancelReason());
 
                 Employee employee = employeeCache.get(leave.getEmployeeId());
                 if (employee != null) {
@@ -398,23 +399,23 @@ public class LeaveManagementController {
     // If it was APPROVED, the deducted leave balance is automatically restored.
     // (Previously this only allowed PENDING and never restored balance - fixed
     // now that it delegates to LeaveActionService.)
-    @PostMapping("/{leaveId}/cancel")
+    @PostMapping({"/{leaveId}/cancel", "/cancel/{leaveId}"})
     public ResponseEntity<?> cancelLeave(@PathVariable String leaveId,
                                          @RequestBody(required = false) Map<String, String> body,
+                                         @RequestParam(value = "reason", required = false) String reasonParam,
                                          Principal principal) {
-        String reason = (body != null) ? body.get("reason") : null;
+        String reason = (body != null && body.get("reason") != null) ? body.get("reason") : reasonParam;
         Map<String, Object> result = leaveActionService.cancelLeave(leaveId, reason);
         boolean ok = Boolean.TRUE.equals(result.get("success"));
         return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);
     }
 
-    // Withdraw Leave: employee retracts a request that is still PENDING
-    // (HR hasn't acted on it yet). Now correctly sets status=WITHDRAWN
-    // (previously this only set the withdrawn flag and left status untouched).
-    @PostMapping("/{leaveId}/withdraw")
+    // Withdraw Leave: employee retracts a PENDING or APPROVED leave (on/before endDate).
+    @PostMapping({"/{leaveId}/withdraw", "/withdraw/{leaveId}"})
     public ResponseEntity<?> withdrawLeave(@PathVariable String leaveId,
-                                           @RequestBody(required = false) Map<String, String> body) {
-        String reason = (body != null) ? body.get("reason") : null;
+                                           @RequestBody(required = false) Map<String, String> body,
+                                           @RequestParam(value = "reason", required = false) String reasonParam) {
+        String reason = (body != null && body.get("reason") != null) ? body.get("reason") : reasonParam;
         Map<String, Object> result = leaveActionService.withdrawLeave(leaveId, reason);
         boolean ok = Boolean.TRUE.equals(result.get("success"));
         return ok ? ResponseEntity.ok(result) : ResponseEntity.badRequest().body(result);

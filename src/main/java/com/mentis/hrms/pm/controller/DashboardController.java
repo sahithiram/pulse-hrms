@@ -51,6 +51,7 @@ public class DashboardController {
     private final ProjectMapper projectMapper;
     private final ClientRepository clientRepository;
     private final PmAccessService access;
+    private final com.mentis.hrms.repository.EmployeeRepository employeeRepository;
     private final com.mentis.hrms.pm.security.ProjectFinanceMasker masker; // STEP 1b
     /** projects the user may see, paged */
     private List<Project> visibleProjects(Long userId, Pageable pageable) {
@@ -234,29 +235,80 @@ public class DashboardController {
         return ApiResponse.ok(out);
     }
 
+    /** Open (not DONE) tasks per person, busiest first. Everyone's workload is admin-only. */
+    private List<Map<String, Object>> workloadRows(int limit) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        int cap = Math.max(1, Math.min(limit, 50));
+        for (Object[] r : taskAssignmentRepository.countOpenByEmployee()) {
+            if (rows.size() >= cap) break;
+            Long empId = ((Number) r[0]).longValue();
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("employeeId", empId);
+            m.put("name", employeeName(empId));
+            m.put("openTasks", ((Number) r[1]).longValue());
+            rows.add(m);
+        }
+        return rows;
+    }
+
+    private String employeeName(Long pk) {
+        return employeeRepository.findById(pk).map(e -> {
+            String f = e.getFirstName() == null ? "" : e.getFirstName();
+            String l = e.getLastName() == null ? "" : e.getLastName();
+            String full = (f + " " + l).trim();
+            return full.isEmpty() ? "Employee #" + pk : full;
+        }).orElse("Employee #" + pk);
+    }
+
     @GetMapping("/team-workload")
     public ApiResponse<List<Map<String, Object>>> teamWorkload(
             @RequestParam(defaultValue = "8") int limit,
             @CurrentUserId Long userId) {
-        List<Map<String, Object>> result = new ArrayList<>();
-        if (!access.isAdmin(userId)) return ApiResponse.ok(result);   // everyone's workload: admin only
+        if (!access.isAdmin(userId)) return ApiResponse.ok(new ArrayList<>());
+        return ApiResponse.ok(workloadRows(limit));
+    }
 
-        var allAssignments = taskAssignmentRepository.findAll();
-        Map<Long, Long> counts = new HashMap<>();
-        for (var ta : allAssignments) {
-            counts.merge(ta.getEmployeeId(), 1L, Long::sum);
+    /** Home > Reports: open tasks per person (admin only; empty for everyone else). */
+    @GetMapping("/charts/team-workload")
+    public ApiResponse<ChartDataResponse> teamWorkloadChart(
+            @RequestParam(defaultValue = "8") int limit,
+            @CurrentUserId Long userId) {
+        List<String> labels = new ArrayList<>();
+        List<Long> data = new ArrayList<>();
+        if (access.isAdmin(userId)) {
+            for (Map<String, Object> m : workloadRows(limit)) {
+                labels.add(String.valueOf(m.get("name")));
+                data.add((Long) m.get("openTasks"));
+            }
         }
-        counts.entrySet().stream()
-                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
-                .limit(limit)
-                .forEach(e -> {
-                    Map<String, Object> m = new LinkedHashMap<>();
-                    m.put("employeeId", e.getKey());
-                    m.put("name", "User #" + e.getKey());
-                    m.put("openTasks", e.getValue());
-                    m.put("loadPct", Math.min(100, e.getValue() * 15));
-                    result.add(m);
-                });
-        return ApiResponse.ok(result);
+        return ApiResponse.ok(ChartDataResponse.builder().labels(labels).data(data).build());
+    }
+
+    /** Home > Reports: tasks completed per week for the last N weeks (admin: all projects, others: visible projects). */
+    @GetMapping("/charts/delivery-trend")
+    public ApiResponse<ChartDataResponse> deliveryTrend(
+            @RequestParam(defaultValue = "6") int weeks,
+            @CurrentUserId Long userId) {
+        int n = Math.max(1, Math.min(weeks, 26));
+        LocalDate first = LocalDate.now().with(java.time.DayOfWeek.MONDAY).minusWeeks(n - 1L);
+        Set<Long> scope = access.isAdmin(userId) ? null : new HashSet<>(visibleProjectIds(userId));
+        long[] buckets = new long[n];
+        for (Task t : taskRepository.findDoneSince(first.atStartOfDay())) {
+            if (scope != null && !scope.contains(t.getProjectId())) continue;
+            java.time.LocalDateTime when = t.getCompletedAt() != null ? t.getCompletedAt() : t.getUpdatedAt();
+            if (when == null) continue;
+            long idx = java.time.temporal.ChronoUnit.WEEKS.between(
+                    first, when.toLocalDate().with(java.time.DayOfWeek.MONDAY));
+            if (idx >= 0 && idx < n) buckets[(int) idx]++;
+        }
+        java.time.format.DateTimeFormatter fmt =
+                java.time.format.DateTimeFormatter.ofPattern("d MMM", java.util.Locale.ENGLISH);
+        List<String> labels = new ArrayList<>();
+        List<Long> data = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            labels.add(first.plusWeeks(i).format(fmt));
+            data.add(buckets[i]);
+        }
+        return ApiResponse.ok(ChartDataResponse.builder().labels(labels).data(data).build());
     }
 }

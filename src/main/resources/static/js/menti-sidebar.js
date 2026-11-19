@@ -9,12 +9,42 @@
 (function () {
     'use strict';
 
+    if (window.__mentiSidebarControllerLoaded) {
+        return;
+    }
+    window.__mentiSidebarControllerLoaded = true;
+    window.__mentiSidebarV3 = true;
+
     var STORAGE_KEY = 'menti.sidebar.rail';
+
+    function normalizePath(path) {
+        if (!path) return '';
+        return path.length > 1 ? path.replace(/\/+$/, '') : path;
+    }
+
+    function parseHref(href) {
+        if (!href) return { isJs: false, path: '', hash: '' };
+        if (href.indexOf('javascript') === 0) {
+            return { isJs: true, path: '', hash: '' };
+        }
+        var hashIdx = href.indexOf('#');
+        var rawPath = hashIdx === -1 ? href : href.slice(0, hashIdx);
+        var rawHash = hashIdx === -1 ? '' : href.slice(hashIdx);
+        var qIdx = rawPath.indexOf('?');
+        if (qIdx !== -1) rawPath = rawPath.slice(0, qIdx);
+        return {
+            isJs: false,
+            path: normalizePath(rawPath),
+            hash: rawHash
+        };
+    }
 
     function initSidebarNav() {
         var nav = document.getElementById('sideNav');
         var sidebar = document.getElementById('sidebar');
         if (!nav || !sidebar) return;
+        if (nav.dataset.mentiSidebarInit === '1') return;
+        nav.dataset.mentiSidebarInit = '1';
 
         var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
         var searchInput = document.getElementById('sideNavSearch');
@@ -30,12 +60,14 @@
             var submenu = submenuOf(group);
             if (!submenu) return;
             group.classList.add('is-open');
-            submenu.style.maxHeight = submenu.scrollHeight + 'px';
+            var h = submenu.scrollHeight;
+            submenu.style.maxHeight = (h > 0 ? h : 600) + 'px';
             var toggle = group.querySelector('.side-group-toggle');
             if (toggle) toggle.setAttribute('aria-expanded', 'true');
             window.setTimeout(function () {
                 if (group.classList.contains('is-open')) {
-                    submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                    var h2 = submenu.scrollHeight;
+                    submenu.style.maxHeight = (h2 > 0 ? h2 : 600) + 'px';
                 }
             }, 300);
         }
@@ -43,11 +75,16 @@
         function closeGroup(group) {
             var submenu = submenuOf(group);
             if (!submenu) return;
+            var toggle = group.querySelector('.side-group-toggle');
+            if (!group.classList.contains('is-open')) {
+                submenu.style.maxHeight = '0px';
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                return;
+            }
             submenu.style.maxHeight = submenu.scrollHeight + 'px';
             void submenu.offsetHeight; // force reflow so collapse animates
             group.classList.remove('is-open');
             submenu.style.maxHeight = '0px';
-            var toggle = group.querySelector('.side-group-toggle');
             if (toggle) toggle.setAttribute('aria-expanded', 'false');
         }
 
@@ -63,59 +100,6 @@
             });
         }
 
-        groups.forEach(function (group) {
-            var toggle = group.querySelector('.side-group-toggle');
-            if (!toggle) return;
-
-            toggle.addEventListener('click', function () {
-                if (document.body.classList.contains('sidebar-rail')) {
-                    document.body.classList.remove('sidebar-rail');
-                    persistRail(false);
-                    openGroup(group);
-                    return;
-                }
-                if (group.classList.contains('is-open')) {
-                    closeGroup(group);
-                } else {
-                    closeAll(group);
-                    openGroup(group);
-                }
-            });
-
-            group.querySelectorAll('.nav-link').forEach(function (link) {
-                link.addEventListener('click', function () {
-                    // Let the page's own handlers run first (they may preventDefault).
-                    window.setTimeout(function () {
-                        var href = link.getAttribute('href') || '';
-                        // Only force active styling for in-page (javascript:) links.
-                        if (href.indexOf('javascript') === 0) {
-                            nav.querySelectorAll('.nav-link.active').forEach(function (el) {
-                                el.classList.remove('active');
-                            });
-                            link.classList.add('active');
-                            markActive();
-                        }
-                        // On mobile, close the sidebar after a click.
-                        if (window.matchMedia('(max-width: 768px)').matches) {
-                            sidebar.classList.remove('active');
-                        }
-                    }, 0);
-                });
-            });
-        });
-
-        // If a page uses pathname-based active (rare), mark it too.
-        nav.querySelectorAll('.nav-link').forEach(function (link) {
-            var href = link.getAttribute('href');
-            if (href && href !== 'javascript:void(0)' && href === window.location.pathname) {
-                nav.querySelectorAll('.nav-link.active').forEach(function (el) {
-                    el.classList.remove('active');
-                });
-                link.classList.add('active');
-            }
-        });
-
-        // Open the group that owns the active link on load.
         function expandActiveGroup() {
             var active = nav.querySelector('.nav-link.active');
             var group = active ? active.closest('.side-group') : null;
@@ -126,8 +110,118 @@
             }
         }
 
-        expandActiveGroup();
-        markActive();
+        function setActiveLink(targetLink) {
+            if (!targetLink) return;
+            nav.querySelectorAll('.nav-link.active').forEach(function (el) {
+                el.classList.remove('active');
+            });
+            targetLink.classList.add('active');
+            markActive();
+            var group = targetLink.closest('.side-group');
+            if (group && !group.classList.contains('is-open')) {
+                closeAll(group);
+                openGroup(group);
+            }
+        }
+
+        function syncActiveByLocation() {
+            var currentPath = normalizePath(window.location.pathname);
+            var currentHash = window.location.hash || '';
+            var search = window.location.search || '';
+            if (!currentHash && /[?&]showAttendance=true(?:&|$)/i.test(search)) {
+                currentHash = '#attendance';
+            }
+            var links = Array.prototype.slice.call(nav.querySelectorAll('.nav-link'));
+            var matched = null;
+
+            // 1. If a URL hash is present (e.g. /dashboard/hr#attendance or ?showAttendance=true), match hash
+            if (currentHash) {
+                for (var i = 0; i < links.length; i++) {
+                    var parsed = parseHref(links[i].getAttribute('href') || '');
+                    if (!parsed.isJs && parsed.hash === currentHash &&
+                        (parsed.path === '' || parsed.path === currentPath || /[?&]showAttendance=true/i.test(search))) {
+                        matched = links[i];
+                        break;
+                    }
+                }
+            }
+
+            // 2. Otherwise match exact pathname without hash (e.g. /dashboard/hr -> Overview)
+            if (!matched) {
+                for (var j = 0; j < links.length; j++) {
+                    var p = parseHref(links[j].getAttribute('href') || '');
+                    if (!p.isJs && !p.hash && p.path && p.path === currentPath) {
+                        matched = links[j];
+                        break;
+                    }
+                }
+            }
+
+            if (matched) {
+                setActiveLink(matched);
+            } else {
+                expandActiveGroup();
+                markActive();
+            }
+        }
+
+        // Capture-phase delegation guarantees ONE click always toggles cleanly,
+        // even if an older cached script attached duplicate listeners to .side-group-toggle.
+        if (!window.__mentiSidebarToggleDelegated) {
+            window.__mentiSidebarToggleDelegated = true;
+            document.addEventListener('click', function (e) {
+                var toggle = e.target && e.target.closest ? e.target.closest('#sideNav .side-group-toggle') : null;
+                if (!toggle) return;
+                var group = toggle.closest('.side-group');
+                if (!group) return;
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof e.stopImmediatePropagation === 'function') {
+                    e.stopImmediatePropagation();
+                }
+                if (document.body.classList.contains('sidebar-rail')) {
+                    document.body.classList.remove('sidebar-rail');
+                    persistRail(false);
+                    closeAll(group);
+                    openGroup(group);
+                    return;
+                }
+                if (group.classList.contains('is-open')) {
+                    closeGroup(group);
+                } else {
+                    closeAll(group);
+                    openGroup(group);
+                }
+            }, true);
+        }
+
+        groups.forEach(function (group) {
+            group.querySelectorAll('.nav-link').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var wasPrevented = !!e.defaultPrevented;
+                    // Let the page's own handlers run first (they may preventDefault).
+                    window.setTimeout(function () {
+                        var href = link.getAttribute('href') || '';
+                        var parsed = parseHref(href);
+                        var currentPath = normalizePath(window.location.pathname);
+                        var isSamePageHash = !parsed.isJs && !!parsed.hash &&
+                            (parsed.path === '' || parsed.path === currentPath);
+
+                        if (parsed.isJs || isSamePageHash || wasPrevented || e.defaultPrevented) {
+                            setActiveLink(link);
+                        }
+                        // On mobile, close the sidebar after a click.
+                        if (window.matchMedia('(max-width: 768px)').matches) {
+                            sidebar.classList.remove('active');
+                        }
+                    }, 0);
+                });
+            });
+        });
+
+        // Sync active item & group with pathname + hash on load and on hash changes.
+        syncActiveByLocation();
+        window.addEventListener('hashchange', syncActiveByLocation);
 
         /* ---------- search ---------- */
         if (searchInput) {

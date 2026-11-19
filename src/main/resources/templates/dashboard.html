@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     <!-- ============ SHARED THEME (single source of truth) ============ -->
-    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css?v=3}" href="../../static/css/menti-theme.css">
     <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
 
     <style>
@@ -20,6 +20,9 @@
 
         /* --- Kept for safety: identical to menti-theme.css, acts as fallback --- */
         .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: linear-gradient(180deg, #0b1220 0%, #0f172a 58%, #101b30 100%); border-right: 1px solid rgba(148,163,184,.12); box-shadow: 2px 0 10px rgba(0,0,0,.2); display: flex; flex-direction: column; transition: var(--transition); z-index: 1000; }
+        .side-submenu { list-style: none; max-height: 0; overflow: hidden; transition: max-height .28s cubic-bezier(.4,0,.2,1); }
+        .side-group.is-open > .side-submenu { max-height: 900px !important; }
+        .side-group.is-open > .side-group-toggle .side-chevron { transform: rotate(90deg); }
         .top-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--dark-card); border-bottom: 1px solid var(--dark-border); padding: .75rem 1.5rem; position: sticky; top: 0; min-height: 64px; z-index: 100; }
         .search-box { position: relative; width: 300px; flex-shrink: 0; }
         .search-box input { width: 100%; padding: .6rem .75rem .6rem 2.5rem; border-radius: 8px; border: 1px solid var(--dark-border); background: var(--dark-bg); color: var(--dark-text); font-size: .875rem; transition: var(--transition); }
@@ -420,7 +423,7 @@
             pointer-events: none;
         }
     </style>
-</head>
+    <script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
 <body>
 
 <!-- === SIDEBAR (shared fragment) === -->
@@ -773,6 +776,7 @@
                                 <option>All Status</option>
                                 <option>Present</option><option>Absent</option>
                                 <option>On Leave</option><option>On Break</option>
+                                <option>Checked Out</option>
                             </select>
                             <button class="attendance-refresh-btn" onclick="refreshLiveData()" title="Refresh">
                                 <i class="fas fa-sync-alt"></i>
@@ -781,7 +785,7 @@
                         <div class="table-container" style="border:none;">
                             <table class="pm-table table-sm">
                                 <thead>
-                                <tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Working Hours</th></tr>
+                                <tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Working Hours</th><th>Status</th></tr>
                                 </thead>
                                 <tbody id="liveAttendanceBody"></tbody>
                             </table>
@@ -834,7 +838,7 @@
                                 <option value="">All Status</option>
                                 <option value="Present">Present</option><option value="Absent">Absent</option>
                                 <option value="On Leave">On Leave</option><option value="Late">Late</option>
-                                <option value="On Break">On Break</option>
+                                <option value="On Break">On Break</option><option value="Checked Out">Checked Out</option>
                             </select>
                             <div class="date-input-wrapper">
                                 <input type="text" id="dailyDatePicker" placeholder="Select date..." readonly>
@@ -1350,6 +1354,7 @@
     function showAttendance() {
       showContainer('attendanceManagementContent');
       openAttendanceTab('dashboard');
+      if (liveMonitor) liveMonitor.loadLiveAttendance();
     }
     function showCompanyProfile() {
       showContainer('companyProfileContent');
@@ -1398,6 +1403,16 @@
     /* ============ Attendance status helpers ============ */
     function getAttendanceStatus(rec) {
       if (!rec) return 'Absent';
+      if (rec.isCheckedOut || rec.hasCheckedOut || rec.checkOutTime) return 'Checked Out';
+      if (rec.statusText) return rec.statusText;
+      if (rec.displayStatus) return rec.displayStatus;
+      if (rec.statusForDisplay) return rec.statusForDisplay;
+      var raw = String(rec.status || '').trim().toUpperCase();
+      if (raw === 'ACTIVE' || raw === 'PRESENT') return 'Present';
+      if (raw === 'BREAK') return 'On Break';
+      if (raw === 'LEAVE') return 'On Leave';
+      if (raw === 'OFFLINE' || raw === 'ABSENT') return 'Absent';
+      if (raw === 'CHECKED_OUT' || raw === 'CHECKED OUT') return 'Checked Out';
       if (rec.status) return rec.status;
       if (rec.checkIn) {
         var t = String(rec.checkIn).split(':');
@@ -1408,16 +1423,15 @@
     }
     function statusBadgeClass(status) {
       var s = (status || 'Absent').toLowerCase();
-      if (s === 'present') return 'badge-sm approved';
-      if (s === 'late') return 'badge-sm pending';
-      if (s === 'on leave') return 'badge-sm pending';
+      if (s === 'present' || s === 'active') return 'badge-sm approved';
+      if (s === 'late' || s === 'on break' || s === 'break' || s === 'on leave' || s === 'leave') return 'badge-sm pending';
       return 'badge-sm rejected';
     }
     function statusDotColor(status) {
       var s = (status || 'Absent').toLowerCase();
-      if (s === 'present') return '#10b981';
-      if (s === 'late') return '#f59e0b';
-      if (s === 'on leave') return '#6366f1';
+      if (s === 'present' || s === 'active') return '#10b981';
+      if (s === 'late' || s === 'on break' || s === 'break') return '#f59e0b';
+      if (s === 'on leave' || s === 'leave') return '#6366f1';
       return '#ef4444';
     }
     function applyFilters(data, deptSelId, statusSelId) {
@@ -1428,9 +1442,9 @@
       var noDept = !dept || dept === 'all' || dept === 'All Departments';
       var noStatus = !status || status === 'all' || status === 'All Status';
       return (data || []).filter(function (r) {
-        var okDept = noDept || (r.department || '—') === dept;
+        var okDept = noDept || String(r.department || '—').trim().toLowerCase() === dept.trim().toLowerCase();
         var st = getAttendanceStatus(r).toLowerCase();
-        return okDept && (noStatus || st === status.toLowerCase());
+        return okDept && (noStatus || st === status.trim().toLowerCase());
       });
     }
           function renderAttendanceRows(tbodyId, rows) {
@@ -1442,7 +1456,7 @@
         return;
       }
       tbody.innerHTML = rows.map(function (r) {
-        var status = r.statusText || r.displayStatus || getAttendanceStatus(r);
+        var status = getAttendanceStatus(r);
         var checkIn  = r.checkInFormatted  || r.checkIn  || '—';
         var checkOut = r.checkOutFormatted || r.checkOut || '—';
         var hours    = r.workingHours      || r.workHours || r.hours || r.currentWorkingTime || '—';
@@ -1565,7 +1579,7 @@
         var present = 0, absent = 0;
         (this.data || []).forEach(function (r) {
           var s = getAttendanceStatus(r).toLowerCase();
-          if (s === 'present' || s === 'late') present++;
+          if (s === 'present' || s === 'late' || s === 'on break' || s === 'checked out') present++;
           else if (s === 'absent') absent++;
         });
         var pendingLeaves = 0, holidays = 0;
@@ -2137,7 +2151,14 @@ try {
           });
         }
         return list.map(function (r) {
-          return [r.employeeName || r.name || '—', r.department || '—', r.checkIn || '—', r.checkOut || '—', r.workHours || r.hours || '—', getAttendanceStatus(r)];
+          return [
+            r.employeeName || r.name || '—',
+            r.department || '—',
+            r.checkInFormatted || r.checkIn || '—',
+            r.checkOutFormatted || r.checkOut || '—',
+            r.workingHours || r.currentWorkingTime || r.workHours || r.hours || '—',
+            getAttendanceStatus(r)
+          ];
         });
       },
       getHeaders(type) {
@@ -2312,47 +2333,83 @@ try {
       var cells = document.querySelectorAll('.funnel-step .funnel-value');
       for (var i = 0; i < 4 && i < cells.length; i++) cells[i].textContent = values[i];
     }
-    async function initRecruitmentChart() {
-      window.__recruitmentChartInit = true;
+    function renderRecruitmentChart() {
       if (typeof Chart === 'undefined') return;
-      await fetchLiveRecruitmentMetrics();
-      updateFunnelDisplay();
+      var ctx = document.getElementById('recruitmentChart');
+      if (!ctx) return;
+
+      var isLine = recruitmentChartType === 'line';
+      var labels = Array.isArray(monthlyChartData.labels) ? monthlyChartData.labels : [];
+      var appsData = (monthlyChartData.applications || []).map(function (v) {
+        var n = Number(v);
+        return isNaN(n) ? 0 : n;
+      });
+      var hiredData = (monthlyChartData.hired || []).map(function (v) {
+        var n = Number(v);
+        return isNaN(n) ? 0 : n;
+      });
+
       Chart.defaults.font.family = 'Inter, sans-serif';
       Chart.defaults.font.size = 12;
       Chart.defaults.color = '#cbd5e1';
-      var ctx = document.getElementById('recruitmentChart');
-      if (!ctx) return;
-      if (recruitmentChart) recruitmentChart.destroy();
+
+      if (recruitmentChart) {
+        recruitmentChart.destroy();
+        recruitmentChart = null;
+      }
+
+      var maxVal = Math.max.apply(null, [0].concat(appsData, hiredData));
+      var pointSize = labels.length <= 1 ? 6 : 4;
+
       recruitmentChart = new Chart(ctx, {
-        type: recruitmentChartType,
+        type: isLine ? 'line' : 'bar',
         data: {
-          labels: monthlyChartData.labels,
+          labels: labels,
           datasets: [
-            {
+            Object.assign({
               label: 'Applications',
-              data: monthlyChartData.applications,
-              backgroundColor: 'rgba(139,92,246,.6)',
+              data: appsData,
+              backgroundColor: isLine ? 'rgba(139,92,246,.18)' : 'rgba(139,92,246,.6)',
               borderColor: '#8b5cf6',
-              borderWidth: 2,
-              borderRadius: 6,
-              tension: .35,
-              fill: recruitmentChartType === 'line'
-            },
-            {
+              borderWidth: isLine ? 3 : 2
+            }, isLine ? {
+              showLine: true,
+              spanGaps: true,
+              tension: 0.35,
+              fill: true,
+              pointRadius: pointSize,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#8b5cf6',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5
+            } : {
+              borderRadius: 6
+            }),
+            Object.assign({
               label: 'Hired',
-              data: monthlyChartData.hired,
-              backgroundColor: 'rgba(16,185,129,.6)',
+              data: hiredData,
+              backgroundColor: isLine ? 'rgba(16,185,129,.18)' : 'rgba(16,185,129,.6)',
               borderColor: '#10b981',
-              borderWidth: 2,
-              borderRadius: 6,
-              tension: .35,
-              fill: recruitmentChartType === 'line'
-            }
+              borderWidth: isLine ? 3 : 2
+            }, isLine ? {
+              showLine: true,
+              spanGaps: true,
+              tension: 0.35,
+              fill: true,
+              pointRadius: pointSize,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5
+            } : {
+              borderRadius: 6
+            })
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
               display: true,
@@ -2363,6 +2420,7 @@ try {
             x: { grid: { color: 'rgba(51,65,85,.5)' } },
             y: {
               beginAtZero: true,
+              suggestedMax: maxVal === 0 ? 5 : undefined,
               ticks: { precision: 0 },
               grid: { color: 'rgba(51,65,85,.5)' }
             }
@@ -2370,13 +2428,23 @@ try {
         }
       });
     }
+    async function initRecruitmentChart(skipFetch) {
+      window.__recruitmentChartInit = true;
+      if (typeof Chart === 'undefined') return;
+      if (!skipFetch) {
+        await fetchLiveRecruitmentMetrics();
+        updateFunnelDisplay();
+      }
+      renderRecruitmentChart();
+    }
     function setupChartTypeSelectors() {
       document.querySelectorAll('.chart-type-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           document.querySelectorAll('.chart-type-btn').forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
           recruitmentChartType = btn.dataset.chart || 'bar';
-          initRecruitmentChart();
+          var hasLoadedLabels = Array.isArray(monthlyChartData.labels) && monthlyChartData.labels.length > 0;
+          initRecruitmentChart(hasLoadedLabels);
         });
       });
     }
@@ -2978,9 +3046,10 @@ try {
     /* ============ Boot ============ */
     function routeByHash() {
       var h = (window.location.hash || '').toLowerCase();
-      if (h === '#attendance' || h === '#leave') showAttendance();
+      var params = new URLSearchParams(window.location.search || '');
+      if (h === '#attendance' || h === '#leave' || params.get('showAttendance') === 'true') showAttendance();
       else if (h === '#company-profile') showCompanyProfile();
-      else if (h === '#roles') showRolesPermissions();
+      else if (h === '#roles' || h === '#roles-permissions') showRolesPermissions();
       else showOverview();
     }
     document.addEventListener('DOMContentLoaded', function () {
@@ -3027,6 +3096,78 @@ try {
       });
 
       routeByHash();
+      window.addEventListener('hashchange', routeByHash);
+
+      /* Self-healing sidebar fallback if external menti-sidebar.js 404s or an older layout fragment is cached */
+      if (!window.__mentiSidebarV3) {
+        (function initDashboardSidebarFallback() {
+          var nav = document.getElementById('sideNav');
+          var sidebar = document.getElementById('sidebar');
+          if (!nav || !sidebar || nav.dataset.mentiSidebarInit === '1') return;
+          nav.dataset.mentiSidebarInit = '1';
+          window.__mentiSidebarV3 = true;
+
+          var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
+          var openGroup = function (group) {
+            var submenu = group.querySelector('.side-submenu');
+            if (!submenu) return;
+            group.classList.add('is-open');
+            var h = submenu.scrollHeight;
+            submenu.style.maxHeight = (h > 0 ? h : 600) + 'px';
+            var t = group.querySelector('.side-group-toggle');
+            if (t) t.setAttribute('aria-expanded', 'true');
+          };
+          var closeGroup = function (group) {
+            var submenu = group.querySelector('.side-submenu');
+            if (!submenu) return;
+            group.classList.remove('is-open');
+            submenu.style.maxHeight = '0px';
+            var t = group.querySelector('.side-group-toggle');
+            if (t) t.setAttribute('aria-expanded', 'false');
+          };
+          var closeAll = function (except) {
+            groups.forEach(function (g) { if (g !== except) closeGroup(g); });
+          };
+          var markActive = function () {
+            groups.forEach(function (g) { g.classList.toggle('has-active', !!g.querySelector('.nav-link.active')); });
+          };
+
+          if (!window.__mentiSidebarToggleDelegated) {
+            window.__mentiSidebarToggleDelegated = true;
+            document.addEventListener('click', function (e) {
+              var toggle = e.target && e.target.closest ? e.target.closest('#sideNav .side-group-toggle') : null;
+              if (!toggle) return;
+              var group = toggle.closest('.side-group');
+              if (!group) return;
+              e.preventDefault();
+              e.stopPropagation();
+              if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+              if (document.body.classList.contains('sidebar-rail')) {
+                document.body.classList.remove('sidebar-rail');
+                closeAll(group);
+                openGroup(group);
+                return;
+              }
+              if (group.classList.contains('is-open')) closeGroup(group);
+              else { closeAll(group); openGroup(group); }
+            }, true);
+          }
+
+          var wantAtt = (window.location.hash || '').toLowerCase() === '#attendance' ||
+            /[?&]showAttendance=true(?:&|$)/i.test(window.location.search || '');
+          var target = wantAtt ? document.getElementById('attendanceLeaveLink') : nav.querySelector('.nav-link.active');
+          if (target) {
+            nav.querySelectorAll('.nav-link.active').forEach(function (el) { el.classList.remove('active'); });
+            target.classList.add('active');
+            var parentGroup = target.closest('.side-group');
+            if (parentGroup) { closeAll(parentGroup); openGroup(parentGroup); }
+          } else if (groups[0]) {
+            closeAll(groups[0]);
+            openGroup(groups[0]);
+          }
+          markActive();
+        })();
+      }
 
       /* Rebind fragment-injected links (idempotent — safe if already handled) */
       var att = document.getElementById('attendanceLeaveLink');

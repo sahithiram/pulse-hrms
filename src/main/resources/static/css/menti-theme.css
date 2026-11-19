@@ -307,6 +307,9 @@ input, select, textarea { font-family: inherit; }
   overflow: hidden;
   transition: max-height .28s cubic-bezier(.4,0,.2,1);
 }
+.side-group.is-open > .side-submenu {
+  max-height: 900px !important;
+}
 .side-submenu > li { list-style: none; }
 .side-submenu > li[hidden] { display: none; }
 
@@ -826,6 +829,85 @@ a.view-link, a.pm-card-link, a.post-job-btn, a.create-employee-btn, a.nav-link {
 .attendance-action-btn.action-approve { background: linear-gradient(135deg, var(--success), #0d9668); }
 .attendance-action-btn.action-reject  { background: linear-gradient(135deg, var(--danger), #d12d2d); }
 .attendance-action-btn.action-view    { background: linear-gradient(135deg, var(--primary), var(--primary-hover)); }
+
+/* Table row icon action buttons (Offer Letters, Onboarding, Employees, etc.) */
+.action-buttons {
+  display: flex !important;
+  align-items: center !important;
+  gap: .45rem !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+}
+.btn-action {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid var(--dark-border) !important;
+  background: rgba(148, 163, 184, .12) !important;
+  color: var(--dark-text-secondary) !important;
+  font-size: .82rem !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  transition: var(--transition) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  flex-shrink: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  box-shadow: none !important;
+}
+.btn-action i {
+  color: inherit !important;
+  pointer-events: none;
+}
+.btn-action:hover {
+  transform: translateY(-2px);
+}
+.btn-action.btn-view {
+  background: rgba(99, 102, 241, .16) !important;
+  border-color: rgba(99, 102, 241, .4) !important;
+  color: #818cf8 !important;
+}
+.btn-action.btn-view:hover {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+}
+.btn-action.btn-edit {
+  background: rgba(14, 165, 233, .16) !important;
+  border-color: rgba(14, 165, 233, .4) !important;
+  color: #38bdf8 !important;
+}
+.btn-action.btn-edit:hover {
+  background: var(--info) !important;
+  border-color: var(--info) !important;
+  color: #fff !important;
+}
+.btn-action.btn-docs {
+  background: rgba(16, 185, 129, .16) !important;
+  border-color: rgba(16, 185, 129, .4) !important;
+  color: #34d399 !important;
+}
+.btn-action.btn-docs:hover {
+  background: var(--success) !important;
+  border-color: var(--success) !important;
+  color: #fff !important;
+}
+.btn-action.btn-delete {
+  background: rgba(239, 68, 68, .16) !important;
+  border-color: rgba(239, 68, 68, .4) !important;
+  color: #f87171 !important;
+}
+.btn-action.btn-delete:hover {
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
+  color: #fff !important;
+}
+
 
 /* Export / print buttons */
 .attendance-export-print-buttons {

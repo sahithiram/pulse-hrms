@@ -237,7 +237,7 @@
           <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
         <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
         </ul>
       </div>
 
@@ -250,7 +250,7 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -632,8 +632,8 @@
   (function () {
     if (window.PM && window.PM.bootstrap) return;
 
-    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: 'LEAD' };
-    var rules = { creator: true, manage: true, clients: true, lead: true };
+    var me = { name: 'Guest', employeeId: '', admin: false, superAdmin: false, leadTier: null };
+    var rules = { creator: false, manage: false, clients: false, lead: false };
 
     function toast(msg, type) {
       var box = document.getElementById('pmToasts');

@@ -293,7 +293,7 @@ public class ApprovalServiceImpl implements ApprovalService {
                     throw new BusinessRuleException("payload.newDueDate must be an ISO date (YYYY-MM-DD)");
                 }
             }
-            default -> { }
+            default -> throw new BusinessRuleException("Unknown approval type: " + type);
         }
 
         // ✅ CHANGED (b): project-level requester must be able to administer the project,

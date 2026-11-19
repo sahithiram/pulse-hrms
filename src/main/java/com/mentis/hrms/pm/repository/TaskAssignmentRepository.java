@@ -17,6 +17,12 @@ public interface TaskAssignmentRepository extends JpaRepository<TaskAssignment, 
 
     void deleteByTaskId(Long taskId);
 
+    /** [employeeId, openTaskCount] for everyone with at least one task that is not DONE, busiest first */
+    @Query("select a.employeeId, count(a) from TaskAssignment a, Task t " +
+            "where a.taskId = t.id and t.status <> com.mentis.hrms.pm.enums.TaskStatus.DONE " +
+            "group by a.employeeId order by count(a) desc")
+    List<Object[]> countOpenByEmployee();
+
     /** true when the employee is assigned to at least one task of the project */
     @Query("select count(a) > 0 from TaskAssignment a, Task t " +
             "where a.taskId = t.id and t.projectId = :projectId and a.employeeId = :employeeId")

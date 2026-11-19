@@ -873,6 +873,11 @@
   }
 
   function applyRouteGuard(user) {
+    // Static sidebars have no per-link role gating: hide Budget / Reports links the person cannot open
+    document.querySelectorAll('a[href^="/pm/10-insights?tab="]').forEach(function (a) {
+      var need = /tab=budget/.test(a.getAttribute('href')) ? 'finance' : 'manage';
+      if (!can(need, user)) { var li = a.closest('li') || a; li.style.display = 'none'; }
+    });
     const path = normPath(location.pathname);
     const route = ROUTES.find(r => r.path === path);
     if (!route) return true;

@@ -21,6 +21,11 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     List<Task> findByParentTaskId(Long parentTaskId);
 
+    /** DONE tasks completed on/after the given moment (falls back to updatedAt for rows finished before completedAt was recorded) */
+    @Query("SELECT t FROM Task t WHERE t.status = com.mentis.hrms.pm.enums.TaskStatus.DONE "
+            + "AND COALESCE(t.completedAt, t.updatedAt) >= :from")
+    List<Task> findDoneSince(@Param("from") java.time.LocalDateTime from);
+
     long countByProjectIdAndStatus(Long projectId, TaskStatus status);
 
     long countByStatusNot(TaskStatus status);

@@ -320,6 +320,31 @@
         .status-rejected  { background: rgba(239, 68, 68, .15);  color: #fca5a5; }
         .status-pending   { background: rgba(148, 163, 184, .15); color: #94a3b8; }
         .status-badge.checked-out { background: rgba(239, 68, 68, .15); color: #ef4444; border: 1px solid rgba(239, 68, 68, .3); }
+        .status-badge.withdrawn, .status-badge.cancelled,
+        .withdrawn, .cancelled { background: rgba(148, 163, 184, .15); color: #cbd5e1; border: 1px solid rgba(148, 163, 184, .35); }
+        .btn-withdraw {
+            background: rgba(245, 158, 11, .14);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, .4);
+            padding: .28rem .65rem;
+            border-radius: 8px;
+            font-size: .72rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            transition: all .2s ease;
+            white-space: nowrap;
+        }
+        .btn-withdraw:hover:not(:disabled) {
+            background: var(--warning);
+            color: #0f172a;
+            border-color: var(--warning);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, .28);
+        }
+        .btn-withdraw:disabled { opacity: .5; cursor: not-allowed; }
 
         .btn-icon { width: 30px; height: 30px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid; cursor: pointer; font-size: 12px; background: transparent; transition: all .2s ease; }
         .btn-icon:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0, 0, 0, .2); }
@@ -958,7 +983,7 @@
     margin-right: 8px;
 }
     </style>
-</head>
+    <script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
 <body>
 <!-- employee identity for the page scripts -->
 <input type="hidden" id="currentEmployeeId"
@@ -1569,12 +1594,12 @@
                                     <thead>
                                     <tr>
                                         <th>Leave ID</th><th>Leave Type</th><th>From Date</th><th>To Date</th>
-                                        <th>Duration</th><th>Status</th><th>Remarks</th>
+                                        <th>Duration</th><th>Status</th><th>Remarks</th><th>Actions</th>
                                     </tr>
                                     </thead>
                                     <tbody id="leave-history-body">
                                     <tr id="no-history-message">
-                                        <td colspan="7" style="text-align: center; padding: 2rem; color: var(--dark-text-secondary);">
+                                        <td colspan="8" style="text-align: center; padding: 2rem; color: var(--dark-text-secondary);">
                                             <i class="fas fa-info-circle" style="font-size: 2rem; margin-bottom: 0.5rem; display: block;"></i>
                                             No leave history yet.
                                         </td>
@@ -1695,6 +1720,31 @@
                         <button type="button" class="btn" onclick="closeApplyLeavePopup()" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text);">Cancel</button>
                         <button type="button" class="btn btn-primary" id="submitLeaveBtn" onclick="submitLeaveFormFromPopup()" disabled>
                             <i class="fas fa-paper-plane"></i> Apply for Leave
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Withdraw Leave Confirmation Popup -->
+                <div class="popup-overlay" id="withdrawLeaveOverlay" onclick="closeWithdrawLeaveModal()"></div>
+                <div class="popup-modal" id="withdrawLeavePopup" style="max-width: 480px;">
+                    <div class="popup-header">
+                        <h3><i class="fas fa-rotate-left" style="color: var(--warning);"></i> Withdraw Leave Request</h3>
+                        <button type="button" class="close-popup-btn" onclick="closeWithdrawLeaveModal()">×</button>
+                    </div>
+                    <div class="popup-body">
+                        <p style="font-size: .84rem; color: var(--dark-text-secondary); margin-bottom: .75rem;">
+                            Are you sure you want to withdraw this leave request? Your leave balance will be restored and any scheduled leave attendance will be reverted so you can check in normally.
+                        </p>
+                        <div id="withdrawLeaveMeta" style="background: var(--dark-bg); border: 1px solid var(--dark-border); border-radius: 10px; padding: .75rem .9rem; margin-bottom: .9rem; font-size: .8rem; color: var(--dark-text); line-height: 1.6;"></div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label for="withdrawReasonInput">Reason for Withdrawal <span style="color: var(--dark-text-secondary); font-weight: 400;">(Optional)</span></label>
+                            <textarea id="withdrawReasonInput" rows="3" placeholder="e.g., Plans changed, will be working as usual..."></textarea>
+                        </div>
+                    </div>
+                    <div class="popup-footer">
+                        <button type="button" class="btn" onclick="closeWithdrawLeaveModal()" style="background: var(--dark-bg); border: 1px solid var(--dark-border); color: var(--dark-text);">Keep Leave</button>
+                        <button type="button" class="btn" id="confirmWithdrawBtn" onclick="confirmWithdrawLeave()" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #0f172a; font-weight: 700;">
+                            <i class="fas fa-rotate-left"></i> Confirm Withdraw
                         </button>
                     </div>
                 </div>
@@ -2823,6 +2873,36 @@ if (tabName === 'timesheet') {
     /* ═════════════════════════════════════════════════════════════════
        LEAVE
        ═════════════════════════════════════════════════════════════════ */
+    let allEmployeeLeaves = [];
+    let pendingWithdrawLeaveId = null;
+
+    function normalizeLeaveDateYmd(val) {
+        if (!val) return '';
+        if (Array.isArray(val) && val.length >= 3) {
+            return `${val[0]}-${String(val[1]).padStart(2, '0')}-${String(val[2]).padStart(2, '0')}`;
+        }
+        const s = String(val).trim();
+        const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (m) return m[1];
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        return '';
+    }
+
+    function canWithdrawLeave(leave) {
+        if (!leave || !leave.status) return false;
+        const status = String(leave.status).toUpperCase();
+        if (status === 'PENDING') return true;
+        if (status === 'APPROVED') {
+            const endStr = normalizeLeaveDateYmd(leave.endDate || leave.startDate);
+            if (!endStr) return false;
+            return endStr >= getTodayLocalDateString();
+        }
+        return false;
+    }
+
     async function loadEmployeeLeaves() {
         const employeeId = document.getElementById('currentEmployeeId')?.value;
         if (!employeeId) return;
@@ -2832,13 +2912,24 @@ if (tabName === 'timesheet') {
             if (!data.success) return;
 
             const all = data.leaves || [];
+            allEmployeeLeaves = all;
             const pending = all.filter(l => l.status && l.status.toUpperCase() === 'PENDING');
-            const history = all.filter(l => l.status && (l.status.toUpperCase() === 'APPROVED' || l.status.toUpperCase() === 'REJECTED'));
+            const historyStatuses = ['APPROVED', 'REJECTED', 'WITHDRAWN', 'CANCELLED'];
+            const history = all.filter(l => l.status && historyStatuses.includes(l.status.toUpperCase()));
 
             updatePendingLeavesTable(pending);
             updateLeaveHistoryTable(history);
-            document.getElementById('pendingCountBadge').textContent = pending.length;
-            document.getElementById('pendingCountBadge').style.display = pending.length > 0 ? 'inline-block' : 'none';
+
+            const pendingBadge = document.getElementById('pendingCountBadge');
+            if (pendingBadge) {
+                pendingBadge.textContent = pending.length;
+                pendingBadge.style.display = pending.length > 0 ? 'inline-block' : 'none';
+            }
+            const historyBadge = document.getElementById('historyCountBadge');
+            if (historyBadge) {
+                historyBadge.textContent = history.length;
+                historyBadge.style.display = history.length > 0 ? 'inline-block' : 'none';
+            }
         } catch (e) { console.error(e); }
     }
 
@@ -2853,17 +2944,26 @@ if (tabName === 'timesheet') {
                 </td></tr>`;
             return;
         }
-        tbody.innerHTML = list.map(leave => `
+        tbody.innerHTML = list.map(leave => {
+            const reasonText = leave.reason
+                ? (leave.reason.substring(0, 30) + (leave.reason.length > 30 ? '...' : ''))
+                : '-';
+            return `
             <tr>
-                <td><strong>${leave.id}</strong></td>
-                <td>${leave.leaveTypeName || leave.leaveType}</td>
+                <td><strong>${escapeHtml(leave.id)}</strong></td>
+                <td>${escapeHtml(leave.leaveTypeName || leave.leaveType)}</td>
                 <td>${formatDateSafe(leave.startDate)}</td>
                 <td>${formatDateSafe(leave.endDate)}</td>
                 <td>${calculateLeaveDuration(leave.startDate, leave.endDate)}</td>
-                <td>${leave.reason ? (leave.reason.substring(0,30) + (leave.reason.length > 30 ? '...' : '')) : '-'}</td>
+                <td>${escapeHtml(reasonText)}</td>
                 <td><span class="status-badge pending">Pending</span></td>
-                <td><button class="btn btn-danger" style="padding:.25rem .5rem;font-size:.75rem;" onclick="cancelLeaveRequest('${leave.id}')"><i class="fas fa-times"></i></button></td>
-            </tr>`).join('');
+                <td>
+                    <button type="button" class="btn-withdraw" onclick="openWithdrawLeaveModal('${escapeAttr(leave.id)}')" title="Withdraw pending leave request">
+                        <i class="fas fa-rotate-left"></i> Withdraw
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
     }
 
    /* ---- Leave History pagination state ---- */
@@ -2926,10 +3026,10 @@ function renderLeaveHistoryPage(page) {
     const totalPages = Math.max(1, Math.ceil(total / LEAVE_HISTORY_PER_PAGE));
     currentLeaveHistoryPage = Math.min(Math.max(1, page), totalPages);
 
-    // Empty state — preserve existing markup
+    // Empty state
     if (total === 0) {
         tbody.innerHTML = `<tr id="no-history-message">
-            <td colspan="7" style="text-align:center;padding:2rem;color:var(--dark-text-secondary);">
+            <td colspan="8" style="text-align:center;padding:2rem;color:var(--dark-text-secondary);">
                 <i class="fas fa-info-circle" style="font-size:2rem;margin-bottom:.5rem;display:block;"></i>
                 No leave history yet.
             </td></tr>`;
@@ -2940,19 +3040,32 @@ function renderLeaveHistoryPage(page) {
     const start = (currentLeaveHistoryPage - 1) * LEAVE_HISTORY_PER_PAGE;
     const pageItems = allLeaveHistory.slice(start, start + LEAVE_HISTORY_PER_PAGE);
 
-    // Row template preserved exactly as before
     tbody.innerHTML = pageItems.map(leave => {
         const status = (leave.status || '').toUpperCase();
-        const cls = status === 'APPROVED' ? 'approved' : status === 'REJECTED' ? 'rejected' : 'pending';
-        const remarks = status === 'REJECTED' ? (leave.rejectionReason || 'Rejected') : (status === 'APPROVED' ? 'Approved' : '-');
+        const cls = status === 'APPROVED' ? 'approved'
+            : status === 'REJECTED' ? 'rejected'
+            : (status === 'WITHDRAWN' || status === 'CANCELLED') ? 'withdrawn'
+            : 'pending';
+        const remarks = status === 'REJECTED'
+            ? (leave.rejectionReason || 'Rejected')
+            : (status === 'WITHDRAWN' || status === 'CANCELLED')
+                ? (leave.cancelReason || 'Withdrawn by employee')
+                : (status === 'APPROVED' ? (leave.approvalRemarks || 'Approved') : '-');
+        const actionHtml = canWithdrawLeave(leave)
+            ? `<button type="button" class="btn-withdraw" onclick="openWithdrawLeaveModal('${escapeAttr(leave.id)}')" title="Withdraw approved leave">
+                   <i class="fas fa-rotate-left"></i> Withdraw
+               </button>`
+            : `<span style="color: var(--dark-text-secondary); font-size: .72rem;">—</span>`;
+
         return `<tr>
-            <td><strong>${leave.id}</strong></td>
-            <td>${leave.leaveTypeName || leave.leaveType}</td>
+            <td><strong>${escapeHtml(leave.id)}</strong></td>
+            <td>${escapeHtml(leave.leaveTypeName || leave.leaveType)}</td>
             <td>${formatDateSafe(leave.startDate)}</td>
             <td>${formatDateSafe(leave.endDate)}</td>
             <td>${calculateLeaveDuration(leave.startDate, leave.endDate)}</td>
-            <td><span class="status-badge ${cls}">${status}</span></td>
-            <td>${remarks}</td>
+            <td><span class="status-badge ${cls}">${escapeHtml(status)}</span></td>
+            <td>${escapeHtml(remarks)}</td>
+            <td>${actionHtml}</td>
         </tr>`;
     }).join('');
 
@@ -2970,12 +3083,101 @@ function goToLeaveHistoryPage(page) {
     renderLeaveHistoryPage(page);
 }
 
+    function openWithdrawLeaveModal(leaveId) {
+        const leave = allEmployeeLeaves.find(l => String(l.id) === String(leaveId));
+        if (leave && !canWithdrawLeave(leave)) {
+            alert('Past leaves cannot be withdrawn.');
+            return;
+        }
+        pendingWithdrawLeaveId = leaveId;
+        const metaEl = document.getElementById('withdrawLeaveMeta');
+        const reasonInput = document.getElementById('withdrawReasonInput');
+        if (reasonInput) reasonInput.value = '';
+        if (metaEl) {
+            if (leave) {
+                const status = String(leave.status || '').toUpperCase();
+                metaEl.innerHTML = `
+                    <div><strong>Leave ID:</strong> ${escapeHtml(leave.id)}</div>
+                    <div><strong>Type:</strong> ${escapeHtml(leave.leaveTypeName || leave.leaveType || '-')}</div>
+                    <div><strong>Dates:</strong> ${formatDateSafe(leave.startDate)} to ${formatDateSafe(leave.endDate)} (${calculateLeaveDuration(leave.startDate, leave.endDate)})</div>
+                    <div><strong>Current Status:</strong> ${escapeHtml(status)}</div>
+                `;
+            } else {
+                metaEl.innerHTML = `<div><strong>Leave ID:</strong> ${escapeHtml(leaveId)}</div>`;
+            }
+        }
+        const btn = document.getElementById('confirmWithdrawBtn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-rotate-left"></i> Confirm Withdraw';
+        }
+        document.getElementById('withdrawLeaveOverlay')?.classList.add('active');
+        document.getElementById('withdrawLeavePopup')?.classList.add('active');
+    }
+
+    function closeWithdrawLeaveModal() {
+        pendingWithdrawLeaveId = null;
+        document.getElementById('withdrawLeavePopup')?.classList.remove('active');
+        document.getElementById('withdrawLeaveOverlay')?.classList.remove('active');
+        const reasonInput = document.getElementById('withdrawReasonInput');
+        if (reasonInput) reasonInput.value = '';
+    }
+
+    async function confirmWithdrawLeave() {
+        if (!pendingWithdrawLeaveId) return;
+        const leaveId = pendingWithdrawLeaveId;
+        const reason = (document.getElementById('withdrawReasonInput')?.value || '').trim();
+        const btn = document.getElementById('confirmWithdrawBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Withdrawing...';
+        }
+
+        try {
+            const response = await fetch(`/api/leaves/${encodeURIComponent(leaveId)}/withdraw`, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data.success === false) {
+                throw new Error(data.error || data.message || `Failed to withdraw leave (HTTP ${response.status})`);
+            }
+
+            closeWithdrawLeaveModal();
+            showSuccessPopup('Leave Withdrawn', data.message || 'Leave request withdrawn and balance restored.');
+
+            await loadEmployeeLeaves();
+            if (typeof loadApprovedLeavesForCalendar === 'function') {
+                await loadApprovedLeavesForCalendar();
+            }
+            if (typeof generateMainCalendar === 'function') {
+                await generateMainCalendar();
+            }
+            if (typeof window.refreshMonthlyBalance === 'function') {
+                await window.refreshMonthlyBalance();
+            }
+            if (typeof loadRecentAttendance === 'function') {
+                await loadRecentAttendance();
+            }
+            if (typeof loadMonthlySummary === 'function') {
+                await loadMonthlySummary();
+            }
+            if (typeof loadTodayAttendanceFromServer === 'function') {
+                await loadTodayAttendanceFromServer();
+            }
+        } catch (err) {
+            alert(err.message || 'Unable to withdraw leave request');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rotate-left"></i> Confirm Withdraw';
+            }
+        }
+    }
+
     function cancelLeaveRequest(leaveId) {
-        if (!confirm('Cancel this leave request?')) return;
-        fetch(`/api/leaves/cancel/${leaveId}`, { method:'POST' })
-            .then(r => r.json())
-            .then(() => { showSuccessPopup('Cancelled', 'Leave request cancelled.'); loadEmployeeLeaves(); })
-            .catch(e => alert(e.message));
+        openWithdrawLeaveModal(leaveId);
     }
 
     /* Apply Leave popup */
@@ -4371,6 +4573,7 @@ function downloadDocument(id) {
             document.getElementById('notificationDropdownMenu')?.classList.remove('show');
             document.getElementById('profileDropdownMenu')?.classList.remove('show');
             closeApplyLeavePopup();
+            closeWithdrawLeaveModal();
             closeCalendarPopup();
             closeSuccessPopup();
         }
@@ -4387,6 +4590,9 @@ function downloadDocument(id) {
     window.submitLeaveFormFromPopup = submitLeaveFormFromPopup;
     window.submitLeaveForm = submitLeaveForm;
     window.cancelLeaveRequest = cancelLeaveRequest;
+    window.openWithdrawLeaveModal = openWithdrawLeaveModal;
+    window.closeWithdrawLeaveModal = closeWithdrawLeaveModal;
+    window.confirmWithdrawLeave = confirmWithdrawLeave;
     window.prevSmallCalendarMonth = prevSmallCalendarMonth;
     window.nextSmallCalendarMonth = nextSmallCalendarMonth;
     window.goToTodaySmallCalendar = goToTodaySmallCalendar;

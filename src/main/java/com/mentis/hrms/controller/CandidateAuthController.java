@@ -148,21 +148,21 @@ public class CandidateAuthController {
             }
 
             // ========== STEP 8: REDIRECT BASED ON ROLE ==========
+            // ========== STEP 8: REDIRECT BASED ON ROLE ==========
             switch (employee.getRole()) {
                 case SUPER_ADMIN:
-                    return "redirect:/dashboard/admin?showAttendance=true";
+                    return "redirect:/dashboard/admin";
                 case HR:
                     return "redirect:/dashboard/hr?showAttendance=true";
                 case HR_MANAGER:
                     return "redirect:/dashboard/hr?showAttendance=true";
-                case PM:                                      // <-- NEW
+                case PM:
                     return "redirect:/pm/01-home";
                 case EMPLOYEE:
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
                 default:
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
             }
-
         } catch (Exception e) {
             logger.error("Login system error: {}", e.getMessage(), e);
             ra.addFlashAttribute("error", "An internal error occurred. Please try again.");

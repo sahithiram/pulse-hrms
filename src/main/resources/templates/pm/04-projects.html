@@ -484,6 +484,149 @@
     .rule-row select, .rule-row input { background: var(--dark-card); border: 1px solid var(--dark-border); border-radius: 4px; color: var(--dark-text); padding: .2rem .4rem; font-size: var(--fs-sm); font-family: inherit; }
     .rule-row .pm-btn-sm { height: 22px; padding: 0 .5rem; font-size: var(--fs-xs); }
 
+    /* ══════════════════════════════════════════════════════
+       CREATE PROJECT — calm, eye-friendly layer
+       Scoped to #createView only; reuses the project palette.
+       ══════════════════════════════════════════════════════ */
+    #createView {
+      --cp-card: #18223a;
+      --cp-field: #0f1729;
+      --cp-line: rgba(148,163,184,.16);
+      --cp-line-2: rgba(148,163,184,.32);
+      --cp-text: #e6ebf4;          /* off-white: less glare than pure white */
+      --cp-muted: #a3b1c6;         /* ~7:1 contrast on the card colour */
+      --cp-accent-soft: rgba(99,102,241,.14);
+      --cp-ok: #34d399;  --cp-ok-soft: rgba(52,211,153,.14);
+      --cp-bad: #f87171; --cp-bad-soft: rgba(248,113,113,.10);
+      color: var(--cp-text);
+      max-width: 1240px; margin: 0 auto;
+      line-height: 1.55;
+    }
+    #createView .cp-top { margin-bottom: 1.15rem; }
+    #createView .cp-top h1 { font-size: 1.65rem; letter-spacing: -.01em; }
+    #createView .cp-top p { color: var(--cp-muted); font-size: .92rem; margin-top: 4px; }
+    #createView .cp-back { width: 40px; height: 40px; background: var(--cp-card); border-color: var(--cp-line-2); }
+
+    /* Step tracker (real-time) */
+    #createView .cp-steps {
+      position: sticky; top: var(--header-h, 56px); z-index: 20;
+      display: flex; gap: .5rem; padding: .55rem; margin: 0 0 1.25rem;
+      background: rgba(15,23,42,.86); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+      border: 1px solid var(--cp-line); border-radius: 16px;
+      overflow-x: auto; scrollbar-width: none;
+    }
+    #createView .cp-steps::-webkit-scrollbar { display: none; }
+    .cp-step {
+      flex: 1 1 0; min-width: 160px; display: flex; align-items: center; gap: .7rem;
+      padding: .6rem .85rem; border: 1px solid transparent; border-radius: 12px;
+      background: transparent; color: var(--cp-muted); cursor: pointer;
+      font: inherit; text-align: left; transition: background .2s, border-color .2s, color .2s;
+    }
+    .cp-step .n {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-content: center; font-size: .82rem; font-weight: 700;
+      background: rgba(148,163,184,.14); color: var(--cp-muted);
+      transition: background .2s, color .2s, transform .2s;
+    }
+    .cp-step b { display: block; font-size: .9rem; font-weight: 600; color: var(--cp-text); line-height: 1.2; }
+    .cp-step small { display: block; font-size: .75rem; color: var(--cp-muted); margin-top: 2px; }
+    .cp-step:hover { background: rgba(148,163,184,.08); }
+    .cp-step.active { background: var(--cp-accent-soft); border-color: rgba(99,102,241,.5); }
+    .cp-step.active .n { background: var(--primary); color: #fff; }
+    .cp-step.done .n { background: var(--cp-ok-soft); color: var(--cp-ok); transform: scale(1.04); }
+    .cp-step.done small { color: var(--cp-ok); }
+    .cp-step.active.done .n { background: var(--cp-ok); color: #06281c; }
+
+    /* Layout + cards */
+    #createView .cp-wrap { grid-template-columns: minmax(0,1fr) 340px; gap: 1.5rem; }
+    #createView .cp-main { gap: 1.1rem; }
+    #createView .cp-side { top: calc(var(--header-h, 56px) + 5.6rem); }
+    #createView .cp-card {
+      background: var(--cp-card); border: 1px solid var(--cp-line); border-radius: 16px;
+      padding: 1.5rem 1.6rem;
+      box-shadow: 0 10px 28px -18px rgba(0,0,0,.6);
+      scroll-margin-top: calc(var(--header-h, 56px) + 5.6rem);
+    }
+    #createView .cp-card-h { margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid var(--cp-line); }
+    #createView .cp-card-h .ic { width: 38px; height: 38px; border-radius: 11px; font-size: .95rem; background: var(--cp-accent-soft); }
+    #createView .cp-card-h h2 { font-size: 1.05rem; }
+    #createView .cp-card-h p { color: var(--cp-muted); font-size: .85rem; margin-top: 2px; }
+    #createView .cp-card-h .tag { padding: .15rem .65rem; border-radius: 999px; background: rgba(148,163,184,.12); font-size: .72rem; color: var(--cp-muted); }
+    #createView .cp-row { gap: 1.1rem; }
+
+    /* Fields */
+    #createView .cp-l { font-size: .86rem; color: var(--cp-text); margin-bottom: .5rem; }
+    #createView .cp-l .opt { color: var(--cp-muted); }
+    #createView .cp-in {
+      height: 44px; border-radius: 10px; padding: 0 .9rem;
+      background: var(--cp-field); border: 1px solid var(--cp-line-2); color: var(--cp-text);
+    }
+    #createView .cp-in::placeholder { color: #70809a; }
+    #createView .cp-in:hover { border-color: rgba(148,163,184,.5); }
+    #createView .cp-in:focus { border-color: var(--primary); background: #0d1424; box-shadow: 0 0 0 4px rgba(99,102,241,.2); }
+    #createView .cp-in.ok  { border-color: rgba(52,211,153,.55); }
+    #createView .cp-in.err { border-color: var(--cp-bad); background: var(--cp-bad-soft); }
+    #createView .cp-in-xl { height: 52px; font-size: 1.1rem; }
+    #createView textarea.cp-in { min-height: 120px !important; padding: .75rem .9rem !important; line-height: 1.6 !important; border-radius: 10px !important; }
+    #createView .cp-err { color: var(--cp-bad); font-size: .8rem; }
+    #createView .cp-err.show { animation: cpNudge .25s ease; }
+    @keyframes cpNudge { 0% { transform: translateX(-4px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+    #createView .cp-count { text-align: right; font-size: .75rem; color: var(--cp-muted); margin-top: .35rem; min-height: 1em; }
+
+    /* Choices */
+    #createView .cp-types { gap: .85rem; }
+    #createView .cp-type { padding: 1rem 1.05rem; border-radius: 14px; border: 1.5px solid var(--cp-line-2); background: var(--cp-field); }
+    #createView .cp-type .ti { width: 42px; height: 42px; border-radius: 12px; }
+    #createView .cp-type b { font-size: .95rem; }
+    #createView .cp-type small { font-size: .78rem; color: var(--cp-muted); }
+    #createView .cp-type:hover { border-color: rgba(99,102,241,.55); transform: none; }
+    #createView .cp-type.on { border-color: var(--primary); background: var(--cp-accent-soft); box-shadow: 0 0 0 3px rgba(99,102,241,.14); }
+    #createView .cp-seg button { height: 44px; border-radius: 10px; border-color: var(--cp-line-2); background: var(--cp-field); }
+    #createView .cp-chips { margin-top: .75rem; gap: .4rem; }
+    #createView .cp-chips .lb, #createView .cp-chips .len { color: var(--cp-muted); }
+    #createView .cp-chips button { height: 30px; padding: 0 .9rem; border-color: var(--cp-line-2); }
+    #createView .cp-team { height: 40px; border-radius: 10px; border-color: var(--cp-line-2); background: var(--cp-field); }
+    #createView .cp-team.on { background: var(--cp-accent-soft); border-color: var(--primary); }
+    #createView .cp-members { min-height: 44px; border-radius: 10px; background: var(--cp-field); border-color: var(--cp-line-2); }
+
+    /* Live side panel */
+    #createView .cp-pv, #createView .cp-ready { background: var(--cp-card); border: 1px solid var(--cp-line); border-radius: 16px; }
+    #createView .cp-pv { padding: 1.25rem; position: relative; overflow: hidden; }
+    #createView .cp-pv::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 3px; background: linear-gradient(90deg, var(--primary), var(--cp-ok)); }
+    #createView .cp-pv-logo { border-radius: 12px; }
+    #createView .cp-pv-r { border-top-color: var(--cp-line); }
+    #createView .cp-ready { padding: 1rem 1.1rem; }
+    #createView .cp-ready-bar { height: 6px; }
+    #createView .cp-sh { color: var(--cp-muted); display: flex; align-items: center; gap: .4rem; }
+    #createView .cp-live { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; font-size: .7rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--cp-ok); }
+    #createView .cp-live i { width: 7px; height: 7px; border-radius: 50%; background: var(--cp-ok); display: inline-block; }
+    #createView .cp-live.tick i { animation: cpPulse .7s ease; }
+    @keyframes cpPulse { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,.7); } 100% { box-shadow: 0 0 0 9px rgba(52,211,153,0); } }
+
+    /* Action bar */
+    #createView .cp-bar { background: rgba(15,23,42,.9); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--cp-line); border-radius: 16px; padding: .75rem 1rem; gap: .75rem; }
+    #createView .cp-bar .note { color: var(--cp-muted); }
+    #createView .cp-btn { height: 40px; border-radius: 10px; }
+    #createView .cp-needs { display: inline-flex; align-items: center; gap: .45rem; font-size: .85rem; color: var(--cp-muted); }
+    #createView .cp-needs b { color: var(--cp-text); font-weight: 600; }
+    #createView .cp-needs.ok { color: var(--cp-ok); }
+    #createView #createBtn.is-ready { box-shadow: 0 0 0 4px rgba(99,102,241,.25); }
+
+    #createView :focus-visible { outline: 2px solid #a5b4fc; outline-offset: 2px; }
+    @media (max-width: 1100px) {
+      #createView .cp-wrap { grid-template-columns: 1fr; }
+      #createView .cp-side { position: static; }
+    }
+    @media (max-width: 768px) {
+      #createView .cp-card { padding: 1rem; }
+      .cp-step { min-width: 138px; }
+      .cp-step small { display: none; }
+      #createView .cp-bar .cp-needs { font-size: .78rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #createView *, #createView *::before { animation: none !important; transition: none !important; }
+    }
+
     /* Responsive */
     @media (max-width: 1100px) {
       .cp-wrap { grid-template-columns: 1fr; }
@@ -576,7 +719,7 @@
           <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
         <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
         </ul>
       </div>
 
@@ -589,7 +732,7 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -743,6 +886,8 @@
         <div class="sp"></div>
         <span class="cp-draft" id="draftChip"><i class="fas fa-floppy-disk"></i> Draft restored <button type="button" onclick="discardDraft()">Discard</button></span>
       </div>
+
+      <nav class="cp-steps" id="cpSteps" aria-label="Project creation steps"></nav>
 
       <div class="cp-wrap">
         <div class="cp-main" id="cpForm">
@@ -911,7 +1056,7 @@
         <!-- RIGHT: live preview + readiness -->
         <aside class="cp-side">
           <div>
-            <div class="cp-sh"><i class="fas fa-eye"></i> Live preview</div>
+            <div class="cp-sh"><i class="fas fa-eye"></i> Live preview <span class="cp-live" id="cpLive"><i></i>live</span></div>
             <div class="cp-pv empty" id="previewCard">
               <div class="cp-pv-top">
                 <div class="cp-pv-logo" id="pvLogo">?</div>
@@ -955,6 +1100,7 @@
 
       <!-- Sticky action bar -->
       <div class="cp-bar">
+        <span class="cp-needs" id="cpNeeds" aria-live="polite"></span>
         <span class="note" id="footNote"><i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type</span>
         <div class="sp"></div>
         <button type="button" class="pm-btn cp-btn" onclick="closeCreate()">Cancel</button>
@@ -1133,8 +1279,8 @@
   (function () {
     if (window.PM && window.PM.bootstrap) return;
 
-    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: null, canCreateProject: true };
-    var rules = { creator: true, manage: true, clients: true, lead: false, finance: true, admin: true, super: true };
+    var me = { name: 'Guest', employeeId: '', admin: false, superAdmin: false, leadTier: null };
+    var rules = { creator: false, manage: false, clients: false, lead: false, finance: false, admin: false, super: false };
 
     function toast(msg, type) {
       var box = document.getElementById('pmToasts');
@@ -2002,6 +2148,82 @@
       }).catch(function () {});
     }
 
+    /* ── Real-time step tracker + status line (additive: reads the same fields refresh() reads) ── */
+    var STEP_DEFS = [
+      { k: 1, t: 'Basics',            s: 'Type, name, priority', req: true  },
+      { k: 2, t: 'Schedule & budget', s: 'Dates and cost',       req: true  },
+      { k: 3, t: 'People',            s: 'Team and members',     req: false },
+      { k: 4, t: 'Details',           s: 'Description, rules',   req: false }
+    ];
+    var STEP_OF_CARD = [1, 1, 1, 2, 3, 4, 4];   // #cpForm > .cp-card order
+    var stepSpy = null;
+    function stepCards() { return Array.prototype.slice.call(document.querySelectorAll('#cpForm > .cp-card')); }
+    function setActiveStep(k) {
+      document.querySelectorAll('.cp-step').forEach(function (b) { b.classList.toggle('active', +b.dataset.step === k); });
+    }
+    function gotoStep(k) {
+      var cards = stepCards(), i = STEP_OF_CARD.indexOf(k);
+      if (i < 0 || !cards[i]) return;
+      cards[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setActiveStep(k);
+    }
+    function buildSteps() {
+      var host = $('cpSteps'); if (!host || host.dataset.built) return;
+      host.dataset.built = '1';
+      host.innerHTML = STEP_DEFS.map(function (d) {
+        return '<button type="button" class="cp-step" data-step="' + d.k + '" onclick="gotoStep(' + d.k + ')">' +
+          '<span class="n">' + d.k + '</span><span><b>' + d.t + '</b><small>' + d.s + '</small></span></button>';
+      }).join('');
+      setActiveStep(1);
+      if ('IntersectionObserver' in window) {
+        var cards = stepCards();
+        stepSpy = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting) { var i = cards.indexOf(en.target); if (i > -1) setActiveStep(STEP_OF_CARD[i] || 1); }
+          });
+        }, { rootMargin: '-35% 0px -55% 0px' });
+        cards.forEach(function (c) { stepSpy.observe(c); });
+      }
+    }
+    function syncCreateUi() {
+      try {
+        buildSteps();
+        var name = $('fldName').value.trim(), code = $('fldCode').value.trim();
+        var s = $('fldStart').value, e = $('fldEnd').value;
+        var dup = !!code && projects.some(function (p) { return (p.code || '').toLowerCase() === code.toLowerCase(); });
+        var done = {
+          1: !!name && !!code && !dup,
+          2: !!(s && e && e > s),
+          3: !!(F.teamIds.length || F.members.length),
+          4: !!$('fldDesc').value.trim()
+        };
+        document.querySelectorAll('.cp-step').forEach(function (b) {
+          var k = +b.dataset.step, def = STEP_DEFS[k - 1], ok = !!done[k];
+          b.classList.toggle('done', ok);
+          b.querySelector('.n').innerHTML = ok ? '<i class="fas fa-check"></i>' : k;
+          b.querySelector('small').textContent = ok ? 'Complete' : (def.req ? 'Required' : 'Optional');
+        });
+        var need = [];
+        if (!name) need.push('Project name');
+        if (!code) need.push('Project code'); else if (dup) need.push('Unique code');
+        if (!s) need.push('Start date');
+        if (!e) need.push('End date'); else if (s && e <= s) need.push('End after start');
+        var n = $('cpNeeds');
+        if (n) {
+          if (need.length) { n.className = 'cp-needs'; n.innerHTML = '<i class="fas fa-circle-info"></i><span>To create: <b>' + PM.esc(need.join(', ')) + '</b></span>'; }
+          else { n.className = 'cp-needs ok'; n.innerHTML = '<i class="fas fa-circle-check"></i><span>Ready to create</span>'; }
+        }
+        var btn = $('createBtn'); if (btn) btn.classList.toggle('is-ready', !need.length);
+        var d = $('fldDesc');
+        if (d) {
+          var cn = $('descCount');
+          if (!cn) { cn = document.createElement('div'); cn.id = 'descCount'; cn.className = 'cp-count'; d.parentNode.insertBefore(cn, d.nextSibling); }
+          cn.textContent = d.value.length ? d.value.length + ' characters' : '';
+        }
+        var lv = $('cpLive'); if (lv) { lv.classList.remove('tick'); void lv.offsetWidth; lv.classList.add('tick'); }
+      } catch (err) { /* cosmetic layer must never break the form */ }
+    }
+
     function refresh() {
       var name = $('fldName').value.trim(), code = $('fldCode').value.trim(), pr = F.priority;
       var cs = $('fldClient');
@@ -2037,6 +2259,7 @@
       $('readyList').innerHTML = checks.map(function (c) { return '<div class="cp-ready-i' + (c.ok ? ' ok' : '') + '"><i class="fas ' + (c.ok ? 'fa-circle-check' : 'fa-circle') + '"></i>' + c.label + '</div>'; }).join('');
       $('advCnt').textContent = document.querySelectorAll('[data-rule]:checked').length + ' of ' + document.querySelectorAll('[data-rule]').length + ' on';
       syncDurChips();
+      syncCreateUi();
       autoSaveDraft();
     }
 

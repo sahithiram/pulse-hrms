@@ -309,6 +309,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     private void trackBlocked(Task task, TaskStatus from, TaskStatus to) {
+        // stamp / clear completedAt on every move into or out of DONE (slip + plan-vs-actual reports read it)
+        task.applyCompletionTransition(from, to);
         if (to == TaskStatus.BLOCKED && from != TaskStatus.BLOCKED) {
             task.setBlockedSince(java.time.LocalDateTime.now());
             task.setEscalationLevel(0);

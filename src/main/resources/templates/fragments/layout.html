@@ -11,7 +11,9 @@
             company-profile | roles-access | roles | categories
             announcementshistory | company-manual | employee-manual | payslips
      ================================================================ -->
-<div th:fragment="sidebar(activeTab)">
+<div th:fragment="sidebar(activeTab)"
+     th:with="effSuperAdmin=${#bools.isTrue(isSuperAdmin) or (session != null and session['userRole'] != null and (#strings.containsIgnoreCase(session['userRole'], 'SUPER') or #strings.equalsIgnoreCase(session['userRole'], 'ADMIN')))},
+              effHR=${#bools.isTrue(isHR) or (session != null and session['userRole'] != null and #strings.containsIgnoreCase(session['userRole'], 'HR'))}">
     <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Toggle menu">
         <i class="fas fa-bars"></i>
     </button>
@@ -146,7 +148,7 @@
                     </ul>
                 </div>
 
-                <div class="side-group" data-group="projects" th:if="${isHR or isSuperAdmin}">
+                <div class="side-group" data-group="projects" th:if="${effHR or effSuperAdmin}">
                     <button type="button" class="side-group-toggle" aria-expanded="false"
                             aria-controls="sideGroupProjects">
                         <span class="side-group-icon"><i class="fas fa-diagram-project"></i></span>
@@ -174,7 +176,7 @@
                     </ul>
                 </div>
 
-                <div class="side-group" data-group="organization" th:if="${isSuperAdmin}">
+                <div class="side-group" data-group="organization" th:if="${effSuperAdmin}">
                     <button type="button" class="side-group-toggle" aria-expanded="false"
                             aria-controls="sideGroupOrganization">
                         <span class="side-group-icon"><i class="fas fa-building"></i></span>
@@ -197,7 +199,7 @@
                     </ul>
                 </div>
 
-                <div class="side-group" data-group="company" th:if="${isSuperAdmin}">
+                <div class="side-group" data-group="company" th:if="${effSuperAdmin}">
                     <button type="button" class="side-group-toggle" aria-expanded="false"
                             aria-controls="sideGroupCompany">
                         <span class="side-group-icon"><i class="fas fa-cog"></i></span>
@@ -240,7 +242,7 @@
                     </ul>
                 </div>
 
-                <div class="side-group" data-group="documentation" th:if="${isSuperAdmin}">
+                <div class="side-group" data-group="documentation" th:if="${effSuperAdmin}">
                     <button type="button" class="side-group-toggle" aria-expanded="false"
                             aria-controls="sideGroupDocumentation">
                         <span class="side-group-icon"><i class="fas fa-folder-open"></i></span>
@@ -280,7 +282,10 @@
 <!-- ================================================================
      TOP HEADER  —  shared HR / Super Admin header fragment
      ================================================================ -->
-<header th:fragment="topbar" class="top-header">
+<header th:fragment="topbar" class="top-header"
+        th:with="effSuperAdmin=${#bools.isTrue(isSuperAdmin) or (session != null and session['userRole'] != null and (#strings.containsIgnoreCase(session['userRole'], 'SUPER') or #strings.equalsIgnoreCase(session['userRole'], 'ADMIN')))},
+                 effHR=${#bools.isTrue(isHR) or (session != null and session['userRole'] != null and #strings.containsIgnoreCase(session['userRole'], 'HR'))},
+                 effUserName=${userName != null and !userName.isEmpty() ? userName : (session != null and session['userName'] != null and !#strings.isEmpty(session['userName']) ? session['userName'] : 'User')}">
     <div class="search-box">
         <i class="fas fa-search"></i>
         <input type="text" id="searchInput" placeholder="Search documents...">
@@ -298,7 +303,7 @@
                  style="display:none;"></div>
         </div>
 
-        <div class="menti-ai-nav-wrapper" th:if="${isHR or isSuperAdmin}">
+        <div class="menti-ai-nav-wrapper" th:if="${effHR or effSuperAdmin}">
             <button class="menti-ai-nav-btn" id="mentiAiNavBtn"
                     onclick="toggleMentiAiPanel()" aria-label="Open Menti Assistant">
                 <span class="menti-ai-pulse"></span>
@@ -317,8 +322,8 @@
                 <button class="btn profile-btn dropdown-toggle" type="button"
                         data-bs-toggle="dropdown" aria-expanded="false">
                     <div class="avatar-sm"
-                         th:text="${#strings.toUpperCase(userName != null ? userName.substring(0,1) : 'U')}">U</div>
-                    <span th:text="${userName}">User Name</span>
+                         th:text="${#strings.toUpperCase(effUserName.substring(0,1))}">U</div>
+                    <span th:text="${effUserName}">User Name</span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
@@ -448,12 +453,14 @@
 <!-- ================================================================
      COMMON SCRIPTS  —  loads required JS + inits shared widgets
      ================================================================ -->
-<div th:fragment="common-scripts">
+<div th:fragment="common-scripts"
+     th:with="effSuperAdmin=${#bools.isTrue(isSuperAdmin) or (session != null and session['userRole'] != null and (#strings.containsIgnoreCase(session['userRole'], 'SUPER') or #strings.equalsIgnoreCase(session['userRole'], 'ADMIN')))},
+              effHR=${#bools.isTrue(isHR) or (session != null and session['userRole'] != null and #strings.containsIgnoreCase(session['userRole'], 'HR'))}">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script th:inline="javascript">
-        var IS_SUPER_ADMIN = /*[[${isSuperAdmin}]]*/ false;
-        var IS_HR = /*[[${isHR}]]*/ false;
+        var IS_SUPER_ADMIN = /*[[${effSuperAdmin}]]*/ false;
+        var IS_HR = /*[[${effHR}]]*/ false;
         window.MENTI_AI_CONFIG = {
             role: IS_SUPER_ADMIN ? 'SUPER_ADMIN' : (IS_HR ? 'HR' : 'ASSISTANT'),
             roleTag: IS_SUPER_ADMIN ? 'Admin' : 'HR',
@@ -466,7 +473,220 @@
         };
     </script>
 
-    <script th:src="@{/js/menti-sidebar.js}"></script>
+    <script th:src="@{/js/menti-sidebar.js?v=4}"></script>
+    <script>
+        (function () {
+            if (window.__mentiSidebarV3) return;
+            window.__mentiSidebarV3 = true;
+
+            var STORAGE_KEY = 'menti.sidebar.rail';
+            function normalizePath(path) {
+                if (!path) return '';
+                return path.length > 1 ? path.replace(/\/+$/, '') : path;
+            }
+            function parseHref(href) {
+                if (!href) return { isJs: false, path: '', hash: '' };
+                if (href.indexOf('javascript') === 0) return { isJs: true, path: '', hash: '' };
+                var hashIdx = href.indexOf('#');
+                var rawPath = hashIdx === -1 ? href : href.slice(0, hashIdx);
+                var rawHash = hashIdx === -1 ? '' : href.slice(hashIdx);
+                var qIdx = rawPath.indexOf('?');
+                if (qIdx !== -1) rawPath = rawPath.slice(0, qIdx);
+                return { isJs: false, path: normalizePath(rawPath), hash: rawHash };
+            }
+            function initFallbackSidebar() {
+                var nav = document.getElementById('sideNav');
+                var sidebar = document.getElementById('sidebar');
+                if (!nav || !sidebar || nav.dataset.mentiSidebarInit === '1') return;
+                nav.dataset.mentiSidebarInit = '1';
+
+                var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
+                var searchInput = document.getElementById('sideNavSearch');
+                var emptyState = document.getElementById('sideNavEmpty');
+                var railToggle = document.getElementById('sidebarRailToggle');
+                var railIcon = document.getElementById('sidebarRailIcon');
+                var mobileToggle = document.getElementById('mobileMenuToggle');
+
+                function submenuOf(group) { return group.querySelector('.side-submenu'); }
+                function openGroup(group) {
+                    var submenu = submenuOf(group);
+                    if (!submenu) return;
+                    group.classList.add('is-open');
+                    var h = submenu.scrollHeight;
+                    submenu.style.maxHeight = (h > 0 ? h : 600) + 'px';
+                    var toggle = group.querySelector('.side-group-toggle');
+                    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+                }
+                function closeGroup(group) {
+                    var submenu = submenuOf(group);
+                    if (!submenu) return;
+                    var toggle = group.querySelector('.side-group-toggle');
+                    if (!group.classList.contains('is-open')) {
+                        submenu.style.maxHeight = '0px';
+                        if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                        return;
+                    }
+                    submenu.style.maxHeight = submenu.scrollHeight + 'px';
+                    void submenu.offsetHeight;
+                    group.classList.remove('is-open');
+                    submenu.style.maxHeight = '0px';
+                    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+                }
+                function closeAll(except) {
+                    groups.forEach(function (g) { if (g !== except) closeGroup(g); });
+                }
+                function markActive() {
+                    groups.forEach(function (g) {
+                        g.classList.toggle('has-active', !!g.querySelector('.nav-link.active'));
+                    });
+                }
+                function expandActiveGroup() {
+                    var active = nav.querySelector('.nav-link.active');
+                    var group = active ? active.closest('.side-group') : null;
+                    if (!group) group = groups[0];
+                    if (group) { closeAll(group); openGroup(group); }
+                }
+                function setActiveLink(targetLink) {
+                    if (!targetLink) return;
+                    nav.querySelectorAll('.nav-link.active').forEach(function (el) { el.classList.remove('active'); });
+                    targetLink.classList.add('active');
+                    markActive();
+                    var group = targetLink.closest('.side-group');
+                    if (group && !group.classList.contains('is-open')) {
+                        closeAll(group);
+                        openGroup(group);
+                    }
+                }
+                function syncActiveByLocation() {
+                    var currentPath = normalizePath(window.location.pathname);
+                    var currentHash = window.location.hash || '';
+                    var search = window.location.search || '';
+                    if (!currentHash && /[?&]showAttendance=true(?:&|$)/i.test(search)) {
+                        currentHash = '#attendance';
+                    }
+                    var links = Array.prototype.slice.call(nav.querySelectorAll('.nav-link'));
+                    var matched = null;
+                    if (currentHash) {
+                        for (var i = 0; i < links.length; i++) {
+                            var parsed = parseHref(links[i].getAttribute('href') || '');
+                            if (!parsed.isJs && parsed.hash === currentHash &&
+                                (parsed.path === '' || parsed.path === currentPath || /[?&]showAttendance=true/i.test(search))) {
+                                matched = links[i];
+                                break;
+                            }
+                        }
+                    }
+                    if (!matched) {
+                        for (var j = 0; j < links.length; j++) {
+                            var p = parseHref(links[j].getAttribute('href') || '');
+                            if (!p.isJs && !p.hash && p.path && p.path === currentPath) {
+                                matched = links[j];
+                                break;
+                            }
+                        }
+                    }
+                    if (matched) setActiveLink(matched);
+                    else { expandActiveGroup(); markActive(); }
+                }
+                function persistRail(isRail) {
+                    try { window.localStorage.setItem(STORAGE_KEY, isRail ? '1' : '0'); } catch (err) {}
+                }
+                function setRail(isRail) {
+                    document.body.classList.toggle('sidebar-rail', isRail);
+                    if (railToggle) {
+                        railToggle.setAttribute('aria-label', isRail ? 'Expand sidebar' : 'Collapse sidebar to icon rail');
+                        railToggle.setAttribute('title', isRail ? 'Expand sidebar' : 'Collapse sidebar');
+                    }
+                    if (railIcon) railIcon.className = isRail ? 'fas fa-angles-right' : 'fas fa-angles-left';
+                }
+
+                if (!window.__mentiSidebarToggleDelegated) {
+                    window.__mentiSidebarToggleDelegated = true;
+                    document.addEventListener('click', function (e) {
+                        var toggle = e.target && e.target.closest ? e.target.closest('#sideNav .side-group-toggle') : null;
+                        if (!toggle) return;
+                        var group = toggle.closest('.side-group');
+                        if (!group) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+                        if (document.body.classList.contains('sidebar-rail')) {
+                            document.body.classList.remove('sidebar-rail');
+                            persistRail(false);
+                            closeAll(group);
+                            openGroup(group);
+                            return;
+                        }
+                        if (group.classList.contains('is-open')) closeGroup(group);
+                        else { closeAll(group); openGroup(group); }
+                    }, true);
+                }
+
+                groups.forEach(function (group) {
+                    group.querySelectorAll('.nav-link').forEach(function (link) {
+                        link.addEventListener('click', function (e) {
+                            var wasPrevented = !!e.defaultPrevented;
+                            window.setTimeout(function () {
+                                var parsed = parseHref(link.getAttribute('href') || '');
+                                var currentPath = normalizePath(window.location.pathname);
+                                var isSamePageHash = !parsed.isJs && !!parsed.hash &&
+                                    (parsed.path === '' || parsed.path === currentPath);
+                                if (parsed.isJs || isSamePageHash || wasPrevented || e.defaultPrevented) {
+                                    setActiveLink(link);
+                                }
+                                if (window.matchMedia('(max-width: 768px)').matches) sidebar.classList.remove('active');
+                            }, 0);
+                        });
+                    });
+                });
+
+                syncActiveByLocation();
+                window.addEventListener('hashchange', syncActiveByLocation);
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', function () {
+                        var term = this.value.trim().toLowerCase();
+                        groups.forEach(function (group) {
+                            var items = Array.prototype.slice.call(group.querySelectorAll('.side-submenu > li'));
+                            var label = (group.querySelector('.side-group-label') || {}).textContent || '';
+                            var groupMatches = label.toLowerCase().indexOf(term) !== -1;
+                            var visibleCount = 0;
+                            items.forEach(function (item) {
+                                var match = !term || groupMatches || item.textContent.toLowerCase().indexOf(term) !== -1;
+                                item.hidden = !match;
+                                if (match) visibleCount += 1;
+                            });
+                            group.hidden = !!term && visibleCount === 0;
+                            if (term && visibleCount > 0) { closeAll(group); openGroup(group); }
+                            else if (!term) { closeAll(null); expandActiveGroup(); }
+                        });
+                        if (emptyState) emptyState.hidden = groups.some(function (g) { return !g.hidden; });
+                        if (!term) markActive();
+                    });
+                }
+
+                if (railToggle) {
+                    try { setRail(window.localStorage.getItem(STORAGE_KEY) === '1'); } catch (err) { setRail(false); }
+                    railToggle.addEventListener('click', function () {
+                        var next = !document.body.classList.contains('sidebar-rail');
+                        setRail(next);
+                        persistRail(next);
+                        if (!next) expandActiveGroup();
+                    });
+                }
+                if (mobileToggle) {
+                    mobileToggle.addEventListener('click', function () {
+                        sidebar.classList.toggle('active');
+                        window.setTimeout(function () {
+                            if (sidebar.classList.contains('active') && !nav.querySelector('.side-group.is-open')) expandActiveGroup();
+                        }, 0);
+                    });
+                }
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initFallbackSidebar);
+            else initFallbackSidebar();
+        })();
+    </script>
     <script th:src="@{/js/menti-ai.js}"></script>
 
     <script>

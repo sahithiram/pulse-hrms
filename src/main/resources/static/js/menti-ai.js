@@ -1,366 +1,291 @@
 /* =====================================================================
-   MENTI AI ASSISTANT — SHARED CONTROLLER (HR / Super Admin / PM)
-   One implementation, role-driven config. Expects shared markup:
-     #mentiAiPanel, #mentiAiOverlay, #mentiAiFab, #mentiAiNavBtn,
-     #mentiAiMessages, #mentiAiInput, #mentiAiSendBtn,
-     #mentiAiSessionsCol/List/Count, #mentiAiBackdrop, #mentiAiHdrChevron
+   MENTI HRMS — SHARED SIDEBAR CONTROLLER
+   Accordion groups + live search + desktop icon rail + mobile collapse.
+   Shared by every page (HR fragment, HR dashboard inline, PM inline).
+   Expects the shared markup contract:
+     #sidebar, #sideNav, .side-group > .side-group-toggle + .side-submenu,
+     #sideNavSearch, #sidebarRailToggle, #mobileMenuToggle, #sideNavEmpty
    ===================================================================== */
 (function () {
     'use strict';
 
-    var cfg = window.MENTI_AI_CONFIG || {};
-    var ROLE = cfg.role || 'ASSISTANT';
-    var SEND_URL = cfg.sendUrl || '/api/chat/hr/send';
-    var SESSIONS_URL = cfg.sessionsUrl || '/api/chat/hr/sessions';
-    var HISTORY_URL = cfg.historyUrl || '/api/chat/hr/session';
-    var DELETE_URL = cfg.deleteUrl || '/api/chat/hr/session';
+    var STORAGE_KEY = 'menti.sidebar.rail';
 
-    var panelOpen = false;
-    var isTyping = false;
-    var currentSessionId = null;
-    var sidebarOpen = false;
-    var temporaryHistory = [];
-    var sessions = [];
-
-    // ---------- helpers ----------
-    function $(id) { return document.getElementById(id); }
-
-    function getEmployeeId() {
-        return ($('currentEmployeeId') || {}).value || '';
+    function normalizePath(path) {
+        if (!path) return '';
+        return path.length > 1 ? path.replace(/\/+$/, '') : path;
     }
 
-    function esc(str) {
-        var d = document.createElement('div');
-        d.textContent = String(str || '');
-        return d.innerHTML;
-    }
-
-    function fmtTime() {
-        return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // ---------- panel ----------
-    window.toggleMentiAiPanel = function () {
-        panelOpen ? closeMentiAiPanel() : openMentiAiPanel();
-    };
-
-    function openMentiAiPanel() {
-        var panel = $('mentiAiPanel'), overlay = $('mentiAiOverlay'), fab = $('mentiAiFab');
-        if (panel) panel.classList.add('open');
-        if (overlay) overlay.classList.add('open');
-        if (fab) fab.style.display = 'flex';
-        panelOpen = true;
-        setTimeout(function () {
-            var input = $('mentiAiInput');
-            if (input) input.focus();
-        }, 350);
-        if (!currentSessionId) startNewSession();
-    }
-    window.openMentiAiPanel = openMentiAiPanel;
-
-    function closeMentiAiPanel() {
-        var panel = $('mentiAiPanel'), overlay = $('mentiAiOverlay'), fab = $('mentiAiFab');
-        if (panel) panel.classList.remove('open');
-        if (overlay) overlay.classList.remove('open');
-        if (fab) fab.style.display = 'none';
-        panelOpen = false;
-    }
-    window.closeMentiAiPanel = closeMentiAiPanel;
-
-    // ---------- sessions sidebar ----------
-    window.toggleMentiAiSessionsSidebar = function () {
-        sidebarOpen = !sidebarOpen;
-        var col = $('mentiAiSessionsCol');
-        var backdrop = $('mentiAiBackdrop');
-        var chevron = $('mentiAiHdrChevron');
-        if (col) col.classList.toggle('open', sidebarOpen);
-        if (backdrop) {
-            backdrop.style.background = sidebarOpen ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0)';
-            backdrop.style.pointerEvents = sidebarOpen ? 'auto' : 'none';
+    function parseHref(href) {
+        if (!href) return { isJs: false, path: '', hash: '' };
+        if (href.indexOf('javascript') === 0) {
+            return { isJs: true, path: '', hash: '' };
         }
-        if (chevron) chevron.classList.toggle('open', sidebarOpen);
-        if (sidebarOpen) loadSessionsList();
-    };
-
-    // ---------- messages ----------
-    function appendMsg(text, role, isError) {
-        var messages = $('mentiAiMessages');
-        if (!messages) return;
-        var isUser = role === 'user';
-        var row = document.createElement('div');
-        row.className = 'menti-ai-msg ' + role;
-
-        var av = document.createElement('div');
-        av.className = 'menti-ai-msg-av ' + (isUser ? 'user' : 'bot');
-        av.textContent = isUser ? ((cfg.userInitial || 'U')) : 'M';
-
-        var body = document.createElement('div');
-        body.className = 'menti-ai-msg-body';
-
-        var bubble = document.createElement('div');
-        bubble.className = 'menti-ai-bubble ' + (isUser ? 'user' : 'bot') + (isError ? ' error' : '');
-        bubble.innerHTML = esc(text).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
-
-        var time = document.createElement('div');
-        time.className = 'menti-ai-msg-time';
-        time.textContent = fmtTime();
-
-        body.appendChild(bubble);
-        body.appendChild(time);
-        if (isUser) { row.appendChild(body); row.appendChild(av); }
-        else { row.appendChild(av); row.appendChild(body); }
-
-        messages.appendChild(row);
-        messages.scrollTop = messages.scrollHeight;
+        var hashIdx = href.indexOf('#');
+        var rawPath = hashIdx === -1 ? href : href.slice(0, hashIdx);
+        var rawHash = hashIdx === -1 ? '' : href.slice(hashIdx);
+        var qIdx = rawPath.indexOf('?');
+        if (qIdx !== -1) rawPath = rawPath.slice(0, qIdx);
+        return {
+            isJs: false,
+            path: normalizePath(rawPath),
+            hash: rawHash
+        };
     }
 
-    function showTyping() {
-        var messages = $('mentiAiMessages');
-        if (!messages) return null;
-        var row = document.createElement('div');
-        row.className = 'menti-ai-msg bot';
-        row.id = 'mentiAiTypingRow';
-        row.innerHTML =
-            '<div class="menti-ai-msg-av bot">M</div>' +
-            '<div class="menti-ai-msg-body">' +
-            '<div class="menti-ai-bubble bot"><div class="menti-ai-typing"><span></span><span></span><span></span></div></div>' +
-            '</div>';
-        messages.appendChild(row);
-        messages.scrollTop = messages.scrollHeight;
-        return row.id;
-    }
+    function initSidebarNav() {
+        var nav = document.getElementById('sideNav');
+        var sidebar = document.getElementById('sidebar');
+        if (!nav || !sidebar) return;
 
-    function removeTyping() {
-        var t = $('mentiAiTypingRow');
-        if (t) t.remove();
-    }
+        var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
+        var searchInput = document.getElementById('sideNavSearch');
+        var emptyState = document.getElementById('sideNavEmpty');
+        var railToggle = document.getElementById('sidebarRailToggle');
+        var railIcon = document.getElementById('sidebarRailIcon');
+        var mobileToggle = document.getElementById('mobileMenuToggle');
 
-    function clearMessages() {
-        var m = $('mentiAiMessages');
-        if (m) m.innerHTML = '';
-    }
+        /* ---------- accordion ---------- */
+        function submenuOf(group) { return group.querySelector('.side-submenu'); }
 
-    function showWelcome() {
-        var messages = $('mentiAiMessages');
-        if (!messages) return;
-        var name = cfg.assistantName || 'Menti';
-        var tag = cfg.roleTag || ROLE;
-        messages.innerHTML =
-            '<div class="menti-ai-welcome-msg">' +
-            '<div class="menti-ai-welcome-av">M</div>' +
-            '<div class="menti-ai-welcome-bubble">' +
-            'Hi! I\'m <strong>' + esc(name) + '</strong> <span class="menti-ai-role-tag">' + esc(tag) + '</span>, your AI assistant.<br><br>' +
-            'I can help you with <strong>all</strong> HRMS tasks including:<br><br>' +
-            '&bull; 👥 Employee &amp; User Management<br>' +
-            '&bull; 📊 Reports &amp; Analytics<br>' +
-            '&bull; 📋 Leave &amp; Attendance Approvals<br>' +
-            '&bull; 🏢 Company Settings &amp; Configuration<br>' +
-            '&bull; 📢 Announcements &amp; Communications<br>' +
-            '&bull; 🔐 Roles &amp; Permissions<br><br>' +
-            '<span style="color:#10b981;font-size:11px;">💾 All chats are saved automatically</span>' +
-            '</div></div>';
-    }
-
-    function updateSessionHeader() {
-        var el = $('mentiAiModeLabel');
-        if (!el) return;
-        if (currentSessionId) {
-            el.textContent = '💾 Saved chat';
-            el.style.color = '#10b981';
-        } else {
-            el.textContent = '💾 New saved chat';
-            el.style.color = '#0ea5e9';
-        }
-    }
-
-    // ---------- sessions ----------
-    function startNewSession() {
-        currentSessionId = null;
-        clearMessages();
-        showWelcome();
-        updateSessionHeader();
-        if (sidebarOpen) toggleMentiAiSessionsSidebar();
-        var chips = $('mentiAiSuggestions');
-        if (chips) chips.style.removeProperty('display');
-        document.querySelectorAll('.menti-ai-session-item').forEach(function (el) {
-            el.classList.remove('active');
-        });
-    }
-    window.startNewMentiAiSession = startNewSession;
-
-    function loadSessionsList() {
-        var employeeId = getEmployeeId();
-        if (!employeeId) return;
-        fetch(SESSIONS_URL + '?employeeId=' + encodeURIComponent(employeeId))
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (!data.success) return;
-                sessions = data.sessions || [];
-                var countEl = $('mentiAiSessionCount');
-                if (countEl) countEl.textContent = sessions.length;
-                renderSessionsList();
-            })
-            .catch(function (e) { console.error('Error loading sessions:', e); });
-    }
-    window.loadMentiAiSessionsList = loadSessionsList;
-
-    function renderSessionsList() {
-        var container = $('mentiAiSessionsList');
-        if (!container) return;
-        if (!sessions.length) {
-            container.innerHTML = '<div style="padding:20px 10px;text-align:center;font-size:10px;color:#334155;">No saved chats yet</div>';
-            return;
-        }
-        container.innerHTML = sessions.map(function (s) {
-            return '<div class="menti-ai-session-item ' + (currentSessionId === s.id ? 'active' : '') + '"' +
-                ' onclick="loadMentiAiSession(' + s.id + ')" data-session-id="' + s.id + '">' +
-                '<div class="menti-ai-session-item-name">' + esc(s.sessionName) +
-                '<span class="menti-ai-role-badge">' + esc(cfg.roleTag || 'Admin') + '</span></div>' +
-                '<div class="menti-ai-session-item-meta">' + esc(s.updatedAt) + ' &middot; ' + (s.messageCount || 0) + ' msgs</div>' +
-                '<button class="menti-ai-session-del" onclick="event.stopPropagation();deleteMentiAiSession(' + s.id + ')" title="Delete">&times;</button>' +
-                '</div>';
-        }).join('');
-    }
-
-    function loadSession(sessionId) {
-        var employeeId = getEmployeeId();
-        if (!employeeId) return;
-        fetch(HISTORY_URL + '/' + sessionId + '/history?employeeId=' + encodeURIComponent(employeeId))
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (!data.success) return;
-                currentSessionId = sessionId;
-                clearMessages();
-                updateSessionHeader();
-                if (sidebarOpen) toggleMentiAiSessionsSidebar();
-                if (data.messages && data.messages.length) {
-                    data.messages.forEach(function (m) { appendMsg(m.content, m.role); });
-                } else {
-                    showWelcome();
+        function openGroup(group) {
+            var submenu = submenuOf(group);
+            if (!submenu) return;
+            group.classList.add('is-open');
+            submenu.style.maxHeight = submenu.scrollHeight + 'px';
+            var toggle = group.querySelector('.side-group-toggle');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+            window.setTimeout(function () {
+                if (group.classList.contains('is-open')) {
+                    submenu.style.maxHeight = submenu.scrollHeight + 'px';
                 }
-                document.querySelectorAll('.menti-ai-session-item').forEach(function (el) {
-                    el.classList.remove('active');
-                });
-                var active = document.querySelector('[data-session-id="' + sessionId + '"]');
-                if (active) active.classList.add('active');
-                var chips = $('mentiAiSuggestions');
-                if (chips) chips.style.display = 'none';
-            })
-            .catch(function (e) { console.error('Error loading session:', e); });
-    }
-    window.loadMentiAiSession = loadSession;
+            }, 300);
+        }
 
-    function deleteSession(sessionId) {
-        if (!confirm('Delete this chat history?')) return;
-        var employeeId = getEmployeeId();
-        if (!employeeId) return;
-        fetch(DELETE_URL + '/' + sessionId + '?employeeId=' + encodeURIComponent(employeeId), { method: 'DELETE' })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                if (data.success) {
-                    if (currentSessionId === sessionId) startNewSession();
-                    loadSessionsList();
-                }
-            })
-            .catch(function (e) { console.error('Error deleting session:', e); });
-    }
-    window.deleteMentiAiSession = deleteSession;
+        function closeGroup(group) {
+            var submenu = submenuOf(group);
+            if (!submenu) return;
+            submenu.style.maxHeight = submenu.scrollHeight + 'px';
+            void submenu.offsetHeight; // force reflow so collapse animates
+            group.classList.remove('is-open');
+            submenu.style.maxHeight = '0px';
+            var toggle = group.querySelector('.side-group-toggle');
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        }
 
-    // ---------- send ----------
-    function sendMessage() {
-        var input = $('mentiAiInput');
-        var btn = $('mentiAiSendBtn');
-        if (!input || isTyping) return;
-        var text = input.value.trim();
-        if (!text) return;
+        function closeAll(except) {
+            groups.forEach(function (group) {
+                if (group !== except) closeGroup(group);
+            });
+        }
 
-        input.value = '';
-        input.style.height = 'auto';
+        function markActive() {
+            groups.forEach(function (group) {
+                group.classList.toggle('has-active', !!group.querySelector('.nav-link.active'));
+            });
+        }
 
-        var chips = $('mentiAiSuggestions');
-        if (chips) chips.style.display = 'none';
-
-        appendMsg(text, 'user');
-        isTyping = true;
-        if (btn) btn.disabled = true;
-        showTyping();
-
-        // Optional local intent hooks (e.g. HR report downloads)
-        if (typeof window.mentiAiLocalIntent === 'function') {
-            var handled = window.mentiAiLocalIntent(text, appendMsg);
-            if (handled) {
-                removeTyping();
-                isTyping = false;
-                if (btn) btn.disabled = false;
-                return;
+        function expandActiveGroup() {
+            var active = nav.querySelector('.nav-link.active');
+            var group = active ? active.closest('.side-group') : null;
+            if (!group) group = groups[0];
+            if (group) {
+                closeAll(group);
+                openGroup(group);
             }
         }
 
-        fetch(SEND_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                employeeId: getEmployeeId(),
-                message: text,
-                sessionId: currentSessionId,
-                role: ROLE
-            })
-        })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-                removeTyping();
-                if (data.success) {
-                    appendMsg(data.reply, 'assistant');
-                    if (data.sessionId && data.sessionId > 0) {
-                        currentSessionId = data.sessionId;
-                        updateSessionHeader();
-                        loadSessionsList();
-                    }
-                } else {
-                    appendMsg(data.error || 'Sorry, something went wrong. Please try again.', 'assistant', true);
-                }
-            })
-            .catch(function () {
-                removeTyping();
-                appendMsg('Connection error. Please check your network.', 'assistant', true);
-            })
-            .finally(function () {
-                isTyping = false;
-                if (btn) btn.disabled = false;
-                if (input) input.focus();
+        function setActiveLink(targetLink) {
+            if (!targetLink) return;
+            nav.querySelectorAll('.nav-link.active').forEach(function (el) {
+                el.classList.remove('active');
             });
+            targetLink.classList.add('active');
+            markActive();
+            var group = targetLink.closest('.side-group');
+            if (group && !group.classList.contains('is-open')) {
+                closeAll(group);
+                openGroup(group);
+            }
+        }
+
+        function syncActiveByLocation() {
+            var currentPath = normalizePath(window.location.pathname);
+            var currentHash = window.location.hash || '';
+            var links = Array.prototype.slice.call(nav.querySelectorAll('.nav-link'));
+            var matched = null;
+
+            // 1. If a URL hash is present (e.g. /dashboard/hr#attendance), match path+hash first
+            if (currentHash) {
+                for (var i = 0; i < links.length; i++) {
+                    var parsed = parseHref(links[i].getAttribute('href') || '');
+                    if (!parsed.isJs && parsed.hash === currentHash &&
+                        (parsed.path === '' || parsed.path === currentPath)) {
+                        matched = links[i];
+                        break;
+                    }
+                }
+            }
+
+            // 2. Otherwise match exact pathname without hash (e.g. /dashboard/hr -> Overview)
+            if (!matched) {
+                for (var j = 0; j < links.length; j++) {
+                    var p = parseHref(links[j].getAttribute('href') || '');
+                    if (!p.isJs && !p.hash && p.path && p.path === currentPath) {
+                        matched = links[j];
+                        break;
+                    }
+                }
+            }
+
+            if (matched) {
+                setActiveLink(matched);
+            } else {
+                expandActiveGroup();
+                markActive();
+            }
+        }
+
+        groups.forEach(function (group) {
+            var toggle = group.querySelector('.side-group-toggle');
+            if (!toggle) return;
+
+            toggle.addEventListener('click', function () {
+                if (document.body.classList.contains('sidebar-rail')) {
+                    document.body.classList.remove('sidebar-rail');
+                    persistRail(false);
+                    openGroup(group);
+                    return;
+                }
+                if (group.classList.contains('is-open')) {
+                    closeGroup(group);
+                } else {
+                    closeAll(group);
+                    openGroup(group);
+                }
+            });
+
+            group.querySelectorAll('.nav-link').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    var wasPrevented = !!e.defaultPrevented;
+                    // Let the page's own handlers run first (they may preventDefault).
+                    window.setTimeout(function () {
+                        var href = link.getAttribute('href') || '';
+                        var parsed = parseHref(href);
+                        var currentPath = normalizePath(window.location.pathname);
+                        var isSamePageHash = !parsed.isJs && !!parsed.hash &&
+                            (parsed.path === '' || parsed.path === currentPath);
+
+                        if (parsed.isJs || isSamePageHash || wasPrevented || e.defaultPrevented) {
+                            setActiveLink(link);
+                        }
+                        // On mobile, close the sidebar after a click.
+                        if (window.matchMedia('(max-width: 768px)').matches) {
+                            sidebar.classList.remove('active');
+                        }
+                    }, 0);
+                });
+            });
+        });
+
+        // Sync active item & group with pathname + hash on load and on hash changes.
+        syncActiveByLocation();
+        window.addEventListener('hashchange', syncActiveByLocation);
+
+        /* ---------- search ---------- */
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                var term = this.value.trim().toLowerCase();
+
+                groups.forEach(function (group) {
+                    var items = Array.prototype.slice.call(group.querySelectorAll('.side-submenu > li'));
+                    var groupLabel = (group.querySelector('.side-group-label') || {}).textContent || '';
+                    var groupMatches = groupLabel.toLowerCase().indexOf(term) !== -1;
+                    var visibleCount = 0;
+
+                    items.forEach(function (item) {
+                        var text = item.textContent.toLowerCase();
+                        var match = !term || groupMatches || text.indexOf(term) !== -1;
+                        item.hidden = !match;
+                        if (match) visibleCount += 1;
+                    });
+
+                    group.hidden = !!term && visibleCount === 0;
+
+                    if (term && visibleCount > 0) {
+                        closeAll(group);
+                        openGroup(group);
+                    } else if (!term) {
+                        closeAll(null);
+                        expandActiveGroup();
+                    }
+                });
+
+                if (emptyState) {
+                    var any = groups.some(function (group) { return !group.hidden; });
+                    emptyState.hidden = any;
+                }
+
+                if (!term) markActive();
+            });
+        }
+
+        /* ---------- icon rail (desktop) ---------- */
+        function persistRail(isRail) {
+            try { window.localStorage.setItem(STORAGE_KEY, isRail ? '1' : '0'); } catch (err) { /* noop */ }
+        }
+
+        function setRail(isRail) {
+            document.body.classList.toggle('sidebar-rail', isRail);
+            if (railToggle) {
+                railToggle.setAttribute('aria-label', isRail ? 'Expand sidebar' : 'Collapse sidebar to icon rail');
+                railToggle.setAttribute('title', isRail ? 'Expand sidebar' : 'Collapse sidebar');
+            }
+            if (railIcon) {
+                railIcon.className = isRail ? 'fas fa-angles-right' : 'fas fa-angles-left';
+            }
+        }
+
+        if (railToggle) {
+            try { setRail(window.localStorage.getItem(STORAGE_KEY) === '1'); }
+            catch (err) { setRail(false); }
+
+            railToggle.addEventListener('click', function () {
+                var next = !document.body.classList.contains('sidebar-rail');
+                setRail(next);
+                persistRail(next);
+                if (!next) expandActiveGroup();
+            });
+        }
+
+        /* ---------- mobile ---------- */
+        if (mobileToggle) {
+            mobileToggle.addEventListener('click', function () {
+                sidebar.classList.toggle('active');
+                window.setTimeout(function () {
+                    var open = nav.querySelector('.side-group.is-open');
+                    if (sidebar.classList.contains('active') && !open) expandActiveGroup();
+                }, 0);
+            });
+            document.addEventListener('click', function (e) {
+                if (sidebar.classList.contains('active') &&
+                    !sidebar.contains(e.target) && e.target !== mobileToggle) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
+
+        // Keep open panels sized correctly on resize.
+        window.addEventListener('resize', function () {
+            nav.querySelectorAll('.side-group.is-open .side-submenu').forEach(function (submenu) {
+                submenu.style.maxHeight = submenu.scrollHeight + 'px';
+            });
+        });
     }
-    window.sendMentiAiMessage = sendMessage;
 
-    window.sendMentiAiSuggestion = function (text) {
-        var input = $('mentiAiInput');
-        if (input) input.value = text;
-        sendMessage();
-    };
-
-    window.handleMentiAiKeydown = function (e) {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendMessage();
-        }
-    };
-
-    window.autoResizeMentiAiInput = function (el) {
-        el.style.height = 'auto';
-        el.style.height = Math.min(el.scrollHeight, 100) + 'px';
-    };
-
-    // keyboard shortcuts
-    document.addEventListener('keydown', function (e) {
-        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
-            e.preventDefault();
-            toggleMentiAiPanel();
-        }
-        if (e.key === 'Escape' && panelOpen) closeMentiAiPanel();
-    });
-
-    // auto-init
-    document.addEventListener('DOMContentLoaded', function () {
-        setTimeout(loadSessionsList, 1000);
-    });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSidebarNav);
+    } else {
+        initSidebarNav();
+    }
 })();

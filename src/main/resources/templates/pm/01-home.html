@@ -381,8 +381,7 @@
           <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
         <ul class="side-submenu" id="sideGroupFinance">
-          <!-- TODO: page missing — create pm/09-budget.html -->
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
         </ul>
       </div>
 
@@ -395,8 +394,7 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <!-- TODO: page missing — create pm/12-reports.html -->
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
           <!-- "My Attendance / Leave" is injected here by the page script -->
         </ul>
@@ -493,8 +491,8 @@
       <button class="pm-qa-btn" onclick="location.href='/pm/06-tasks?view=board'"><i class="fas fa-list-check"></i> New Task</button>
       <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/07-team?tab=members'"><i class="fas fa-user-plus"></i> Add Member</button>
       <button class="pm-qa-btn" data-rule="clients" onclick="location.href='/pm/08-clients'"><i class="fas fa-user-tie"></i> New Client</button>
-      <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/09-budget'"><i class="fas fa-wallet"></i> Budget</button>
-      <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/12-reports'"><i class="fas fa-file-lines"></i> Reports</button>
+      <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/10-insights?tab=budget'"><i class="fas fa-wallet"></i> Budget</button>
+      <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/10-insights?tab=reports'"><i class="fas fa-file-lines"></i> Reports</button>
       <button class="pm-qa-btn" data-rule="manage" onclick="location.href='/pm/10-insights?tab=builder'"><i class="fas fa-paint-brush"></i> Report Builder</button>
       <button class="pm-qa-btn" onclick="location.href='/pm/05-planning?tab=whiteboard'"><i class="fas fa-chalkboard"></i> Whiteboard</button>
     </div>
@@ -699,13 +697,13 @@
         <div class="pm-widget">
           <div class="pm-widget-head">
             <div class="pm-widget-title"><i class="fas fa-chart-pie"></i> Budget vs Actual (by project)</div>
-            <span class="pm-card-link" onclick="location.href='/pm/09-budget'">Open Budget →</span>
+            <span class="pm-card-link" onclick="location.href='/pm/10-insights?tab=budget'">Open Budget →</span>
           </div>
           <div class="pm-widget-body"><div class="pm-chart-box tall"><canvas id="chartBudget"></canvas></div></div>
         </div>
         <div class="pm-widget">
           <div class="pm-widget-head">
-            <div class="pm-widget-title"><i class="fas fa-list-check"></i> Spend by Category</div>
+            <div class="pm-widget-title"><i class="fas fa-list-check"></i> Budget Health</div>
           </div>
           <div class="pm-widget-body"><div class="widget-scroll" id="budgetCategoryList">Loading…</div></div>
         </div>
@@ -714,7 +712,7 @@
       <div class="pm-widget">
         <div class="pm-widget-head">
           <div class="pm-widget-title"><i class="fas fa-table"></i> Project Budget Overview</div>
-          <span class="pm-card-link" onclick="location.href='/pm/09-budget'">Manage →</span>
+          <span class="pm-card-link" onclick="location.href='/pm/10-insights?tab=budget'">Manage →</span>
         </div>
         <div class="pm-widget-body" style="padding:0;">
           <div style="overflow-x:auto">
@@ -734,18 +732,18 @@
       <div class="pm-widget" style="margin-bottom:1.5rem">
         <div class="pm-widget-head">
           <div class="pm-widget-title"><i class="fas fa-file-lines"></i> Standard Reports</div>
-          <span class="pm-card-link" onclick="location.href='/pm/12-reports'">Open Reports →</span>
+          <span class="pm-card-link" onclick="location.href='/pm/10-insights?tab=reports'">Open Reports →</span>
         </div>
         <div class="pm-widget-body">
           <div style="display:flex;flex-wrap:wrap;gap:.6rem">
-            <button class="report-chip" onclick="PM.toast('Project status report queued','success')"><i class="fas fa-diagram-project"></i> Project Status</button>
-            <button class="report-chip" onclick="PM.toast('Resource utilisation report queued','success')"><i class="fas fa-users"></i> Resource Utilisation</button>
-            <button class="report-chip" onclick="PM.toast('Task throughput report queued','success')"><i class="fas fa-list-check"></i> Task Throughput</button>
-            <button class="report-chip" onclick="PM.toast('Budget variance report queued','success')"><i class="fas fa-wallet"></i> Budget Variance</button>
-            <button class="report-chip" onclick="PM.toast('Client profitability report queued','success')"><i class="fas fa-user-tie"></i> Client Profitability</button>
-            <button class="report-chip" onclick="PM.toast('Sprint velocity report queued','success')"><i class="fas fa-bolt"></i> Sprint Velocity</button>
-            <button class="report-chip" onclick="PM.toast('Overdue & at-risk report queued','success')"><i class="fas fa-triangle-exclamation"></i> Overdue & At-Risk</button>
-            <button class="report-chip" onclick="PM.toast('Time tracking report queued','success')"><i class="fas fa-clock"></i> Time Tracking</button>
+            <button class="report-chip" onclick="location.href='/pm/10-insights?tab=reports'"><i class="fas fa-diagram-project"></i> Project Status</button>
+            <button class="report-chip" onclick="location.href='/api/pm/reports/utilization/export.csv'"><i class="fas fa-users"></i> Resource Utilisation</button>
+            <button class="report-chip" onclick="location.href='/pm/10-insights?tab=reports'"><i class="fas fa-list-check"></i> Task Throughput</button>
+            <button class="report-chip" onclick="location.href='/pm/10-insights?tab=budget'"><i class="fas fa-wallet"></i> Budget Variance</button>
+            <button class="report-chip" onclick="location.href='/pm/08-clients'"><i class="fas fa-user-tie"></i> Client Profitability</button>
+            <button class="report-chip" onclick="location.href='/pm/10-insights?tab=reports'"><i class="fas fa-bolt"></i> Sprint Velocity</button>
+            <button class="report-chip" onclick="location.href='/pm/09-quality?tab=risks'"><i class="fas fa-triangle-exclamation"></i> Overdue & At-Risk</button>
+            <button class="report-chip" onclick="location.href='/pm/07-team?tab=timesheets'"><i class="fas fa-clock"></i> Time Tracking</button>
           </div>
         </div>
       </div>
@@ -763,7 +761,7 @@
 
       <div class="pm-widget">
         <div class="pm-widget-head">
-          <div class="pm-widget-title"><i class="fas fa-clock-rotate-left"></i> Recent Generated Reports</div>
+          <div class="pm-widget-title"><i class="fas fa-file-export"></i> Exports</div>
         </div>
         <div class="pm-widget-body">
           <div class="widget-scroll" id="recentReportsList">
@@ -937,8 +935,8 @@
     if (window.PM && window.PM.bootstrap) return;
 
     // ---- Minimal PM core shim (offline / preview fallback) ----
-    var me = { name: 'Demo User', employeeId: 'EMP001', admin: true, superAdmin: true, leadTier: null };
-    var rules = { creator: true, manage: true, clients: true, lead: false };
+    var me = { name: 'Guest', employeeId: '', admin: false, superAdmin: false, leadTier: null };
+    var rules = { creator: false, manage: false, clients: false, lead: false };
 
     function toast(msg, type) {
       var box = document.getElementById('pmToasts');
@@ -1281,104 +1279,78 @@
     /* ---------- Budget tab ---------- */
     var chartBudget = null;
     function initBudgetTab() {
-      // KPIs
-      PM.api('GET', '/api/pm/budget/summary').then(function (s) {
-        s = s || {};
-        var fmt = function (v) {
-          if (v == null) return '—';
-          if (v >= 1e6) return '₹' + (v / 1e6).toFixed(1) + 'M';
-          if (v >= 1e3) return '₹' + (v / 1e3).toFixed(0) + 'K';
-          return '₹' + v;
-        };
-        set('kpiBudgetTotal', fmt(s.totalBudget));
-        set('kpiBudgetSpent', fmt(s.totalSpent));
-        set('kpiBudgetRemaining', fmt(s.remaining));
-        set('kpiBudgetOverrun', s.overrunCount != null ? s.overrunCount : '—');
-      }).catch(function () {
-        // graceful fallback
-        set('kpiBudgetTotal', '₹4.2M');
-        set('kpiBudgetSpent', '₹2.9M');
-        set('kpiBudgetRemaining', '₹1.3M');
-        set('kpiBudgetOverrun', '2');
-      });
-
-      // Chart
-      if (!chartBudget) {
-        PM.api('GET', '/api/pm/budget/charts/project-budget').then(function (d) {
-          var el = document.getElementById('chartBudget');
-          if (!el) return;
-          chartBudget = new Chart(el, {
-            type: 'bar',
-            data: {
-              labels: d.labels && d.labels.length ? d.labels : ['No data'],
-              datasets: [
-                { label: 'Budget', data: d.budget && d.budget.length ? d.budget : [0], backgroundColor: '#6366f1', borderRadius: 6 },
-                { label: 'Spent',  data: d.spent  && d.spent.length  ? d.spent  : [0], backgroundColor: '#f59e0b', borderRadius: 6 }
-              ]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 12 } } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,.5)' } },
-                x: { grid: { display: false } }
-              }
-            }
-          });
-        }).catch(function () {
-          var el = document.getElementById('chartBudget');
-          if (!el) return;
-          chartBudget = new Chart(el, {
-            type: 'bar',
-            data: {
-              labels: ['Alpha', 'Beta', 'Gamma', 'Delta'],
-              datasets: [
-                { label: 'Budget', data: [1200000, 800000, 600000, 500000], backgroundColor: '#6366f1', borderRadius: 6 },
-                { label: 'Spent',  data: [900000, 750000, 350000, 300000],  backgroundColor: '#f59e0b', borderRadius: 6 }
-              ]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 12 } } },
-              scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,.5)' } },
-                x: { grid: { display: false } }
-              }
-            }
-          });
-        });
-      }
-
-      // Category list
-      var catBox = document.getElementById('budgetCategoryList');
-      if (catBox) {
-        PM.api('GET', '/api/pm/budget/categories').then(function (list) {
-          renderBudgetCategories(catBox, list || []);
-        }).catch(function () {
-          renderBudgetCategories(catBox, [
-            { name: 'Engineering', pct: 48, spent: '₹1.4M' },
-            { name: 'Design',      pct: 18, spent: '₹520K' },
-            { name: 'QA',          pct: 12, spent: '₹350K' },
-            { name: 'DevOps',      pct: 14, spent: '₹410K' },
-            { name: 'Other',       pct: 8,  spent: '₹220K' }
-          ]);
-        });
-      }
-
-      // Table
+      var fmt = function (v) {
+        if (v == null) return '—';
+        var a = Math.abs(v), sg = v < 0 ? '-' : '';
+        if (a >= 1e6) return sg + '₹' + (a / 1e6).toFixed(1) + 'M';
+        if (a >= 1e3) return sg + '₹' + (a / 1e3).toFixed(0) + 'K';
+        return sg + '₹' + a;
+      };
       var tbody = document.getElementById('budgetTableBody');
-      if (tbody) {
-        PM.api('GET', '/api/pm/budget/projects?limit=10').then(function (items) {
-          renderBudgetTable(tbody, items || []);
-        }).catch(function () {
-          renderBudgetTable(tbody, [
-            { name: 'Alpha Platform', budget: 1200000, spent: 900000, status: 'ON_TRACK' },
-            { name: 'Beta CRM',        budget: 800000,  spent: 750000, status: 'AT_RISK' },
-            { name: 'Gamma Mobile',    budget: 600000,  spent: 350000, status: 'ON_TRACK' },
-            { name: 'Delta Analytics', budget: 500000,  spent: 300000, status: 'ON_TRACK' }
-          ]);
+      var catBox = document.getElementById('budgetCategoryList');
+      var msgRow = function (t) { return '<tr><td colspan="5" style="text-align:center;padding:1rem;color:var(--dark-text-secondary)">' + PM.esc(t) + '</td></tr>'; };
+      var msgBox = function (t) { return '<div style="text-align:center;padding:1rem;color:var(--dark-text-secondary)">' + PM.esc(t) + '</div>'; };
+
+      // One real source: all-projects budget report (Super Admin only on the server).
+      PM.api('GET', '/api/pm/reports/budget').then(function (rows) {
+        rows = rows || [];
+        var total = 0, spent = 0, over = 0, near = 0, ok = 0;
+        rows.forEach(function (r) {
+          total += r.budgetTotal || 0; spent += r.budgetSpent || 0;
+          if (r.status === 'OVER') over++; else if (r.status === 'WARN') near++; else ok++;
         });
-      }
+        set('kpiBudgetTotal', fmt(total));
+        set('kpiBudgetSpent', fmt(spent));
+        set('kpiBudgetRemaining', fmt(total - spent));
+        set('kpiBudgetOverrun', over);
+
+        // Budget vs actual per project (top 8 by budget)
+        var top = rows.slice().sort(function (a, b) { return (b.budgetTotal || 0) - (a.budgetTotal || 0); }).slice(0, 8);
+        var el = document.getElementById('chartBudget');
+        if (chartBudget) { chartBudget.destroy(); chartBudget = null; }
+        if (el && top.length) {
+          chartBudget = new Chart(el, {
+            type: 'bar',
+            data: {
+              labels: top.map(function (r) { var n = r.projectName || ('#' + r.projectId); return n.length > 14 ? n.slice(0, 14) + '…' : n; }),
+              datasets: [
+                { label: 'Budget', data: top.map(function (r) { return r.budgetTotal || 0; }), backgroundColor: '#6366f1', borderRadius: 6 },
+                { label: 'Spent',  data: top.map(function (r) { return r.budgetSpent || 0; }), backgroundColor: '#f59e0b', borderRadius: 6 }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { position: 'bottom', labels: { boxWidth: 8, padding: 12 } } },
+              scales: { y: { beginAtZero: true, grid: { color: 'rgba(51,65,85,.5)' } }, x: { grid: { display: false } } }
+            }
+          });
+        }
+
+        // "Spend by Category" is not tracked per category anywhere, so this panel shows budget health instead.
+        if (catBox) {
+          var n = rows.length || 1;
+          renderBudgetCategories(catBox, rows.length ? [
+            { name: 'Within budget', pct: Math.round(ok / n * 100),   spent: ok + ' project(s)' },
+            { name: 'Near limit',    pct: Math.round(near / n * 100), spent: near + ' project(s)' },
+            { name: 'Over budget',   pct: Math.round(over / n * 100), spent: over + ' project(s)' }
+          ] : []);
+        }
+
+        if (tbody) {
+          renderBudgetTable(tbody, top.map(function (r) {
+            return { name: r.projectName, budget: r.budgetTotal, spent: r.budgetSpent,
+                     status: r.status === 'OVER' ? 'OVER_BUDGET' : r.status === 'WARN' ? 'NEAR_LIMIT' : 'ON_TRACK' };
+          }));
+        }
+      }).catch(function (e) {
+        var denied = e && /permission|super admin|forbidden|403/i.test(String(e.message || e));
+        var msg = denied
+          ? 'Budget figures are visible to Super Admin only. Project owners and managers: open Insights → Budget.'
+          : 'Could not load budget data. Please try again.';
+        ['kpiBudgetTotal', 'kpiBudgetSpent', 'kpiBudgetRemaining', 'kpiBudgetOverrun'].forEach(function (id) { set(id, '—'); });
+        if (catBox) catBox.innerHTML = msgBox(msg);
+        if (tbody) tbody.innerHTML = msgRow(msg);
+      });
     }
     window.initBudgetTab = initBudgetTab;
 
@@ -1411,8 +1383,8 @@
       tbody.innerHTML = items.map(function (p) {
         var util = p.budget ? Math.round((p.spent / p.budget) * 100) : 0;
         var cls = util > 100 ? 'danger' : util > 85 ? 'warning' : util > 50 ? '' : 'success';
-        var statusCls = p.status === 'AT_RISK' ? 'warning' : p.status === 'COMPLETED' ? 'info' : 'success';
-        return '<tr onclick="location.href=\'/pm/09-budget\'" style="cursor:pointer">' +
+        var statusCls = /OVER/.test(p.status || '') ? 'danger' : (p.status === 'AT_RISK' || p.status === 'NEAR_LIMIT') ? 'warning' : p.status === 'COMPLETED' ? 'info' : 'success';
+        return '<tr onclick="location.href=\'/pm/10-insights?tab=budget\'" style="cursor:pointer">' +
           '<td style="font-weight:600">' + PM.esc(p.name) + '</td>' +
           '<td>' + fmt(p.budget) + '</td>' +
           '<td>' + fmt(p.spent) + '</td>' +
@@ -1428,16 +1400,16 @@
     var chartReportTrend = null, chartReportWorkload = null;
     function initReportsTab() {
       if (!chartReportTrend) {
-        PM.api('GET', '/api/pm/reports/charts/delivery-trend').then(function (d) {
+        PM.api('GET', '/api/pm/dashboard/charts/delivery-trend').then(function (d) {
           var el = document.getElementById('chartReportTrend');
           if (!el) return;
           chartReportTrend = new Chart(el, {
             type: 'line',
             data: {
-              labels: d.labels && d.labels.length ? d.labels : ['W1','W2','W3','W4','W5','W6'],
+              labels: d.labels || [],
               datasets: [{
                 label: 'Delivered',
-                data: d.data && d.data.length ? d.data : [3,5,4,6,7,8],
+                data: d.data || [],
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99,102,241,.15)',
                 fill: true, tension: .35
@@ -1455,16 +1427,16 @@
         }).catch(function () {});
       }
       if (!chartReportWorkload) {
-        PM.api('GET', '/api/pm/reports/charts/team-workload').then(function (d) {
+        PM.api('GET', '/api/pm/dashboard/charts/team-workload').then(function (d) {
           var el = document.getElementById('chartReportWorkload');
           if (!el) return;
           chartReportWorkload = new Chart(el, {
             type: 'bar',
             data: {
-              labels: d.labels && d.labels.length ? d.labels : ['A','B','C','D','E'],
+              labels: d.labels || [],
               datasets: [{
                 label: 'Active tasks',
-                data: d.data && d.data.length ? d.data : [5,8,3,7,4],
+                data: d.data || [],
                 backgroundColor: '#10b981',
                 borderRadius: 6
               }]
@@ -1483,25 +1455,10 @@
 
       var list = document.getElementById('recentReportsList');
       if (list) {
-        PM.api('GET', '/api/pm/reports/recent?limit=8').then(function (items) {
-          items = items || [];
-          if (!items.length) {
-            list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--dark-text-secondary)">No reports generated yet.</div>';
-            return;
-          }
-          list.innerHTML = items.map(function (r) {
-            return '<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid rgba(51,65,85,.5)">' +
-              '<i class="fas fa-file-lines" style="color:var(--primary)"></i>' +
-              '<div style="flex:1">' +
-                '<div style="font-weight:600;font-size:.85rem">' + PM.esc(r.name || 'Report') + '</div>' +
-                '<div style="font-size:.75rem;color:var(--dark-text-secondary)">' + PM.esc(r.generatedBy || '') + ' · ' + (r.generatedAt ? PM.fmtDateTime(r.generatedAt) : '') + '</div>' +
-              '</div>' +
-              '<a class="pm-card-link" href="' + PM.esc(r.downloadUrl || '#') + '">Download</a>' +
-            '</div>';
-          }).join('');
-        }).catch(function () {
-          list.innerHTML = '<div style="text-align:center;padding:1rem;color:var(--dark-text-secondary)">No reports generated yet.</div>';
-        });
+        list.innerHTML = '<div style="padding:.5rem 0;font-size:.85rem;color:var(--dark-text-secondary)">Reports are generated on demand and are not stored.</div>' +
+          '<div style="display:flex;flex-direction:column;gap:.5rem;padding-top:.4rem">' +
+          '<a class="pm-card-link" href="/api/pm/reports/utilization/export.csv">Download people utilisation (CSV)</a>' +
+          '<a class="pm-card-link" href="/pm/10-insights?tab=reports">Per-project reports and CSV exports →</a></div>';
       }
     }
     window.initReportsTab = initReportsTab;

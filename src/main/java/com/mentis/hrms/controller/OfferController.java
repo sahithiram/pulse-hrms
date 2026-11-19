@@ -11,18 +11,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -104,18 +99,29 @@ public class OfferController {
     @PostMapping("/save-offer-letter")
     public String saveOffer(@ModelAttribute OfferRequest offerRequest,
                             @RequestParam(required = false) MultipartFile signatureFile,
+                            @RequestParam(required = false) String returnTo,
                             Model model) {
         try {
-            offerRequest.setSignatureFile(signatureFile);
+            if (offerRequest.getEmployeeId() != null && offerRequest.getEmployeeId().trim().isEmpty()) {
+                offerRequest.setEmployeeId(null);
+            }
+            if (signatureFile != null && !signatureFile.isEmpty()) {
+                offerRequest.setSignatureFile(signatureFile);
+            }
 
             // Create offer using the unified method
             OfferLetter offer = offerService.createOffer(offerRequest);
 
-            // FIXED: Redirect with success parameters
+            // Redirect with success parameters
             return "redirect:/dashboard/hr/offer-candidates?success=Offer+generated+successfully&offerId=" + offer.getId() + "&showPopup=true";
 
         } catch (Exception e) {
-            logger.error("Error saving offer: {}", e.getMessage());
+            logger.error("Error saving offer: {}", e.getMessage(), e);
+            if ("offer-candidates".equals(returnTo)) {
+                String msg = e.getMessage() != null ? e.getMessage() : "Unable to generate offer letter";
+                return "redirect:/dashboard/hr/offer-candidates?error=" +
+                        URLEncoder.encode("Failed to generate offer: " + msg, StandardCharsets.UTF_8);
+            }
             model.addAttribute("error", "Failed to generate offer: " + e.getMessage());
             model.addAttribute("offerRequest", offerRequest);
             return "templates/offer/create-offer";
@@ -138,8 +144,6 @@ public class OfferController {
         }
     }
 
-
-    // Add this method to your OfferController.java
     @PostMapping("/offers/delete/{offerId}")
     @ResponseBody
     public Map<String, Object> deleteOffer(@PathVariable Long offerId) {
@@ -147,12 +151,10 @@ public class OfferController {
         try {
             logger.info("Received request to delete offer with id: {}", offerId);
 
-            // Check if offer exists before deleting
             Optional<OfferLetter> offerOpt = offerService.getOfferById(offerId);
             if (offerOpt.isPresent()) {
                 OfferLetter offer = offerOpt.get();
 
-                // Optional: Check if offer is already in use (has employee or onboarding started)
                 if (offer.getEmployeeId() != null && !offer.getEmployeeId().isEmpty()) {
                     response.put("success", false);
                     response.put("error", "Cannot delete offer that has been converted to employee");
@@ -160,7 +162,6 @@ public class OfferController {
                     return response;
                 }
 
-                // Call service method to delete the offer
                 offerService.deleteOffer(offerId);
 
                 response.put("success", true);
@@ -180,7 +181,6 @@ public class OfferController {
         }
         return response;
     }
-    // REMOVED: Duplicate download method @GetMapping("/offers/download/{offerId}")
 
     @GetMapping("/offers/candidates")
     public String showOfferCandidates(Model model) {
@@ -228,10 +228,8 @@ public class OfferController {
         return response;
     }
 
-    // Safe method to find employee without depending on specific method names
     private Employee findEmployeeSafely(String employeeId) {
         try {
-            // Get all employees and find by ID
             List<Employee> allEmployees = employeeService.getAllEmployees();
             for (Employee emp : allEmployees) {
                 if (employeeId.equals(emp.getEmployeeId())) {

@@ -1,10 +1,10 @@
 package com.mentis.hrms.controller;
 
-import com.mentis.hrms.model.DocumentChecklist;
 import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.model.OnboardingDocument;
 import com.mentis.hrms.service.DocumentService;
 import com.mentis.hrms.service.EmployeeService;
+import com.mentis.hrms.service.NotificationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.slf4j.Logger;
@@ -16,14 +16,14 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.servlet.support.RequestContextUtils;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import com.mentis.hrms.service.NotificationService;
 
 @Controller
 @RequestMapping("/onboarding")
@@ -58,10 +57,21 @@ public class NewOnboardingController {
     @Value("${app.upload.base-path:C:/hrms/uploads}")
     private String basePath;
 
+    private void addSidebarContext(Model model, HttpSession session) {
+        String userRole = session != null ? (String) session.getAttribute("userRole") : null;
+        String userName = session != null ? (String) session.getAttribute("userName") : null;
+        boolean isSuperAdmin = "SUPER_ADMIN".equalsIgnoreCase(userRole) || "ADMIN".equalsIgnoreCase(userRole);
+        boolean isHR = "HR".equalsIgnoreCase(userRole);
+        model.addAttribute("isSuperAdmin", isSuperAdmin);
+        model.addAttribute("isHR", isHR);
+        model.addAttribute("userName", (userName != null && !userName.isEmpty()) ? userName : "HR Admin");
+    }
+
     // MAIN ONBOARDING DASHBOARD
     @GetMapping
-    public String showOnboardingDashboard(Model model) {
+    public String showOnboardingDashboard(Model model, HttpSession session) {
         logger.info("=== LOADING ONBOARDING DASHBOARD ===");
+        addSidebarContext(model, session);
         try {
             List<Employee> allEmployees = employeeService.getAllEmployees();
 
@@ -108,9 +118,11 @@ public class NewOnboardingController {
     @GetMapping("/employee/{employeeId}")
     public String showEmployeeOnboarding(@PathVariable String employeeId,
                                          Model model,
+                                         HttpSession session,
                                          HttpServletRequest request,
                                          RedirectAttributes ra) {
         logger.info("=== LOADING ONBOARDING FOR EMPLOYEE: {} ===", employeeId);
+        addSidebarContext(model, session);
 
         Optional<Employee> employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId);
 
@@ -123,14 +135,14 @@ public class NewOnboardingController {
         Employee employee = employeeOpt.get();
         List<OnboardingDocument> documents = documentService.getDocumentsByEmployee(employee);
 
-        // Add required attributes for the sidebar
+        // Add required attributes for the sidebar and view
         model.addAttribute("employee", employee);
         model.addAttribute("documents", documents);
         model.addAttribute("progress", calculateOnboardingProgress(employee));
 
         // Add these attributes that the sidebar expects
-        model.addAttribute("totalPending", 0); // You can calculate this if needed
-        model.addAttribute("offerCount", 0);   // You can calculate this if needed
+        model.addAttribute("totalPending", 0);
+        model.addAttribute("offerCount", 0);
 
         logger.info("✅ Loaded {} documents for employee {}", documents.size(), employeeId);
         return "onboarding/employee-dashboard";
@@ -182,8 +194,10 @@ public class NewOnboardingController {
     public String showUploadForm(@PathVariable String employeeId,
                                  @PathVariable String documentType,
                                  Model model,
+                                 HttpSession session,
                                  HttpServletRequest request) {
         logger.info("=== SHOW UPLOAD FORM FOR EMPLOYEE: {}, DOCUMENT: {} ===", employeeId, documentType);
+        addSidebarContext(model, session);
 
         Optional<Employee> employeeOpt = employeeService.getEmployeeByEmployeeId(employeeId);
         if (employeeOpt.isPresent()) {
@@ -214,10 +228,6 @@ public class NewOnboardingController {
     }
 
     /* ---------- UPLOAD DOCUMENT (Handles both Form and AJAX) ---------- */
-
-
-
-    /* ---------- UPLOAD DOCUMENT (Handles both Form and AJAX) ---------- */
     @PostMapping("/employee/{employeeId}/upload/{documentType}")
     public Object uploadDocument(@PathVariable String employeeId,
                                  @PathVariable String documentType,
@@ -231,7 +241,6 @@ public class NewOnboardingController {
         logger.info("Employee ID: {}, Document Type: {}, File Size: {} bytes",
                 employeeId, documentType, file.getSize());
 
-        // Correct AJAX detection using HTTP request header
         String requestedWith = request.getHeader("X-Requested-With");
         boolean isAjax = "XMLHttpRequest".equals(requestedWith);
 
@@ -270,7 +279,7 @@ public class NewOnboardingController {
 
             String fileName = file.getOriginalFilename();
 
-            if (fileName != null) {
+            if (fileName != null && fileName.contains(".")) {
                 String fileExtension = fileName.substring(
                         fileName.lastIndexOf(".") + 1
                 ).toLowerCase();
@@ -314,13 +323,14 @@ public class NewOnboardingController {
             }
 
             String hrUserName = (String) session.getAttribute("hrUserName");
-
-            if (hrUserName == null) {
+            if (hrUserName == null || hrUserName.isEmpty()) {
+                hrUserName = (String) session.getAttribute("userName");
+            }
+            if (hrUserName == null || hrUserName.isEmpty()) {
                 logger.warn("HR user not found in session, using default");
                 hrUserName = "SYSTEM_HR";
             }
 
-            // Existing service logic preserved
             OnboardingDocument document = documentService.hrUploadDocument(
                     employeeId, documentType, file, notes, hrUserName
             );
@@ -328,7 +338,6 @@ public class NewOnboardingController {
             logger.info("Document uploaded and auto-verified: ID={}, Type={}",
                     document.getId(), documentType);
 
-            // AJAX response
             if (isAjax) {
                 return ResponseEntity.ok(Map.of(
                         "success", true,
@@ -339,7 +348,6 @@ public class NewOnboardingController {
                 ));
             }
 
-            // Normal form submission
             ra.addFlashAttribute("success",
                     "Document uploaded and verified by " + hrUserName + "!");
 
@@ -364,7 +372,6 @@ public class NewOnboardingController {
                     + "/upload/" + documentType;
         }
     }
-
 
     /* ---------- DEBUG ENDPOINTS ---------- */
     @GetMapping("/debug/employees")
@@ -455,10 +462,7 @@ public class NewOnboardingController {
 
             Employee employee = employeeOpt.get();
 
-            // Initialize document checklist
             documentService.initializeDocumentChecklist(employee);
-
-            // Update employee status
             employee.setOnboardingStatus("DOCUMENTS_PENDING");
             employeeService.saveEmployee(employee);
 
@@ -623,7 +627,6 @@ public class NewOnboardingController {
 
         Map<String, Object> response = new HashMap<>();
 
-        // ===== SESSION BACKUP (Prevents HR context loss) =====
         String backupUserId = (String) session.getAttribute("userId");
         String backupUserRole = (String) session.getAttribute("userRole");
         String backupUserName = (String) session.getAttribute("userName");
@@ -654,7 +657,6 @@ public class NewOnboardingController {
             response.put("message", "Document " + status.toLowerCase() + " by " + actualVerifier);
             response.put("document", docMap);
 
-            // ===== SESSION RESTORATION (If corrupted) =====
             if (session.getAttribute("userId") == null && backupUserId != null) {
                 logger.warn("⚠️ Session corrupted during verification - RESTORING HR attributes");
                 session.setAttribute("userId", backupUserId);
@@ -670,11 +672,11 @@ public class NewOnboardingController {
             response.put("success", false);
             response.put("error", e.getMessage());
 
-            // Restore session on error too
             if (session.getAttribute("userId") == null && backupUserId != null) {
                 session.setAttribute("userId", backupUserId);
                 session.setAttribute("userRole", backupUserRole);
-                session.setAttribute("userName", backupUserName);            }
+                session.setAttribute("userName", backupUserName);
+            }
 
             return ResponseEntity.badRequest().body(response);
         }
@@ -697,16 +699,13 @@ public class NewOnboardingController {
 
             Employee employee = employeeOpt.get();
 
-            // Initialize documents if not already done
             List<OnboardingDocument> documents = documentService.getDocumentsByEmployee(employee);
 
             if (documents.isEmpty()) {
-                // Auto-initialize if empty
                 documentService.initializeDocumentChecklist(employee);
                 documents = documentService.getDocumentsByEmployee(employee);
             }
 
-            // Convert to simplified format for frontend
             List<Map<String, Object>> docsList = documents.stream().map(doc -> {
                 Map<String, Object> docMap = new HashMap<>();
                 docMap.put("id", doc.getId());
@@ -726,7 +725,7 @@ public class NewOnboardingController {
             response.put("employeeName", employee.getFirstName() + " " + employee.getLastName());
             response.put("totalDocuments", documents.size());
             response.put("submittedDocuments",
-                    documents.stream().filter(d -> d.getStatus().equals("SUBMITTED") || d.getStatus().equals("VERIFIED")).count());
+                    documents.stream().filter(d -> "SUBMITTED".equals(d.getStatus()) || "VERIFIED".equals(d.getStatus())).count());
 
             return ResponseEntity.ok(response);
 
@@ -769,7 +768,6 @@ public class NewOnboardingController {
                         .append(doc.getStatus()).append("</span></td>")
                         .append("<td>");
 
-                // Date/time cell
                 if (doc.getSubmittedDate() != null) {
                     html.append("<div class='datetime-wrapper'>")
                             .append("<div class='date-row'><i class='fas fa-calendar'></i>")
@@ -783,32 +781,27 @@ public class NewOnboardingController {
 
                 html.append("</td><td><div class='action-buttons'>");
 
-                // View button (if file exists)
                 if (doc.getFilePath() != null) {
                     html.append("<button class='btn-icon btn-icon-view' onclick='viewDocument(\"")
                             .append(doc.getId()).append("\", \"").append(doc.getDocumentType()).append("\")' title='View'>")
                             .append("<i class='fas fa-eye'></i></button>");
                 }
 
-                // Details button
                 html.append("<button class='btn-icon btn-icon-details' onclick='viewDetails(this)' data-id='")
                         .append(doc.getId()).append("' title='Details'><i class='fas fa-info'></i></button>");
 
-                // Upload button (only for PENDING or REJECTED)
                 if ("PENDING".equals(doc.getStatus()) || "REJECTED".equals(doc.getStatus())) {
                     html.append("<a href='/onboarding/employee/").append(employeeId).append("/upload/")
                             .append(doc.getDocumentType()).append("' class='btn-icon btn-icon-upload' title='Upload'>")
                             .append("<i class='fas fa-upload'></i></a>");
                 }
 
-                // Download button (if file exists)
                 if (doc.getFilePath() != null) {
                     html.append("<a href='/onboarding/employee/").append(employeeId).append("/download/")
                             .append(doc.getId()).append("' class='btn-icon btn-icon-download' download title='Download'>")
                             .append("<i class='fas fa-download'></i></a>");
                 }
 
-                // Verify/Reject buttons (only for SUBMITTED)
                 if ("SUBMITTED".equals(doc.getStatus())) {
                     html.append("<button class='btn-icon btn-icon-verify' onclick=\"verifyDoc('")
                             .append(doc.getId()).append("', 'VERIFIED')\" title='Verify'><i class='fas fa-check'></i></button>");
@@ -816,7 +809,6 @@ public class NewOnboardingController {
                             .append(doc.getId()).append("', 'REJECTED')\" title='Reject'><i class='fas fa-times'></i></button>");
                 }
 
-                // Verified icon (if already verified)
                 if ("VERIFIED".equals(doc.getStatus())) {
                     html.append("<span class='btn-icon' style='color:#10b981; pointer-events:none;' title='Verified'>")
                             .append("<i class='fas fa-check-double'></i></span>");
@@ -852,16 +844,19 @@ public class NewOnboardingController {
 
             OnboardingDocument document = documentService.getDocumentById(documentId);
 
-            if (document == null) {
-                logger.error("Document not found: {}", documentId);
+            if (document == null || document.getFilePath() == null || document.getFilePath().trim().isEmpty()) {
+                logger.error("Document or file path not found: {}", documentId);
                 return ResponseEntity.notFound().build();
             }
 
-            String fullPath = basePath + "/" + document.getFilePath();
-            Path filePath = Paths.get(fullPath);
+            String rawPath = document.getFilePath().trim();
+            Path candidate = Paths.get(rawPath);
+            Path filePath = (candidate.isAbsolute() && Files.exists(candidate))
+                    ? candidate
+                    : Paths.get(basePath).resolve(rawPath.replaceFirst("^[/\\\\]+", ""));
 
             if (!Files.exists(filePath)) {
-                logger.error("File not found: {}", fullPath);
+                logger.error("File not found: {}", filePath);
                 return ResponseEntity.notFound().build();
             }
 
@@ -869,8 +864,10 @@ public class NewOnboardingController {
 
             String fileName = filePath.getFileName().toString();
             String extension = getFileExtension(fileName);
+            String empId = (document.getEmployee() != null && document.getEmployee().getEmployeeId() != null)
+                    ? document.getEmployee().getEmployeeId() : "EMP";
             String downloadName = document.getDocumentType() + "_" +
-                    document.getEmployee().getEmployeeId() +
+                    empId +
                     (extension.isEmpty() ? "" : "." + extension);
 
             String contentType = Files.probeContentType(filePath);

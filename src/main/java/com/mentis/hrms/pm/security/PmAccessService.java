@@ -585,7 +585,12 @@ public class PmAccessService {
                 Long pid = projectIdOfTask(entityId);
                 yield pid != null && canManageProject(approverId, pid);
             }
-            default -> true;
+            // only the approver picked at submit time may decide a timesheet, never the owner
+            case "TIMESHEET" -> timesheetWeekRepository.findById(entityId)
+                    .map(w -> approverId.equals(w.getApproverId()) && !approverId.equals(w.getEmployeeId()))
+                    .orElse(false);
+            // unknown / legacy types: Super Admin only (creation of unknown types is now refused)
+            default -> isSuperAdmin(approverId);
         };
     }
 }
