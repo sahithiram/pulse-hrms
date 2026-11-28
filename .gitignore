@@ -10,7 +10,7 @@ target/
 # Logs
 *.log
 logs/
-
+application.properties
 # Environment / Secrets
 *.env
 application-local.properties
