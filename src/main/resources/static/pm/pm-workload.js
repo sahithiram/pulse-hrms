@@ -63,7 +63,6 @@
                }
                if (!rows.length && failed) throw new Error('You do not have access to workload for these teams.');
         }
-      }
       rows.sort(function (a, b) { return b.utilizationPct - a.utilizationPct; });
 
       var over  = rows.filter(function (w) { return w.utilizationPct > 100; }).length;

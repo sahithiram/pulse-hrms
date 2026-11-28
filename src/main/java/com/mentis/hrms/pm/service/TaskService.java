@@ -24,6 +24,11 @@ public interface TaskService {
                                                 Pageable pageable);
 
     // NEW — team filter (ClickUp-style chip filter on task board)
+    PageResponse<TaskSummaryResponse> listVisibleTasks(java.util.Collection<Long> projectIds,
+                                                       java.util.Collection<Long> teamIds, Long userId,
+                                                       com.mentis.hrms.pm.enums.TaskStatus status, String search,
+                                                       org.springframework.data.domain.Pageable pageable);
+
     PageResponse<TaskSummaryResponse> listTasksByTeam(Long teamId,
                                                       TaskStatus status,
                                                       String search,

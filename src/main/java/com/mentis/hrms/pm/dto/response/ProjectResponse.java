@@ -49,4 +49,23 @@ public class ProjectResponse {
     // STEP 1b: false when budget/baseline-budget were hidden for this viewer
     private Boolean financeVisible;
     private Boolean reviewRequired;
+
+    // ── PM-025: multi-manager support (DisplayName strategy keeps the pipeline stable) ──
+    /** Full name of the accountable owner (project.ownerId). */
+    private String ownerName;
+    /** Every employee with role MANAGER on this project (owner excluded). */
+    private java.util.List<MemberRef> managers;
+    /** Full name of the project LEAD, when there is one. */
+    private String leadName;
+
+    @lombok.Getter @lombok.Setter @lombok.NoArgsConstructor @lombok.AllArgsConstructor @lombok.Builder
+    public static class MemberRef {
+        private Long id;          // employee pk
+        private String employeeId;
+        private String name;
+        private String initials;
+        /** MANAGER | LEAD | MEMBER | VIEWER */
+        private String role;
+        private Integer allocationPct;
+    }
 }

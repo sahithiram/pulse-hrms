@@ -45,4 +45,7 @@ public class CreateProjectRequest {
     private Boolean reviewRequired;
     /** People chosen in the "People" step of the create form (added as MEMBER). */
     private List<Long> memberIds;
+
+    /** PM-025: co-managers. Each id gets a MANAGER row (owner excluded automatically). */
+    private List<Long> managerIds;
 }

@@ -10,299 +10,27 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- ============ SHARED THEME (single source of truth) ============ -->
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css?v=3}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
 
     <style>
         /* ============================================
-           SIDEBAR + DASHBOARD STYLES
+           PAGE-SPECIFIC VARIABLES & PERFORMANCE STYLES
            ============================================ */
         :root {
-            --dark-bg: #0f172a;
-            --dark-card: #1e293b;
             --dark-card-hover: #273548;
-            --dark-border: #334155;
-            --dark-text: #f8fafc;
-            --dark-text-secondary: #94a3b8;
             --dark-text-muted: #64748b;
-            --primary: #6366f1;
-            --primary-hover: #4f46e5;
             --primary-light: rgba(99, 102, 241, 0.15);
-            --success: #10b981;
             --success-light: rgba(16, 185, 129, 0.15);
-            --danger: #ef4444;
             --danger-light: rgba(239, 68, 68, 0.15);
-            --warning: #f59e0b;
             --warning-light: rgba(245, 158, 11, 0.15);
-            --info: #0ea5e9;
             --info-light: rgba(14, 165, 233, 0.15);
             --purple: #8b5cf6;
             --purple-light: rgba(139, 92, 246, 0.15);
             --border-radius: 12px;
             --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --sidebar-bg: #0f172a;
-            --sidebar-hover: #1e293b;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--dark-bg);
-            color: var(--dark-text);
-            font-size: 14px;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* ===== SIDEBAR STYLES ===== */
-        .sidebar {
-            position: fixed;
-            top: 0; left: 0; width: 280px; height: 100vh;
-            background: var(--sidebar-bg);
-            box-shadow: 2px 0 10px rgba(0,0,0,.2);
-            transition: var(--transition);
-            z-index: 1000;
-            overflow-y: auto;
-        }
-
-        .sidebar-brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--dark-border);
-            color: #fff;
-            font-weight: 600;
-            font-size: 1.25rem;
-            position: sticky;
-            top: 0;
-            background: var(--sidebar-bg);
-            z-index: 10;
-        }
-
-        .brand-icon {
-            width: 64px;
-            height: 64px;
-            background: #fff;
-            color: var(--sidebar-bg);
-            border-radius: 8px;
-            display: grid;
-            place-content: center;
-            flex-shrink: 0;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        }
-
-        .nav-section {
-            padding: 1.2rem 1.5rem 0.5rem;
-            color: #94a3b8;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-top: 1rem;
-        }
-
-        .nav-section i {
-            font-size: 0.8rem;
-            color: var(--primary);
-            opacity: 0.8;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 0.65rem 1.5rem;
-            margin: 0 0.5rem 0.25rem;
-            width: calc(100% - 1rem);
-            color: #94a3b8;
-            text-decoration: none;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            border: none;
-            background: none;
-            text-align: left;
-            font-size: 0.875rem;
-            cursor: pointer;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            background: var(--sidebar-hover);
-            color: #fff;
-            transform: translateX(2px);
-        }
-
-        .nav-link i {
-            width: 20px;
-            text-align: center;
-            font-size: 1rem;
-            color: var(--primary);
-            transition: all 0.2s;
-        }
-
-        .nav-link:hover i,
-        .nav-link.active i {
-            color: #fff;
-        }
-
-        .nav-badge {
-            margin-left: auto;
-            background: var(--primary);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 10px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            min-width: 24px;
-            text-align: center;
-        }
-
-        .sidebar-content {
-            height: calc(100vh - 80px);
-            overflow-y: auto;
-            padding-bottom: 20px;
-        }
-
-        .sidebar-content::-webkit-scrollbar {
-            width: 6px;
-        }
-        .sidebar-content::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-        }
-        .sidebar-content::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-        }
-        .sidebar-content::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-
-        .mobile-menu-toggle {
-            display: none;
-            background: none;
-            border: none;
-            color: var(--dark-text);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0.5rem;
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1001;
-        }
-
-        .main-content {
-            margin-left: 280px;
-            min-height: 100vh;
-            transition: var(--transition);
-        }
-
-        /* ===== TOP HEADER ===== */
-        .top-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: var(--dark-card);
-            border-bottom: 1px solid var(--dark-border);
-            padding: .75rem 1.5rem;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .search-box {
-            position: relative;
-            width: 300px;
-        }
-        .search-box input {
-            width: 100%;
-            padding: .6rem .75rem .6rem 2.5rem;
-            border-radius: 8px;
-            border: 1px solid var(--dark-border);
-            background: var(--dark-bg);
-            color: var(--dark-text);
-            font-size: .875rem;
-            transition: var(--transition);
-        }
-        .search-box input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99,102,241,.1);
-            outline: none;
-        }
-        .search-box i {
-            position: absolute;
-            left: .75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--dark-text-secondary);
-        }
-
-        .top-header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .icon-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 8px;
-            background: var(--dark-bg);
-            border: 1px solid var(--dark-border);
-            color: var(--dark-text-secondary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: var(--transition);
-            position: relative;
-        }
-
-        .icon-btn:hover {
-            background: var(--primary);
-            color: #fff;
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .notification-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: var(--danger);
-            color: #fff;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 0.65rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-        }
-
-        .user-profile-menu {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .dropdown-menu {
-            background: var(--dark-card);
-            border: 1px solid var(--dark-border);
-        }
-        .dropdown-item {
-            color: var(--dark-text);
-        }
-        .dropdown-item:hover {
-            background: var(--sidebar-hover);
         }
 
         /* ============================================
@@ -713,7 +441,7 @@
             border-collapse: collapse;
             font-size: 0.85rem;
             margin: 0;
-            min-width: 900px; /* Reduced because we removed Learning column */
+            min-width: 900px;
         }
 
         .table-performance thead {
@@ -1280,7 +1008,7 @@
 
         .details-pillars {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Changed from 4 to 3 */
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
             margin-bottom: 1.25rem;
         }
@@ -1556,7 +1284,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
-            min-width: 750px; /* Reduced because we removed Learning column */
+            min-width: 750px;
         }
 
         .table-bulk thead {
@@ -1761,7 +1489,7 @@
             width: 100%;
             border-collapse: collapse;
             font-size: 0.85rem;
-            min-width: 600px; /* Reduced because we removed Learning column */
+            min-width: 600px;
         }
 
         .table-history thead {
@@ -1796,7 +1524,7 @@
 
         .pillar-breakdown {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* Changed from 4 to 3 */
+            grid-template-columns: repeat(3, 1fr);
             gap: 1rem;
             margin-top: 1rem;
         }
@@ -1939,7 +1667,7 @@
 
         .weight-slider-group {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* Changed from 2 to 3 columns */
+            grid-template-columns: 1fr 1fr 1fr;
             gap: 1rem;
         }
 
@@ -2125,26 +1853,6 @@
         }
 
         @media (max-width: 768px) {
-            .mobile-menu-toggle {
-                display: block;
-            }
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            .sidebar.active {
-                transform: translateX(0);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .top-header {
-                flex-direction: column;
-                gap: 1rem;
-                padding: 1rem;
-            }
-            .search-box {
-                width: 100%;
-            }
             .performance-container {
                 padding: 0.75rem;
             }
@@ -2265,238 +1973,240 @@
 </head>
 <body>
 
-<!-- ===== MOBILE MENU TOGGLE ===== -->
-<button class="mobile-menu-toggle" id="mobileMenuToggle">
-    <i class="fas fa-bars"></i>
-</button>
+<!-- === SHARED SIDEBAR (performance active) === -->
+<div th:replace="~{fragments/layout :: sidebar('performance')}"></div>
 
-<!-- ===== SIDEBAR ===== -->
-<div th:replace="~{fragments/sidebar :: sidebar}"></div>
-
-<!-- ===== MAIN CONTENT ===== -->
+<!-- === MAIN CONTENT === -->
 <div class="main-content">
 
-    <!-- ===== TOP HEADER ===== -->
-    <div th:replace="~{fragments/header :: header}"></div>
+    <!-- === SHARED TOP HEADER === -->
+    <header th:replace="~{fragments/layout :: topbar}"></header>
 
-    <!-- ===== PERFORMANCE CONTENT ===== -->
-    <div class="performance-container" id="performanceApp">
+    <div class="content-area">
 
-        <!-- ===== PERFORMANCE TABS ===== -->
-        <div class="performance-tabs" id="performanceTabs">
-            <button class="tab-btn active" data-tab="main" onclick="switchPerformanceTab('main')">
-                <i class="fas fa-chart-line"></i> Calculate Performance
-                <span class="tab-badge" id="mainTabBadge">Active</span>
-            </button>
-            <button class="tab-btn" data-tab="history" onclick="switchPerformanceTab('history')">
-                <i class="fas fa-history"></i> History
-                <span class="tab-badge">View</span>
-            </button>
-            <button class="tab-btn" data-tab="bulk" onclick="switchPerformanceTab('bulk')">
-                <i class="fas fa-layer-group"></i> Bulk
-                <span class="tab-badge">Mass</span>
-            </button>
-            <button class="tab-btn" data-tab="settings" onclick="switchPerformanceTab('settings')">
-                <i class="fas fa-cog"></i> Settings
-                <span class="tab-badge">Admin</span>
-            </button>
-        </div>
+        <!-- ===== PERFORMANCE CONTENT ===== -->
+        <div class="performance-container" id="performanceApp">
 
-        <!-- ==========================================
-             TAB 1: MAIN PERFORMANCE (Calculate)
-             ========================================== -->
-        <div class="performance-tab-content active" id="tab-main">
-
-            <!-- ===== HEADER ===== -->
-            <div class="performance-header">
-                <div class="performance-header-left">
-                    <h1>
-                        <i class="fas fa-chart-line"></i>
-                        Employee Performance
-                        <span class="header-badge">Monthly Review</span>
-                    </h1>
-                </div>
-                <div class="performance-header-right">
-                    <span class="month-display">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span id="currentMonthDisplay">August 2026</span>
-                    </span>
-                    <button class="btn-primary-gradient" onclick="openCalculateModal()">
-                        <i class="fas fa-calculator"></i> Calculate Performance
-                    </button>
-                    <button class="btn-outline-secondary" onclick="loadPerformances()" title="Refresh">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
+            <!-- ===== PERFORMANCE TABS ===== -->
+            <div class="performance-tabs" id="performanceTabs">
+                <button class="tab-btn active" data-tab="main" onclick="switchPerformanceTab('main')">
+                    <i class="fas fa-chart-line"></i> Calculate Performance
+                    <span class="tab-badge" id="mainTabBadge">Active</span>
+                </button>
+                <button class="tab-btn" data-tab="history" onclick="switchPerformanceTab('history')">
+                    <i class="fas fa-history"></i> History
+                    <span class="tab-badge">View</span>
+                </button>
+                <button class="tab-btn" data-tab="bulk" onclick="switchPerformanceTab('bulk')">
+                    <i class="fas fa-layer-group"></i> Bulk
+                    <span class="tab-badge">Mass</span>
+                </button>
+                <button class="tab-btn" data-tab="settings" onclick="switchPerformanceTab('settings')">
+                    <i class="fas fa-cog"></i> Settings
+                    <span class="tab-badge">Admin</span>
+                </button>
             </div>
 
-            <!-- ===== STATS CARDS ===== -->
-            <div class="stats-grid" id="statsGrid">
-                <div class="stat-card total-evaluated">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-value" id="statTotalEmployees">0</div>
-                    <div class="stat-title">Employees Evaluated</div>
-                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> This Month</div>
-                </div>
-                <div class="stat-card avg-score">
-                    <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
-                    <div class="stat-value" id="statAverageScore">0%</div>
-                    <div class="stat-title">Average Performance</div>
-                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> +2.5%</div>
-                </div>
-                <div class="stat-card outstanding">
-                    <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                    <div class="stat-value" id="statOutstanding">0</div>
-                    <div class="stat-title">Outstanding Performers</div>
-                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> Top Talent</div>
-                </div>
-                <div class="stat-card pip">
-                    <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                    <div class="stat-value" id="statPIP">0</div>
-                    <div class="stat-title">Needs Improvement (PIP)</div>
-                    <div class="stat-trend down"><i class="fas fa-arrow-down"></i> Needs Attention</div>
-                </div>
+            <!-- ==========================================
+                 TAB 1: MAIN PERFORMANCE (Calculate)
+                 ========================================== -->
+            <div class="performance-tab-content active" id="tab-main">
 
-            </div>
-
-            <!-- ===== FILTER BAR ===== -->
-            <div class="filter-bar">
-                <span class="filter-label"><i class="fas fa-filter"></i> Filters</span>
-                <select id="monthFilter" onchange="loadPerformances()">
-                    <option value="">Select Month</option>
-                </select>
-                <select id="departmentFilter" onchange="loadPerformances()">
-                    <option value="All">All Departments</option>
-                </select>
-                <select id="ratingFilter" onchange="filterByRating()">
-                    <option value="All">All Ratings</option>
-                    <option value="Outstanding">Outstanding</option>
-                    <option value="Exceeds Expectations">Exceeds Expectations</option>
-                    <option value="Meets Expectations">Meets Expectations</option>
-                    <option value="Needs Improvement">Needs Improvement</option>
-                </select>
-
-            </div>
-
-            <!-- ===== PERFORMANCE TABLE ===== -->
-            <div class="table-card">
-                <div class="table-card-header">
-                    <h3><i class="fas fa-list"></i> Performance Records</h3>
-                    <span class="table-info" id="tableInfo">Showing 0 employees</span>
-                    <button id="syncClickUpBtn" class="btn-primary-gradient" onclick="syncFromClickUp()" style="margin-left: auto;">
-                        <i class="fas fa-sync"></i> Sync from ClickUp
-                    </button>
-                </div>
-                <div class="table-container">
-                    <table class="table-performance" id="performanceTable">
-                        <thead>
-                        <tr>
-                            <th style="width: 40px;">#</th>
-                            <th style="min-width: 180px;">Employee</th>
-                            <th style="min-width: 120px;">Department</th>
-                            <th style="min-width: 90px;">Attendance</th>
-                            <th style="min-width: 90px;">Behavior</th>
-                            <th style="min-width: 90px;">Initiative</th>
-                            <th style="min-width: 90px;">Work (ClickUp)</th>
-                            <th style="min-width: 90px;">Total Score</th>
-                            <th style="min-width: 140px;">Rating</th>
-                            <th style="min-width: 120px;">Actions</th>
-                        </tr>
-                        </thead>
-                        <tbody id="performanceTableBody">
-                        <tr>
-                            <td colspan="9" style="text-align: center; padding: 3rem;">
-                                <div class="empty-state">
-                                    <i class="fas fa-clipboard-list"></i>
-                                    <h4>No Performance Records Found</h4>
-                                    <p>Click "Calculate Performance" to evaluate employees for the selected month.</p>
-                                    <button class="btn-primary-gradient" onclick="openCalculateModal()">
-                                        <i class="fas fa-calculator"></i> Calculate Now
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination-container">
-                    <span class="info" id="paginationInfo">Showing 0 of 0 entries</span>
-                    <div class="pagination-buttons" id="paginationButtons">
-                        <button class="page-btn" onclick="changePage('prev')">‹</button>
-                        <button class="page-btn active">1</button>
-                        <button class="page-btn" onclick="changePage('next')">›</button>
+                <!-- ===== HEADER ===== -->
+                <div class="performance-header">
+                    <div class="performance-header-left">
+                        <h1>
+                            <i class="fas fa-chart-line"></i>
+                            Employee Performance
+                            <span class="header-badge">Monthly Review</span>
+                        </h1>
                     </div>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- ==========================================
-             TAB 2: HISTORY
-             ========================================== -->
-        <div class="performance-tab-content" id="tab-history">
-            <div class="history-container" id="historyApp">
-                <!-- Back to Main Button -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <button class="btn-outline-secondary" onclick="switchPerformanceTab('main')">
-                            <i class="fas fa-arrow-left"></i> Back to Performance
+                    <div class="performance-header-right">
+                        <span class="month-display">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span id="currentMonthDisplay">August 2026</span>
+                        </span>
+                        <button class="btn-primary-gradient" onclick="openCalculateModal()">
+                            <i class="fas fa-calculator"></i> Calculate Performance
                         </button>
-                        <span style="color: var(--dark-text-secondary); font-size: 0.85rem;">
-                    <i class="fas fa-history"></i> Employee Performance History
-                </span>
+                        <button class="btn-outline-secondary" onclick="loadPerformances()" title="Refresh">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
                     </div>
-                    <button class="btn-outline-secondary" onclick="refreshHistory()" title="Refresh">
-                        <i class="fas fa-sync-alt"></i> Refresh
-                    </button>
                 </div>
 
-                <!-- History Content -->
-                <div id="historyContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
-                        <p style="margin-top: 1rem;">Loading history...</p>
+                <!-- ===== STATS CARDS ===== -->
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card total-evaluated">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div class="stat-value" id="statTotalEmployees">0</div>
+                        <div class="stat-title">Employees Evaluated</div>
+                        <div class="stat-trend up"><i class="fas fa-arrow-up"></i> This Month</div>
+                    </div>
+                    <div class="stat-card avg-score">
+                        <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div class="stat-value" id="statAverageScore">0%</div>
+                        <div class="stat-title">Average Performance</div>
+                        <div class="stat-trend up"><i class="fas fa-arrow-up"></i> +2.5%</div>
+                    </div>
+                    <div class="stat-card outstanding">
+                        <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                        <div class="stat-value" id="statOutstanding">0</div>
+                        <div class="stat-title">Outstanding Performers</div>
+                        <div class="stat-trend up"><i class="fas fa-arrow-up"></i> Top Talent</div>
+                    </div>
+                    <div class="stat-card pip">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-value" id="statPIP">0</div>
+                        <div class="stat-title">Needs Improvement (PIP)</div>
+                        <div class="stat-trend down"><i class="fas fa-arrow-down"></i> Needs Attention</div>
+                    </div>
+
+                </div>
+
+                <!-- ===== FILTER BAR ===== -->
+                <div class="filter-bar">
+                    <span class="filter-label"><i class="fas fa-filter"></i> Filters</span>
+                    <select id="monthFilter" onchange="loadPerformances()">
+                        <option value="">Select Month</option>
+                    </select>
+                    <select id="departmentFilter" onchange="loadPerformances()">
+                        <option value="All">All Departments</option>
+                    </select>
+                    <select id="ratingFilter" onchange="filterByRating()">
+                        <option value="All">All Ratings</option>
+                        <option value="Outstanding">Outstanding</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                    </select>
+
+                </div>
+
+                <!-- ===== PERFORMANCE TABLE ===== -->
+                <div class="table-card">
+                    <div class="table-card-header">
+                        <h3><i class="fas fa-list"></i> Performance Records</h3>
+                        <span class="table-info" id="tableInfo">Showing 0 employees</span>
+                        <button id="syncClickUpBtn" class="btn-primary-gradient" onclick="syncFromClickUp()" style="margin-left: auto;">
+                            <i class="fas fa-sync"></i> Sync from ClickUp
+                        </button>
+                    </div>
+                    <div class="table-container">
+                        <table class="table-performance" id="performanceTable">
+                            <thead>
+                            <tr>
+                                <th style="width: 40px;">#</th>
+                                <th style="min-width: 180px;">Employee</th>
+                                <th style="min-width: 120px;">Department</th>
+                                <th style="min-width: 90px;">Attendance</th>
+                                <th style="min-width: 90px;">Behavior</th>
+                                <th style="min-width: 90px;">Initiative</th>
+                                <th style="min-width: 90px;">Work (ClickUp)</th>
+                                <th style="min-width: 90px;">Total Score</th>
+                                <th style="min-width: 140px;">Rating</th>
+                                <th style="min-width: 120px;">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody id="performanceTableBody">
+                            <tr>
+                                <td colspan="10" style="text-align: center; padding: 3rem;">
+                                    <div class="empty-state">
+                                        <i class="fas fa-clipboard-list"></i>
+                                        <h4>No Performance Records Found</h4>
+                                        <p>Click "Calculate Performance" to evaluate employees for the selected month.</p>
+                                        <button class="btn-primary-gradient" onclick="openCalculateModal()">
+                                            <i class="fas fa-calculator"></i> Calculate Now
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-container">
+                        <span class="info" id="paginationInfo">Showing 0 of 0 entries</span>
+                        <div class="pagination-buttons" id="paginationButtons">
+                            <button class="page-btn" onclick="changePage('prev')">‹</button>
+                            <button class="page-btn active">1</button>
+                            <button class="page-btn" onclick="changePage('next')">›</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ==========================================
+                 TAB 2: HISTORY
+                 ========================================== -->
+            <div class="performance-tab-content" id="tab-history">
+                <div class="history-container" id="historyApp">
+                    <!-- Back to Main Button -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <button class="btn-outline-secondary" onclick="switchPerformanceTab('main')">
+                                <i class="fas fa-arrow-left"></i> Back to Performance
+                            </button>
+                            <span style="color: var(--dark-text-secondary); font-size: 0.85rem;">
+                        <i class="fas fa-history"></i> Employee Performance History
+                    </span>
+                        </div>
+                        <button class="btn-outline-secondary" onclick="refreshHistory()" title="Refresh">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+
+                    <!-- History Content -->
+                    <div id="historyContent">
+                        <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                            <p style="margin-top: 1rem;">Loading history...</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
 
 
 
-        <!-- ==========================================
-             TAB 3: BULK
-             ========================================== -->
-        <div class="performance-tab-content" id="tab-bulk">
-            <div class="bulk-container" id="bulkApp">
-                <!-- Bulk content will be loaded dynamically -->
-                <div id="bulkContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
-                        <p style="margin-top: 1rem;">Loading bulk calculation...</p>
+            <!-- ==========================================
+                 TAB 3: BULK
+                 ========================================== -->
+            <div class="performance-tab-content" id="tab-bulk">
+                <div class="bulk-container" id="bulkApp">
+                    <!-- Bulk content will be loaded dynamically -->
+                    <div id="bulkContent">
+                        <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                            <p style="margin-top: 1rem;">Loading bulk calculation...</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- ==========================================
-             TAB 4: SETTINGS
-             ========================================== -->
-        <div class="performance-tab-content" id="tab-settings">
-            <div class="settings-container" id="settingsApp">
-                <!-- Settings content will be loaded dynamically -->
-                <div id="settingsContent">
-                    <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
-                        <p style="margin-top: 1rem;">Loading settings...</p>
+            <!-- ==========================================
+                 TAB 4: SETTINGS
+                 ========================================== -->
+            <div class="performance-tab-content" id="tab-settings">
+                <div class="settings-container" id="settingsApp">
+                    <!-- Settings content will be loaded dynamically -->
+                    <div id="settingsContent">
+                        <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
+                            <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                            <p style="margin-top: 1rem;">Loading settings...</p>
+                        </div>
                     </div>
                 </div>
             </div>
+
         </div>
 
     </div>
 
 </div>
+
+<!-- === SHARED AI ASSISTANT PANEL (from fragment) === -->
+<div th:replace="~{fragments/layout :: aipanel}"></div>
 
 <!-- ===== TOAST CONTAINER ===== -->
 <div id="toastContainer"></div>
@@ -2665,6 +2375,9 @@
         </div>
     </div>
 </div>
+
+<!-- Shared Bootstrap + sidebar controller + AI assistant + toast helpers -->
+<div th:replace="~{fragments/layout :: common-scripts}"></div>
 
 <!-- ============================================
      SCRIPTS
@@ -3076,30 +2789,11 @@ function loadHistoryContent(forceReload = false) {
     }
 
     // ============================================
-    // SIDEBAR TOGGLE FOR MOBILE
+    // PAGE BOOT
     // ============================================
    document.addEventListener('DOMContentLoaded', function() {
     // ============================================
-    // 1. SIDEBAR TOGGLE FOR MOBILE
-    // ============================================
-    const menuToggle = document.getElementById('mobileMenuToggle');
-    const sidebar = document.getElementById('sidebar');
-    if (menuToggle && sidebar) {
-        menuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
-        });
-
-        document.addEventListener('click', function(e) {
-            if (sidebar.classList.contains('active') &&
-                !sidebar.contains(e.target) &&
-                e.target !== menuToggle) {
-                sidebar.classList.remove('active');
-            }
-        });
-    }
-
-    // ============================================
-    // 2. SET DEFAULT MONTH TO PREVIOUS MONTH
+    // 1. SET DEFAULT MONTH TO PREVIOUS MONTH
     // ============================================
     const now = new Date();
     const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -3117,23 +2811,22 @@ function loadHistoryContent(forceReload = false) {
     document.getElementById('calcMonth').value = previousMonthStr;
 
     // ============================================
-    // 3. POPULATE DROPDOWNS
+    // 2. POPULATE DROPDOWNS
     // ============================================
     populateEmployeeDropdown();
     populateMonthFilter();
     populateDepartmentFilter();
 
     // ============================================
-    // 4. LOAD PERFORMANCES (with previous month)
+    // 3. LOAD PERFORMANCES (with previous month)
     // ============================================
     loadPerformances();
 
     // ============================================
-    // 5. EVENT LISTENERS
+    // 4. EVENT LISTENERS
     // ============================================
 
-    // Auto-load attendance preview when employee is selected
-       // Auto-load attendance AND work performance preview when employee is selected
+    // Auto-load attendance AND work performance preview when employee is selected
     document.getElementById('calcEmployee').addEventListener('change', function() {
         if (this.value) {
             // Check if month is current and not completed
@@ -3153,7 +2846,7 @@ function loadHistoryContent(forceReload = false) {
     document.getElementById('calcInitiative').addEventListener('input', updateSummary);
 
     // ============================================
-    // 6. HASH-BASED NAVIGATION (for tabs)
+    // 5. HASH-BASED NAVIGATION (for tabs)
     // ============================================
     const hash = window.location.hash.replace('#', '');
     if (hash && ['history', 'bulk', 'settings'].includes(hash)) {
@@ -3177,7 +2870,6 @@ function loadHistoryContent(forceReload = false) {
     const select = document.getElementById('calcEmployee');
     if (!select) return;
 
-    // CORRECT URL
     fetch('/dashboard/hr/performance/api/employees/all')
         .then(res => res.json())
         .then(data => {
@@ -3263,7 +2955,7 @@ function populateMonthFilter() {
     const tbody = document.getElementById('performanceTableBody');
     tbody.innerHTML = `
         <tr>
-            <td colspan="9" style="text-align: center; padding: 3rem;">
+            <td colspan="10" style="text-align: center; padding: 3rem;">
                 <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
                 <p style="margin-top: 1rem; color: var(--dark-text-muted);">Loading performances...</p>
             </td>
@@ -3281,7 +2973,6 @@ function populateMonthFilter() {
             if (data.success) {
                 allPerformances = data.performances || [];
                 // Merge in Work Performance (ClickUp) + the true 4-pillar combined score.
-                // New, additive endpoint — doesn't touch the old /list endpoint above.
                 return fetch(`/dashboard/hr/performance/work/api/combined?month=${month}`)
                     .then(res2 => res2.json())
                     .then(combinedData => {
@@ -3311,9 +3002,6 @@ function populateMonthFilter() {
         });
 }
 // ===== LIVE AUTO-REFRESH =====
-// Re-reads the database every 60s so Behavior/Initiative edits or a completed
-// ClickUp sync show up without a manual page reload. Does NOT call ClickUp
-// directly — only re-reads what's already stored, so it's fast and free.
 let autoRefreshInterval = null;
 
 function startAutoRefresh() {
@@ -3327,8 +3015,6 @@ function stopAutoRefresh() {
     if (autoRefreshInterval) clearInterval(autoRefreshInterval);
 }
 
-// Start auto-refresh once the page loads. Pause it when the tab isn't visible
-// (saves requests when HR isn't actually looking at the screen).
 document.addEventListener('visibilitychange', () => {
     if (document.hidden) stopAutoRefresh();
     else startAutoRefresh();
@@ -3336,7 +3022,6 @@ document.addEventListener('visibilitychange', () => {
 startAutoRefresh();
 
 // ===== MANUAL "SYNC FROM CLICKUP" BUTTON =====
-// This is the only thing that actually calls ClickUp's API.
 function syncFromClickUp() {
     const month = document.getElementById('monthFilter').value;
     if (!month) { showToast('Select a month first', 'error'); return; }
@@ -3349,7 +3034,7 @@ function syncFromClickUp() {
         .then(data => {
             if (data.success) {
                 showToast(`Synced ${data.count} employees from ClickUp`, 'success');
-                loadPerformances(); // immediate refresh after a real sync
+                loadPerformances();
             } else {
                 showToast(data.error || 'Sync failed', 'error');
             }
@@ -3390,7 +3075,7 @@ function syncFromClickUp() {
         if (pageData.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 3rem;">
+                    <td colspan="10" style="text-align: center; padding: 3rem;">
                         <div class="empty-state">
                             <i class="fas fa-clipboard-list"></i>
                             <h4>No Records Found</h4>
@@ -3411,8 +3096,6 @@ function syncFromClickUp() {
             const displayRating = p.finalRating || p.performanceRating;
             const ratingClass = getRatingClass(displayRating);
 
-            // Each pillar is colored by ITS OWN percentage, not the row's total —
-            // e.g. a 0% Attendance shows red even if the Total is a mid-range yellow.
             const attendanceClass = getScoreClass(p.attendanceScore || 0);
             const behaviorClass = getScoreClass(p.behaviorScore || 0);
             const initiativeClass = getScoreClass(p.initiativeScore || 0);
@@ -3550,14 +3233,10 @@ function syncFromClickUp() {
         document.getElementById('statOutstanding').textContent = ratings['Outstanding'] || 0;
         document.getElementById('statPIP').textContent = ratings['Needs Improvement'] || 0;
 
-        // Recompute average + ClickUp sync count from the merged (4-pillar) data,
-        // since allPerformances now carries finalScore/hasClickUpMapping after the merge.
         if (allPerformances && allPerformances.length > 0) {
             const scores = allPerformances.map(p => p.finalScore != null ? p.finalScore : (p.totalScore || 0));
             const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
             document.getElementById('statAverageScore').textContent = (Math.round(avg * 10) / 10) + '%';
-
-            const syncedCount = allPerformances.filter(p => p.hasClickUpMapping).length;
 
         } else {
             document.getElementById('statAverageScore').textContent = (summary.averageScore || 0) + '%';
@@ -3568,7 +3247,6 @@ function syncFromClickUp() {
     // FILTER BY RATING
     // ============================================
     function filterByRating() {
-
           loadPerformances();
     }
 
@@ -3619,14 +3297,12 @@ function isMonthCompleted(monthStr) {
     const now = new Date();
     const parts = monthStr.split('-');
     const year = parseInt(parts[0]);
-    const month = parseInt(parts[1]) - 1; // JavaScript months are 0-indexed
+    const month = parseInt(parts[1]) - 1;
 
-    // If it's not the current month, it's completed
     if (year !== now.getFullYear() || month !== now.getMonth()) {
         return true;
     }
 
-    // It IS the current month - check if we're past the last day
     const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
     return now.getDate() >= lastDayOfMonth;
 }
@@ -3642,7 +3318,7 @@ function isMonthCompleted(monthStr) {
         setStars(3);
         document.getElementById('calcInitiative').value = 50;
         document.getElementById('calcInitiativeDisplay').textContent = '50';
-               document.getElementById('calcAttendanceScore').textContent = '--';
+        document.getElementById('calcAttendanceScore').textContent = '--';
         document.getElementById('calcAttendanceDetails').textContent = 'Select an employee';
         document.getElementById('calcWorkScore').textContent = '--';
         document.getElementById('calcWorkDetails').textContent = 'Select an employee';
@@ -3715,7 +3391,6 @@ function loadAttendancePreview(employeeId) {
     display.textContent = '...';
     details.textContent = 'Loading attendance data...';
 
-    // CORRECT URL
     fetch(`/dashboard/hr/performance/api/attendance-preview/${employeeId}/${month}`)
         .then(res => res.json())
         .then(data => {
@@ -3737,8 +3412,6 @@ function loadAttendancePreview(employeeId) {
 
 // ============================================
 // LOAD WORK PERFORMANCE PREVIEW (ClickUp, live)
-// Triggers a real sync for this one employee — user-initiated by
-// selecting them in the modal, not a silent background call.
 // ============================================
 function loadWorkPreview(employeeId) {
     const month = document.getElementById('calcMonth').value;
@@ -3759,7 +3432,6 @@ function loadWorkPreview(employeeId) {
                 display.textContent = r.workScore != null ? r.workScore : 0;
                 details.textContent = `${r.completedTasks || 0}/${r.totalTasksAssigned || 0} tasks completed`;
             } else {
-                // No ClickUp mapping — Work pillar doesn't apply to this employee
                 document.getElementById('calcWorkApplicable').value = 'false';
                 document.getElementById('calcWorkScoreValue').value = 0;
                 display.textContent = 'N/A';
@@ -3786,11 +3458,8 @@ function loadWorkPreview(employeeId) {
 
         let total;
         if (workApplicable) {
-            // Full 4-pillar weights: Attendance 35%, Behavior 17.5%, Initiative 17.5%, Work 30%
             total = (attendance * 0.35) + (behavior * 0.175) + (initiative * 0.175) + (work * 0.30);
         } else {
-            // No ClickUp mapping — reweight the 3 pillars to fill 100%
-            // (35 : 17.5 : 17.5 scaled up to sum to 100)
             total = (attendance * 0.50) + (behavior * 0.25) + (initiative * 0.25);
         }
 
@@ -3833,25 +3502,21 @@ function loadWorkPreview(employeeId) {
     const behaviorRemarks = document.getElementById('calcBehaviorRemarks').value.trim();
     const initiativeScore = parseInt(document.getElementById('calcInitiative').value);
 
-    // ===== VALIDATION: Check if employee is selected =====
     if (!employeeId) {
         showToast('Please select an employee', 'error');
         return;
     }
 
-    // ===== VALIDATION: Check if month is selected =====
     if (!month) {
         showToast('Please select a month', 'error');
         return;
     }
 
-    // ===== VALIDATION: Check if current month is completed =====
     if (!isMonthCompleted(month)) {
         showToast('⚠️ Cannot calculate performance for the current month until the month is completed. Please select a previous month.', 'warning');
         return;
     }
 
-    // ===== Continue with saving =====
     const submitBtn = document.getElementById('calcSubmitBtn');
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
@@ -3904,7 +3569,7 @@ function loadWorkPreview(employeeId) {
             </div>
         `;
 
-        const monthShort = reviewMonth.substring(0, 7); // "yyyy-MM" for the combined endpoint
+        const monthShort = reviewMonth.substring(0, 7);
 
         Promise.all([
             fetch(`/dashboard/hr/performance/api/history/${employeeId}`).then(res => res.json()),
@@ -3916,7 +3581,7 @@ function loadWorkPreview(employeeId) {
                 if (current) {
                     if (combinedData.success) {
                         const match = (combinedData.results || []).find(r => r.employeeId === employeeId);
-                        if (match) Object.assign(current, match); // merges workScore, finalScore, finalRating, hasClickUpMapping
+                        if (match) Object.assign(current, match);
                     }
                     renderDetailsModal(current, history);
                 } else {
@@ -4157,9 +3822,7 @@ function loadWorkPreview(employeeId) {
     const bulkMonth = document.getElementById('bulkMonth');
     if (bulkMonth) bulkMonth.value = monthStr;
 
-    // Initialize default stars
     setDefaultStars(3);
-
     loadBulkEmployees();
 }
 function loadBulkEmployees() {
@@ -4171,7 +3834,6 @@ function loadBulkEmployees() {
         return;
     }
 
-    // Check if current month is completed
     if (!isMonthCompleted(month)) {
         showToast('⚠️ Current month is not completed. You can still load employees but calculations will be restricted.', 'warning');
     }
@@ -4278,7 +3940,6 @@ function toggleAllBulkEmployees(checked) {
     const initiative = document.getElementById('defaultInitiative').value;
     const behavior = document.getElementById('defaultBehaviorStars').value;
 
-    // Only apply to visible rows (not filtered out)
     document.querySelectorAll('.bulk-behavior').forEach(sel => {
         const row = sel.closest('tr');
         if (row && row.style.display !== 'none') {
@@ -4309,7 +3970,6 @@ function toggleAllBulkEmployees(checked) {
         return;
     }
 
-    // Check if current month is completed
     if (!isMonthCompleted(month)) {
         showToast('⚠️ Cannot calculate performance for the current month until the month is completed. Please select a previous month.', 'warning');
         return;
@@ -4395,16 +4055,13 @@ function toggleAllBulkEmployees(checked) {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-play"></i> Calculate All';
 
-    // ===== FIX: Show completion status =====
     const progressText = document.querySelector('.progress-container .progress-text');
     if (progressText) {
         progressText.innerHTML = '<i class="fas fa-check-circle" style="color: var(--success);"></i> Completed!';
     }
 
-    // ===== FIX: Auto-hide progress after 3 seconds =====
     setTimeout(() => {
         progressContainer.classList.remove('active');
-        // Reset the progress text for next time
         if (progressText) {
             progressText.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calculating...';
         }
@@ -4551,17 +4208,14 @@ function loadHistory(empId) {
     const container = document.getElementById('historyContent');
 
     if (!empId) {
-        // Show the employee selector again
         loadHistoryContent(true);
         return;
     }
 
-    // Update URL with employee ID for bookmarking
     const url = new URL(window.location);
     url.searchParams.set('id', empId);
     window.history.replaceState({}, '', url);
 
-    // Show loading state
     container.innerHTML = `
         <div class="history-container-inner">
             <div style="text-align: center; padding: 3rem; color: var(--dark-text-muted);">
@@ -4611,7 +4265,6 @@ function loadHistory(empId) {
     return;
 }
 
-    // Sort by date (newest first)
     data.sort((a, b) => new Date(b.reviewMonth) - new Date(a.reviewMonth));
 
     const latest = data[0];
@@ -4619,10 +4272,6 @@ function loadHistory(empId) {
     const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
     const trend = scores.length > 1 ? scores[0] - scores[scores.length - 1] : 0;
 
-    // Get employee ID from the first record
-    const currentEmployeeId = latest.employeeId;
-
-    // Build table rows
     let tableHtml = '';
     data.forEach(record => {
         const month = new Date(record.reviewMonth).toLocaleDateString('en-US', {
@@ -4645,7 +4294,6 @@ function loadHistory(empId) {
         `;
     });
 
-    // Calculate pillar averages
     const avg = (key) => {
         const vals = data.map(d => d[key] || 0);
         return vals.reduce((a, b) => a + b, 0) / vals.length;
@@ -4655,7 +4303,6 @@ function loadHistory(empId) {
     const behavior = Math.round(avg('behaviorScore') * 10) / 10;
     const initiative = Math.round(avg('initiativeScore') * 10) / 10;
 
-    // Build the complete history HTML
     container.innerHTML = `
         <div class="history-container-inner">
             <!-- CHANGE EMPLOYEE BUTTON -->
@@ -4811,7 +4458,6 @@ function loadHistory(empId) {
         </div>
     `;
 
-    // Render chart after DOM update
     setTimeout(() => {
         const labels = data.map(d =>
             new Date(d.reviewMonth).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
@@ -4894,7 +4540,6 @@ function refreshHistory() {
         }
     }
 
-    // If no employee found, show selector
     loadHistoryContent(true);
     showToast('Select an employee to view history', 'info');
 }
@@ -4940,7 +4585,6 @@ function exportBulkResults() {
         }
     });
 
-    // Create CSV
     let csv = 'Employee,Department,Status\n';
     data.forEach(d => {
         csv += `"${d.employee}","${d.department}","${d.status}"\n`;

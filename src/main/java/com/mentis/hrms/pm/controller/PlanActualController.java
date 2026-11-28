@@ -37,13 +37,9 @@ public class PlanActualController {
         if (!access.canAdministerProject(userId, projectId))
             throw new PmAccessDeniedException("Only a manager can capture or re-baseline.");
     }
-
-    @PostMapping("/baseline")
-    public ResponseEntity<ApiResponse<ProjectResponse>> capture(
-            @PathVariable Long projectId, @CurrentUserId Long userId) {
-        requireManage(userId, projectId);
-        return ResponseEntity.ok(ApiResponse.ok("Baseline saved", projectService.saveBaseline(projectId, userId)));
-    }
+    /* PM-001/PM-039: POST /projects/{projectId}/baseline removed.
+       ProjectController#baseline (/api/pm/projects/{id}/baseline) is the single owner
+       of baseline capture; it also enforces the COMPLETED/ARCHIVED lock. */
 
     @PostMapping("/rebaseline")
     public ResponseEntity<ApiResponse<ProjectResponse>> rebaseline(

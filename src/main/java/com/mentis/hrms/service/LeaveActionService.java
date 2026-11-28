@@ -211,7 +211,7 @@ public class LeaveActionService {
     }
 
     // ---------------------------------------------------------------
-    // WITHDRAW - employee retracts a request that is still PENDING
+    // WITHDRAW - employee retracts a PENDING or APPROVED leave (on/before endDate)
     // ---------------------------------------------------------------
     @Transactional
     public Map<String, Object> withdrawLeave(String leaveId, String reason) {
@@ -220,22 +220,46 @@ public class LeaveActionService {
             LeaveRequest leave = leaveRequestRepository.findById(leaveId)
                     .orElseThrow(() -> new RuntimeException("Leave not found: " + leaveId));
 
-            if (!"PENDING".equals(leave.getStatus())) {
+            String previousStatus = leave.getStatus();
+            if (!"PENDING".equals(previousStatus) && !"APPROVED".equals(previousStatus)) {
                 result.put("success", false);
-                result.put("error", "Only PENDING leave requests can be withdrawn. This leave is "
-                        + leave.getStatus() + " - use cancel instead if it has already been approved.");
+                result.put("error", "Only PENDING or APPROVED leaves can be withdrawn (current status: " + previousStatus + ")");
                 return result;
             }
+
+            if (leave.getEndDate() != null && leave.getEndDate().isBefore(LocalDate.now())) {
+                result.put("success", false);
+                result.put("error", "Past leaves cannot be withdrawn.");
+                return result;
+            }
+
+            String finalReason = (reason != null && !reason.trim().isEmpty())
+                    ? reason.trim()
+                    : "Withdrawn by employee";
 
             leave.setStatus("WITHDRAWN");
             leave.setWithdrawn(true);
             leave.setWithdrawnDate(LocalDateTime.now());
-            leave.setCancelReason(reason);
+            leave.setCancelReason(finalReason);
 
-            LeaveRequest saved = leaveRequestRepository.save(leave);
+            boolean balanceRestored = false;
+            if ("APPROVED".equals(previousStatus)) {
+                balanceRestored = leaveBalanceService.addBackLeaveBalance(leave);
+                if (!balanceRestored) {
+                    logger.warn("Could not restore leave balance for withdrawn leave {}", leaveId);
+                }
+            }
+
+            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
+
+            if ("APPROVED".equals(previousStatus)) {
+                attendanceService.removeLeaveAttendance(saved.getEmployeeId(), saved.getStartDate(), saved.getEndDate());
+                notifyProjectManagersOfLeaveAsync(saved, true);
+            }
 
             result.put("success", true);
-            result.put("message", "Leave request withdrawn successfully");
+            result.put("message", "Leave withdrawn successfully"
+                    + (balanceRestored ? " and leave balance restored" : ""));
             result.put("leaveId", leaveId);
             result.put("status", saved.getStatus());
         } catch (Exception e) {
@@ -247,7 +271,7 @@ public class LeaveActionService {
     }
 
     // ---------------------------------------------------------------
-    // CANCEL - employee cancels a PENDING or an already-APPROVED leave.
+    // CANCEL - employee cancels/withdraws a PENDING or APPROVED leave
     // ---------------------------------------------------------------
     @Transactional
     public Map<String, Object> cancelLeave(String leaveId, String reason) {
@@ -260,12 +284,24 @@ public class LeaveActionService {
 
             if (!"PENDING".equals(previousStatus) && !"APPROVED".equals(previousStatus)) {
                 result.put("success", false);
-                result.put("error", "Only PENDING or APPROVED leaves can be cancelled (current status: " + previousStatus + ")");
+                result.put("error", "Only PENDING or APPROVED leaves can be withdrawn (current status: " + previousStatus + ")");
                 return result;
             }
 
-            leave.setStatus("CANCELLED");
-            leave.setCancelReason(reason);
+            if ("APPROVED".equals(previousStatus)
+                    && leave.getEndDate() != null
+                    && leave.getEndDate().isBefore(LocalDate.now())) {
+                result.put("success", false);
+                result.put("error", "Past approved leaves cannot be withdrawn.");
+                return result;
+            }
+
+            String finalReason = (reason != null && !reason.trim().isEmpty())
+                    ? reason.trim()
+                    : "Withdrawn by employee";
+
+            leave.setStatus("WITHDRAWN");
+            leave.setCancelReason(finalReason);
             leave.setWithdrawn(true);
             leave.setWithdrawnDate(LocalDateTime.now());
 
@@ -273,21 +309,24 @@ public class LeaveActionService {
             if ("APPROVED".equals(previousStatus)) {
                 balanceRestored = leaveBalanceService.addBackLeaveBalance(leave);
                 if (!balanceRestored) {
-                    logger.warn("Could not restore leave balance for cancelled leave {}", leaveId);
+                    logger.warn("Could not restore leave balance for withdrawn leave {}", leaveId);
                 }
             }
 
-            LeaveRequest saved = leaveRequestRepository.save(leave);
+            LeaveRequest saved = leaveRequestRepository.saveAndFlush(leave);
 
-            if ("APPROVED".equals(previousStatus)) notifyProjectManagersOfLeave(saved, true);
+            if ("APPROVED".equals(previousStatus)) {
+                attendanceService.removeLeaveAttendance(saved.getEmployeeId(), saved.getStartDate(), saved.getEndDate());
+                notifyProjectManagersOfLeaveAsync(saved, true);
+            }
 
             result.put("success", true);
-            result.put("message", "Leave cancelled successfully"
+            result.put("message", "Leave withdrawn successfully"
                     + (balanceRestored ? " and leave balance restored" : ""));
             result.put("leaveId", leaveId);
             result.put("status", saved.getStatus());
         } catch (Exception e) {
-            logger.error("Error cancelling leave {}: {}", leaveId, e.getMessage(), e);
+            logger.error("Error withdrawing leave {}: {}", leaveId, e.getMessage(), e);
             result.put("success", false);
             result.put("error", e.getMessage());
         }

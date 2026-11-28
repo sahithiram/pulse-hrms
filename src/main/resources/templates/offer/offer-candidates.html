@@ -9,10 +9,54 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css(v=2)}" href="../../static/css/menti-theme.css">
     <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
 
     <style>
+        .action-buttons {
+            display: flex !important; align-items: center !important;
+            gap: .45rem !important; width: 100% !important; flex-wrap: nowrap !important;
+        }
+        .btn-action {
+            width: 32px !important; height: 32px !important; border-radius: 8px !important;
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            border: 1px solid var(--dark-border, #334155) !important;
+            background: rgba(148, 163, 184, .12) !important;
+            color: var(--dark-text-secondary, #cbd5e1) !important;
+            font-size: .82rem !important; cursor: pointer !important;
+            text-decoration: none !important; transition: all .2s ease !important;
+            padding: 0 !important; margin: 0 !important; line-height: 1 !important;
+            flex-shrink: 0 !important; appearance: none !important; -webkit-appearance: none !important;
+            box-shadow: none !important;
+        }
+        .btn-action i { color: inherit !important; pointer-events: none; }
+        .btn-action:hover { transform: translateY(-2px); }
+        .btn-action.btn-view {
+            background: rgba(99, 102, 241, .16) !important;
+            border-color: rgba(99, 102, 241, .4) !important;
+            color: #818cf8 !important;
+        }
+        .btn-action.btn-view:hover { background: #6366f1 !important; border-color: #6366f1 !important; color: #fff !important; }
+        .btn-action.btn-edit {
+            background: rgba(14, 165, 233, .16) !important;
+            border-color: rgba(14, 165, 233, .4) !important;
+            color: #38bdf8 !important;
+        }
+        .btn-action.btn-edit:hover { background: #0ea5e9 !important; border-color: #0ea5e9 !important; color: #fff !important; }
+        .btn-action.btn-docs {
+            background: rgba(16, 185, 129, .16) !important;
+            border-color: rgba(16, 185, 129, .4) !important;
+            color: #34d399 !important;
+        }
+        .btn-action.btn-docs:hover { background: #10b981 !important; border-color: #10b981 !important; color: #fff !important; }
+        .btn-action.btn-delete {
+            background: rgba(239, 68, 68, .16) !important;
+            border-color: rgba(239, 68, 68, .4) !important;
+            color: #f87171 !important;
+        }
+        .btn-action.btn-delete:hover { background: #ef4444 !important; border-color: #ef4444 !important; color: #fff !important; }
+
+        .filter-toolbar-card { overflow: visible !important; position: relative; z-index: 50; }
         .filter-dropdown { position: relative; }
         .filter-dropdown-btn {
             display: flex; align-items: center; gap: .5rem;
@@ -32,13 +76,13 @@
             border: 1px solid var(--dark-border);
             border-radius: var(--radius-btn);
             box-shadow: var(--shadow-md);
-            z-index: 100;
-            opacity: 0; visibility: hidden;
+            z-index: 500;
+            opacity: 0; visibility: hidden; pointer-events: none;
             transform: translateY(-6px);
             transition: var(--transition);
             padding: .25rem;
         }
-        .filter-dropdown-menu.show { opacity: 1; visibility: visible; transform: translateY(0); }
+        .filter-dropdown-menu.show { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
         .filter-option {
             padding: .55rem .75rem;
             border-radius: 6px;
@@ -133,7 +177,7 @@
         .panel-step.completed .panel-step-num { background:var(--success); color:#fff; }
         .panel-step.completed .panel-step-label { color:var(--success); }
     </style>
-</head>
+    <script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
 <body>
 
 <!-- === SHARED SIDEBAR (offer-letters active) === -->
@@ -159,13 +203,18 @@
             </div>
         </div>
 
+        <div th:if="${param.success}" class="alert alert-success" style="margin-bottom: 1rem;">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${param.success}"></span>
+        </div>
+
         <div th:if="${param.error}" class="alert alert-danger" style="margin-bottom: 1rem;">
             <i class="fas fa-exclamation-circle me-2"></i>
             <span th:text="${param.error}"></span>
         </div>
 
         <!-- Toolbar -->
-        <div class="content-card" style="margin-bottom: 1rem;">
+        <div class="content-card filter-toolbar-card" style="margin-bottom: 1rem;">
             <div class="card-body">
                 <div style="display: flex; gap: .75rem; flex-wrap: wrap; align-items: center;">
                     <div class="search-box" style="flex: 1; min-width: 240px; width: auto;">
@@ -180,7 +229,7 @@
                     </span>
 
                     <div class="filter-dropdown">
-                        <button class="filter-dropdown-btn" id="filterDropdownBtn">
+                        <button type="button" class="filter-dropdown-btn" id="filterDropdownBtn">
                             <i class="fas fa-filter"></i>
                             <span id="selectedFilterText">All Time</span>
                             <i class="fas fa-chevron-down"></i>
@@ -332,10 +381,11 @@
             </div>
         </div>
 
-        <form id="panelOfferForm" method="POST" action="/dashboard/hr/save-offer" enctype="multipart/form-data">
+        <form id="panelOfferForm" method="POST" action="/dashboard/save-offer-letter" enctype="multipart/form-data">
             <input type="hidden" name="applicationId" value="">
             <input type="hidden" name="employeeId" value="">
             <input type="hidden" name="type" value="NEW">
+            <input type="hidden" name="returnTo" value="offer-candidates">
 
             <!-- Section 1 -->
             <div id="panelSection1">
@@ -489,7 +539,8 @@
 
         updateCount(rows.length);
 
-        filterBtn.addEventListener('click', function () {
+        filterBtn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
             filterMenu.classList.toggle('show');
         });
         document.addEventListener('click', function (ev) {
@@ -563,8 +614,13 @@
         currentDeleteOfferId = id;
 
         var msg = document.getElementById('deleteConfirmMessage');
-        if (msg) msg.innerHTML = 'Are you sure you want to delete the offer for <strong>' +
-            (name || 'this candidate') + '</strong>?';
+        if (msg) {
+            msg.textContent = 'Are you sure you want to delete the offer for ';
+            var strong = document.createElement('strong');
+            strong.textContent = name || 'this candidate';
+            msg.appendChild(strong);
+            msg.appendChild(document.createTextNode('?'));
+        }
 
         var modal = document.getElementById('deleteConfirmModal');
         if (modal) modal.style.display = 'block';
@@ -577,14 +633,15 @@
     }
 
     async function performDelete() {
-        if (!currentDeleteOfferId) return;
+        var offerId = currentDeleteOfferId;
+        if (!offerId) return;
         var btn = document.getElementById('confirmDeleteBtn');
         var original = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
 
         try {
-            var res = await fetch('/dashboard/offers/delete/' + currentDeleteOfferId, {
+            var res = await fetch('/dashboard/offers/delete/' + encodeURIComponent(offerId), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
@@ -592,17 +649,27 @@
             var data;
             try { data = JSON.parse(text); } catch (e) { data = { success: res.ok }; }
 
-            if (data.success) {
+            if (res.ok && data.success !== false) {
                 closeDeleteModal();
-                var row = document.querySelector('button[data-offer-id="' + currentDeleteOfferId + '"]').closest('tr');
+                var delBtn = document.querySelector('button[data-offer-id="' + offerId + '"]');
+                var row = delBtn ? delBtn.closest('tr') : null;
                 if (row) {
                     row.style.transition = 'opacity .3s';
                     row.style.opacity = '0';
-                    setTimeout(function () { row.remove(); initializeSearchAndFilters(); }, 300);
+                    setTimeout(function () {
+                        row.remove();
+                        var remaining = document.querySelectorAll('#offersTable tbody tr[data-name]');
+                        var visibleCount = 0;
+                        remaining.forEach(function (r) {
+                            if (r.style.display !== 'none') visibleCount++;
+                        });
+                        var countEl = document.getElementById('recordCount');
+                        if (countEl) countEl.textContent = visibleCount;
+                    }, 300);
                 }
                 showPmToast('Offer deleted successfully', 'success');
             } else {
-                showPmToast(data.error || 'Failed to delete offer', 'error');
+                showPmToast((data && data.error) || 'Failed to delete offer', 'error');
             }
         } catch (err) {
             showPmToast('Error deleting offer', 'error');

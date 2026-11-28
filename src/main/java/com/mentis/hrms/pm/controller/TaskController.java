@@ -106,9 +106,15 @@ public class TaskController {
         // STEP 1 leftover: nobody lists tasks of a project / team they cannot see
         if (projectId != null) pmAccessService.requireCanViewProject(userId, projectId);
         if (teamId != null) pmAccessService.requireCanViewTeam(userId, teamId);
-        if (projectId == null && teamId == null) pmAccessService.requireAdmin(userId);
         Sort sort = Sort.by(Sort.Direction.fromString(direction), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
+        // Non-admins used to get "Admins only" here, so the Tasks page showed nothing.
+        if (projectId == null && teamId == null && !pmAccessService.isAdmin(userId)) {
+            return ResponseEntity.ok(ApiResponse.ok(taskService.listVisibleTasks(
+                    pmAccessService.pmPortfolioProjectIds(userId),
+                    pmAccessService.myTeamIds(userId),
+                    userId, status, search, pageable)));
+        }
         if (teamId != null) {
             return ResponseEntity.ok(ApiResponse.ok(
                     taskService.listTasksByTeam(teamId, status, search, pageable)));

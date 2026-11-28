@@ -25,6 +25,13 @@ public interface ProjectService {
 
     /** Same as {@link #saveBaseline(Long, Long)}; {@code reason} is required when a baseline already exists. */
     ProjectResponse saveBaseline(Long id, Long currentUserId, String reason);
+
+    /** PM-026: hand the project over to another owner (SA always, current owner otherwise). */
+    ProjectResponse transferOwner(Long id, Long newOwnerId, String reason,
+                                  boolean keepPreviousAsManager, Long currentUserId);
+
+    /** PM-025: add/promote MANAGER rows for the given employees. */
+    void applyManagers(Long projectId, Long ownerId, java.util.List<Long> managerIds, Long actorId);
     PageResponse<ProjectSummaryResponse> listProjects(String search,
                                                       ProjectStatus status,
                                                       Long ownerId,

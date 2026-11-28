@@ -9,10 +9,53 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css(v=2)}" href="../../static/css/menti-theme.css">
     <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
 
     <style>
+        .action-buttons {
+            display: flex !important; align-items: center !important;
+            gap: .45rem !important; width: 100% !important; flex-wrap: nowrap !important;
+        }
+        .btn-action {
+            width: 32px !important; height: 32px !important; border-radius: 8px !important;
+            display: inline-flex !important; align-items: center !important; justify-content: center !important;
+            border: 1px solid var(--dark-border, #334155) !important;
+            background: rgba(148, 163, 184, .12) !important;
+            color: var(--dark-text-secondary, #cbd5e1) !important;
+            font-size: .82rem !important; cursor: pointer !important;
+            text-decoration: none !important; transition: all .2s ease !important;
+            padding: 0 !important; margin: 0 !important; line-height: 1 !important;
+            flex-shrink: 0 !important; appearance: none !important; -webkit-appearance: none !important;
+            box-shadow: none !important;
+        }
+        .btn-action i { color: inherit !important; pointer-events: none; }
+        .btn-action:hover { transform: translateY(-2px); }
+        .btn-action.btn-view {
+            background: rgba(99, 102, 241, .16) !important;
+            border-color: rgba(99, 102, 241, .4) !important;
+            color: #818cf8 !important;
+        }
+        .btn-action.btn-view:hover { background: #6366f1 !important; border-color: #6366f1 !important; color: #fff !important; }
+        .btn-action.btn-edit {
+            background: rgba(14, 165, 233, .16) !important;
+            border-color: rgba(14, 165, 233, .4) !important;
+            color: #38bdf8 !important;
+        }
+        .btn-action.btn-edit:hover { background: #0ea5e9 !important; border-color: #0ea5e9 !important; color: #fff !important; }
+        .btn-action.btn-docs {
+            background: rgba(16, 185, 129, .16) !important;
+            border-color: rgba(16, 185, 129, .4) !important;
+            color: #34d399 !important;
+        }
+        .btn-action.btn-docs:hover { background: #10b981 !important; border-color: #10b981 !important; color: #fff !important; }
+        .btn-action.btn-delete {
+            background: rgba(239, 68, 68, .16) !important;
+            border-color: rgba(239, 68, 68, .4) !important;
+            color: #f87171 !important;
+        }
+        .btn-action.btn-delete:hover { background: #ef4444 !important; border-color: #ef4444 !important; color: #fff !important; }
+
         .employee-header-card {
             background: var(--dark-card);
             border: 1px solid var(--dark-border);
@@ -154,7 +197,7 @@
             border-radius: 8px;
         }
     </style>
-</head>
+    <script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
 <body>
 
 <!-- === SHARED SIDEBAR (onboarding active) === -->
@@ -558,7 +601,6 @@
         var badge = el.closest('.deadline-badge');
         if (!badge) return;
 
-        // Fallback: parse from the second span
         var textNodes = badge.querySelectorAll('span');
         var deadlineText = '';
         for (var i = 0; i < textNodes.length; i++) {

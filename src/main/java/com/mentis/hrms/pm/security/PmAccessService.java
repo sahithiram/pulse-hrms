@@ -4,6 +4,7 @@ import com.mentis.hrms.model.Employee;
 import com.mentis.hrms.model.enums.UserRole;
 import com.mentis.hrms.pm.entity.Project;
 import com.mentis.hrms.pm.entity.Task;
+import com.mentis.hrms.pm.entity.Team;
 import com.mentis.hrms.pm.entity.TaskChecklistItem;
 import com.mentis.hrms.pm.entity.TaskComment;
 import com.mentis.hrms.pm.entity.TaskDependency;
@@ -20,7 +21,7 @@ import com.mentis.hrms.pm.repository.TaskRepository;
 import com.mentis.hrms.pm.repository.TaskWatcherRepository;
 import com.mentis.hrms.pm.repository.TeamMemberRepository;
 import com.mentis.hrms.pm.repository.TeamRepository;
-import com.mentis.hrms.pm.service.ProjectTeamService;              // NEW
+import com.mentis.hrms.pm.service.ProjectTeamService; // NEW
 import com.mentis.hrms.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,17 +29,26 @@ import org.springframework.transaction.annotation.Transactional;
 import com.mentis.hrms.pm.enums.ProjectStatus;
 import com.mentis.hrms.pm.exception.BusinessRuleException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import com.mentis.hrms.pm.repository.TimesheetWeekRepository;
 
+/**
+ * PERF NOTES (behaviour is unchanged, only the number of DB round trips):
+ *  - isTeamMember / isTaskAssignee / watcher check use EXISTS queries instead of loading full lists.
+ *  - canViewProject loads the project-member row ONCE (was 4 separate queries for the same row)
+ *    and checks all of a project's teams with one query instead of 2 queries per team.
+ *  - isProjectLead / canViewEmployeeTimesheet no longer loop with a query per team.
+ */
 @Service
 @RequiredArgsConstructor
 public class PmAccessService {
 
     private final ProjectRepository projectRepository;
 
-    private final ProjectTeamService projectTeamService;   // NEW: the single source of truth for a project's teams
+    private final ProjectTeamService projectTeamService; // NEW: the single source of truth for a project's teams
 
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
@@ -83,6 +93,19 @@ public class PmAccessService {
 
     public boolean canViewIntakeQueue(Long userId) {
         return isAdmin(userId) || isPmRole(userId);
+    }
+
+    /**
+     * The finance tier for a company-wide aggregate: Super Admin, PM, project managers/owners and
+     * HR managers. A plain delivery member is still refused — they see money only on tasks they own.
+     */
+    public boolean canViewFinanceAnywhere(Long userId) {
+        return isSuperAdmin(userId) || isPmRole(userId) || isAdmin(userId) || isAnyProjectManager(userId);
+    }
+
+    public void requireCanViewFinanceAnywhere(Long userId) {
+        if (!canViewFinanceAnywhere(userId))
+            throw new PmAccessDeniedException("You do not have access to budget information.");
     }
 
     public boolean canCreateProject(Long userId) {
@@ -185,16 +208,23 @@ public class PmAccessService {
 
     @Transactional(readOnly = true)
     public boolean isTeamMember(Long userId, Long teamId) {
-        if (teamId == null) return false;
-        return teamMemberRepository.findByTeamId(teamId).stream()
-                .anyMatch(tm -> tm.getEmployeeId().equals(userId));
+        if (teamId == null || userId == null) return false;
+        // PERF: EXISTS instead of loading every member of the team
+        return teamMemberRepository.existsByTeamIdAndEmployeeId(teamId, userId);
     }
 
     @Transactional(readOnly = true)
     public boolean isTaskAssignee(Long userId, Long taskId) {
-        if (taskId == null) return false;
-        return taskAssignmentRepository.findByTaskId(taskId).stream()
-                .anyMatch(a -> a.getEmployeeId().equals(userId));
+        if (taskId == null || userId == null) return false;
+        // PERF: EXISTS instead of loading every assignment of the task
+        return taskAssignmentRepository.existsByTaskIdAndEmployeeId(taskId, userId);
+    }
+
+    /** true when the user leads at least one of these teams (one query for all teams). */
+    private boolean leadsAnyTeam(Long userId, Set<Long> teamIds) {
+        if (userId == null || teamIds == null || teamIds.isEmpty()) return false;
+        return teamRepository.findAllById(teamIds).stream()
+                .anyMatch(t -> t.getLeadEmployeeId() != null && t.getLeadEmployeeId().equals(userId));
     }
 
     @Transactional(readOnly = true)
@@ -202,8 +232,7 @@ public class PmAccessService {
         if (userId == null || projectId == null) return false;
         if (isProjectLeadRole(userId, projectId)) return true;
         // CHANGED: multi-team — lead of ANY of the project's teams counts.
-        return projectTeamService.teamIdsOf(projectId).stream()
-                .anyMatch(tid -> isTeamLead(userId, tid));
+        return leadsAnyTeam(userId, projectTeamService.teamIdsOf(projectId));
     }
 
     @Transactional(readOnly = true)
@@ -235,15 +264,22 @@ public class PmAccessService {
         return isProjectLead(userId, projectId);
     }
 
+    /**
+     * Same rule as before: admins, owner, ANY project role (manager / lead / member / viewer),
+     * member or lead of any of the project's teams, or assigned to a task of the project.
+     * PERF: the project-member row is read once and teams are checked in two queries total.
+     */
     @Transactional(readOnly = true)
     public boolean canViewProject(Long userId, Long projectId) {
         if (userId == null || projectId == null) return false;
         if (isAdmin(userId)) return true;
-        if (canManageProject(userId, projectId)) return true;
-        if (isProjectMember(userId, projectId)) return true;
+        if (isProjectOwner(userId, projectId)) return true;
+        if (projectMemberRepository.findByProjectIdAndEmployeeId(projectId, userId).isPresent()) return true;
         // CHANGED: multi-team — member or lead of ANY of the project's teams counts.
-        for (Long teamId : projectTeamService.teamIdsOf(projectId)) {
-            if (isTeamMember(userId, teamId) || isTeamLead(userId, teamId)) return true;
+        Set<Long> teamIds = projectTeamService.teamIdsOf(projectId);
+        if (!teamIds.isEmpty()) {
+            if (teamMemberRepository.existsByEmployeeIdAndTeamIdIn(userId, teamIds)) return true;
+            if (leadsAnyTeam(userId, teamIds)) return true;
         }
         return taskAssignmentRepository.existsByProjectAndEmployee(projectId, userId);
     }
@@ -272,13 +308,29 @@ public class PmAccessService {
             throw new PmAccessDeniedException("You don't have permission to view this project.");
     }
 
+    /**
+     * PM-020 (fixed): SA, the team's creator, THE TEAM LEAD, or the owner/manager of a project
+     * that owns this team. The old code only checked SA + creator, so a newly appointed team
+     * lead could not even add a member to his own team (the 403 message named a rule that
+     * did not exist in the code).
+     */
     @Transactional(readOnly = true)
     public boolean canManageTeam(Long userId, Long teamId) {
         if (isSuperAdmin(userId)) return true;
         if (userId == null || teamId == null) return false;
-        return teamRepository.findById(teamId)
-                .map(t -> userId.equals(t.getCreatedBy()))
-                .orElse(false);
+        Team team = teamRepository.findById(teamId).orElse(null);
+        if (team == null) return false;
+        if (userId.equals(team.getCreatedBy())) return true;
+        if (team.getLeadEmployeeId() != null && team.getLeadEmployeeId().equals(userId)) return true;
+        // a project manager of a project this team belongs to (SA, owner or MANAGER row)
+        for (Long pid : managedProjectIds(userId)) {
+            try {
+                if (projectTeamService.teamIdsOf(pid).contains(teamId)) return true;
+            } catch (RuntimeException ignored) {
+                // a project with no team links must not break the permission check
+            }
+        }
+        return false;
     }
 
     public void requireCanManageTeam(Long userId, Long teamId) {
@@ -291,8 +343,10 @@ public class PmAccessService {
         if (viewerId == null || employeePk == null) return false;
         if (viewerId.equals(employeePk)) return true;
         if (isAdmin(viewerId)) return true;
-        if (teamMemberRepository.findByEmployeeId(employeePk).stream()
-                .anyMatch(m -> isTeamLead(viewerId, m.getTeamId()))) return true;
+        // PERF: one query for all the employee's teams instead of one per team
+        Set<Long> teamIds = teamMemberRepository.findByEmployeeId(employeePk).stream()
+                .map(m -> m.getTeamId()).collect(Collectors.toSet());
+        if (leadsAnyTeam(viewerId, teamIds)) return true;
         return timesheetWeekRepository.existsByEmployeeIdAndApproverId(employeePk, viewerId);
     }
 
@@ -342,8 +396,31 @@ public class PmAccessService {
         if (isTeamMember(userId, teamId)) return true;
         if (isTaskAssignee(userId, taskId)) return true;
 
-        return taskWatcherRepository.findByTaskId(taskId).stream()
-                .anyMatch(w -> w.getEmployeeId().equals(userId));
+        // PERF: EXISTS instead of loading all watchers
+        if (taskWatcherRepository.existsByTaskIdAndEmployeeId(taskId, userId)) return true;
+
+        /* PM-019: a member may also see the tasks that block him or are blocked by him
+           ("dependency tasks"), one hop only — never the whole project graph. */
+        return isDependencyNeighbourOfMyTask(userId, taskId);
+    }
+
+    /**
+     * PM-019 — one-hop dependency visibility.
+     * True when the task is a blocker of one of my tasks, or is blocked by one of my tasks.
+     */
+    @Transactional(readOnly = true)
+    public boolean isDependencyNeighbourOfMyTask(Long userId, Long taskId) {
+        if (userId == null || taskId == null) return false;
+        List<Long> mine = taskAssignmentRepository.findTaskIdsByEmployeeId(userId);
+        if (mine == null || mine.isEmpty()) return false;
+        return taskDependencyRepository.existsBetweenAny(mine, taskId);
+    }
+
+    /** PM-019: the ids of every task I am assigned to (used by the member task board). */
+    @Transactional(readOnly = true)
+    public List<Long> myTaskIds(Long userId) {
+        if (userId == null) return List.of();
+        return taskAssignmentRepository.findTaskIdsByEmployeeId(userId);
     }
 
     @Transactional(readOnly = true)
@@ -585,7 +662,12 @@ public class PmAccessService {
                 Long pid = projectIdOfTask(entityId);
                 yield pid != null && canManageProject(approverId, pid);
             }
-            default -> true;
+            // only the approver picked at submit time may decide a timesheet, never the owner
+            case "TIMESHEET" -> timesheetWeekRepository.findById(entityId)
+                    .map(w -> approverId.equals(w.getApproverId()) && !approverId.equals(w.getEmployeeId()))
+                    .orElse(false);
+            // unknown / legacy types: Super Admin only (creation of unknown types is now refused)
+            default -> isSuperAdmin(approverId);
         };
     }
 }

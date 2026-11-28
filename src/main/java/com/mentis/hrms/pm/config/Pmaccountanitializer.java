@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -21,10 +22,11 @@ import java.util.stream.Collectors;
  * Runs on every startup against the database the app is connected to
  * (Clever Cloud). Makes sure exactly one working PM001 account exists.
  *
- * Turn it off later with:  pm.seed.enabled=false
- * Stop it from resetting the password on each start with:  pm.seed.reset-password=false
+ * Turn it off later with: pm.seed.enabled=false
+ * Stop it from resetting the password on each start with: pm.seed.reset-password=false
  */
 @Component
+@Profile("!test")
 @Order(100)
 public class Pmaccountanitializer implements CommandLineRunner {
 

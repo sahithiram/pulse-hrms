@@ -163,7 +163,7 @@
     }
     document.getElementById('pmDrawerTitle').textContent = title || 'Details';
     document.getElementById('pmDrawerBody').innerHTML = html || '';
-    requestAnimationFrame(() => { bd.classList.add('open'); dr.classList.add('open'); });
+    requestAnimationFrame(() => { bd.classList.add('open'); dr.classList.add('open'); document.body.classList.add('pmui-lock'); });
   }
 
   function closeDrawer() {
@@ -171,6 +171,7 @@
     const dr = document.getElementById('pmDrawer');
     if (bd) bd.classList.remove('open');
     if (dr) dr.classList.remove('open');
+    document.body.classList.remove('pmui-lock');
   }
 
   /* ============================================================
@@ -249,6 +250,10 @@
       err.status = res.status;
       throw err;
     }
+    if (opts.method !== 'GET') {
+      try { Object.keys(sessionStorage).filter(function (k) { return k.indexOf('pm.c:') === 0; })
+        .forEach(function (k) { sessionStorage.removeItem(k); }); } catch (e) {}
+    }
     return data ? data.data : null;
   }
 
@@ -267,16 +272,33 @@
      /api/pm/me — cached
      ============================================================ */
   let _meCache = null;
-  async function getMe() {
-    if (_meCache) return _meCache;
-    _meCache = await api('GET', '/api/pm/me');
-    return _meCache;
-  }
+ async function getMe() {
+   if (_meCache) return _meCache;
+   try {
+     const raw = sessionStorage.getItem('pm.me');
+     if (raw) {
+       const { at, me } = JSON.parse(raw);
+       if (Date.now() - at < 60000) {
+         _meCache = me;
+         return me;
+       }
+     }
+   } catch (e) {}
+   _meCache = await api('GET', '/api/pm/me');
+   try { sessionStorage.setItem('pm.me', JSON.stringify({ at: Date.now(), me: _meCache })); } catch (e) {}
+   return _meCache;
+ }
 
   /* ============================================================
      LOGOUT
      ============================================================ */
   function logout() {
+    // PERF/SECURITY: drop cached /me + dropdown data so the next login in this tab starts clean
+    try {
+      Object.keys(sessionStorage).forEach(function (k) {
+        if (k === 'pm.me' || k.indexOf('pm.c:') === 0) sessionStorage.removeItem(k);
+      });
+    } catch (e) {}
     PM.toast('Logging out...', 'info', 800);
     setTimeout(() => { window.location.href = '/candidate/auth/logout'; }, 300);
   }
@@ -592,20 +614,29 @@
       el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--dark-text-secondary);padding:0 6px';
       host.insertBefore(el, host.firstChild); return el;
     }
-    function setLive(on) {
-      var el = liveEl(); if (!el) return;
-      el.innerHTML = '<span class="dot" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' +
-        (on ? '#10b981' : '#ef4444') + '"></span> ' + (on ? 'Live' : 'Reconnecting…');
-    }
+    function setLive(on) { /* live badge removed */ }
     function loadScript(src) {
       return new Promise(function (res) {
         var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = res; document.head.appendChild(s);
       });
     }
     var timer;
+    var pendingWhileHidden = false;
+    function runRefresh() {
+      if (typeof window.pmRefresh === 'function') window.pmRefresh();
+    }
     window.addEventListener('pm:event', function () {
       clearTimeout(timer);
-      timer = setTimeout(function () { if (typeof window.pmRefresh === 'function') window.pmRefresh(); }, 400);
+      // PERF: do not hit the server for background tabs; refresh once when the tab is shown again
+      if (document.hidden) { pendingWhileHidden = true; return; }
+      timer = setTimeout(runRefresh, 2500);
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && pendingWhileHidden) {
+        pendingWhileHidden = false;
+        clearTimeout(timer);
+        timer = setTimeout(runRefresh, 300);
+      }
     });
 
     var started = false;
@@ -908,7 +939,7 @@
     var back = empId ? '/candidate/dashboard/' + empId : '/candidate/dashboard';
     function addLink(ulId, href, icon, label, first) {
       var ul = document.getElementById(ulId);
-      if (!ul || ul.querySelector('[data-pm-tl="' + href + '"]')) return;
+      if (!ul || ul.querySelector('[data-pm-tl="' + href + '"]') || ul.querySelector('a[href="' + href + '"]')) return;
       var li = document.createElement('li');
       li.innerHTML = '<a class="nav-link" data-pm-tl="' + href + '" href="' + href + '"><i class="fas ' + icon + '"></i> <span>' + label + '</span></a>';
       if (normPath(location.pathname) === normPath(href)) li.firstChild.classList.add('active');
@@ -968,6 +999,22 @@
   }
 
   /* ============================================================
+     CACHED GET — for dropdown lists (employees, teams, projects).
+     Kept in sessionStorage for 2 minutes; cleared on any write.
+     ============================================================ */
+  async function cachedApi(url, ttlMs) {
+    ttlMs = ttlMs || 120000;
+    var key = 'pm.c:' + url;
+    try {
+      var raw = sessionStorage.getItem(key);
+      if (raw) { var o = JSON.parse(raw); if (Date.now() - o.at < ttlMs) return o.v; }
+    } catch (e) {}
+    var v = await api('GET', url);
+    try { sessionStorage.setItem(key, JSON.stringify({ at: Date.now(), v: v })); } catch (e) {}
+    return v;
+  }
+
+  /* ============================================================
      EXPORT
      ============================================================ */
   window.PM = {
@@ -977,7 +1024,7 @@
     // formatting
     getInitials, fmtDate, fmtDateTime, fmtMinutes,
     // data
-    api, apiList, getMe, bootstrap, logout,
+    api, apiList, cachedApi, getMe, bootstrap, logout,
     buildSidebar, buildHeader,
     // Phase 3
     meTasks, meProjects, invalidateMeCaches,
@@ -996,4 +1043,4 @@
       return Promise.resolve(window.confirm((o.title ? o.title + '\n\n' : '') + (o.message || 'Are you sure?')));
     }
   };
-})();
+})();

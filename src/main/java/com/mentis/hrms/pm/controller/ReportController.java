@@ -117,6 +117,57 @@ public class ReportController {
         return csv(service.utilizationCsv(from, to), "utilization");
     }
 
+    /* ── PM-013: aliases for the URLs the Insights page actually calls ──
+       The page used /budget.csv, /velocity.csv, ... The controller only ever exposed
+       /budget/export.csv, so five of the six buttons 404'd. Both shapes now work;
+       nothing was renamed, so any bookmark or external link keeps working. */
+
+    @GetMapping(value = {"/budget.csv", "/budget-all.csv"}, produces = "text/csv")
+    public ResponseEntity<String> budgetCsvAlias(@RequestParam(required = false) Long projectId,
+                                                 @CurrentUserId Long userId) {
+        scopeFinance(userId, projectId);
+        return csv(service.budgetCsv(projectId),
+                projectId == null ? "budget-all" : "budget");
+    }
+
+    @GetMapping(value = "/velocity.csv", produces = "text/csv")
+    public ResponseEntity<String> velocityCsvAlias(@RequestParam Long projectId,
+                                                   @RequestParam(defaultValue = "6") int lastSprints,
+                                                   @CurrentUserId Long userId) {
+        access.requireCanViewProject(userId, projectId);
+        return csv(service.velocityCsv(projectId, lastSprints), "velocity");
+    }
+
+    @GetMapping(value = "/quality.csv", produces = "text/csv")
+    public ResponseEntity<String> qualityCsvAlias(@RequestParam(required = false) Long projectId,
+                                                  @CurrentUserId Long userId) {
+        scopeView(userId, projectId);
+        return csv(service.qualityCsv(projectId), "quality");
+    }
+
+    @GetMapping(value = "/risk.csv", produces = "text/csv")
+    public ResponseEntity<String> riskCsvAlias(@RequestParam(required = false) Long projectId,
+                                               @CurrentUserId Long userId) {
+        scopeView(userId, projectId);
+        return csv(service.riskCsv(projectId), "risk");
+    }
+
+    @GetMapping(value = "/utilization.csv", produces = "text/csv")
+    public ResponseEntity<String> utilizationCsvAlias(
+            @CurrentUserId Long userId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        access.requireAdmin(userId);
+        return csv(service.utilizationCsv(from, to), "utilization");
+    }
+
+    /** PM-014: the approvals page had no export at all. */
+    @GetMapping(value = "/approvals.csv", produces = "text/csv")
+    public ResponseEntity<String> approvalsCsv(@CurrentUserId Long userId) {
+        access.requireAdmin(userId);
+        return csv(service.approvalsCsv(), "approvals");
+    }
+
     private ResponseEntity<String> csv(String body, String name) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,

@@ -66,9 +66,7 @@ public class DashboardController implements WebMvcConfigurer {
     /* ---------- RESOURCE HANDLERS ---------- */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:///C:/hrms/uploads/")
-                .setCachePeriod(3600);
+        // NOTE: /uploads/** public handler REMOVED (Sprint 2). Files are served via /secure-uploads/** after auth.
         registry.addResourceHandler("/webjars/**")
                 .addResourceLocations("classpath:/META-INF/resources/webjars/");
         registry.addResourceHandler("/static/**")

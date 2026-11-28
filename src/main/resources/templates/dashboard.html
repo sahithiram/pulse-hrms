@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     <!-- ============ SHARED THEME (single source of truth) ============ -->
-    <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
+    <link rel="stylesheet" th:href="@{/css/menti-theme.css?v=3}" href="../../static/css/menti-theme.css">
     <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
 
     <style>
@@ -20,7 +20,11 @@
 
         /* --- Kept for safety: identical to menti-theme.css, acts as fallback --- */
         .sidebar { position: fixed; top: 0; left: 0; width: 280px; height: 100vh; background: linear-gradient(180deg, #0b1220 0%, #0f172a 58%, #101b30 100%); border-right: 1px solid rgba(148,163,184,.12); box-shadow: 2px 0 10px rgba(0,0,0,.2); display: flex; flex-direction: column; transition: var(--transition); z-index: 1000; }
-        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--dark-card); border-bottom: 1px solid var(--dark-border); padding: .75rem 1.5rem; position: sticky; top: 0; min-height: 64px; z-index: 100; }
+        .side-submenu { list-style: none; max-height: 0; overflow: hidden; transition: max-height .28s cubic-bezier(.4,0,.2,1); }
+        .side-group.is-open > .side-submenu { max-height: 900px !important; }
+        .side-group.is-open > .side-group-toggle .side-chevron { transform: rotate(90deg); }
+        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; background: var(--dark-card); border-bottom: 1px solid var(--dark-border); padding: .75rem 1.5rem; position: sticky; top: 0; min-height: 64px; z-index: 1020; }
+        .top-header .dropdown-menu { z-index: 1100; }
         .search-box { position: relative; width: 300px; flex-shrink: 0; }
         .search-box input { width: 100%; padding: .6rem .75rem .6rem 2.5rem; border-radius: 8px; border: 1px solid var(--dark-border); background: var(--dark-bg); color: var(--dark-text); font-size: .875rem; transition: var(--transition); }
         .search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1); outline: none; }
@@ -332,8 +336,89 @@
         input:checked + .slider { background-color: var(--primary); }
         input:checked + .slider:before { transform: translateX(16px); }
 
-        #hrLeaveRequestsTable { table-layout: fixed; width: 100%; }
-        #hrLeaveRequestsTable td { white-space: normal; word-wrap: break-word; }
+        #hrLeaveRequestsTable {
+            table-layout: fixed;
+            width: 100%;
+            min-width: 1240px;
+            border-collapse: collapse;
+        }
+        #hrLeaveRequestsTable th,
+        #hrLeaveRequestsTable td {
+            padding: .7rem .65rem;
+            vertical-align: middle;
+        }
+        #hrLeaveRequestsTable td {
+            white-space: normal;
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+        #hrLeaveRequestsTable td.col-nowrap,
+        #hrLeaveRequestsTable th.col-nowrap {
+            white-space: nowrap;
+        }
+        #hrLeaveRequestsTable td.col-status {
+            white-space: nowrap;
+            overflow: visible;
+        }
+        #hrLeaveRequestsTable td.col-status .badge-sm {
+            display: inline-block;
+            white-space: nowrap;
+            max-width: 100%;
+        }
+        #hrLeaveRequestsTable td.col-actions {
+            white-space: nowrap;
+            overflow: visible;
+        }
+        #hrLeaveRequestsTable td.col-actions .action-buttons {
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: .375rem;
+        }
+        .leave-date-range {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            white-space: nowrap;
+            font-size: .8rem;
+        }
+        .leave-reason-preview {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            line-height: 1.4;
+            word-break: break-word;
+            font-size: .82rem;
+            color: var(--dark-text);
+        }
+        .leave-reason-more {
+            display: inline-block;
+            margin-top: .25rem;
+            padding: 0;
+            border: none;
+            background: transparent;
+            color: var(--primary);
+            font-size: .72rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .leave-reason-more:hover { color: #818cf8; }
+
+        #allHolidaysTable th.col-actions,
+        #allHolidaysTable td.col-actions {
+            white-space: nowrap;
+            width: 110px;
+            min-width: 110px;
+        }
+        #allHolidaysTable td.col-actions .action-buttons {
+            display: inline-flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: .375rem;
+        }
 
         /* Print */
         @media print {
@@ -348,7 +433,7 @@
                 border: 1px solid #000 !important; color: #000 !important;
             }
             .attendance-card.print-target .pm-table th { background: #f0f0f0 !important; }
-            .attendance-export-print-buttons, .attendance-filter-bar, .attendance-refresh-btn { display: none !important; }
+            .attendance-export-print-buttons, .attendance-filter-bar, .attendance-refresh-btn, .attendance-pagination { display: none !important; }
         }
 
 
@@ -419,8 +504,79 @@
             opacity: .45;
             pointer-events: none;
         }
+
+        /* Attendance & Leave Management pagination */
+        .attendance-pagination {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: wrap;
+            padding: .75rem 1rem;
+            margin-top: .75rem;
+            border-top: 1px solid var(--dark-border);
+            background: rgba(255, 255, 255, .015);
+            border-radius: 0 0 8px 8px;
+        }
+        .attendance-pagination .pg-meta {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            flex-wrap: wrap;
+            font-size: .78rem;
+            color: var(--dark-text-secondary);
+        }
+        .attendance-pagination .pg-size-select {
+            height: 28px;
+            padding: 0 .5rem;
+            border-radius: 6px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .75rem;
+            cursor: pointer;
+        }
+        .attendance-pagination .pg-controls {
+            display: flex;
+            align-items: center;
+            gap: .25rem;
+            flex-wrap: wrap;
+        }
+        .attendance-pagination .pg-link {
+            min-width: 30px;
+            height: 28px;
+            padding: 0 .55rem;
+            border-radius: 6px;
+            border: 1px solid var(--dark-border);
+            background: var(--dark-bg);
+            color: var(--dark-text);
+            font-size: .75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .25rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .attendance-pagination .pg-link:hover:not(:disabled):not(.active) {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .attendance-pagination .pg-link.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            font-weight: 600;
+        }
+        .attendance-pagination .pg-link:disabled,
+        .attendance-pagination .pg-link.disabled {
+            opacity: .45;
+            cursor: default;
+            pointer-events: none;
+        }
     </style>
-</head>
+    <script src="/_aistudio-iframe.js?v=29045eb3"></script><script src="/_aistudio-iframe.js?v=29045eb3"></script><script src="/_aistudio-iframe.js?v=29045eb3"></script><script src="/_aistudio-iframe.js?v=29045eb3"></script></head>
 <body>
 
 <!-- === SIDEBAR (shared fragment) === -->
@@ -773,6 +929,7 @@
                                 <option>All Status</option>
                                 <option>Present</option><option>Absent</option>
                                 <option>On Leave</option><option>On Break</option>
+                                <option>Checked Out</option>
                             </select>
                             <button class="attendance-refresh-btn" onclick="refreshLiveData()" title="Refresh">
                                 <i class="fas fa-sync-alt"></i>
@@ -781,11 +938,12 @@
                         <div class="table-container" style="border:none;">
                             <table class="pm-table table-sm">
                                 <thead>
-                                <tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Working Hours</th></tr>
+                                <tr><th>Employee ID</th><th>Name</th><th>Department</th><th>Check-in</th><th>Check-out</th><th>Working Hours</th><th>Status</th></tr>
                                 </thead>
                                 <tbody id="liveAttendanceBody"></tbody>
                             </table>
                         </div>
+                        <div class="attendance-pagination" id="liveAttendancePagination" style="display:none;"></div>
                     </div>
                 </div>
 
@@ -834,7 +992,7 @@
                                 <option value="">All Status</option>
                                 <option value="Present">Present</option><option value="Absent">Absent</option>
                                 <option value="On Leave">On Leave</option><option value="Late">Late</option>
-                                <option value="On Break">On Break</option>
+                                <option value="On Break">On Break</option><option value="Checked Out">Checked Out</option>
                             </select>
                             <div class="date-input-wrapper">
                                 <input type="text" id="dailyDatePicker" placeholder="Select date..." readonly>
@@ -858,6 +1016,7 @@
                                 <tbody id="dailyAttendanceBody"></tbody>
                             </table>
                         </div>
+                        <div class="attendance-pagination" id="dailyAttendancePagination" style="display:none;"></div>
 
                         <div id="dailyAttendanceEmpty" style="display:none;" class="empty-state">
                             <i class="fas fa-calendar-times"></i>
@@ -906,16 +1065,17 @@
                                     <button class="btn-print-attendance" onclick="printHolidaysTable()"><i class="fas fa-print"></i> Print</button>
                                 </div>
                             </div>
-                            <div style="overflow:auto; max-height:400px;">
+                            <div style="overflow:auto; max-height:460px;">
                                 <table class="pm-table table-sm" id="allHolidaysTable" style="min-width:800px;">
                                     <thead style="position:sticky; top:0; z-index:10;">
-                                    <tr><th style="width:10%;">S.No</th><th style="width:20%;">Date</th><th style="width:25%;">Holiday Name</th><th style="width:15%;">Type</th><th style="width:20%;">Day</th><th style="width:10%;">Actions</th></tr>
+                                    <tr><th style="width:8%;">S.No</th><th style="width:20%;">Date</th><th style="width:25%;">Holiday Name</th><th style="width:15%;">Type</th><th style="width:20%;">Day</th><th class="col-actions" style="width:12%;">Actions</th></tr>
                                     </thead>
                                     <tbody id="allHolidaysTableBody">
                                     <tr><td colspan="6" style="text-align:center; padding:2rem;"><i class="fas fa-spinner fa-spin"></i> Loading holidays...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="attendance-pagination" id="holidaysPagination" style="display:none; margin-top:0;"></div>
                         </div>
                     </div>
                 </div>
@@ -954,12 +1114,36 @@
 
                         <div style="overflow-x:auto;">
                             <table class="pm-table table-sm" id="hrLeaveRequestsTable">
+                                <colgroup>
+                                    <col style="width:115px;">
+                                    <col style="width:130px;">
+                                    <col style="width:110px;">
+                                    <col style="width:95px;">
+                                    <col style="width:190px;">
+                                    <col style="width:75px;">
+                                    <col style="width:225px;">
+                                    <col style="width:105px;">
+                                    <col style="width:115px;">
+                                    <col style="width:125px;">
+                                </colgroup>
                                 <thead>
-                                <tr><th>Leave ID</th><th>Employee</th><th>Department</th><th>Leave Type</th><th>Dates</th><th>Duration</th><th>Reason</th><th>Applied On</th><th>Status</th><th>Actions</th></tr>
+                                <tr>
+                                    <th class="col-nowrap">Leave ID</th>
+                                    <th>Employee</th>
+                                    <th>Department</th>
+                                    <th>Leave Type</th>
+                                    <th class="col-nowrap">Dates</th>
+                                    <th class="col-nowrap" style="text-align:center;">Duration</th>
+                                    <th>Reason</th>
+                                    <th class="col-nowrap">Applied On</th>
+                                    <th class="col-nowrap">Status</th>
+                                    <th class="col-nowrap">Actions</th>
+                                </tr>
                                 </thead>
                                 <tbody id="hrLeaveRequestsBody"></tbody>
                             </table>
                         </div>
+                        <div class="attendance-pagination" id="leaveApprovalsPagination" style="display:none;"></div>
 
                         <div id="noLeaveRequestsHR" class="empty-state" style="display:none; margin-top:1rem;">
                             <i class="fas fa-calendar-alt"></i>
@@ -1305,8 +1489,7 @@
 <!-- === SHARED AI ASSISTANT PANEL (from fragment) === -->
 <div th:replace="~{fragments/layout :: aipanel}"></div>
 
-<!-- === PAGE-SPECIFIC SCRIPTS === -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- === PAGE-SPECIFIC SCRIPTS (Bootstrap is loaded once by fragments/layout :: common-scripts) === -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1340,16 +1523,47 @@
       if (el) el.classList.add('active');
       window.scrollTo({ top: 0 });
     }
+    function syncDashboardSidebarActive(linkSelectorOrEl) {
+      var nav = document.getElementById('sideNav');
+      if (!nav) return;
+      var target = typeof linkSelectorOrEl === 'string'
+        ? nav.querySelector(linkSelectorOrEl)
+        : linkSelectorOrEl;
+      if (!target) return;
+      nav.querySelectorAll('.nav-link.active').forEach(function (el) { el.classList.remove('active'); });
+      target.classList.add('active');
+      var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
+      var targetGroup = target.closest('.side-group');
+      groups.forEach(function (g) {
+        g.classList.toggle('has-active', !!g.querySelector('.nav-link.active'));
+        var sub = g.querySelector('.side-submenu');
+        var toggle = g.querySelector('.side-group-toggle');
+        if (g === targetGroup) {
+          g.classList.add('is-open');
+          if (sub) sub.style.maxHeight = (sub.scrollHeight > 0 ? sub.scrollHeight : 600) + 'px';
+          if (toggle) toggle.setAttribute('aria-expanded', 'true');
+        } else {
+          g.classList.remove('is-open');
+          if (sub) sub.style.maxHeight = '0px';
+          if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
     function showOverview() {
       showContainer('defaultDashboardContent');
+      syncDashboardSidebarActive('a[href="/dashboard/hr"]');
       if (typeof initRecruitmentChart === 'function' && !window.__recruitmentChartInit) {
         initRecruitmentChart();
         window.__recruitmentChartInit = true;
+      } else if (typeof recruitmentChartInstance !== 'undefined' && recruitmentChartInstance && typeof recruitmentChartInstance.resize === 'function') {
+        recruitmentChartInstance.resize();
       }
     }
     function showAttendance() {
       showContainer('attendanceManagementContent');
+      syncDashboardSidebarActive('#attendanceLeaveLink');
       openAttendanceTab('dashboard');
+      if (liveMonitor) liveMonitor.loadLiveAttendance();
     }
     function showCompanyProfile() {
       showContainer('companyProfileContent');
@@ -1398,6 +1612,16 @@
     /* ============ Attendance status helpers ============ */
     function getAttendanceStatus(rec) {
       if (!rec) return 'Absent';
+      if (rec.isCheckedOut || rec.hasCheckedOut || rec.checkOutTime) return 'Checked Out';
+      if (rec.statusText) return rec.statusText;
+      if (rec.displayStatus) return rec.displayStatus;
+      if (rec.statusForDisplay) return rec.statusForDisplay;
+      var raw = String(rec.status || '').trim().toUpperCase();
+      if (raw === 'ACTIVE' || raw === 'PRESENT') return 'Present';
+      if (raw === 'BREAK') return 'On Break';
+      if (raw === 'LEAVE') return 'On Leave';
+      if (raw === 'OFFLINE' || raw === 'ABSENT') return 'Absent';
+      if (raw === 'CHECKED_OUT' || raw === 'CHECKED OUT') return 'Checked Out';
       if (rec.status) return rec.status;
       if (rec.checkIn) {
         var t = String(rec.checkIn).split(':');
@@ -1408,16 +1632,15 @@
     }
     function statusBadgeClass(status) {
       var s = (status || 'Absent').toLowerCase();
-      if (s === 'present') return 'badge-sm approved';
-      if (s === 'late') return 'badge-sm pending';
-      if (s === 'on leave') return 'badge-sm pending';
+      if (s === 'present' || s === 'active') return 'badge-sm approved';
+      if (s === 'late' || s === 'on break' || s === 'break' || s === 'on leave' || s === 'leave') return 'badge-sm pending';
       return 'badge-sm rejected';
     }
     function statusDotColor(status) {
       var s = (status || 'Absent').toLowerCase();
-      if (s === 'present') return '#10b981';
-      if (s === 'late') return '#f59e0b';
-      if (s === 'on leave') return '#6366f1';
+      if (s === 'present' || s === 'active') return '#10b981';
+      if (s === 'late' || s === 'on break' || s === 'break') return '#f59e0b';
+      if (s === 'on leave' || s === 'leave') return '#6366f1';
       return '#ef4444';
     }
     function applyFilters(data, deptSelId, statusSelId) {
@@ -1428,9 +1651,9 @@
       var noDept = !dept || dept === 'all' || dept === 'All Departments';
       var noStatus = !status || status === 'all' || status === 'All Status';
       return (data || []).filter(function (r) {
-        var okDept = noDept || (r.department || '—') === dept;
+        var okDept = noDept || String(r.department || '—').trim().toLowerCase() === dept.trim().toLowerCase();
         var st = getAttendanceStatus(r).toLowerCase();
-        return okDept && (noStatus || st === status.toLowerCase());
+        return okDept && (noStatus || st === status.trim().toLowerCase());
       });
     }
           function renderAttendanceRows(tbodyId, rows) {
@@ -1442,7 +1665,7 @@
         return;
       }
       tbody.innerHTML = rows.map(function (r) {
-        var status = r.statusText || r.displayStatus || getAttendanceStatus(r);
+        var status = getAttendanceStatus(r);
         var checkIn  = r.checkInFormatted  || r.checkIn  || '—';
         var checkOut = r.checkOutFormatted || r.checkOut || '—';
         var hours    = r.workingHours      || r.workHours || r.hours || r.currentWorkingTime || '—';
@@ -1469,6 +1692,102 @@
           '<td><span class="' + statusBadgeClass(status) + '">' + escapeHtml(status) + '</span></td>' +
           '</tr>';
       }).join('');
+    }
+
+    /* ============ Attendance & Leave Management Pagination ============ */
+    var attendancePaginationState = {
+      live:      { page: 1, pageSize: 10 },
+      daily:     { page: 1, pageSize: 10 },
+      holidays:  { page: 1, pageSize: 10 },
+      approvals: { page: 1, pageSize: 10 }
+    };
+
+    function paginateRows(key, list) {
+      var rows = Array.isArray(list) ? list : [];
+      var st = attendancePaginationState[key] || { page: 1, pageSize: 10 };
+      var pageSize = Math.max(1, Number(st.pageSize) || 10);
+      var total = rows.length;
+      var totalPages = Math.max(1, Math.ceil(total / pageSize));
+      var page = Math.min(Math.max(1, Number(st.page) || 1), totalPages);
+      st.page = page;
+      st.pageSize = pageSize;
+      var start = (page - 1) * pageSize;
+      var end = Math.min(start + pageSize, total);
+      return {
+        pageRows: rows.slice(start, end),
+        page: page,
+        pageSize: pageSize,
+        total: total,
+        totalPages: totalPages,
+        start: start,
+        end: end
+      };
+    }
+
+    function renderAttendancePagination(containerId, key, info) {
+      var el = document.getElementById(containerId);
+      if (!el) return;
+      if (!info || !info.total) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+      }
+      el.style.display = 'flex';
+      var page = info.page;
+      var totalPages = info.totalPages;
+      var btns = [];
+      btns.push(
+        '<button type="button" class="pg-link' + (page <= 1 ? ' disabled' : '') + '" ' +
+        (page <= 1 ? 'disabled' : 'onclick="setAttendancePage(\'' + key + '\',' + (page - 1) + ')"') + '>' +
+        '<i class="fas fa-chevron-left"></i> Prev</button>'
+      );
+      for (var i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= page - 1 && i <= page + 1)) {
+          btns.push(
+            '<button type="button" class="pg-link' + (i === page ? ' active' : '') + '" ' +
+            'onclick="setAttendancePage(\'' + key + '\',' + i + ')">' + i + '</button>'
+          );
+        } else if ((i === 2 && page > 3) || (i === totalPages - 1 && page < totalPages - 2)) {
+          btns.push('<span class="pg-link disabled">...</span>');
+        }
+      }
+      btns.push(
+        '<button type="button" class="pg-link' + (page >= totalPages ? ' disabled' : '') + '" ' +
+        (page >= totalPages ? 'disabled' : 'onclick="setAttendancePage(\'' + key + '\',' + (page + 1) + ')"') + '>' +
+        'Next <i class="fas fa-chevron-right"></i></button>'
+      );
+
+      var sizeOptions = [10, 25, 50].map(function (sz) {
+        return '<option value="' + sz + '"' + (info.pageSize === sz ? ' selected' : '') + '>' + sz + ' / page</option>';
+      }).join('');
+
+      el.innerHTML =
+        '<div class="pg-meta">' +
+          '<span>Showing <strong>' + (info.start + 1) + '–' + info.end + '</strong> of <strong>' + info.total + '</strong></span>' +
+          '<span>Page <strong>' + page + '</strong> of <strong>' + totalPages + '</strong></span>' +
+          '<select class="pg-size-select" aria-label="Rows per page" onchange="setAttendancePageSize(\'' + key + '\', this.value)">' + sizeOptions + '</select>' +
+        '</div>' +
+        '<div class="pg-controls">' + btns.join('') + '</div>';
+    }
+
+    function rerenderAttendanceSection(key) {
+      if (key === 'live' && liveMonitor) liveMonitor.updateAttendanceTable();
+      else if (key === 'daily') renderDailyAttendanceTable(applyFilters(dailyAttendanceData, 'dailyDepartmentFilter', 'dailyStatusFilter'));
+      else if (key === 'holidays') populateAllHolidaysTable();
+      else if (key === 'approvals') renderFilteredLeaveRequestsHR();
+    }
+
+    function setAttendancePage(key, nextPage) {
+      if (!attendancePaginationState[key]) return;
+      attendancePaginationState[key].page = Math.max(1, Number(nextPage) || 1);
+      rerenderAttendanceSection(key);
+    }
+
+    function setAttendancePageSize(key, nextSize) {
+      if (!attendancePaginationState[key]) return;
+      attendancePaginationState[key].pageSize = Math.max(1, Number(nextSize) || 10);
+      attendancePaginationState[key].page = 1;
+      rerenderAttendanceSection(key);
     }
 
     /* ============ Daily attendance tab ============ */
@@ -1505,16 +1824,22 @@
       var l = document.getElementById('dailyAttendanceLoading');
       var t = document.getElementById('dailyAttendanceTableContainer');
       var e = document.getElementById('dailyAttendanceEmpty');
+      var p = document.getElementById('dailyAttendancePagination');
       if (l) l.style.display = show ? 'block' : 'none';
       if (t) t.style.display = show ? 'none' : '';
       if (e) e.style.display = 'none';
+      if (p && show) p.style.display = 'none';
     }
     function renderDailyAttendanceTable(rows) {
-      renderAttendanceRows('dailyAttendanceBody', rows);
+      var list = Array.isArray(rows) ? rows : [];
+      var info = paginateRows('daily', list);
+      renderAttendanceRows('dailyAttendanceBody', info.pageRows);
+      renderAttendancePagination('dailyAttendancePagination', 'daily', info);
       var empty = document.getElementById('dailyAttendanceEmpty');
-      if (empty) empty.style.display = (rows && rows.length) ? 'none' : 'block';
+      if (empty) empty.style.display = list.length ? 'none' : 'block';
     }
     function filterDailyAttendance() {
+      attendancePaginationState.daily.page = 1;
       renderDailyAttendanceTable(applyFilters(dailyAttendanceData, 'dailyDepartmentFilter', 'dailyStatusFilter'));
     }
 
@@ -1559,13 +1884,16 @@
         await this.updateStats();
       }
       updateAttendanceTable() {
-        renderAttendanceRows('liveAttendanceBody', applyFilters(this.data, 'liveDeptFilter', 'liveStatusFilter'));
+        var filtered = applyFilters(this.data, 'liveDeptFilter', 'liveStatusFilter');
+        var info = paginateRows('live', filtered);
+        renderAttendanceRows('liveAttendanceBody', info.pageRows);
+        renderAttendancePagination('liveAttendancePagination', 'live', info);
       }
       async updateStats() {
         var present = 0, absent = 0;
         (this.data || []).forEach(function (r) {
           var s = getAttendanceStatus(r).toLowerCase();
-          if (s === 'present' || s === 'late') present++;
+          if (s === 'present' || s === 'late' || s === 'on break' || s === 'checked out') present++;
           else if (s === 'absent') absent++;
         });
         var pendingLeaves = 0, holidays = 0;
@@ -1599,7 +1927,10 @@
       }
     }
     var liveMonitor = null;
-    function applyLiveFiltersFromUI() { if (liveMonitor) liveMonitor.updateAttendanceTable(); }
+    function applyLiveFiltersFromUI() {
+      attendancePaginationState.live.page = 1;
+      if (liveMonitor) liveMonitor.updateAttendanceTable();
+    }
     function refreshLiveData() {
       if (liveMonitor) liveMonitor.loadLiveAttendance();
       showNotification('Live attendance refreshed', 'info');
@@ -1747,10 +2078,14 @@
 
     if (!list.length) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--dark-text-secondary);padding:1.5rem;">No holidays configured</td></tr>';
+        renderAttendancePagination('holidaysPagination', 'holidays', { total: 0 });
         return;
     }
 
-    tbody.innerHTML = list.map(function (h, idx) {
+    var info = paginateRows('holidays', list);
+    renderAttendancePagination('holidaysPagination', 'holidays', info);
+
+    tbody.innerHTML = info.pageRows.map(function (h, idx) {
         // Support both field naming conventions coming from DB vs. local fallback
         var hId = h.id;
         var hName = h.holidayName || h.name || '';
@@ -1767,14 +2102,16 @@
         } catch (e) {}
 
         return '<tr>' +
-            '<td>' + (idx + 1) + '</td>' +
+            '<td>' + (info.start + idx + 1) + '</td>' +
             '<td>' + escapeHtml(hDate) + '</td>' +
             '<td><strong>' + escapeHtml(hName) + '</strong></td>' +
             '<td><span class="pm-badge info" style="text-transform:capitalize;">' + escapeHtml(hType) + '</span></td>' +
             '<td>' + escapeHtml(dayName) + '</td>' +
-            '<td>' +
-                '<button class="attendance-btn action-view" title="View" onclick="viewHolidayDetails(\'' + hId + '\')"><i class="fas fa-eye"></i></button> ' +
-                '<button class="attendance-btn action-reject" title="Delete" onclick="confirmDeleteHoliday(\'' + hId + '\', \'' + escapeHtml(hName).replace(/'/g, "\\'") + '\')"><i class="fas fa-trash"></i></button>' +
+            '<td class="col-actions">' +
+                '<div class="action-buttons">' +
+                    '<button class="attendance-btn action-view" title="View" onclick="viewHolidayDetails(\'' + hId + '\')"><i class="fas fa-eye"></i></button>' +
+                    '<button class="attendance-btn action-reject" title="Delete" onclick="confirmDeleteHoliday(\'' + hId + '\', \'' + escapeHtml(hName).replace(/'/g, "\\'") + '\')"><i class="fas fa-trash"></i></button>' +
+                '</div>' +
             '</td>' +
             '</tr>';
     }).join('');
@@ -1923,7 +2260,7 @@ try {
           var leaves = Array.isArray(data) ? data : (data.leaves || []);
           allLeaveRequestsHR = leaves;
           updateFilterCounts();
-          filterLeaveRequestsHR(currentLeaveFilter);
+          renderFilteredLeaveRequestsHR();
         });
     }
     function getSampleLeaveRequests() {
@@ -1940,6 +2277,17 @@ try {
       if (s === 'rejected') return 'badge-sm rejected';
       return 'badge-sm pending';
     }
+    function getFilteredLeaveRequestsHR() {
+      return currentLeaveFilter === 'all'
+        ? allLeaveRequestsHR
+        : allLeaveRequestsHR.filter(function (r) { return (r.status || '').toLowerCase() === currentLeaveFilter; });
+    }
+    function renderFilteredLeaveRequestsHR() {
+      document.querySelectorAll('.filter-tab').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.filter === currentLeaveFilter);
+      });
+      renderLeaveRequestsHR(getFilteredLeaveRequestsHR());
+    }
       function renderLeaveRequestsHR(list) {
       var tbody = document.getElementById('hrLeaveRequestsBody');
       var empty = document.getElementById('noLeaveRequestsHR');
@@ -1949,30 +2297,39 @@ try {
         if (table) table.style.display = 'none';
         if (empty) empty.style.display = 'block';
         tbody.innerHTML = '';
+        renderAttendancePagination('leaveApprovalsPagination', 'approvals', { total: 0 });
         return;
       }
       if (table) table.style.display = '';
       if (empty) empty.style.display = 'none';
+      var info = paginateRows('approvals', list);
+      renderAttendancePagination('leaveApprovalsPagination', 'approvals', info);
       var canManage = hasFullLeaveAccess();
-      tbody.innerHTML = list.map(function (r) {
+      tbody.innerHTML = info.pageRows.map(function (r) {
+        var safeId = escapeHtml(String(r.id || '')).replace(/'/g, "\\'");
+        var reasonText = String(r.reason || '—');
+        var isLongReason = reasonText.length > 65;
+        var reasonHtml =
+          '<div class="leave-reason-preview" title="' + escapeHtml(reasonText) + '">' + escapeHtml(reasonText) + '</div>' +
+          (isLongReason ? '<button type="button" class="leave-reason-more" onclick="viewLeaveDetails(\'' + safeId + '\')">Read full</button>' : '');
         var actions = canManage
           ? '<div class="action-buttons">' +
-            '<button class="attendance-btn action-approve" onclick="approveLeaveRequest(\'' + r.id + '\')" title="Approve"><i class="fas fa-check"></i></button>' +
-            '<button class="attendance-btn action-reject" onclick="rejectLeaveRequest(\'' + r.id + '\')" title="Reject"><i class="fas fa-times"></i></button>' +
-            '<button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button>' +
+            '<button class="attendance-btn action-approve" onclick="approveLeaveRequest(\'' + safeId + '\')" title="Approve"><i class="fas fa-check"></i></button>' +
+            '<button class="attendance-btn action-reject" onclick="rejectLeaveRequest(\'' + safeId + '\')" title="Reject"><i class="fas fa-times"></i></button>' +
+            '<button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + safeId + '\')" title="View"><i class="fas fa-eye"></i></button>' +
             '</div>'
-          : '<div class="action-buttons"><button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + r.id + '\')" title="View"><i class="fas fa-eye"></i></button></div>';
+          : '<div class="action-buttons"><button class="attendance-btn action-view" onclick="viewLeaveDetails(\'' + safeId + '\')" title="View"><i class="fas fa-eye"></i></button></div>';
         return '<tr>' +
-          '<td><strong>' + escapeHtml(r.id || '—') + '</strong></td>' +
+          '<td class="col-nowrap"><strong>' + escapeHtml(r.id || '—') + '</strong></td>' +
           '<td>' + escapeHtml(r.employeeName || '—') + '</td>' +
           '<td>' + escapeHtml(r.department || '—') + '</td>' +
-          '<td>' + escapeHtml(r.leaveType || '—') + '</td>' +
-          '<td>' + escapeHtml(r.startDate || '—') + ' → ' + escapeHtml(r.endDate || '—') + '</td>' +
-          '<td>' + escapeHtml(String(r.totalDays || r.days || '—')) + '</td>' +
-          '<td>' + escapeHtml(r.reason || '—') + '</td>' +
-          '<td>' + escapeHtml(r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : (r.appliedOn || '—')) + '</td>' +
-          '<td><span class="' + leaveBadgeClass(r.status) + '">' + escapeHtml((r.status || 'PENDING')) + '</span></td>' +
-          '<td>' + actions + '</td>' +
+          '<td style="text-transform:capitalize;">' + escapeHtml(r.leaveType || '—') + '</td>' +
+          '<td class="col-nowrap"><span class="leave-date-range"><span>' + escapeHtml(r.startDate || '—') + '</span><span style="opacity:.6;">→</span><span>' + escapeHtml(r.endDate || '—') + '</span></span></td>' +
+          '<td class="col-nowrap" style="text-align:center;">' + escapeHtml(String(r.totalDays || r.days || '—')) + '</td>' +
+          '<td>' + reasonHtml + '</td>' +
+          '<td class="col-nowrap">' + escapeHtml(r.createdAt ? new Date(r.createdAt).toISOString().split('T')[0] : (r.appliedOn || '—')) + '</td>' +
+          '<td class="col-status"><span class="' + leaveBadgeClass(r.status) + '">' + escapeHtml((r.status || 'PENDING')) + '</span></td>' +
+          '<td class="col-actions">' + actions + '</td>' +
           '</tr>';
       }).join('');
     }
@@ -1989,13 +2346,8 @@ try {
     }
     function filterLeaveRequestsHR(filter) {
       currentLeaveFilter = filter || 'all';
-      document.querySelectorAll('.filter-tab').forEach(function (b) {
-        b.classList.toggle('active', b.dataset.filter === currentLeaveFilter);
-      });
-      var list = currentLeaveFilter === 'all'
-        ? allLeaveRequestsHR
-        : allLeaveRequestsHR.filter(function (r) { return (r.status || '').toLowerCase() === currentLeaveFilter; });
-      renderLeaveRequestsHR(list);
+      attendancePaginationState.approvals.page = 1;
+      renderFilteredLeaveRequestsHR();
     }
     function refreshLeaveRequests() {
       loadAllLeaveRequestsHR();
@@ -2032,10 +2384,10 @@ try {
 
         // If successful, update the local UI
         allLeaveRequestsHR = allLeaveRequestsHR.map(function (r) {
-          return r.id === id ? Object.assign({}, r, { status: decision }) : r;
+          return String(r.id) === String(id) ? Object.assign({}, r, { status: decision }) : r;
         });
         updateFilterCounts();
-        filterLeaveRequestsHR(currentLeaveFilter);
+        renderFilteredLeaveRequestsHR();
         showNotification('Leave request ' + decision.toLowerCase() + ' successfully', decision === 'APPROVED' ? 'success' : 'warning');
 
       } catch (e) {
@@ -2046,7 +2398,7 @@ try {
     function approveLeaveRequest(id) { decideLeaveRequest(id, 'APPROVED'); }
     function rejectLeaveRequest(id) { decideLeaveRequest(id, 'REJECTED'); }
     function viewLeaveDetails(id) {
-      var r = allLeaveRequestsHR.find(function (x) { return x.id === id; });
+      var r = allLeaveRequestsHR.find(function (x) { return String(x.id) === String(id); });
       if (!r) return;
       var old = document.getElementById('leaveDetailsModal');
       if (old) old.remove();
@@ -2054,17 +2406,20 @@ try {
       modal.id = 'leaveDetailsModal';
       modal.className = 'attendance-modal';
       modal.innerHTML =
-        '<div class="attendance-modal-content" style="max-width:520px;">' +
+        '<div class="attendance-modal-content" style="max-width:560px;">' +
         '<div class="attendance-modal-header"><h3><i class="fas fa-file-alt"></i> Leave Request Details</h3>' +
         '<button class="close-attendance-modal" onclick="closeLeaveDetailsModal()">&times;</button></div>' +
         '<div class="attendance-modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:1rem 0;">' +
+        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Leave ID</div><div><strong>' + escapeHtml(r.id || '—') + '</strong></div></div>' +
         '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Employee</div><div>' + escapeHtml(r.employeeName || '—') + '</div></div>' +
-        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Leave Type</div><div>' + escapeHtml(r.leaveType || '—') + '</div></div>' +
+        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Department</div><div>' + escapeHtml(r.department || '—') + '</div></div>' +
+        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Leave Type</div><div style="text-transform:capitalize;">' + escapeHtml(r.leaveType || '—') + '</div></div>' +
         '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Start Date</div><div>' + escapeHtml(r.startDate || '—') + '</div></div>' +
         '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">End Date</div><div>' + escapeHtml(r.endDate || '—') + '</div></div>' +
-        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Days</div><div>' + escapeHtml(String(r.days || '—')) + '</div></div>' +
+        '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Duration (Days)</div><div>' + escapeHtml(String(r.totalDays || r.days || '—')) + '</div></div>' +
         '<div><div style="font-size:.75rem;color:var(--dark-text-secondary);">Status</div><div><span class="' + leaveBadgeClass(r.status) + '">' + escapeHtml(r.status || '') + '</span></div></div>' +
-        '<div style="grid-column:1/-1;"><div style="font-size:.75rem;color:var(--dark-text-secondary);">Reason</div><div>' + escapeHtml(r.reason || '—') + '</div></div>' +
+        '<div style="grid-column:1/-1;"><div style="font-size:.75rem;color:var(--dark-text-secondary);margin-bottom:.25rem;">Reason</div>' +
+        '<div style="background:var(--dark-bg);border:1px solid var(--dark-border);border-radius:6px;padding:.65rem .75rem;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto;line-height:1.45;">' + escapeHtml(r.reason || '—') + '</div></div>' +
         '</div>' +
         '<div class="attendance-modal-footer"><button class="attendance-btn btn-secondary-attendance" onclick="closeLeaveDetailsModal()">Close</button></div>' +
         '</div>';
@@ -2137,7 +2492,14 @@ try {
           });
         }
         return list.map(function (r) {
-          return [r.employeeName || r.name || '—', r.department || '—', r.checkIn || '—', r.checkOut || '—', r.workHours || r.hours || '—', getAttendanceStatus(r)];
+          return [
+            r.employeeName || r.name || '—',
+            r.department || '—',
+            r.checkInFormatted || r.checkIn || '—',
+            r.checkOutFormatted || r.checkOut || '—',
+            r.workingHours || r.currentWorkingTime || r.workHours || r.hours || '—',
+            getAttendanceStatus(r)
+          ];
         });
       },
       getHeaders(type) {
@@ -2312,47 +2674,83 @@ try {
       var cells = document.querySelectorAll('.funnel-step .funnel-value');
       for (var i = 0; i < 4 && i < cells.length; i++) cells[i].textContent = values[i];
     }
-    async function initRecruitmentChart() {
-      window.__recruitmentChartInit = true;
+    function renderRecruitmentChart() {
       if (typeof Chart === 'undefined') return;
-      await fetchLiveRecruitmentMetrics();
-      updateFunnelDisplay();
+      var ctx = document.getElementById('recruitmentChart');
+      if (!ctx) return;
+
+      var isLine = recruitmentChartType === 'line';
+      var labels = Array.isArray(monthlyChartData.labels) ? monthlyChartData.labels : [];
+      var appsData = (monthlyChartData.applications || []).map(function (v) {
+        var n = Number(v);
+        return isNaN(n) ? 0 : n;
+      });
+      var hiredData = (monthlyChartData.hired || []).map(function (v) {
+        var n = Number(v);
+        return isNaN(n) ? 0 : n;
+      });
+
       Chart.defaults.font.family = 'Inter, sans-serif';
       Chart.defaults.font.size = 12;
       Chart.defaults.color = '#cbd5e1';
-      var ctx = document.getElementById('recruitmentChart');
-      if (!ctx) return;
-      if (recruitmentChart) recruitmentChart.destroy();
+
+      if (recruitmentChart) {
+        recruitmentChart.destroy();
+        recruitmentChart = null;
+      }
+
+      var maxVal = Math.max.apply(null, [0].concat(appsData, hiredData));
+      var pointSize = labels.length <= 1 ? 6 : 4;
+
       recruitmentChart = new Chart(ctx, {
-        type: recruitmentChartType,
+        type: isLine ? 'line' : 'bar',
         data: {
-          labels: monthlyChartData.labels,
+          labels: labels,
           datasets: [
-            {
+            Object.assign({
               label: 'Applications',
-              data: monthlyChartData.applications,
-              backgroundColor: 'rgba(139,92,246,.6)',
+              data: appsData,
+              backgroundColor: isLine ? 'rgba(139,92,246,.18)' : 'rgba(139,92,246,.6)',
               borderColor: '#8b5cf6',
-              borderWidth: 2,
-              borderRadius: 6,
-              tension: .35,
-              fill: recruitmentChartType === 'line'
-            },
-            {
+              borderWidth: isLine ? 3 : 2
+            }, isLine ? {
+              showLine: true,
+              spanGaps: true,
+              tension: 0.35,
+              fill: true,
+              pointRadius: pointSize,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#8b5cf6',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5
+            } : {
+              borderRadius: 6
+            }),
+            Object.assign({
               label: 'Hired',
-              data: monthlyChartData.hired,
-              backgroundColor: 'rgba(16,185,129,.6)',
+              data: hiredData,
+              backgroundColor: isLine ? 'rgba(16,185,129,.18)' : 'rgba(16,185,129,.6)',
               borderColor: '#10b981',
-              borderWidth: 2,
-              borderRadius: 6,
-              tension: .35,
-              fill: recruitmentChartType === 'line'
-            }
+              borderWidth: isLine ? 3 : 2
+            }, isLine ? {
+              showLine: true,
+              spanGaps: true,
+              tension: 0.35,
+              fill: true,
+              pointRadius: pointSize,
+              pointHoverRadius: 7,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 1.5
+            } : {
+              borderRadius: 6
+            })
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
               display: true,
@@ -2363,6 +2761,7 @@ try {
             x: { grid: { color: 'rgba(51,65,85,.5)' } },
             y: {
               beginAtZero: true,
+              suggestedMax: maxVal === 0 ? 5 : undefined,
               ticks: { precision: 0 },
               grid: { color: 'rgba(51,65,85,.5)' }
             }
@@ -2370,13 +2769,23 @@ try {
         }
       });
     }
+    async function initRecruitmentChart(skipFetch) {
+      window.__recruitmentChartInit = true;
+      if (typeof Chart === 'undefined') return;
+      if (!skipFetch) {
+        await fetchLiveRecruitmentMetrics();
+        updateFunnelDisplay();
+      }
+      renderRecruitmentChart();
+    }
     function setupChartTypeSelectors() {
       document.querySelectorAll('.chart-type-btn').forEach(function (btn) {
         btn.addEventListener('click', function () {
           document.querySelectorAll('.chart-type-btn').forEach(function (b) { b.classList.remove('active'); });
           btn.classList.add('active');
           recruitmentChartType = btn.dataset.chart || 'bar';
-          initRecruitmentChart();
+          var hasLoadedLabels = Array.isArray(monthlyChartData.labels) && monthlyChartData.labels.length > 0;
+          initRecruitmentChart(hasLoadedLabels);
         });
       });
     }
@@ -2976,11 +3385,27 @@ try {
     };
 
     /* ============ Boot ============ */
+    function isLoginAttendanceRedirect(h, params) {
+      var ref = (document.referrer || '').toLowerCase();
+      var fromLoginPage = /\/(login|signin|auth)\b/.test(ref);
+      var fromInternalPage = !!(ref && !fromLoginPage);
+      if (params.get('showAttendance') === 'true' && !fromInternalPage) return true;
+      if ((h === '#attendance' || h === '#leave') && fromLoginPage) return true;
+      return false;
+    }
     function routeByHash() {
       var h = (window.location.hash || '').toLowerCase();
-      if (h === '#attendance' || h === '#leave') showAttendance();
+      var params = new URLSearchParams(window.location.search || '');
+      if (isLoginAttendanceRedirect(h, params)) {
+        params.delete('showAttendance');
+        var cleanUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        try { history.replaceState(null, '', cleanUrl); } catch (err) {}
+        showOverview();
+        return;
+      }
+      if (h === '#attendance' || h === '#leave' || params.get('showAttendance') === 'true') showAttendance();
       else if (h === '#company-profile') showCompanyProfile();
-      else if (h === '#roles') showRolesPermissions();
+      else if (h === '#roles' || h === '#roles-permissions') showRolesPermissions();
       else showOverview();
     }
     document.addEventListener('DOMContentLoaded', function () {
@@ -3027,8 +3452,94 @@ try {
       });
 
       routeByHash();
+      window.addEventListener('hashchange', routeByHash);
+
+      /* Self-healing sidebar fallback if external menti-sidebar.js 404s or an older layout fragment is cached */
+      if (!window.__mentiSidebarV3) {
+        (function initDashboardSidebarFallback() {
+          var nav = document.getElementById('sideNav');
+          var sidebar = document.getElementById('sidebar');
+          if (!nav || !sidebar || nav.dataset.mentiSidebarInit === '1') return;
+          nav.dataset.mentiSidebarInit = '1';
+          window.__mentiSidebarV3 = true;
+
+          var groups = Array.prototype.slice.call(nav.querySelectorAll('.side-group'));
+          var openGroup = function (group) {
+            var submenu = group.querySelector('.side-submenu');
+            if (!submenu) return;
+            group.classList.add('is-open');
+            var h = submenu.scrollHeight;
+            submenu.style.maxHeight = (h > 0 ? h : 600) + 'px';
+            var t = group.querySelector('.side-group-toggle');
+            if (t) t.setAttribute('aria-expanded', 'true');
+          };
+          var closeGroup = function (group) {
+            var submenu = group.querySelector('.side-submenu');
+            if (!submenu) return;
+            group.classList.remove('is-open');
+            submenu.style.maxHeight = '0px';
+            var t = group.querySelector('.side-group-toggle');
+            if (t) t.setAttribute('aria-expanded', 'false');
+          };
+          var closeAll = function (except) {
+            groups.forEach(function (g) { if (g !== except) closeGroup(g); });
+          };
+          var markActive = function () {
+            groups.forEach(function (g) { g.classList.toggle('has-active', !!g.querySelector('.nav-link.active')); });
+          };
+
+          if (!window.__mentiSidebarToggleDelegated) {
+            window.__mentiSidebarToggleDelegated = true;
+            document.addEventListener('click', function (e) {
+              var toggle = e.target && e.target.closest ? e.target.closest('#sideNav .side-group-toggle') : null;
+              if (!toggle) return;
+              var group = toggle.closest('.side-group');
+              if (!group) return;
+              e.preventDefault();
+              e.stopPropagation();
+              if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+              if (document.body.classList.contains('sidebar-rail')) {
+                document.body.classList.remove('sidebar-rail');
+                closeAll(group);
+                openGroup(group);
+                return;
+              }
+              if (group.classList.contains('is-open')) closeGroup(group);
+              else { closeAll(group); openGroup(group); }
+            }, true);
+          }
+
+          var hNow = (window.location.hash || '').toLowerCase();
+          var pNow = new URLSearchParams(window.location.search || '');
+          var wantAtt = !isLoginAttendanceRedirect(hNow, pNow) &&
+            (hNow === '#attendance' || hNow === '#leave' || pNow.get('showAttendance') === 'true');
+          var target = wantAtt ? document.getElementById('attendanceLeaveLink') : nav.querySelector('.nav-link.active');
+          if (target) {
+            nav.querySelectorAll('.nav-link.active').forEach(function (el) { el.classList.remove('active'); });
+            target.classList.add('active');
+            var parentGroup = target.closest('.side-group');
+            if (parentGroup) { closeAll(parentGroup); openGroup(parentGroup); }
+          } else if (groups[0]) {
+            closeAll(groups[0]);
+            openGroup(groups[0]);
+          }
+          markActive();
+        })();
+      }
 
       /* Rebind fragment-injected links (idempotent — safe if already handled) */
+      var ovLinks = document.querySelectorAll('#sideNav a[href="/dashboard/hr"]');
+      ovLinks.forEach(function (l) {
+        l.addEventListener('click', function (e) {
+          if (typeof showOverview === 'function') {
+            e.preventDefault();
+            if (window.location.hash) {
+              try { history.replaceState(null, '', '/dashboard/hr'); } catch (err) { window.location.hash = ''; }
+            }
+            showOverview();
+          }
+        });
+      });
       var att = document.getElementById('attendanceLeaveLink');
       if (att) att.addEventListener('click', function (e) {
         if (typeof showAttendance === 'function') { e.preventDefault(); showAttendance(); }
@@ -3071,7 +3582,8 @@ try {
       openAnnouncementCreateModal: openAnnouncementCreateModal, closeAnnouncementCreateModal: closeAnnouncementCreateModal,
       submitAnnouncementCreateForm: submitAnnouncementCreateForm, toggleAnnouncementExpiryField: toggleAnnouncementExpiryField,
       toggleAnnouncementPin: toggleAnnouncementPin, deactivateAnnouncement: deactivateAnnouncement, deleteAnnouncement: deleteAnnouncement,
-      toggleHRNotificationDropdown: toggleHRNotificationDropdown, showNotification: showNotification
+      toggleHRNotificationDropdown: toggleHRNotificationDropdown, showNotification: showNotification,
+      setAttendancePage: setAttendancePage, setAttendancePageSize: setAttendancePageSize
     });
 </script>
 </body>

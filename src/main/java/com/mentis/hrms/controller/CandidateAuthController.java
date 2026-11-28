@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import com.mentis.hrms.repository.EmployeeRepository;
 import com.mentis.hrms.service.PasswordResetMailService;
+import com.mentis.hrms.service.LoginThrottleService;
+import com.mentis.hrms.service.AuditService;
 import org.springframework.beans.factory.annotation.Value;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -41,6 +43,12 @@ public class CandidateAuthController {
     @Autowired
     private PasswordResetMailService passwordResetMailService;
 
+    @Autowired
+    private LoginThrottleService loginThrottleService;
+
+    @Autowired
+    private AuditService auditService;
+
     @Value("${app.base-url:http://localhost:8080}")
     private String appBaseUrl;
 
@@ -55,6 +63,17 @@ public class CandidateAuthController {
             RedirectAttributes ra) {
 
         logger.info("=== LOGIN ATTEMPT: {} ===", employeeId);
+
+        // ===== SPRINT 2: throttle (5 failures / 15 minutes per ip|employeeId) =====
+        String throttleKey = request.getRemoteAddr() + "|" + (employeeId == null ? "" : employeeId.trim().toUpperCase());
+        if (loginThrottleService.isLocked(throttleKey)) {
+            long waitSec = loginThrottleService.retryAfterSeconds(throttleKey);
+            logger.warn("LOGIN_THROTTLED {} from {}", employeeId, request.getRemoteAddr());
+            auditService.audit("LOGIN_THROTTLED", null, null, "employee", employeeId,
+                    null, null, request, "{\"ip\":\"" + request.getRemoteAddr() + "\"}");
+            ra.addFlashAttribute("error", "Too many attempts. Please try again in " + (waitSec / 60 + 1) + " minutes.");
+            return "redirect:/candidate/login";
+        }
 
         try {
             // ========== STEP 1: FETCH EMPLOYEE ==========
@@ -90,6 +109,9 @@ public class CandidateAuthController {
             boolean passwordMatches = passwordUtil.matchesPassword(password, employee.getPassword());
 
             if (!passwordMatches) {
+                loginThrottleService.recordFailure(throttleKey);
+                auditService.audit("LOGIN_FAILURE", null, null, "employee", employeeId,
+                        null, null, request, "{\"reason\":\"bad_credentials\"}");
                 ra.addFlashAttribute("error", "Invalid Employee ID or password");
                 return "redirect:/candidate/login";
             }
@@ -107,6 +129,10 @@ public class CandidateAuthController {
             newSession.setAttribute("userName", employee.getFirstName() + " " + employee.getLastName());
             newSession.setAttribute("candidateEmployeeId", employee.getEmployeeId());
             newSession.setMaxInactiveInterval(1800); // 30 minutes
+
+            loginThrottleService.recordSuccess(throttleKey);
+            auditService.audit("LOGIN_SUCCESS", null, employee.getRole() == null ? null : employee.getRole().name(),
+                    "employee", employee.getEmployeeId(), null, null, request, null);
 
             logger.info("Login successful. User: {}, Role: {}", employeeId, employee.getRole());
 
@@ -148,21 +174,21 @@ public class CandidateAuthController {
             }
 
             // ========== STEP 8: REDIRECT BASED ON ROLE ==========
+            // ========== STEP 8: REDIRECT BASED ON ROLE ==========
             switch (employee.getRole()) {
                 case SUPER_ADMIN:
-                    return "redirect:/dashboard/admin?showAttendance=true";
+                    return "redirect:/dashboard/admin";
                 case HR:
                     return "redirect:/dashboard/hr?showAttendance=true";
                 case HR_MANAGER:
                     return "redirect:/dashboard/hr?showAttendance=true";
-                case PM:                                      // <-- NEW
+                case PM:
                     return "redirect:/pm/01-home";
                 case EMPLOYEE:
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
                 default:
                     return "redirect:/candidate/dashboard/" + employee.getEmployeeId() + "?showAttendance=true";
             }
-
         } catch (Exception e) {
             logger.error("Login system error: {}", e.getMessage(), e);
             ra.addFlashAttribute("error", "An internal error occurred. Please try again.");

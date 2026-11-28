@@ -14,7 +14,7 @@
   <!-- ============ SHARED THEME (single source of truth) ============ -->
   <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
   <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
-
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
   <style>
     /* ============ PAGE-SPECIFIC STYLES ONLY (PM Projects) ============ */
 
@@ -101,30 +101,74 @@
     .bulk-bar button:hover { background: rgba(255,255,255,.25); }
 
     /* ── Project cards grid ── */
-    .pgrid {
+        .pgrid {
       display: grid;
-      grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
-      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 1.1rem;
     }
-    .pcard {
-      background: var(--dark-card); border: 1px solid var(--dark-border);
-      border-radius: var(--radius-card); padding: .95rem;
-      cursor: pointer; transition: var(--transition); position: relative;
+       .pcard {
+      background: var(--dark-card);
+      border: 1px solid var(--dark-border);
+      border-radius: 12px;
+      padding: 1.1rem 1.15rem;
+      cursor: pointer;
+      transition: all .18s ease;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: .3rem;
     }
-    .pcard:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.15); }
+    .pcard:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: 0 10px 28px rgba(0,0,0,.18);
+    }
     .pcard.pinned::before {
-      content: '📌'; position: absolute; top: -8px; left: 12px;
-      font-size: 14px; background: var(--dark-card); padding: 0 4px; z-index: 1;
+      content: '📌';
+      position: absolute;
+      top: -8px;
+      left: 12px;
+      font-size: 14px;
+      background: var(--dark-card);
+      padding: 0 4px;
+      z-index: 1;
     }
     .pcard.pinned { border-color: var(--warning); }
-    .pcard-top { display: flex; justify-content: space-between; align-items: start; gap: .5rem; margin-bottom: .4rem; }
-    .pcard-title {
-      font-size: var(--fs-md); font-weight: 600; line-height: 1.25;
-      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    .pcard-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: .5rem;
+      margin-bottom: .25rem;
     }
-    .pcard-code { font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: 2px; }
-    .pcard-meta { display: flex; gap: .6rem; flex-wrap: wrap; font-size: var(--fs-xs); color: var(--dark-text-secondary); margin-top: .5rem; }
-    .pcard-meta span { display: flex; align-items: center; gap: 3px; }
+    .pcard-title {
+      font-size: .95rem;
+      font-weight: 600;
+      line-height: 1.3;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .pcard-code {
+      font-size: .75rem;
+      color: var(--dark-text-secondary);
+      margin-top: 1px;
+    }
+    .pcard-meta {
+      display: flex;
+      gap: .65rem;
+      flex-wrap: wrap;
+      font-size: .75rem;
+      color: var(--dark-text-secondary);
+      margin-top: .45rem;
+    }
+    .pcard-meta span {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
 
     .star-btn {
       background: transparent; border: none;
@@ -498,6 +542,7 @@
       .pgrid { grid-template-columns: 1fr; }
     }
   </style>
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
 </head>
 <body th:attr="data-user-role=${isSuperAdmin != null && isSuperAdmin ? 'SUPER_ADMIN' : (isHR != null && isHR ? 'HR' : 'PM')}">
 
@@ -565,20 +610,11 @@
           <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
           <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
           <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                    <li><a class="nav-link" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
         </ul>
       </div>
 
-      <!-- Finance -->
-      <div class="side-group" data-group="finance">
-        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
-          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
-          <span class="side-group-label">Finance</span>
-          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
-        </button>
-        <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
-        </ul>
-      </div>
+
 
       <!-- Insights -->
       <div class="side-group" data-group="insights">
@@ -589,7 +625,8 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -609,13 +646,11 @@
     <div class="search-box" onclick="PM.openCmd()">
       <i class="fas fa-search"></i>
       <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
-      <kbd>⌘K</kbd>
+
     </div>
 
     <div class="top-header-actions">
-      <button class="icon-btn" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></button>
-      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
-      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+
       <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
@@ -653,39 +688,64 @@
 
     <!-- ═════════════ LIST VIEW ═════════════ -->
     <div id="listView">
-      <div class="pm-page-head">
+      <div class="pm-page-head" style="margin-bottom:1rem;">
         <div>
-          <div class="pm-page-title"><i class="fas fa-folder-open"></i> All Projects</div>
-          <div class="pm-page-sub">
-            <span id="prCount">0</span> projects ·
+          <div class="pm-page-title" style="font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:.5rem;">
+            <i class="fas fa-folder-open" style="color:var(--primary);"></i> Projects
+          </div>
+          <div class="pm-page-sub" style="margin-top:2px;font-size:.85rem;color:var(--dark-text-secondary);">
+            <span id="prCount">0</span> total ·
             <span id="prActive">0</span> active ·
             <span id="prRisk">0</span> at risk
           </div>
         </div>
-        <div class="pm-page-actions">
+        <div class="pm-page-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;">
           <button class="pm-btn" id="requestBtn" onclick="PM.openIntake('requests')">
-            <i class="fas fa-paper-plane"></i> <span id="requestBtnLabel">Request a project</span>
+            <i class="fas fa-paper-plane"></i> Request
           </button>
           <button class="pm-btn" id="autoRulesBtn" hidden onclick="openAutoRules()"><i class="fas fa-robot"></i> Auto-Rules</button>
           <button class="pm-btn" id="recomputeBtn" hidden onclick="recomputeAllStatuses()"><i class="fas fa-sync"></i> Recompute</button>
           <button class="pm-btn" onclick="exportProjects()"><i class="fas fa-file-export"></i> Export</button>
-          <button class="pm-btn pm-btn-primary" onclick="openCreate()" id="newProjectBtn" hidden><i class="fas fa-plus"></i> New Project</button>
+          <button class="pm-btn pm-btn-primary" onclick="openCreate()" id="newProjectBtn"><i class="fas fa-plus"></i> New Project</button>
         </div>
       </div>
-
-      <div class="pr-saved" id="savedChips">
-        <span class="pr-chip active" data-filter="all" onclick="setFilter(this,'all')"><i class="fas fa-th-large"></i> All <span class="cnt" id="cntAll">0</span></span>
-        <span class="pr-chip" data-filter="mine" onclick="setFilter(this,'mine')"><i class="fas fa-user"></i> Mine <span class="cnt" id="cntMine">0</span></span>
-        <span class="pr-chip" data-filter="active" onclick="setFilter(this,'active')"><i class="fas fa-play"></i> Active <span class="cnt" id="cntActive">0</span></span>
-        <span class="pr-chip" data-filter="at-risk" onclick="setFilter(this,'at-risk')"><i class="fas fa-exclamation-triangle"></i> At Risk <span class="cnt" id="cntRisk">0</span></span>
-        <span class="pr-chip" data-filter="delayed" onclick="setFilter(this,'delayed')"><i class="fas fa-clock"></i> Delayed <span class="cnt" id="cntDelayed">0</span></span>
-        <span class="pr-chip" data-filter="completed" onclick="setFilter(this,'completed')"><i class="fas fa-check"></i> Completed <span class="cnt" id="cntCompleted">0</span></span>
-        <span class="pr-chip" data-filter="starred" onclick="setFilter(this,'starred')"><i class="fas fa-star"></i> Starred <span class="cnt" id="cntStarred">0</span></span>
+      <div class="pr-saved" id="savedChips" style="margin-bottom:.85rem;gap:.35rem;">
+        <span class="pr-chip active" data-filter="all" onclick="setFilter(this,'all')">
+          <i class="fas fa-th-large"></i> All <span class="cnt" id="cntAll">0</span>
+        </span>
+        <span class="pr-chip" data-filter="mine" onclick="setFilter(this,'mine')">
+          <i class="fas fa-user"></i> Mine <span class="cnt" id="cntMine">0</span>
+        </span>
+        <span class="pr-chip" data-filter="active" onclick="setFilter(this,'active')">
+          <i class="fas fa-play"></i> Active <span class="cnt" id="cntActive">0</span>
+        </span>
+        <span class="pr-chip" data-filter="at-risk" onclick="setFilter(this,'at-risk')">
+          <i class="fas fa-exclamation-triangle"></i> At Risk <span class="cnt" id="cntRisk">0</span>
+        </span>
+        <span class="pr-chip" data-filter="delayed" onclick="setFilter(this,'delayed')">
+          <i class="fas fa-clock"></i> Delayed <span class="cnt" id="cntDelayed">0</span>
+        </span>
+        <span class="pr-chip" data-filter="completed" onclick="setFilter(this,'completed')">
+          <i class="fas fa-check"></i> Done <span class="cnt" id="cntCompleted">0</span>
+        </span>
+        <span class="pr-chip" data-filter="starred" onclick="setFilter(this,'starred')">
+          <i class="fas fa-star"></i> Starred <span class="cnt" id="cntStarred">0</span>
+        </span>
       </div>
 
-      <div class="pr-toolbar">
-        <input class="cp-in grow" style="height:32px;font-size:var(--fs-sm)" placeholder="Filter by name, code, client..." id="prSearch" oninput="render()">
-        <select class="cp-in pm-btn" style="max-width:150px;height:32px;font-size:var(--fs-sm)" id="prStatus" onchange="render()">
+      <div class="pr-toolbar" style="gap:.45rem;padding:.55rem .75rem;">
+        <!-- Search -->
+        <div style="position:relative;flex:1;min-width:200px;max-width:280px;">
+          <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--dark-text-secondary);"></i>
+          <input class="cp-in" id="prSearch"
+                 style="height:34px;padding-left:32px;font-size:.85rem;width:100%;"
+                 placeholder="Search projects..."
+                 oninput="render()">
+        </div>
+
+        <!-- Status -->
+        <select class="cp-in" id="prStatus" onchange="render()"
+                style="height:34px;max-width:140px;font-size:.85rem;">
           <option value="">All Status</option>
           <option value="on-track">On Track</option>
           <option value="at-risk">At Risk</option>
@@ -693,25 +753,41 @@
           <option value="completed">Completed</option>
           <option value="planning">Planning</option>
         </select>
-        <select class="cp-in pm-btn" style="max-width:150px;height:32px;font-size:var(--fs-sm)" id="prPriority" onchange="render()">
+
+        <!-- Priority -->
+        <select class="cp-in" id="prPriority" onchange="render()"
+                style="height:34px;max-width:140px;font-size:.85rem;">
           <option value="">All Priority</option>
           <option value="critical">Critical</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
         </select>
-        <select class="cp-in pm-btn" style="max-width:160px;height:32px;font-size:var(--fs-sm)" id="prSort" onchange="render()">
-          <option value="created-desc">Newest First</option>
+
+        <!-- Sort -->
+        <select class="cp-in" id="prSort" onchange="render()"
+                style="height:34px;max-width:150px;font-size:.85rem;">
+          <option value="created-desc">Newest</option>
           <option value="name">Name A→Z</option>
           <option value="progress-desc">Progress ↓</option>
           <option value="progress-asc">Progress ↑</option>
           <option value="budget-desc">Budget ↓</option>
         </select>
-        <div class="view-toggle">
-          <button data-view="cards" class="active" onclick="setView('cards',this)" title="Cards"><i class="fas fa-th-large"></i></button>
-          <button data-view="table" onclick="setView('table',this)" title="Table"><i class="fas fa-list"></i></button>
-          <button data-view="kanban" onclick="setView('kanban',this)" title="Kanban"><i class="fas fa-table-columns"></i></button>
-          <button data-view="compact" onclick="setView('compact',this)" title="Compact"><i class="fas fa-bars"></i></button>
+
+        <!-- View Toggle -->
+        <div class="view-toggle" style="margin-left:auto;">
+          <button data-view="cards" class="active" onclick="setView('cards',this)" title="Cards">
+            <i class="fas fa-th-large"></i>
+          </button>
+          <button data-view="table" onclick="setView('table',this)" title="Table">
+            <i class="fas fa-list"></i>
+          </button>
+          <button data-view="kanban" onclick="setView('kanban',this)" title="Kanban">
+            <i class="fas fa-table-columns"></i>
+          </button>
+          <button data-view="compact" onclick="setView('compact',this)" title="Compact">
+            <i class="fas fa-bars"></i>
+          </button>
         </div>
       </div>
 
@@ -1095,6 +1171,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- Shared sidebar controller -->
+<!-- PM tab guard: keeps tabs / inner tabs clickable before PM.bootstrap() finishes -->
+<script th:src="@{/js/pm-tabs.js}" src="../../static/js/pm-tabs.js"></script>
 <script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
 
 <!-- Shared AI assistant controller -->
@@ -2204,4 +2282,4 @@
   });
 </script>
 </body>
-</html>
+</html>

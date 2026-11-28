@@ -1,0 +1,6 @@
+package com.mentis.hrms.model.enums;
+
+public enum LeaveEntryType {
+    CREDIT_ACCRUAL, CREDIT_CARRY_FORWARD, CREDIT_MANUAL,
+    DEBIT_LEAVE, CREDIT_REVERSAL, DEBIT_EXPIRY, DEBIT_ENCASHMENT
+}

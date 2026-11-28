@@ -170,6 +170,49 @@ public class Employee {
     private String manager;
 
     // ============================================
+    // SPRINT 1 - TYPED ORG + LIFECYCLE (dual-written with legacy text columns)
+    // ============================================
+
+    @Column(name = "department_id")
+    private Long departmentId;
+
+    @Column(name = "designation_id")
+    private Long designationId;
+
+    @Column(name = "location_id")
+    private Long locationId;
+
+    @Column(name = "manager_employee_id")
+    private Long managerEmployeeId;
+
+    @Column(name = "secondary_manager_id")
+    private Long secondaryManagerId;
+
+    @Column(name = "employment_status", length = 20)
+    private String employmentStatus = "PROBATION";
+
+    @Column(name = "employment_mode", length = 20)
+    private String employmentMode = "FULL_TIME";
+
+    @Column(name = "work_mode", length = 20)
+    private String workMode = "OFFICE";
+
+    @Column(name = "probation_end_date")
+    private LocalDate probationEndDate;
+
+    @Column(name = "confirmation_date")
+    private LocalDate confirmationDate;
+
+    @Column(name = "notice_start_date")
+    private LocalDate noticeStartDate;
+
+    @Column(name = "exit_date")
+    private LocalDate exitDate;
+
+    @Column(name = "exit_reason")
+    private String exitReason;
+
+    // ============================================
     // COMPENSATION
     // ============================================
 
@@ -181,6 +224,8 @@ public class Employee {
 
     @Column(name = "currency")
     private String currency;
+    @Column(name = "salary_amount", precision = 15, scale = 2)
+    private java.math.BigDecimal salaryAmount;
 
     // ============================================
     // BENEFITS
@@ -569,4 +614,59 @@ public class Employee {
 
     public List<OnboardingDocument> getDocuments() { return documents; }
     public void setDocuments(List<OnboardingDocument> documents) { this.documents = documents; }
+
+    // ============================================
+    // SPRINT 1 - ACCESSORS
+    // ============================================
+
+    public Long getDepartmentId() { return departmentId; }
+    public void setDepartmentId(Long departmentId) { this.departmentId = departmentId; }
+
+    public Long getDesignationId() { return designationId; }
+    public void setDesignationId(Long designationId) { this.designationId = designationId; }
+
+    public Long getLocationId() { return locationId; }
+    public void setLocationId(Long locationId) { this.locationId = locationId; }
+
+    public Long getManagerEmployeeId() { return managerEmployeeId; }
+    public void setManagerEmployeeId(Long managerEmployeeId) { this.managerEmployeeId = managerEmployeeId; }
+
+    public Long getSecondaryManagerId() { return secondaryManagerId; }
+    public void setSecondaryManagerId(Long secondaryManagerId) { this.secondaryManagerId = secondaryManagerId; }
+
+    public String getEmploymentStatus() { return employmentStatus != null ? employmentStatus : "PROBATION"; }
+    public void setEmploymentStatus(String employmentStatus) { this.employmentStatus = employmentStatus; }
+    public com.mentis.hrms.model.enums.EmploymentStatus getEmploymentStatusEnum() {
+        try {
+            return com.mentis.hrms.model.enums.EmploymentStatus.valueOf(getEmploymentStatus());
+        } catch (IllegalArgumentException e) {
+            return com.mentis.hrms.model.enums.EmploymentStatus.PROBATION;
+        }
+    }
+    public void setEmploymentStatusEnum(com.mentis.hrms.model.enums.EmploymentStatus s) { this.employmentStatus = s.name(); }
+
+    public String getEmploymentMode() { return employmentMode != null ? employmentMode : "FULL_TIME"; }
+    public void setEmploymentMode(String employmentMode) { this.employmentMode = employmentMode; }
+
+    public String getWorkMode() { return workMode != null ? workMode : "OFFICE"; }
+    public void setWorkMode(String workMode) { this.workMode = workMode; }
+
+    public LocalDate getProbationEndDate() { return probationEndDate; }
+    public void setProbationEndDate(LocalDate probationEndDate) { this.probationEndDate = probationEndDate; }
+
+    public LocalDate getConfirmationDate() { return confirmationDate; }
+    public void setConfirmationDate(LocalDate confirmationDate) { this.confirmationDate = confirmationDate; }
+
+    public LocalDate getNoticeStartDate() { return noticeStartDate; }
+    public void setNoticeStartDate(LocalDate noticeStartDate) { this.noticeStartDate = noticeStartDate; }
+
+    public LocalDate getExitDate() { return exitDate; }
+    public void setExitDate(LocalDate exitDate) { this.exitDate = exitDate; }
+
+    public String getExitReason() { return exitReason; }
+    public void setExitReason(String exitReason) { this.exitReason = exitReason; }
+
+    public java.math.BigDecimal getSalaryAmount() { return salaryAmount; }
+    public void setSalaryAmount(java.math.BigDecimal salaryAmount) { this.salaryAmount = salaryAmount; }
+
 }

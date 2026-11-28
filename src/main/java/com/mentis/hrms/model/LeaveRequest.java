@@ -3,7 +3,20 @@ package com.mentis.hrms.model;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+/**
+ * UPDATED in Sprint 4 (complete file, ready to overwrite).
+ * Changes vs the 2026-11-26 Drive version:
+ *  + @Version Long version          → column leave_requests.version (optimistic locking, concurrent approvals)
+ *  + Long leaveTypeId               → column leave_type_id (FK → leave_type.id) alongside legacy free-text leaveType (kept)
+ *  + String startHalf / endHalf     → FIRST_HALF | SECOND_HALF
+ *  + String currentApproverId       → who the request is waiting on
+ *  + String attachmentId            → supporting document ref
+ *  - generateLeaveId() no longer uses Math.random() — PrePersist assigns a UUID-based placeholder;
+ *    REAL codes (LV-YYYY-NNNNNN, per-year sequence) are assigned by LeaveCodeGenerator at service level.
+ *  Status values now may include: DRAFT, PENDING, APPROVED, REJECTED, WITHDRAWN, CANCELLATION_PENDING, CANCELLED.
+ */
 @Entity
 @Table(name = "leave_requests")
 public class LeaveRequest {
@@ -21,8 +34,17 @@ public class LeaveRequest {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
+    @Column(name = "start_half", length = 10)
+    private String startHalf;
+
+    @Column(name = "end_half", length = 10)
+    private String endHalf;
+
     @Column(name = "leave_type", length = 50)
     private String leaveType;
+
+    @Column(name = "leave_type_id")
+    private Long leaveTypeId;
 
     @Column(name = "reason", length = 500)
     private String reason;
@@ -33,6 +55,9 @@ public class LeaveRequest {
     @Column(name = "approved_by")
     private String approvedBy;
 
+    @Column(name = "current_approver_id", length = 50)
+    private String currentApproverId;
+
     @Column(name = "approved_date")
     private LocalDateTime approvedDate;
 
@@ -41,6 +66,9 @@ public class LeaveRequest {
 
     @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
+
+    @Column(name = "attachment_id", length = 64)
+    private String attachmentId;
 
     @Column(name = "leave_duration", length = 20)
     private String leaveDuration;
@@ -54,7 +82,6 @@ public class LeaveRequest {
     @Column(name = "approval_remarks", length = 500)
     private String approvalRemarks;
 
-    // NEW FIELDS FOR CHAT ACTIONS
     @Column(name = "withdrawn")
     private Boolean withdrawn = false;
 
@@ -64,25 +91,26 @@ public class LeaveRequest {
     @Column(name = "cancel_reason", length = 500)
     private String cancelReason;
 
+    @Version
+    @Column(name = "version")
+    private Long version = 0L;
+
     @PrePersist
     public void prePersist() {
         if (this.id == null || this.id.isEmpty()) {
-            this.id = generateLeaveId();
+            // Placeholder — services SHOULD set the real LV-YYYY-NNNNNN code via LeaveCodeGenerator before save.
+            this.id = "LV-TMP-" + UUID.randomUUID().toString().substring(0, 8);
         }
         if (this.createdAt == null) {
             this.createdAt = LocalDateTime.now();
         }
+        if (this.version == null) {
+            this.version = 0L;
+        }
     }
 
-    private String generateLeaveId() {
-        int random = (int) (Math.random() * 10000);
-        return String.format("LV-%d-%04d", LocalDate.now().getYear(), random);
-    }
-
-    // Constructors
     public LeaveRequest() {}
 
-    // Getters and Setters (existing + new)
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
 
@@ -95,8 +123,17 @@ public class LeaveRequest {
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
 
+    public String getStartHalf() { return startHalf; }
+    public void setStartHalf(String startHalf) { this.startHalf = startHalf; }
+
+    public String getEndHalf() { return endHalf; }
+    public void setEndHalf(String endHalf) { this.endHalf = endHalf; }
+
     public String getLeaveType() { return leaveType; }
     public void setLeaveType(String leaveType) { this.leaveType = leaveType; }
+
+    public Long getLeaveTypeId() { return leaveTypeId; }
+    public void setLeaveTypeId(Long leaveTypeId) { this.leaveTypeId = leaveTypeId; }
 
     public String getReason() { return reason; }
     public void setReason(String reason) { this.reason = reason; }
@@ -107,6 +144,9 @@ public class LeaveRequest {
     public String getApprovedBy() { return approvedBy; }
     public void setApprovedBy(String approvedBy) { this.approvedBy = approvedBy; }
 
+    public String getCurrentApproverId() { return currentApproverId; }
+    public void setCurrentApproverId(String currentApproverId) { this.currentApproverId = currentApproverId; }
+
     public LocalDateTime getApprovedDate() { return approvedDate; }
     public void setApprovedDate(LocalDateTime approvedDate) { this.approvedDate = approvedDate; }
 
@@ -115,6 +155,9 @@ public class LeaveRequest {
 
     public String getRejectionReason() { return rejectionReason; }
     public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
+
+    public String getAttachmentId() { return attachmentId; }
+    public void setAttachmentId(String attachmentId) { this.attachmentId = attachmentId; }
 
     public String getLeaveDuration() { return leaveDuration; }
     public void setLeaveDuration(String leaveDuration) { this.leaveDuration = leaveDuration; }
@@ -128,7 +171,6 @@ public class LeaveRequest {
     public String getApprovalRemarks() { return approvalRemarks; }
     public void setApprovalRemarks(String approvalRemarks) { this.approvalRemarks = approvalRemarks; }
 
-    // NEW GETTERS/SETTERS
     public Boolean getWithdrawn() { return withdrawn; }
     public void setWithdrawn(Boolean withdrawn) { this.withdrawn = withdrawn; }
 
@@ -137,4 +179,7 @@ public class LeaveRequest {
 
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+
+    public Long getVersion() { return version; }
+    public void setVersion(Long version) { this.version = version; }
 }

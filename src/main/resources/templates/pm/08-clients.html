@@ -16,7 +16,7 @@
   <!-- ============ SHARED THEME ============ -->
   <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
   <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
-
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
   <style>
     /* ============ PAGE-SPECIFIC STYLES ONLY (PM Clients) ============ */
 
@@ -360,6 +360,7 @@
       .map-sidebar { display: none; }
     }
   </style>
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
 </head>
 <body>
 
@@ -419,19 +420,11 @@
           <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
           <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
           <li><a class="nav-link active" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                    <li><a class="nav-link" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
         </ul>
       </div>
 
-      <div class="side-group" data-group="finance">
-        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
-          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
-          <span class="side-group-label">Finance</span>
-          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
-        </button>
-        <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
-        </ul>
-      </div>
+
 
       <div class="side-group" data-group="insights">
         <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
@@ -441,7 +434,8 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -459,12 +453,11 @@
     <div class="search-box" onclick="PM.openCmd()">
       <i class="fas fa-search"></i>
       <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
-      <kbd>⌘K</kbd>
+
     </div>
 
     <div class="top-header-actions">
-      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
-      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+
       <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
@@ -504,22 +497,36 @@
       <span>/</span><span id="pmCrumb">Directory</span>
     </div>
 
-    <div class="pm-page-head">
+    <div class="pm-page-head" style="margin-bottom:1rem;">
       <div>
-        <div class="pm-page-title"><i class="fas fa-address-card" id="pmPageIcon"></i> <span id="pmPageTitle">Client Directory</span></div>
-        <div class="pm-page-sub"><span id="clCount">0</span> clients · <span id="clActive">0</span> active</div>
-      </div>
-      <div class="pm-page-actions">
-        <div class="tk-view-toggle" id="clViewToggle">
-          <button data-view="cards" class="active" onclick="setView('cards',this)"><i class="fas fa-th-large"></i> Cards</button>
-          <button data-view="map" onclick="setView('map',this)"><i class="fas fa-map-location-dot"></i> Map</button>
+        <div class="pm-page-title" style="font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:.5rem;">
+          <i class="fas fa-address-card" id="pmPageIcon" style="color:var(--primary);"></i>
+          <span id="pmPageTitle">Clients</span>
         </div>
-        <button class="pm-btn" onclick="exportClients()"><i class="fas fa-file-export"></i> Export</button>
-        <button class="pm-btn" id="importBtn" onclick="openCreate('import')"><i class="fas fa-file-import"></i> Import CSV</button>
-        <button class="pm-btn pm-btn-primary" id="newClientBtn" onclick="openCreate('blank')"><i class="fas fa-plus"></i> New Client</button>
+        <div class="pm-page-sub" id="pmPageSub" style="margin-top:2px;font-size:.85rem;color:var(--dark-text-secondary);">
+          Client directory and project mapping
+        </div>
+      </div>
+      <div class="pm-page-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;">
+        <div class="view-toggle" id="clViewToggle">
+          <button data-view="cards" class="active" onclick="setView('cards',this)" title="Cards">
+            <i class="fas fa-th-large"></i>
+          </button>
+          <button data-view="map" onclick="setView('map',this)" title="Map">
+            <i class="fas fa-map-location-dot"></i>
+          </button>
+        </div>
+        <button class="pm-btn" onclick="exportClients()">
+          <i class="fas fa-file-export"></i> Export
+        </button>
+        <button class="pm-btn" id="importBtn" onclick="openCreate('import')">
+          <i class="fas fa-file-import"></i> Import
+        </button>
+        <button class="pm-btn pm-btn-primary" id="newClientBtn" onclick="openCreate('blank')">
+          <i class="fas fa-plus"></i> New Client
+        </button>
       </div>
     </div>
-
     <!-- Cards view -->
     <div id="cardsView">
       <div class="pm-kpi-grid">
@@ -537,19 +544,40 @@
         <span class="tk-chip" data-filter="hold" onclick="setFilter(this,'hold')"><i class="fas fa-pause"></i> On Hold <span style="opacity:.7" id="cntHold">0</span></span>
         <span class="tk-chip" data-filter="starred" onclick="setFilter(this,'starred')"><i class="fas fa-star"></i> Starred <span style="opacity:.7" id="cntStarred">0</span></span>
       </div>
+      <div class="pr-toolbar" style="gap:.45rem;padding:.55rem .75rem;margin-bottom:1rem;">
+        <!-- Search -->
+        <div style="position:relative;flex:1;min-width:200px;max-width:280px;">
+          <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.8rem;color:var(--dark-text-secondary);"></i>
+          <input class="cp-in" id="clSearch"
+                 style="height:34px;padding-left:32px;font-size:.85rem;width:100%;"
+                 placeholder="Search by name, contact..."
+                 oninput="renderClients()">
+        </div>
 
-      <div class="cl-toolbar">
-        <input class="form-input" style="max-width:260px" placeholder="Search by name, contact..." id="clSearch" oninput="renderClients()">
-        <select class="form-input" style="max-width:160px" id="clIndustry" onchange="renderClients()">
+        <!-- Industry -->
+        <select class="cp-in" id="clIndustry" onchange="renderClients()"
+                style="height:34px;max-width:160px;font-size:.85rem;">
           <option value="">All Industries</option>
-          <option>Retail</option><option>Fintech</option><option>Logistics</option>
-          <option>Healthcare</option><option>Consumer Goods</option><option>Manufacturing</option><option>Internal</option>
+          <option>Retail</option>
+          <option>Fintech</option>
+          <option>Logistics</option>
+          <option>Healthcare</option>
+          <option>Consumer Goods</option>
+          <option>Manufacturing</option>
+          <option>Internal</option>
         </select>
-        <select class="form-input" style="max-width:160px" id="clSort" onchange="renderClients()">
+
+        <!-- Sort -->
+        <select class="cp-in" id="clSort" onchange="renderClients()"
+                style="height:34px;max-width:150px;font-size:.85rem;">
           <option value="name">Name A→Z</option>
           <option value="revenue">Revenue ↓</option>
         </select>
-        <span style="margin-left:auto;font-size:var(--fs-xs);color:var(--dark-text-secondary)">Showing <span id="clShown">0</span> clients</span>
+
+        <!-- Count -->
+        <span style="margin-left:auto;font-size:.8rem;color:var(--dark-text-secondary);white-space:nowrap;">
+          Showing <span id="clShown">0</span> clients
+        </span>
       </div>
 
       <div class="cl-grid" id="clGrid">
@@ -790,6 +818,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- PM tab guard: keeps tabs / inner tabs clickable before PM.bootstrap() finishes -->
+<script th:src="@{/js/pm-tabs.js}" src="../../static/js/pm-tabs.js"></script>
 <script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
 <script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
 <script>
@@ -954,8 +984,8 @@
       return list;
     }
     function updateCounts() {
-      document.getElementById('clCount').textContent = clients.length;
-      document.getElementById('clActive').textContent = clients.filter(function (c) { return c.status === 'active'; }).length;
+      var clCountEl = document.getElementById('clCount'); if (clCountEl) clCountEl.textContent = clients.length;
+      var clActiveEl = document.getElementById('clActive'); if (clActiveEl) clActiveEl.textContent = clients.filter(function (c) { return c.status === 'active'; }).length;
       document.getElementById('kTotal').textContent = clients.length;
       document.getElementById('kActive').textContent = clients.filter(function (c) { return c.status === 'active'; }).length;
       document.getElementById('kProspect').textContent = clients.filter(function (c) { return c.status === 'prospect'; }).length;
@@ -1569,4 +1599,4 @@
   });
 </script>
 </body>
-</html>
+</html>

@@ -19,4 +19,7 @@ public interface ReportService {
     String qualityCsv(Long projectId);
     String riskCsv(Long projectId);
     String utilizationCsv(LocalDate from, LocalDate to);
+
+    /** PM-014: every approval request, newest first — the approvals page had no export. */
+    String approvalsCsv();
 }

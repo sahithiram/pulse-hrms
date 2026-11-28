@@ -33,4 +33,7 @@ public class UpdateProjectRequest {
 
     /** When present (even empty) it replaces the project's teams. Absent = leave the teams alone. */
     private java.util.List<Long> teamIds;
+
+    /** PM-025: when present (even empty) it replaces the MANAGER rows of the project. */
+    private java.util.List<Long> managerIds;
 }

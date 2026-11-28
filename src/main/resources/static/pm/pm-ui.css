@@ -1,0 +1,275 @@
+/* =========================================================
+   PM UI Layer – Clean, consistent, less clutter
+   Linked last so it overrides Bootstrap + theme
+   ========================================================= */
+
+:root {
+  --pmui-radius: 12px;
+  --pmui-gap: 1rem;
+  --pmui-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+/* ---------- 1. Centered Modals ---------- */
+.modal-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 1300 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 1.5rem !important;
+  opacity: 1 !important;
+  background: rgba(10, 14, 20, .55) !important;
+  backdrop-filter: blur(4px);
+  overflow-y: auto;
+}
+.modal-backdrop.open { display: flex !important; }
+
+.modal-backdrop > .modal {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  left: auto !important;
+  display: flex !important;
+  flex-direction: column;
+  width: 100% !important;
+  height: auto !important;
+  max-width: 680px;
+  max-height: calc(100vh - 3rem);
+  margin: auto !important;
+  overflow: hidden !important;
+  border-radius: var(--pmui-radius) !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .28) !important;
+  animation: pmuiPop .22s var(--pmui-ease);
+}
+.modal-backdrop > .modal.modal-sm { max-width: 460px; }
+.modal-backdrop > .modal.modal-lg { max-width: 880px; }
+
+@keyframes pmuiPop {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+.modal-head { padding: 1.1rem 1.4rem !important; }
+.modal-head h3 { font-size: 1.15rem !important; letter-spacing: -.01em; }
+.modal-body { padding: 1.4rem !important; overflow-y: auto; }
+.modal-foot { padding: 1rem 1.4rem !important; }
+
+/* ---------- 2. Friendly Forms ---------- */
+.modal-body label,
+.modal-body .form-label {
+  display: block;
+  font-size: .78rem;
+  font-weight: 600;
+  margin-bottom: .35rem;
+}
+
+.modal-body input:not([type=checkbox]):not([type=radio]):not([type=color]),
+.modal-body select,
+.modal-body textarea {
+  width: 100%;
+  min-height: 42px;
+  padding: .6rem .85rem;
+  border-radius: 10px;
+  font-size: .9rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+.modal-body textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus {
+  outline: none;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 22%, transparent) !important;
+}
+
+.modal-body .form-grid,
+.modal-body .cp-grid,
+.modal-body .grid-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--pmui-gap);
+}
+.modal-body .full,
+.modal-body .span-2 { grid-column: 1 / -1; }
+
+.modal-foot .pm-btn,
+.modal-foot button {
+  min-height: 40px;
+  padding: 0 1.2rem;
+  border-radius: 999px;
+}
+
+/* ---------- 3. Centered Drawers ---------- */
+.pm-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(10, 14, 20, .55);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.pm-drawer-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pm-drawer {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1401;
+  width: min(720px, calc(100vw - 2rem));
+  max-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--dark-card, #fff);
+  border: 1px solid var(--dark-border, #e3e8ee);
+  border-radius: var(--pmui-radius);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .3);
+  transform: translate(-50%, -46%) scale(.98);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform .22s var(--pmui-ease), opacity .2s;
+}
+.pm-drawer.open {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pm-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid var(--dark-border, #e3e8ee);
+  flex-shrink: 0;
+}
+.pm-drawer-title { font-size: 1.15rem; font-weight: 600; }
+.pm-drawer-body { padding: 1.3rem 1.4rem; overflow-y: auto; }
+.pm-drawer-body .pm-btn { min-height: 38px; border-radius: 999px; }
+
+body.pmui-lock { overflow: hidden; }
+
+/* ---------- 4. Global Clean-up (less clutter) ---------- */
+.pm-page {
+  padding: 1.25rem 1.5rem 2.5rem !important;
+}
+
+.pm-card {
+  padding: 1.1rem 1.25rem !important;
+  border-radius: 12px !important;
+}
+
+.pm-btn {
+  height: 34px !important;
+  padding: 0 .9rem !important;
+  border-radius: 8px !important;
+  font-size: .84rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: .4rem !important;
+}
+
+.pm-table th,
+.pm-table td {
+  padding: .65rem .9rem !important;
+  vertical-align: middle !important;
+}
+
+/* Toolbar consistency */
+.pr-toolbar,
+.budget-toolbar {
+  gap: .45rem !important;
+  padding: .55rem .75rem !important;
+  border-radius: 10px !important;
+}
+
+/* Filter chips */
+.pr-chip {
+  padding: .3rem .75rem !important;
+  font-size: .8rem !important;
+  transition: all .15s ease;
+}
+.pr-chip:hover {
+  transform: translateY(-1px);
+}
+/* ===== Task Drawer – cleaner layout ===== */
+.pm-drawer {
+  width: min(760px, calc(100vw - 2rem)) !important;
+}
+.pm-drawer-body {
+  padding: 1.4rem 1.5rem !important;
+}
+.pm-drawer-body .pm-card {
+  margin-bottom: 1rem !important;
+  padding: 1rem 1.15rem !important;
+}
+.pm-drawer-body label {
+  font-size: .78rem !important;
+  font-weight: 600 !important;
+  color: var(--dark-text-secondary) !important;
+  margin-bottom: .3rem !important;
+  display: block;
+}
+.pm-drawer-body input,
+.pm-drawer-body select,
+.pm-drawer-body textarea {
+  background: var(--dark-bg) !important;
+  border: 1px solid var(--dark-border) !important;
+  color: var(--dark-text) !important;
+  border-radius: 9px !important;
+  height: 38px !important;
+  padding: 0 .8rem !important;
+  font-size: .88rem !important;
+  width: 100% !important;
+}
+.pm-drawer-body textarea {
+  height: auto !important;
+  min-height: 80px !important;
+  padding: .65rem .8rem !important;
+}
+/* Project cards */
+.pcard {
+  padding: 1.1rem 1.15rem !important;
+  border-radius: 12px !important;
+  transition: all .18s ease !important;
+}
+.pcard:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .18) !important;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .modal-backdrop { padding: .75rem !important; }
+  .modal-body .form-grid,
+  .modal-body .cp-grid,
+  .modal-body .grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .pm-page {
+    padding: 1rem 1rem 2rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop > .modal,
+  .pm-drawer {
+    animation: none;
+    transition: none;
+  }
+}

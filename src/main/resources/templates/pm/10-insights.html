@@ -13,7 +13,7 @@
   <!-- ============ SHARED THEME ============ -->
   <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
   <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
-
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
   <style>
     /* ============ PAGE-SPECIFIC STYLES ONLY (PM Insights) ============ */
 
@@ -53,6 +53,7 @@
     .exp-row { display: flex; gap: .4rem; flex-wrap: wrap; }
     .exp-row .pm-btn { height: 30px; padding: .35rem .75rem; font-size: var(--fs-sm); }
   </style>
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
 </head>
 <body>
 
@@ -113,19 +114,11 @@
           <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
           <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
           <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                    <li><a class="nav-link" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
         </ul>
       </div>
 
-      <div class="side-group" data-group="finance">
-        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
-          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
-          <span class="side-group-label">Finance</span>
-          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
-        </button>
-        <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
-        </ul>
-      </div>
+
 
       <div class="side-group" data-group="insights">
         <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
@@ -134,8 +127,9 @@
           <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
-          <li><a class="nav-link active" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link active" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -153,12 +147,11 @@
     <div class="search-box" onclick="PM.openCmd()">
       <i class="fas fa-search"></i>
       <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
-      <kbd>⌘K</kbd>
+
     </div>
 
     <div class="top-header-actions">
-      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
-      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+
       <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
@@ -198,15 +191,24 @@
       <span>/</span><span id="pmCrumb">Reports</span>
     </div>
 
-    <div class="pm-page-head">
+    <div class="pm-page-head" style="margin-bottom:1rem;">
       <div>
-        <div class="pm-page-title"><i class="fas fa-chart-pie" id="pmPageIcon"></i> <span id="pmPageTitle">Reports</span></div>
-        <div class="pm-page-sub" id="pmPageSub">Charts and CSV exports for one project at a time</div>
+        <div class="pm-page-title" style="font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:.5rem;">
+          <i id="pmPageIcon" class="fas fa-chart-line" style="color:var(--primary);"></i>
+          <span id="pmPageTitle">Insights</span>
+        </div>
+        <div class="pm-page-sub" id="pmPageSub" style="margin-top:2px;font-size:.85rem;color:var(--dark-text-secondary);">
+          Reports and analytics
+        </div>
       </div>
-      <div class="pm-page-actions">
-        <select class="pm-btn" id="reportsPicker" style="max-width:280px;height:32px;font-size:var(--fs-sm);padding:.35rem .75rem" aria-label="Project">
+      <div class="pm-page-actions" style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <select id="reportsPicker" aria-label="Project" title="Project"
+                style="height:34px;max-width:240px;font-size:.85rem;padding:0 .6rem;border-radius:8px;background:var(--dark-card);color:var(--dark-text);border:1px solid var(--dark-border);">
           <option value="">Loading projects…</option>
         </select>
+        <button class="pm-btn pm-btn-primary" onclick="location.href='/pm/10-insights?tab=builder'">
+          <i class="fas fa-paint-brush"></i> Report Builder
+        </button>
       </div>
     </div>
 
@@ -371,6 +373,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- PM tab guard: keeps tabs / inner tabs clickable before PM.bootstrap() finishes -->
+<script th:src="@{/js/pm-tabs.js}" src="../../static/js/pm-tabs.js"></script>
 <script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
 <script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
 <script>
@@ -486,7 +490,7 @@
     }
 
     function loadReports() {
-      var pid = parseInt($('reportsPicker').value || '0', 10);
+      var pid = parseInt(($('reportsPicker') || {}).value || state.projectId || '0', 10);
       if (!pid) {
         $('reportsGrid').innerHTML = '<div class="pm-widget" style="grid-column:1/-1"><div class="pm-widget-body"><div class="empty-state"><i class="fas fa-folder-open"></i><div>No project selected.</div></div></div></div>';
         return;
@@ -748,6 +752,11 @@
 
     window.switchTab = function (tab) {
       if (!tabMeta[tab]) tab = 'reports';
+      // keep the sidebar highlight (Reports / Budget) in step with the tab
+      document.querySelectorAll('#sideNav .nav-link').forEach(function (a) {
+        var h = a.getAttribute('href') || '';
+        if (h.indexOf('/pm/10-insights?tab=') === 0) a.classList.toggle('active', h === '/pm/10-insights?tab=' + tab);
+      });
       document.querySelectorAll('#pmTabs button').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === tab); });
       document.querySelectorAll('.pm-pane').forEach(function (p) { p.classList.toggle('active', p.id === 'pane-' + tab); });
       var m = tabMeta[tab];
@@ -772,4 +781,4 @@
   });
 </script>
 </body>
-</html>
+</html>

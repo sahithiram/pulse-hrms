@@ -107,6 +107,18 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT t.status, COUNT(t) FROM Task t GROUP BY t.status")
     List<Object[]> countGroupByStatus();
     List<Task> findByProjectIdInAndStatus(Collection<Long> ids, TaskStatus status);
+
+    /** Tasks a non-admin may see: their projects, their teams, or created by them. */
+    @org.springframework.data.jpa.repository.Query(
+            "SELECT t FROM Task t WHERE (t.projectId IN :pids OR t.teamId IN :tids OR t.createdBy = :uid)"
+                    + " AND (:status IS NULL OR t.status = :status)"
+                    + " AND (:search IS NULL OR LOWER(t.title) LIKE LOWER(CONCAT('%', :search, '%')))")
+    Page<Task> searchVisible(@Param("pids") Collection<Long> projectIds,
+                             @Param("tids") Collection<Long> teamIds,
+                             @Param("uid") Long userId,
+                             @Param("status") TaskStatus status,
+                             @Param("search") String search,
+                             Pageable pageable);
     @Query("SELECT t.status, COUNT(t) FROM Task t WHERE t.projectId = :projectId GROUP BY t.status")
     List<Object[]> countGroupByStatusForProject(@Param("projectId") Long projectId);
 
@@ -116,7 +128,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     List<Task> findAllByAssigneeIn(@Param("employeeIds") Collection<Long> employeeIds);
     @Query("SELECT COUNT(t) FROM Task t WHERE t.projectId IN :ids AND t.status <> :done")
     long countOpenInProjects(@Param("ids") Collection<Long> ids, @Param("done") TaskStatus done);
-
+    /** Tasks completed on/after the given time (used by the delivery-trend chart). */
+    @Query("SELECT t FROM Task t WHERE t.status = com.mentis.hrms.pm.enums.TaskStatus.DONE " +
+            "AND COALESCE(t.completedAt, t.updatedAt) >= :since")
+    List<Task> findDoneSince(@Param("since") java.time.LocalDateTime since);
     @Query("SELECT COUNT(t) FROM Task t WHERE t.projectId IN :ids AND t.status = :done")
     long countDoneInProjects(@Param("ids") Collection<Long> ids, @Param("done") TaskStatus done);
 
@@ -140,4 +155,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Transactional
     @Query("UPDATE Task t SET t.escalationLevel = :lvl WHERE t.id = :id")
     int updateEscalationLevel(@Param("id") Long id, @Param("lvl") int lvl);
+
+    // ── Batch counts for list screens (one query for many tasks) ──
+    @Query("SELECT t.parentTaskId, COUNT(t), " +
+           "SUM(CASE WHEN t.status = com.mentis.hrms.pm.enums.TaskStatus.DONE THEN 1 ELSE 0 END) " +
+           "FROM Task t WHERE t.parentTaskId IN :ids GROUP BY t.parentTaskId")
+    List<Object[]> subtaskCounts(@Param("ids") Collection<Long> ids);
+
+    @Query("SELECT d.taskId, COUNT(d) FROM TaskDependency d " +
+           "JOIN Task b ON b.id = d.dependsOnTaskId " +
+           "WHERE d.taskId IN :ids AND b.status <> com.mentis.hrms.pm.enums.TaskStatus.DONE " +
+           "GROUP BY d.taskId")
+    List<Object[]> openBlockerCounts(@Param("ids") Collection<Long> ids);
 }

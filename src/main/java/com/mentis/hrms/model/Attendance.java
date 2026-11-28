@@ -4,6 +4,17 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * UPDATED in Sprint 5 (complete file, ready to overwrite).
+ * Changes vs the 2026-11-26 Drive version — ALL ADDITIVE, nothing removed:
+ *  + source        (WEB|MOBILE|BIOMETRIC|ADMIN|REGULARIZED) default 'WEB'   → column `source`
+ *  + ipAddress     → `ip_address`
+ *  + latitude/longitude (nullable, e.g. mobile punch)                       → `latitude`, `longitude`
+ *  + workMode      (OFFICE|REMOTE|FIELD|...)                                → `work_mode`
+ *  + isAutoClosed  (nightly auto check-out flag)                            → `is_auto_closed`
+ *  + editedFlag    (set by admin correction/regularization)                  → `edited_flag`
+ * Existing table name `attendance`, all columns, constructors, getters kept byte-compatible.
+ */
 @Entity
 @Table(name = "attendance")
 public class Attendance {
@@ -41,6 +52,27 @@ public class Attendance {
 
     @Column(name = "status", length = 20)
     private String status = "OFFLINE";
+
+    @Column(name = "source", length = 12, nullable = false)
+    private String source = "WEB";
+
+    @Column(name = "ip_address", length = 64)
+    private String ipAddress;
+
+    @Column(name = "latitude")
+    private java.math.BigDecimal latitude;
+
+    @Column(name = "longitude")
+    private java.math.BigDecimal longitude;
+
+    @Column(name = "work_mode", length = 16)
+    private String workMode;
+
+    @Column(name = "is_auto_closed", nullable = false)
+    private boolean autoClosed = false;
+
+    @Column(name = "edited_flag", nullable = false)
+    private boolean editedFlag = false;
 
     @Column(name = "session_number")
     private Integer sessionNumber = 1;
@@ -98,6 +130,27 @@ public class Attendance {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
+
+    public String getIpAddress() { return ipAddress; }
+    public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
+
+    public java.math.BigDecimal getLatitude() { return latitude; }
+    public void setLatitude(java.math.BigDecimal latitude) { this.latitude = latitude; }
+
+    public java.math.BigDecimal getLongitude() { return longitude; }
+    public void setLongitude(java.math.BigDecimal longitude) { this.longitude = longitude; }
+
+    public String getWorkMode() { return workMode; }
+    public void setWorkMode(String workMode) { this.workMode = workMode; }
+
+    public boolean isAutoClosed() { return autoClosed; }
+    public void setAutoClosed(boolean autoClosed) { this.autoClosed = autoClosed; }
+
+    public boolean isEditedFlag() { return editedFlag; }
+    public void setEditedFlag(boolean editedFlag) { this.editedFlag = editedFlag; }
 
     public Integer getSessionNumber() { return sessionNumber; }
     public void setSessionNumber(Integer sessionNumber) { this.sessionNumber = sessionNumber; }

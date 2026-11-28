@@ -85,16 +85,27 @@ public class OfferService {
     }
 
     public OfferLetter createAndGenerateOffer(OfferRequest request) throws Exception {
-        logger.info("Creating offer letter for application ID: {}", request.getApplicationId());
+        logger.info("Creating offer letter for application ID: {}, type: {}",
+                request.getApplicationId(), request.getType());
 
         try {
-            JobApplication application = jobApplicationService.getApplicationById(request.getApplicationId());
-            if (application == null) {
-                throw new RuntimeException("Application not found with ID: " + request.getApplicationId());
+            OfferLetter offer;
+            if (request.getApplicationId() != null) {
+                JobApplication application = jobApplicationService.getApplicationById(request.getApplicationId());
+                if (application == null) {
+                    throw new RuntimeException("Application not found with ID: " + request.getApplicationId());
+                }
+                offer = new OfferLetter(application);
+            } else {
+                // Standalone NEW offer created from Offer Candidates modal (no linked JobApplication)
+                offer = new OfferLetter();
+                offer.setCreatedDate(LocalDateTime.now());
             }
 
-            OfferLetter offer = new OfferLetter(application);
             populateOfferData(offer, request);
+            if (offer.getCreatedDate() == null) {
+                offer.setCreatedDate(LocalDateTime.now());
+            }
 
             offer = offerLetterRepository.save(offer);
             logger.info("Offer letter created with ID: {}", offer.getId());
@@ -269,31 +280,6 @@ public class OfferService {
         }
     }
 
-    /**
-     * SIMPLER ALTERNATIVE - Use this if you don't need file deletion
-     */
-    /*
-    public void deleteOffer(Long offerId) {
-        try {
-            logger.info("Attempting to delete offer with id: {}", offerId);
-
-            // Check if offer exists
-            if (!offerLetterRepository.existsById(offerId)) {
-                throw new RuntimeException("Offer not found with id: " + offerId);
-            }
-
-            // Simple delete by ID
-            offerLetterRepository.deleteById(offerId);
-
-            logger.info("Offer deleted successfully with id: {}", offerId);
-
-        } catch (Exception e) {
-            logger.error("Error in deleteOffer service: {}", e.getMessage());
-            throw new RuntimeException("Failed to delete offer: " + e.getMessage());
-        }
-    }
-    */
-
     public OfferLetter createAndGenerateOfferForEmployee(OfferRequest request) throws Exception {
         logger.info("Creating offer for employee ID: {}", request.getEmployeeId());
 
@@ -301,8 +287,6 @@ public class OfferService {
         if (employeeOpt.isEmpty()) {
             throw new RuntimeException("Employee not found with ID: " + request.getEmployeeId());
         }
-
-        Employee employee = employeeOpt.get();
 
         OfferLetter offer = new OfferLetter();
         offer.setEmployeeId(request.getEmployeeId());

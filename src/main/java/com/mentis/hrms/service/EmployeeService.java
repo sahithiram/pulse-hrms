@@ -206,6 +206,11 @@ public class EmployeeService {
                 || status.equalsIgnoreCase("Inactive"))) {
             return true;
         }
+        String lifecycle = e.getEmploymentStatus();
+        if (lifecycle != null && (lifecycle.equalsIgnoreCase("EXITED")
+                || lifecycle.equalsIgnoreCase("INACTIVE"))) {
+            return true;
+        }
         if (!e.isActive()) return true;
         return Boolean.FALSE.equals(e.getIsActive());
     }

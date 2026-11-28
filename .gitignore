@@ -58,3 +58,5 @@ files*.txt
 pm-audit-*/
 pm-audit-*.zip
 replacements.txt
+
+src/main/resources/application.properties

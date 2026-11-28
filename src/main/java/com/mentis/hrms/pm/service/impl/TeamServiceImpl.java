@@ -78,7 +78,7 @@ public class TeamServiceImpl implements TeamService {
     public PageResponse<TeamSummaryResponse> listTeams(String search, Pageable pageable, Set<Long> onlyTeamIds) {
         if (onlyTeamIds == null) {
             Page<Team> page = teamRepository.search(search, pageable);
-            return PageResponse.of(page.map(this::toSummaryWithLeadName));
+            return PageResponse.of(new PageImpl<>(toSummaries(page.getContent()), pageable, page.getTotalElements()));
         }
         String q = search == null ? "" : search.trim().toLowerCase();
         List<Team> all = teamsInScope(onlyTeamIds).stream()
@@ -87,25 +87,22 @@ public class TeamServiceImpl implements TeamService {
                 .collect(Collectors.toList());
         int from = (int) Math.min(pageable.getOffset(), all.size());
         int to = Math.min(from + pageable.getPageSize(), all.size());
-        Page<Team> page = new PageImpl<>(all.subList(from, to), pageable, all.size());
-        return PageResponse.of(page.map(this::toSummaryWithLeadName));
+        return PageResponse.of(new PageImpl<>(
+                toSummaries(new ArrayList<>(all.subList(from, to))), pageable, all.size()));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TeamSummaryResponse> listAllForCards(Set<Long> onlyTeamIds) {
-        return teamsInScope(onlyTeamIds).stream()
-                .map(this::toSummaryWithLeadName)
-                .collect(Collectors.toList());
+        return toSummaries(teamsInScope(onlyTeamIds));
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<TeamSummaryResponse> listForDropdown(Set<Long> onlyTeamIds) {
-        return teamsInScope(onlyTeamIds).stream()
+        return toSummaries(teamsInScope(onlyTeamIds).stream()
                 .sorted(Comparator.comparing(Team::getName, String.CASE_INSENSITIVE_ORDER))
-                .map(this::toSummaryWithLeadName)
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     /** null = every team, empty = none, otherwise only those ids. */
@@ -177,11 +174,12 @@ public class TeamServiceImpl implements TeamService {
         long open = combined.stream().filter(t -> t.getStatus() != TaskStatus.DONE).count();
         long done = combined.stream().filter(t -> t.getStatus() == TaskStatus.DONE).count();
 
-        Map<Long, Boolean> visible = new HashMap<>();
-        List<TaskSummaryResponse> summaries = combined.stream()
+        // PERF: load assignees, employee names and project names for ALL tasks in 3 queries
+        // (was: 2-4 queries per task, i.e. hundreds of round trips for limit=300).
+        List<Task> pageTasks = combined.stream()
                 .limit(limit > 0 ? limit : 100)
-                .map(t -> toTaskSummary(t, viewerId, visible))
                 .collect(Collectors.toList());
+        List<TaskSummaryResponse> summaries = toTaskSummaries(pageTasks, viewerId);
 
         String leadName = team.getLeadEmployeeId() != null
                 ? resolveEmployeeName(team.getLeadEmployeeId()) : null;
@@ -197,8 +195,13 @@ public class TeamServiceImpl implements TeamService {
     public List<TeamMemberResponse> listTeamMembers(Long teamId) {
         Team team = teamRepository.findById(teamId)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found: " + teamId));
-        return teamMemberRepository.findByTeamId(teamId).stream()
-                .map(m -> toMemberResponse(team, m))
+        List<TeamMember> members = teamMemberRepository.findByTeamId(teamId);
+        // PERF: one query for all member employees instead of one per member
+        Map<Long, com.mentis.hrms.model.Employee> emps = new HashMap<>();
+        Set<Long> ids = members.stream().map(TeamMember::getEmployeeId).collect(Collectors.toSet());
+        if (!ids.isEmpty()) employeeRepository.findAllById(ids).forEach(e -> emps.put(e.getId(), e));
+        return members.stream()
+                .map(m -> toMemberResponse(team, m, emps))
                 .collect(Collectors.toList());
     }
 
@@ -240,6 +243,73 @@ public class TeamServiceImpl implements TeamService {
         teamMemberRepository.delete(m);
     }
 
+    private TeamMemberResponse toMemberResponse(Team team, TeamMember m,
+                                                Map<Long, com.mentis.hrms.model.Employee> emps) {
+        com.mentis.hrms.model.Employee e = emps.get(m.getEmployeeId());
+        return TeamMemberResponse.builder()
+                .employeeId(m.getEmployeeId())
+                .employeeName(e == null ? "Employee #" + m.getEmployeeId() : displayName(e))
+                .employeeCode(e == null ? null : e.getEmployeeId())
+                .roleInTeam(m.getRoleInTeam())
+                .allocationPct(m.getAllocationPct())
+                .lead(team.getLeadEmployeeId() != null && team.getLeadEmployeeId().equals(m.getEmployeeId()))
+                .build();
+    }
+
+    private static String displayName(com.mentis.hrms.model.Employee e) {
+        String first = e.getFirstName() == null ? "" : e.getFirstName().trim();
+        String last = e.getLastName() == null ? "" : e.getLastName().trim();
+        String full = (first + " " + last).trim();
+        if (!full.isEmpty()) return full;
+        if (e.getEmployeeName() != null && !e.getEmployeeName().isBlank()) return e.getEmployeeName().trim();
+        if (e.getEmail() != null && !e.getEmail().isBlank()) return e.getEmail().trim();
+        return "Employee #" + e.getId();
+    }
+
+    /** PERF: summaries for many tasks with a fixed number of queries. */
+    private List<TaskSummaryResponse> toTaskSummaries(List<Task> tasks, Long viewerId) {
+        if (tasks.isEmpty()) return new ArrayList<>();
+        List<Long> taskIds = tasks.stream().map(Task::getId).collect(Collectors.toList());
+
+        Map<Long, List<Long>> assigneesByTask = new HashMap<>();
+        for (TaskAssignment a : taskAssignmentRepository.findByTaskIdIn(taskIds))
+            assigneesByTask.computeIfAbsent(a.getTaskId(), k -> new ArrayList<>()).add(a.getEmployeeId());
+
+        Set<Long> empIds = assigneesByTask.values().stream()
+                .flatMap(List::stream).collect(Collectors.toSet());
+        Map<Long, String> empNames = new HashMap<>();
+        if (!empIds.isEmpty())
+            employeeRepository.findAllById(empIds).forEach(e -> empNames.put(e.getId(), displayName(e)));
+
+        Set<Long> projectIds = tasks.stream().map(Task::getProjectId)
+                .filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> projectNames = new HashMap<>();
+        if (!projectIds.isEmpty())
+            projectRepository.findAllById(projectIds).forEach(p -> projectNames.put(p.getId(), p.getName()));
+
+        Map<Long, Boolean> visible = new HashMap<>();   // canViewProject is asked once per distinct project
+        List<TaskSummaryResponse> out = new ArrayList<>(tasks.size());
+        for (Task t : tasks) {
+            List<Long> ids = assigneesByTask.getOrDefault(t.getId(), List.of());
+            List<String> names = new ArrayList<>(ids.size());
+            for (Long id : ids) names.add(empNames.getOrDefault(id, "Employee #" + id));
+            boolean hidden = viewerId != null && t.getProjectId() != null
+                    && !visible.computeIfAbsent(t.getProjectId(), pid -> access.canViewProject(viewerId, pid));
+            out.add(TaskSummaryResponse.builder()
+                    .id(t.getId())
+                    .title(hidden ? "Task in another project" : t.getTitle())
+                    .status(t.getStatus()).priority(t.getPriority())
+                    .dueDate(t.getDueDate()).progressPct(t.getProgressPct())
+                    .projectId(hidden ? null : t.getProjectId())
+                    .projectName(hidden ? "Another project" : projectNames.get(t.getProjectId()))
+                    .teamId(t.getTeamId())
+                    .parentTaskId(t.getParentTaskId())
+                    .assigneeIds(ids).assigneeNames(names)
+                    .build());
+        }
+        return out;
+    }
+
     private TeamMemberResponse toMemberResponse(Team team, TeamMember m) {
         String code = null;
         try {
@@ -259,6 +329,36 @@ public class TeamServiceImpl implements TeamService {
         List<Long> ids = teamMemberRepository.findByTeamId(t.getId())
                 .stream().map(TeamMember::getEmployeeId).collect(Collectors.toList());
         return teamMapper.toResponse(t, ids);
+    }
+
+    /** PERF: member counts and lead names for many teams in 2 queries instead of 2 per team. */
+    private List<TeamSummaryResponse> toSummaries(List<Team> teams) {
+        if (teams == null || teams.isEmpty()) return new ArrayList<>();
+        Set<Long> idSet = teams.stream().map(Team::getId).collect(Collectors.toSet());
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] row : teamMemberRepository.countByTeamIds(idSet))
+            counts.put((Long) row[0], ((Number) row[1]).longValue());
+        Set<Long> leadIds = teams.stream().map(Team::getLeadEmployeeId)
+                .filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, String> leadNames = new HashMap<>();
+        if (!leadIds.isEmpty()) {
+            employeeRepository.findAllById(leadIds).forEach(e -> {
+                String first = e.getFirstName() == null ? "" : e.getFirstName().trim();
+                String last = e.getLastName() == null ? "" : e.getLastName().trim();
+                String full = (first + " " + last).trim();
+                if (full.isEmpty() && e.getEmployeeName() != null && !e.getEmployeeName().isBlank())
+                    full = e.getEmployeeName().trim();
+                if (full.isEmpty() && e.getEmail() != null) full = e.getEmail();
+                leadNames.put(e.getId(), full.isEmpty() ? "Employee #" + e.getId() : full);
+            });
+        }
+        List<TeamSummaryResponse> out = new ArrayList<>(teams.size());
+        for (Team t : teams) {
+            Long lead = t.getLeadEmployeeId();
+            out.add(teamMapper.toSummary(t, counts.getOrDefault(t.getId(), 0L),
+                    lead == null ? null : leadNames.getOrDefault(lead, "Employee #" + lead)));
+        }
+        return out;
     }
 
     private TeamSummaryResponse toSummaryWithLeadName(Team t) {

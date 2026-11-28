@@ -17,10 +17,20 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.mentis.hrms.model.Holiday;
-import com.mentis.hrms.service.HolidayService;
+import com.mentis.hrms.service.WorkingDayService;
 import org.springframework.beans.factory.annotation.Value;
 
+/**
+ * UPDATED in Sprint 3 (complete file, ready to overwrite).
+ * Changes vs the 2026-11-26 Drive version:
+ *  - BOTH duplicate day-type loops (Sunday-only / Sunday+holiday) DELETED — day typing now comes
+ *    from WorkingDayService (the single authoritative source, REQ-3-08).
+ *  - HolidayService/Sunday-check code removed; 9:15 late cutoff externalized to
+ *    performance.late.hour / performance.late.minute (defaults 9 / 15 — same behaviour).
+ *  - Update path now reuses the same stats object (no second scan).
+ * Behaviour note: attendanceDenominator now honors weekly-off patterns, holidays (incl. half-day),
+ * optional-holiday choices, overrides and employee start/exit dates — matching leave counting in Sprint 4.
+ */
 @Service
 @Transactional
 public class AdminEmpPerformanceService {
@@ -35,8 +45,10 @@ public class AdminEmpPerformanceService {
 
     @Autowired
     private AttendanceRepository attendanceRepository;
+
     @Autowired
-    private HolidayService holidayService;
+    private WorkingDayService workingDayService;
+
     // ===== UPDATED WEIGHTAGE CONFIGURATION (3 Pillars) =====
     @Value("${performance.weight.attendance:0.35}")
     private double attendanceWeightRaw;
@@ -44,7 +56,12 @@ public class AdminEmpPerformanceService {
     private double behaviorWeightRaw;
     @Value("${performance.weight.initiative:0.175}")
     private double initiativeWeightRaw;
-    // LEARNING REMOVED
+
+    // ===== LATE CUTOFF (externalized Sprint 3; same defaults as before) =====
+    @Value("${performance.late.hour:9}")
+    private int lateHour;
+    @Value("${performance.late.minute:15}")
+    private int lateMinute;
 
     // ===== PERFORMANCE RATING THRESHOLDS =====
     private static final double RATING_OUTSTANDING = 90.0;
@@ -65,9 +82,10 @@ public class AdminEmpPerformanceService {
     }
 
     /**
-     * Real, holiday-aware attendance stats for one employee/month.
-     * Working day = not a Sunday AND not a listed company holiday.
-     * Present day = has a check-in on that working day.
+     * Working-day-aware attendance stats for one employee/month.
+     * Working day = whatever WorkingDayService says for THIS employee
+     * (weekly-off pattern, that employee's holiday calendar, optional choices, overrides,
+     * start/exit date). Present day = has a check-in on that working day.
      */
     public AttendanceStats getAttendanceStats(String employeeId, int year, int month) {
         LocalDate startDate = LocalDate.of(year, month, 1);
@@ -81,40 +99,30 @@ public class AdminEmpPerformanceService {
                 .map(Attendance::getAttendanceDate)
                 .collect(Collectors.toSet());
 
-        // Pull the holiday calendar for this month ONCE (not per-day) to avoid N extra queries
-        Set<LocalDate> holidayDates = holidayService.getHolidaysByMonth(year, month).stream()
-                .map(Holiday::getHolidayDate)
-                .collect(Collectors.toSet());
+        Map<LocalDate, Attendance> firstByDate = new HashMap<>();
+        for (Attendance a : attendances) {
+            if (a.getAttendanceDate() != null) {
+                firstByDate.putIfAbsent(a.getAttendanceDate(), a);
+            }
+        }
+
+        List<WorkingDayService.DayInfo> dayInfos = workingDayService.getDayInfos(employeeId, startDate, endDate);
 
         AttendanceStats stats = new AttendanceStats();
-
-        LocalDate currentDate = startDate;
-        while (!currentDate.isAfter(endDate)) {
-            boolean isSunday = currentDate.getDayOfWeek().getValue() == 7;
-            boolean isHoliday = holidayDates.contains(currentDate);
-
-            if (!isSunday && !isHoliday) {
-                stats.totalWorkingDays++;
-
-                if (attendanceDays.contains(currentDate)) {
-                    stats.presentDays++;
-
-                    final LocalDate finalCurrentDate = currentDate;
-                    Attendance att = attendances.stream()
-                            .filter(a -> a.getAttendanceDate().equals(finalCurrentDate))
-                            .findFirst()
-                            .orElse(null);
-
-                    if (att != null && att.getCheckInTime() != null
-                            && (att.getCheckInTime().getHour() > 9
-                            || (att.getCheckInTime().getHour() == 9 && att.getCheckInTime().getMinute() > 15))) {
-                        stats.lateDays++;
-                    }
-                } else {
-                    stats.absentDays++;
+        for (WorkingDayService.DayInfo di : dayInfos) {
+            if (!di.isWorking()) continue;
+            stats.totalWorkingDays++;
+            LocalDate day = di.date;
+            if (attendanceDays.contains(day)) {
+                stats.presentDays++;
+                Attendance att = firstByDate.get(day);
+                if (att != null && att.getCheckInTime() != null
+                        && isLate(att.getCheckInTime().getHour(), att.getCheckInTime().getMinute())) {
+                    stats.lateDays++;
                 }
+            } else {
+                stats.absentDays++;
             }
-            currentDate = currentDate.plusDays(1);
         }
 
         stats.attendancePercentage = stats.totalWorkingDays == 0
@@ -124,11 +132,13 @@ public class AdminEmpPerformanceService {
         return stats;
     }
 
+    private boolean isLate(int hour, int minute) {
+        return hour > lateHour || (hour == lateHour && minute > lateMinute);
+    }
+
     /**
      * Calculate attendance score for an employee for a specific month.
-     * FIXED: this is now a real percentage (presentDays / workingDays * 100),
-     * not a point-deduction system. Working days correctly exclude both
-     * Sundays and listed holidays.
+     * Working days come from WorkingDayService (REQ-3-08).
      */
     public Double calculateAttendanceScore(String employeeId, int year, int month) {
         try {
@@ -147,13 +157,8 @@ public class AdminEmpPerformanceService {
     }
 
     /**
-     * Calculate total performance score with 3 pillars (Attendance, Behavior, Initiative)
-     * Learning removed - weights redistributed
-     */
-    /**
      * Calculate total performance score with 3 pillars (Attendance, Behavior, Initiative).
-     * Reweighted proportionally to the SAME base ratio PerformanceSyncService uses
-     * for Work-less employees, so this screen and the table never disagree again.
+     * Reweighted proportionally to the SAME base ratio PerformanceSyncService uses.
      */
     public Double calculateTotalScore(Double attendanceScore, Double behaviorScore, Double initiativeScore) {
         if (attendanceScore == null) attendanceScore = 0.0;
@@ -207,8 +212,9 @@ public class AdminEmpPerformanceService {
     }
 
     /**
-     * Calculate and save performance for a single employee
-     * Learning parameter removed
+     * Calculate and save performance for a single employee.
+     * The second duplicate working-day loop is gone — stats come from the same
+     * getAttendanceStats() used everywhere else.
      */
     @Transactional
     public AdminEmpPerformance calculateAndSavePerformance(
@@ -216,7 +222,6 @@ public class AdminEmpPerformanceService {
             Double behaviorScore, String behaviorRemarks, Integer behaviorStars,
             Double initiativeScore,
             String reviewedBy) {
-        // learningScore parameter REMOVED
 
         logger.info("Calculating performance for {} - {}/{}", employeeId, month, year);
 
@@ -227,8 +232,9 @@ public class AdminEmpPerformanceService {
         }
         Employee employee = empOpt.get();
 
-        // Calculate attendance score
-        Double attendanceScore = calculateAttendanceScore(employeeId, year, month);
+        // Calculate attendance stats ONCE via WorkingDayService (REQ-3-08)
+        AttendanceStats stats = getAttendanceStats(employeeId, year, month);
+        Double attendanceScore = stats.attendancePercentage;
 
         // Calculate total score - learning removed
         Double totalScore = calculateTotalScore(attendanceScore, behaviorScore, initiativeScore);
@@ -253,59 +259,11 @@ public class AdminEmpPerformanceService {
         performance.setBehaviorRemarks(behaviorRemarks);
         performance.setBehaviorRatingStars(behaviorStars);
 
-        // Attendance details for transparency
-        final LocalDate startDate = LocalDate.of(year, month, 1);
-        final LocalDate endDate = YearMonth.of(year, month).atEndOfMonth();
-
-        List<Attendance> attendances = attendanceRepository.findByEmployeeIdAndAttendanceDateBetween(
-                employeeId, startDate, endDate);
-
-        Set<LocalDate> attendanceDays = new HashSet<>();
-        for (Attendance att : attendances) {
-            if (att.getCheckInTime() != null) {
-                attendanceDays.add(att.getAttendanceDate());
-            }
-        }
-
-        int totalWorkingDays = 0;
-        int presentDays = 0;
-        int absentDays = 0;
-        int lateDays = 0;
-
-        LocalDate currentDate = startDate;
-        while (!currentDate.isAfter(endDate)) {
-            if (currentDate.getDayOfWeek().getValue() != 7) {
-                totalWorkingDays++;
-                if (attendanceDays.contains(currentDate)) {
-                    presentDays++;
-                    final LocalDate finalCurrentDate = currentDate;
-                    Attendance att = null;
-                    for (Attendance a : attendances) {
-                        if (a.getAttendanceDate().equals(finalCurrentDate)) {
-                            att = a;
-                            break;
-                        }
-                    }
-                    if (att != null && att.getCheckInTime() != null) {
-                        if (att.getCheckInTime().getHour() > 9 ||
-                                (att.getCheckInTime().getHour() == 9 && att.getCheckInTime().getMinute() > 15)) {
-                            lateDays++;
-                        }
-                    }
-                } else {
-                    absentDays++;
-                }
-            }
-            currentDate = currentDate.plusDays(1);
-        }
-
-        performance.setPresentDays(presentDays);
-        performance.setAbsentDays(absentDays);
-        performance.setLateDays(lateDays);
-        performance.setTotalWorkingDays(totalWorkingDays);
-
-        double attendancePercentage = totalWorkingDays > 0 ? (presentDays * 100.0) / totalWorkingDays : 0;
-        performance.setAttendancePercentage(Math.round(attendancePercentage * 10.0) / 10.0);
+        performance.setPresentDays(stats.presentDays);
+        performance.setAbsentDays(stats.absentDays);
+        performance.setLateDays(stats.lateDays);
+        performance.setTotalWorkingDays(stats.totalWorkingDays);
+        performance.setAttendancePercentage(stats.attendancePercentage);
 
         performance.setReviewedBy(reviewedBy);
         performance.setReviewedDate(LocalDateTime.now());

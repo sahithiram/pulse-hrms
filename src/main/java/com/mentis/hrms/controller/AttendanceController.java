@@ -283,38 +283,38 @@ public class AttendanceController {
             att.put("checkOutFormatted", "--:--");
         }
 
-        String status = (String) att.get("status");
-        String statusColor = "green";
-        String statusText = "Present";
+        String rawStatus = att.get("status") != null ? att.get("status").toString().trim().toUpperCase() : "";
+        String statusColor;
+        String statusText;
 
-        // FIXED: Proper status mapping for checked out employees
-        if ("OFFLINE".equals(status)) {
-            if (checkOut != null) {
-                statusColor = "red";  // Red for checked out
-                statusText = "Checked Out";  // Show "Checked Out" not "Absent"
-            } else {
-                statusColor = "red";
-                statusText = "Absent";
-            }
-        } else if ("ABSENT".equals(status)) {
+        if (checkOut != null || "CHECKED_OUT".equals(rawStatus) || "CHECKED OUT".equals(rawStatus)) {
             statusColor = "red";
-            statusText = "Absent";
-        } else if ("BREAK".equals(status)) {
+            statusText = "Checked Out";
+        } else if ("BREAK".equals(rawStatus)) {
             statusColor = "orange";
             statusText = "On Break";
-        } else if ("ACTIVE".equals(status)) {
-            statusColor = "green";
-            statusText = "Present";
-        } else if ("LEAVE".equals(status)) {
+        } else if ("LEAVE".equals(rawStatus)) {
             statusColor = "purple";
             statusText = "On Leave";
+        } else if ("ACTIVE".equals(rawStatus) || "PRESENT".equals(rawStatus)) {
+            statusColor = "green";
+            statusText = "Present";
+        } else if ("OFFLINE".equals(rawStatus) || "ABSENT".equals(rawStatus) || checkIn == null) {
+            statusColor = "red";
+            statusText = "Absent";
+        } else {
+            statusColor = "green";
+            statusText = "Present";
         }
 
         att.put("statusColor", statusColor);
         att.put("statusText", statusText);
+        att.put("displayStatus", statusText);
+        att.put("statusForDisplay", statusText);
 
         // CRITICAL FIX: Add explicit checkout status flag for frontend
         att.put("isCheckedOut", checkOut != null);
+        att.put("hasCheckedOut", checkOut != null);
         att.put("checkOutTimeFormatted", checkOut != null ? checkOut.format(timeFormatter) : null);
     }
 

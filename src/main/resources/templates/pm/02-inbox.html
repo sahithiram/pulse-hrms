@@ -14,7 +14,7 @@
     <!-- ============ SHARED THEME (single source of truth) ============ -->
     <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
     <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
-
+    <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
     <style>
         /* ============ PAGE-SPECIFIC STYLES ONLY (PM inbox) ============ */
 
@@ -87,7 +87,8 @@
         .inbox-row .inbox-msg { font-weight: 500; line-height: 1.4; }
         .inbox-row .inbox-sub { font-size: var(--fs-sm); color: var(--dark-text-secondary); margin-top: 2px; line-height: 1.4; }
         .inbox-row .inbox-meta { font-size: var(--fs-xs); color: var(--dark-text-secondary); opacity: .8; margin-top: 3px; }
-        .inbox-row .inbox-badge {
+        .inbox-row .inbox-badge,
+        .activity-row .inbox-badge {
           display: inline-flex; align-items: center; gap: 3px;
           padding: 1px 6px; border-radius: 10px; font-size: var(--fs-xs);
           font-weight: 600; background: rgba(99,102,241,.12);
@@ -128,6 +129,7 @@
           .inbox-filters .spacer { display: none; }
         }
     </style>
+    <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
 </head>
 <body th:attr="data-user-role=${isSuperAdmin != null && isSuperAdmin ? 'SUPER_ADMIN' : (isHR != null && isHR ? 'HR' : 'PM')}">
 
@@ -197,20 +199,11 @@
                     <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
                     <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
                     <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                    <li><a class="nav-link" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
                 </ul>
             </div>
 
-            <!-- Finance -->
-            <div class="side-group" data-group="finance">
-                <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
-                    <span class="side-group-icon"><i class="fas fa-coins"></i></span>
-                    <span class="side-group-label">Finance</span>
-                    <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
-                </button>
-                <ul class="side-submenu" id="sideGroupFinance">
-                    <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
-                </ul>
-            </div>
+
 
             <!-- Insights -->
             <div class="side-group" data-group="insights">
@@ -221,7 +214,8 @@
                 </button>
                 <ul class="side-submenu" id="sideGroupInsights">
                     <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-                    <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+                    <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+                    <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
                     <li><a class="nav-link" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
                 </ul>
             </div>
@@ -243,17 +237,11 @@
         <div class="search-box" onclick="PM.openCmd()">
             <i class="fas fa-search"></i>
             <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
-            <kbd>⌘K</kbd>
+
         </div>
 
         <div class="top-header-actions">
-            <button class="icon-btn" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></button>
-            <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)">
-                <i class="fas fa-terminal"></i>
-            </button>
-            <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme">
-                <i class="fas fa-moon"></i>
-            </button>
+
             <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
                 <i class="fas fa-bell"></i>
                 <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
@@ -295,17 +283,22 @@
             <span>/</span><span>Project Management</span>
             <span>/</span><span id="pmCrumb">Inbox</span>
         </div>
-
-        <div class="pm-page-head">
+        <div class="pm-page-head" style="margin-bottom:1rem;">
             <div>
-                <div class="pm-page-title"><i class="fas fa-inbox"></i> <span id="pmPageTitle">Inbox</span></div>
-                <div class="pm-page-sub" id="pmPageSub">Notifications · Approvals · Activity logs</div>
+                <div class="pm-page-title" style="font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:.5rem;">
+                    <i id="pmPageIcon" class="fas fa-inbox" style="color:var(--primary);"></i>
+          <span id="pmPageTitle">Inbox</span>
+                </div>
+                <div class="pm-page-sub" id="pmPageSub" style="margin-top:2px;font-size:.85rem;color:var(--dark-text-secondary);">
+                    Approvals, requests and notifications waiting for you
+                </div>
             </div>
-            <div class="pm-page-actions">
-                <button class="pm-btn" onclick="pmRefresh()"><i class="fas fa-rotate"></i> Refresh</button>
+            <div class="pm-page-actions" style="display:flex;gap:.5rem;">
+                <button class="pm-btn" onclick="location.reload()">
+                    <i class="fas fa-rotate"></i> Refresh
+                </button>
             </div>
         </div>
-
         <div class="pm-tabs" id="tabs">
             <button data-tab="notifications" class="active" onclick="switchInboxTab('notifications', this)">Notifications</button>
             <button data-tab="approvals" onclick="switchInboxTab('approvals', this)">Approvals</button>
@@ -424,6 +417,8 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- Shared sidebar controller (accordion + search + rail + mobile) -->
+<!-- PM tab guard: keeps tabs / inner tabs clickable before PM.bootstrap() finishes -->
+<script th:src="@{/js/pm-tabs.js}" src="../../static/js/pm-tabs.js"></script>
 <script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
 
 <!-- Shared AI assistant controller -->
@@ -742,19 +737,15 @@
 
       window.switchInboxTab = function (t, el) {
         tab = t;
-        history.replaceState(null, '', '?tab=' + tab);
+        try { history.replaceState(null, '', '?tab=' + tab); } catch (e) { /* ignore */ }
         load();
       };
 
       window.pmRefresh = load;
 
-      document.getElementById('tabs').addEventListener('click', function (e) {
-        if (e.target.dataset.tab) {
-          tab = e.target.dataset.tab;
-          history.replaceState(null, '', '?tab=' + tab);
-          load();
-        }
-      });
+      /* Tab buttons already call switchInboxTab() via onclick. The old extra
+         delegated listener ran load() a second time on every click (double
+         API calls / flicker) and ignored clicks on child nodes, so it is gone. */
 
       setTimeout(function () { if (window.Notifications && window.Notifications.boot) window.Notifications.boot(); }, 200);
       load();
@@ -765,4 +756,4 @@
     });
 </script>
 </body>
-</html>
+</html>

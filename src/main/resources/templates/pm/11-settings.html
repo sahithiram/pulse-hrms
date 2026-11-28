@@ -13,7 +13,7 @@
   <!-- ============ SHARED THEME ============ -->
   <link rel="stylesheet" th:href="@{/css/menti-theme.css}" href="../../static/css/menti-theme.css">
   <link rel="stylesheet" th:href="@{/css/menti-ai.css}" href="../../static/css/menti-ai.css">
-
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
   <style>
     /* ============ PAGE-SPECIFIC STYLES ONLY (PM Settings) ============ */
 
@@ -96,6 +96,7 @@
     .ref-table td.n { color: var(--dark-text-secondary); text-align: center; }
     .ref-table td.p { color: var(--warning); text-align: center; font-size: var(--fs-xs); }
   </style>
+  <link rel="stylesheet" th:href="@{/pm/pm-ui.css}" href="../../static/pm/pm-ui.css">
 </head>
 <body>
 
@@ -156,19 +157,11 @@
           <li><a class="nav-link" href="/pm/05-planning"><i class="fas fa-chalkboard"></i> <span>Planning</span></a></li>
           <li><a class="nav-link" href="/pm/07-team"><i class="fas fa-users"></i> <span>Team</span></a></li>
           <li><a class="nav-link" href="/pm/08-clients"><i class="fas fa-user-tie"></i> <span>Clients</span></a></li>
+                    <li><a class="nav-link" href="/pm/09-quality"><i class="fas fa-shield-halved"></i> <span>Quality</span></a></li>
         </ul>
       </div>
 
-      <div class="side-group" data-group="finance">
-        <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupFinance">
-          <span class="side-group-icon"><i class="fas fa-coins"></i></span>
-          <span class="side-group-label">Finance</span>
-          <i class="fas fa-chevron-right side-chevron" aria-hidden="true"></i>
-        </button>
-        <ul class="side-submenu" id="sideGroupFinance">
-          <li><a class="nav-link" href="/pm/09-budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
-        </ul>
-      </div>
+
 
       <div class="side-group" data-group="insights">
         <button type="button" class="side-group-toggle" aria-expanded="false" aria-controls="sideGroupInsights">
@@ -178,7 +171,8 @@
         </button>
         <ul class="side-submenu" id="sideGroupInsights">
           <li><a class="nav-link" href="/pm/10-insights"><i class="fas fa-chart-simple"></i> <span>Insights</span></a></li>
-          <li><a class="nav-link" href="/pm/12-reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=budget"><i class="fas fa-wallet"></i> <span>Budget</span></a></li>
+          <li><a class="nav-link" href="/pm/10-insights?tab=reports"><i class="fas fa-file-lines"></i> <span>Reports</span></a></li>
           <li><a class="nav-link active" href="/pm/11-settings"><i class="fas fa-gear"></i> <span>Settings</span></a></li>
         </ul>
       </div>
@@ -196,12 +190,11 @@
     <div class="search-box" onclick="PM.openCmd()">
       <i class="fas fa-search"></i>
       <input type="text" placeholder="Search or jump to..." readonly style="cursor:pointer">
-      <kbd>⌘K</kbd>
+
     </div>
 
     <div class="top-header-actions">
-      <button class="icon-btn" onclick="PM.openCmd()" title="Command palette (⌘K)"><i class="fas fa-terminal"></i></button>
-      <button class="icon-btn" onclick="PM.toggleTheme()" title="Toggle theme"><i class="fas fa-moon"></i></button>
+
       <button class="icon-btn" onclick="location.href='/pm/02-inbox?tab=notifications'" title="Notifications">
         <i class="fas fa-bell"></i>
         <span class="notification-badge notif-bell-badge" style="display:none;">0</span>
@@ -241,10 +234,18 @@
       <span>/</span><span id="pmCrumb">Profile</span>
     </div>
 
-    <div class="pm-page-head">
+    <div class="pm-page-head" style="margin-bottom:1rem;">
       <div>
-        <div class="pm-page-title"><i class="fas fa-gear"></i> <span id="pmPageTitle">Settings</span></div>
-        <div class="pm-page-sub">Your profile, appearance, and a reference of who can do what</div>
+        <div class="pm-page-title" style="font-size:1.35rem;font-weight:700;display:flex;align-items:center;gap:.5rem;">
+          <i class="fas fa-gear" style="color:var(--primary);"></i>
+          Settings
+        </div>
+        <div class="pm-page-sub" style="margin-top:2px;font-size:.85rem;color:var(--dark-text-secondary);">
+          Project Management preferences
+        </div>
+      </div>
+      <div class="pm-page-actions" style="display:flex;gap:.5rem;">
+        <!-- usually no primary button needed -->
       </div>
     </div>
 
@@ -415,6 +416,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+<!-- PM tab guard: keeps tabs / inner tabs clickable before PM.bootstrap() finishes -->
+<script th:src="@{/js/pm-tabs.js}" src="../../static/js/pm-tabs.js"></script>
 <script th:src="@{/js/menti-sidebar.js}" src="../../static/js/menti-sidebar.js"></script>
 <script th:src="@{/js/menti-ai.js}" src="../../static/js/menti-ai.js"></script>
 <script>
@@ -537,4 +540,4 @@
   });
 </script>
 </body>
-</html>
+</html>

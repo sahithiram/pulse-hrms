@@ -36,6 +36,7 @@ public class ReportServiceImpl implements ReportService {
     private final RiskRepository riskRepository;
     private final EmployeeRepository employeeRepository;
     private final WorkloadService workloadService;
+    private final com.mentis.hrms.pm.repository.ApprovalRequestRepository approvalRequestRepository;
 
     // ── BUDGET ──
     @Override
@@ -274,6 +275,36 @@ public class ReportServiceImpl implements ReportService {
                     .append(r.getStatus()).append('\n');
         }
         return b.toString();
+    }
+
+    /** PM-014 — approvals export. Shows who asked, who must decide, and the current state. */
+    @Override public String approvalsCsv() {
+        StringBuilder b = new StringBuilder();
+        b.append("Id,Type,Subject,RequestedBy,Approver,Status,Priority,Created,Decided,DecisionNote\n");
+        for (com.mentis.hrms.pm.entity.ApprovalRequest a : approvalRequestRepository.findAll(
+                org.springframework.data.domain.Sort.by(
+                        org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))) {
+            b.append(a.getId()).append(',')
+                    .append(csv(a.getEntityType())).append(',')
+                    .append(csv(a.getEntityTitle())).append(',')
+                    .append(csv(name(a.getRequestedBy()))).append(',')
+                    .append(csv(name(a.getApproverId()))).append(',')
+                    .append(csv(a.getStatus())).append(',')
+                    .append(csv(a.getPriority())).append(',')
+                    .append(a.getCreatedAt() == null ? "" : a.getCreatedAt().toLocalDate()).append(',')
+                    .append(a.getDecidedAt() == null ? "" : a.getDecidedAt().toLocalDate()).append(',')
+                    .append(csv(a.getDecisionNote())).append('\n');
+        }
+        return b.toString();
+    }
+
+    private String name(Long employeePk) {
+        if (employeePk == null) return "";
+        return employeeRepository.findById(employeePk)
+                .map(e -> ((e.getFirstName() == null ? "" : e.getFirstName()) + " "
+                        + (e.getLastName() == null ? "" : e.getLastName())).trim())
+                .filter(n -> !n.isEmpty())
+                .orElse("Employee #" + employeePk);
     }
 
     private String csv(String s) { return s == null ? "" : "\"" + s.replace("\"", "\"\"") + "\""; }

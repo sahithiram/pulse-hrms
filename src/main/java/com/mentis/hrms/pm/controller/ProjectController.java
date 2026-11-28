@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.Objects;
 import com.mentis.hrms.pm.dto.request.ReopenProjectRequest;
+import com.mentis.hrms.pm.dto.request.ProjectOwnerChangeRequest;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -74,7 +75,31 @@ public class ProjectController {
         // Step 3a: refuse changes that would silently invalidate an existing baseline
         guardBaselinedChanges(id, req);
 
-        return ResponseEntity.ok(ApiResponse.ok(projectService.updateProject(id, req, userId)));
+        ProjectResponse updated = projectService.updateProject(id, req, userId);
+        // PM-025: when managerIds is present it replaces the co-managers (owner is never removed)
+        if (req.getManagerIds() != null) {
+            projectService.applyManagers(id, updated.getOwnerId(), req.getManagerIds(), userId);
+            updated = projectService.getProject(id);
+        }
+        return ResponseEntity.ok(ApiResponse.ok(updated));
+    }
+
+    /**
+     * PM-026 — hand the project over to another owner.
+     * Allowed: Super Admin (always) and the current owner. Co-managers cannot do this.
+     * Effects: project.ownerId changes, the new owner gets a MANAGER row, the previous
+     * owner keeps one unless keepPreviousAsManager=false, an activity entry is written.
+     */
+    @PostMapping("/{id}/owner")
+    public ResponseEntity<ApiResponse<ProjectResponse>> changeOwner(
+            @PathVariable Long id,
+            @Valid @RequestBody ProjectOwnerChangeRequest req,
+            @CurrentUserId Long userId) {
+        // anyone who can see the project may call it; the service applies the owner/SA rule
+        access.requireCanViewProject(userId, id);
+        boolean keep = req.getKeepPreviousAsManager() == null || req.getKeepPreviousAsManager();
+        return ResponseEntity.ok(ApiResponse.ok("Owner updated",
+                projectService.transferOwner(id, req.getNewOwnerId(), req.getReason(), keep, userId)));
     }
 
     @GetMapping("/{id}")
@@ -202,12 +227,8 @@ public class ProjectController {
         out.put("notified", financeService.sendStatusReport(id, true));
         return ResponseEntity.ok(ApiResponse.ok("Status update sent", out));
     }
-    @GetMapping("/{id}/baselines")
-    public ResponseEntity<ApiResponse<List<com.mentis.hrms.pm.dto.response.BaselineHistoryResponse>>> baselines(
-            @PathVariable Long id, @CurrentUserId Long userId) {
-        access.requireCanViewFinance(userId, id);
-        return ResponseEntity.ok(ApiResponse.ok(projectService.baselineHistory(id)));
-    }
+    /* PM-001: GET /projects/{id}/baselines removed.
+       ProjectBaselineController (/projects/{projectId}/baselines/) owns baseline history. */
 
     // ────────────────────────────────────────────────────────────
     // Step 3a: baseline guard.

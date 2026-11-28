@@ -134,7 +134,6 @@ public class TaskServiceImpl implements TaskService {
                 "Task created: " + saved.getTitle());
 
         rollUp(saved);
-        publisher.publish("POST", "/api/pm/tasks/" + saved.getId(), String.valueOf(currentUserId));
         return toFullResponse(saved);
     }
 
@@ -218,7 +217,6 @@ public class TaskServiceImpl implements TaskService {
         logActivity(id, "UPDATED", currentUserId, null, null,
                 msg.length() > 450 ? msg.substring(0, 450) + "…" : msg);
 
-        publisher.publish("PATCH", "/api/pm/tasks/" + saved.getId(), String.valueOf(currentUserId));
         return toFullResponse(saved);
     }
 
@@ -271,7 +269,6 @@ public class TaskServiceImpl implements TaskService {
                 "Status: " + oldStatus + " → " + newStatus);
         rollUp(saved);
         if (newStatus == TaskStatus.DONE) notifyUnblocked(saved, currentUserId);
-        publisher.publish("PATCH", "/api/pm/tasks/" + saved.getId(), String.valueOf(currentUserId));
 
         try {
             String actorName = resolveEmployeeName(currentUserId);
@@ -326,7 +323,15 @@ public class TaskServiceImpl implements TaskService {
         String q = f.getSearch() == null ? "" : f.getSearch().trim().toLowerCase();
 
         List<Task> hits = new ArrayList<>();
-        for (Task t : taskRepository.findByProjectId(f.getProjectId())) {
+        List<Task> projectTasks = taskRepository.findByProjectId(f.getProjectId());
+        Map<Long, Set<Long>> assigneesByTask = new HashMap<>();
+        if (f.getAssigneeId() != null || f.isUnassignedOnly()) {
+            taskAssignmentRepository.findByTaskIdIn(
+                            projectTasks.stream().map(Task::getId).collect(Collectors.toList()))
+                    .forEach(a -> assigneesByTask
+                            .computeIfAbsent(a.getTaskId(), k -> new HashSet<>()).add(a.getEmployeeId()));
+        }
+        for (Task t : projectTasks) {
             if (f.getStatuses() != null && !f.getStatuses().isEmpty() && !f.getStatuses().contains(t.getStatus())) continue;
             if (f.getPriorities() != null && !f.getPriorities().isEmpty() && !f.getPriorities().contains(t.getPriority())) continue;
             if (f.getDueFrom() != null && (t.getDueDate() == null || t.getDueDate().isBefore(f.getDueFrom()))) continue;
@@ -341,10 +346,9 @@ public class TaskServiceImpl implements TaskService {
                 if (!title.contains(q) && !desc.contains(q)) continue;
             }
             if (f.getAssigneeId() != null || f.isUnassignedOnly()) {
-                List<TaskAssignment> as = taskAssignmentRepository.findByTaskId(t.getId());
+                Set<Long> as = assigneesByTask.getOrDefault(t.getId(), Collections.emptySet());
                 if (f.isUnassignedOnly() && !as.isEmpty()) continue;
-                if (f.getAssigneeId() != null
-                        && as.stream().noneMatch(a -> f.getAssigneeId().equals(a.getEmployeeId()))) continue;
+                if (f.getAssigneeId() != null && !as.contains(f.getAssigneeId())) continue;
             }
             hits.add(t);
         }
@@ -355,8 +359,8 @@ public class TaskServiceImpl implements TaskService {
         int size = Math.min(Math.max(f.getSize(), 1), 200);
         int page = Math.max(f.getPage(), 0);
         int from = Math.min(page * size, hits.size());
-        List<TaskSummaryResponse> slice = hits.subList(from, Math.min(from + size, hits.size()))
-                .stream().map(this::toSummaryWithNames).collect(Collectors.toList());
+        List<TaskSummaryResponse> slice = toSummaries(
+                new ArrayList<>(hits.subList(from, Math.min(from + size, hits.size()))));
         return PageResponse.of(new org.springframework.data.domain.PageImpl<>(
                 slice, org.springframework.data.domain.PageRequest.of(page, size), hits.size()));
     }
@@ -523,7 +527,6 @@ public class TaskServiceImpl implements TaskService {
         logActivity(id, "ASSIGNED", currentUserId, oldNames, newNames,
                 "Assignees: " + (oldNames.isEmpty() ? "none" : oldNames) + " → "
                         + (newNames.isEmpty() ? "none" : newNames));
-        publisher.publish("PATCH", "/api/pm/tasks/" + id, String.valueOf(currentUserId));
 
         TaskResponse res = toFullResponse(task);
         res.setAssignmentWarnings(warnings);
@@ -543,7 +546,22 @@ public class TaskServiceImpl implements TaskService {
     public PageResponse<TaskSummaryResponse> listTasks(Long projectId, TaskStatus status,
                                                        String search, Pageable pageable) {
         Page<Task> page = taskRepository.searchFull(projectId, null, status, search, pageable);
-        return PageResponse.of(page.map(this::toSummaryWithNames));
+        return PageResponse.of(new org.springframework.data.domain.PageImpl<>(
+                toSummaries(page.getContent()), pageable, page.getTotalElements()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<TaskSummaryResponse> listVisibleTasks(java.util.Collection<Long> projectIds,
+                                                              java.util.Collection<Long> teamIds, Long userId,
+                                                              TaskStatus status, String search, Pageable pageable) {
+        // empty IN () is invalid SQL on some databases, so use a sentinel id
+        java.util.Collection<Long> pids = projectIds == null || projectIds.isEmpty() ? java.util.List.of(-1L) : projectIds;
+        java.util.Collection<Long> tids = teamIds == null || teamIds.isEmpty() ? java.util.List.of(-1L) : teamIds;
+        String q = (search == null || search.isBlank()) ? null : search.trim();
+        Page<Task> page = taskRepository.searchVisible(pids, tids, userId, status, q, pageable);
+        return PageResponse.of(new org.springframework.data.domain.PageImpl<>(
+                toSummaries(page.getContent()), pageable, page.getTotalElements()));
     }
 
     @Override
@@ -551,7 +569,8 @@ public class TaskServiceImpl implements TaskService {
     public PageResponse<TaskSummaryResponse> listTasksByTeam(Long teamId, TaskStatus status,
                                                              String search, Pageable pageable) {
         Page<Task> page = taskRepository.searchFull(null, teamId, status, search, pageable);
-        return PageResponse.of(page.map(this::toSummaryWithNames));
+        return PageResponse.of(new org.springframework.data.domain.PageImpl<>(
+                toSummaries(page.getContent()), pageable, page.getTotalElements()));
     }
 
     @Override
@@ -592,9 +611,7 @@ public class TaskServiceImpl implements TaskService {
     public List<TaskSummaryResponse> listSubtasks(Long parentTaskId) {
         if (!taskRepository.existsById(parentTaskId))
             throw new ResourceNotFoundException("Parent not found: " + parentTaskId);
-        return taskRepository.findSubtasks(parentTaskId).stream()
-                .map(this::toSummaryWithNames)
-                .collect(Collectors.toList());
+        return toSummaries(taskRepository.findSubtasks(parentTaskId));
     }
 
     @Override
@@ -684,7 +701,6 @@ public class TaskServiceImpl implements TaskService {
 
         logActivity(taskId, "COMMENTED", userId, null, null,
                 mentions.isBlank() ? "Comment added" : "Comment added with mentions");
-        publisher.publish("POST", "/api/pm/tasks/" + taskId + "/comments", String.valueOf(userId));
 
         if (!mentions.isBlank()) {
             Task task = taskRepository.findById(taskId).orElse(null);
@@ -1054,7 +1070,84 @@ public class TaskServiceImpl implements TaskService {
         return res;
     }
 
+    /**
+     * PERF: builds summaries for many tasks with a fixed number of queries
+     * (instead of ~4+ queries per task).
+     */
+    private List<TaskSummaryResponse> toSummaries(List<Task> tasks) {
+        if (tasks == null || tasks.isEmpty()) return new ArrayList<>();
+        List<Long> ids = tasks.stream().map(Task::getId).collect(Collectors.toList());
+
+        Map<Long, List<Long>> assigneeIds = new HashMap<>();
+        for (TaskAssignment a : taskAssignmentRepository.findByTaskIdIn(ids))
+            assigneeIds.computeIfAbsent(a.getTaskId(), k -> new ArrayList<>()).add(a.getEmployeeId());
+
+        Set<Long> empIds = assigneeIds.values().stream()
+                .flatMap(List::stream).collect(Collectors.toSet());
+        Map<Long, String> empNames = new HashMap<>();
+        if (!empIds.isEmpty())
+            employeeRepository.findAllById(empIds).forEach(e -> empNames.put(e.getId(), displayName(e)));
+
+        Map<Long, String> teamNames = new HashMap<>();
+        Set<Long> teamIds = tasks.stream().map(Task::getTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (!teamIds.isEmpty()) teamRepository.findAllById(teamIds).forEach(x -> teamNames.put(x.getId(), x.getName()));
+
+        Map<Long, String> projectNames = new HashMap<>();
+        Set<Long> projectIds = tasks.stream().map(Task::getProjectId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (!projectIds.isEmpty()) projectRepository.findAllById(projectIds).forEach(x -> projectNames.put(x.getId(), x.getName()));
+
+        Map<Long, String> sprintNames = new HashMap<>();
+        Set<Long> sprintIds = tasks.stream().map(Task::getSprintId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (!sprintIds.isEmpty()) sprintRepository.findAllById(sprintIds).forEach(x -> sprintNames.put(x.getId(), x.getName()));
+
+        Map<Long, String> milestoneNames = new HashMap<>();
+        Set<Long> milestoneIds = tasks.stream().map(Task::getMilestoneId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (!milestoneIds.isEmpty()) milestoneRepository.findAllById(milestoneIds).forEach(x -> milestoneNames.put(x.getId(), x.getName()));
+
+        Map<Long, long[]> subs = new HashMap<>();
+        for (Object[] r : taskRepository.subtaskCounts(ids))
+            subs.put((Long) r[0], new long[]{((Number) r[1]).longValue(), ((Number) r[2]).longValue()});
+        Map<Long, Long> blockers = new HashMap<>();
+        for (Object[] r : taskRepository.openBlockerCounts(ids))
+            blockers.put((Long) r[0], ((Number) r[1]).longValue());
+
+        List<TaskSummaryResponse> out = new ArrayList<>(tasks.size());
+        for (Task t : tasks) {
+            List<Long> aIds = assigneeIds.getOrDefault(t.getId(), new ArrayList<>());
+            List<String> names = new ArrayList<>(aIds.size());
+            for (Long id : aIds) names.add(empNames.getOrDefault(id, "Employee #" + id));
+            TaskSummaryResponse s = taskMapper.toSummary(
+                    t, projectNames.get(t.getProjectId()), teamNames.get(t.getTeamId()),
+                    aIds, names,
+                    t.getSprintId(), sprintNames.get(t.getSprintId()),
+                    t.getMilestoneId(), milestoneNames.get(t.getMilestoneId()));
+            s.setStoryPoints(t.getStoryPoints());
+            long[] sc = subs.getOrDefault(t.getId(), new long[]{0, 0});
+            s.setSubtaskCount(sc[0]);
+            s.setSubtaskDone(sc[1]);
+            s.setOpenBlockerCount(blockers.getOrDefault(t.getId(), 0L));
+            out.add(s);
+        }
+        return out;
+    }
+
+    private String displayName(Employee e) {
+        String first = e.getFirstName() == null ? "" : e.getFirstName();
+        String last = e.getLastName() == null ? "" : e.getLastName();
+        String full = (first + " " + last).trim();
+        if (!full.isEmpty()) return full;
+        if (e.getEmployeeName() != null && !e.getEmployeeName().isBlank()) return e.getEmployeeName();
+        if (e.getEmail() != null) return e.getEmail();
+        return "Employee #" + e.getId();
+    }
+
     private TaskSummaryResponse toSummaryWithNames(Task t) {
+        return toSummaries(Collections.singletonList(t)).get(0);
+    }
+
+    /** Old per-task version, kept for reference. */
+    @SuppressWarnings("unused")
+    private TaskSummaryResponse toSummaryWithNamesOld(Task t) {
         List<Long> ids = taskAssignmentRepository.findByTaskId(t.getId())
                 .stream().map(TaskAssignment::getEmployeeId).collect(Collectors.toList());
         List<String> names = resolveEmployeeNames(ids);
