@@ -391,7 +391,7 @@
       label: function (u) { return (u.admin === true || u.pm === true || u.intakeReviewer === true) ? 'Project Requests' : 'Request a project'; },
       href: '/pm/04-projects#requests', intake: 'requests'
     },
-    { icon: 'fa-plus', label: 'Create Project', href: '/pm/04-projects?action=create', requires: 'creator' },
+    { icon: 'fa-plus', label: 'Create Project', href: '/pm/04-projects/new', requires: 'creator' },
     { icon: 'fa-layer-group', label: 'Templates', href: '/pm/04-projects#templates', intake: 'templates', requires: 'templates' },
     { icon: 'fa-robot', label: 'Auto-Rules', href: '/pm/04-projects?action=autorules', requires: 'creator' },
 

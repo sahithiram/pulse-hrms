@@ -19,6 +19,10 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     boolean existsByCode(String code);
 
+    /** All auto-style codes (PRJ-...). Plain JPQL so it works on MySQL, Postgres, H2 alike. */
+    @Query("select p.code from Project p where p.code like 'PRJ-%'")
+    List<String> findAllAutoCodes();
+
     /**
      * Highest numeric suffix among codes shaped PRJ-&lt;digits&gt;; 1000 when there are none
      * (so the first auto-generated code is PRJ-1001).

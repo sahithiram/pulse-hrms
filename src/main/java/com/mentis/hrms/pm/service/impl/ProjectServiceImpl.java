@@ -125,7 +125,14 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     @Transactional(readOnly = true)
     public String nextProjectCode() {                              // NEW
-        long n = projectRepository.findMaxNumericCode().longValue() + 1;
+        // Database-independent: read the PRJ-… codes and take the highest number in Java.
+        long max = 1000;   // first generated code is PRJ-1001
+        for (String c : projectRepository.findAllAutoCodes()) {
+            if (c != null && c.matches("PRJ-\\d+")) {
+                try { max = Math.max(max, Long.parseLong(c.substring(4))); } catch (NumberFormatException ignore) { }
+            }
+        }
+        long n = max + 1;
         String code = "PRJ-" + n;
         // Defensive: covers the (rare) case where a code outside the numeric pattern
         // was inserted between the MAX query and this loop.

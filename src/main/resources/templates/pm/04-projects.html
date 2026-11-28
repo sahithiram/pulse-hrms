@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta name="current-user-id" th:content="${session.userId ?: 'anonymous'}">
   <title>Project Management · Projects</title>
+  <script>if (/\/04-projects\/(new|create)\/?$/.test(location.pathname)) document.documentElement.classList.add('pm-create-page');</script>
 
   <!-- Shared CDN set -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -206,6 +207,37 @@
        NEW PROJECT — FULL PAGE
        ══════════════════════════════════════════════════════ */
     #createView { animation: pmFade .22s ease; }
+
+    html.pm-create-page #listView { display: none !important; }
+    .wiz-hide { display: none !important; }
+
+    /* ── Wizard ── */
+    .wiz-steps { display: flex; gap: .5rem; flex-wrap: wrap; }
+    .wiz-step {
+      flex: 1; min-width: 120px; display: flex; align-items: center; gap: .55rem;
+      padding: .55rem .75rem; border-radius: 10px; cursor: pointer;
+      background: var(--dark-card); border: 1px solid var(--dark-border);
+      color: var(--dark-text-secondary); font-size: var(--fs-sm); font-weight: 600;
+      transition: var(--transition); text-align: left;
+    }
+    .wiz-step .n {
+      width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+      display: grid; place-content: center; font-size: var(--fs-xs); font-weight: 700;
+      background: var(--dark-bg); border: 1px solid var(--dark-border);
+    }
+    .wiz-step.on { border-color: var(--primary); color: var(--dark-text); background: rgba(99,102,241,.12); }
+    .wiz-step.on .n { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .wiz-step.done .n { background: var(--success); border-color: var(--success); color: #fff; }
+    .wiz-step.done { color: var(--dark-text); }
+    #cpForm > section.cp-card[data-wiz] { display: none; }
+    #cpForm > section.cp-card[data-wiz].wiz-on { display: block; animation: pmFade .2s ease; }
+    #segMode { grid-template-columns: 1fr 1fr; }
+    .wiz-note { font-size: var(--fs-sm); color: var(--dark-text-secondary); margin: .6rem 0 .1rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+    .wiz-note a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+    .wiz-rev { display: grid; grid-template-columns: 150px 1fr; gap: .45rem 1rem; font-size: var(--fs-base); }
+    .wiz-rev dt { color: var(--dark-text-secondary); font-weight: 500; margin: 0; }
+    .wiz-rev dd { margin: 0; font-weight: 600; word-break: break-word; }
+    @media (max-width: 640px) { .wiz-rev { grid-template-columns: 1fr; } .wiz-step .t { display: none; } .wiz-step.on .t { display: inline; } }
 
     .cp-top {
       display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; margin-bottom: 1rem;
@@ -701,7 +733,7 @@
         </div>
         <div class="pm-page-actions" style="display:flex;gap:.5rem;flex-wrap:wrap;">
           <button class="pm-btn" id="requestBtn" onclick="PM.openIntake('requests')">
-            <i class="fas fa-paper-plane"></i> Request
+            <i class="fas fa-paper-plane"></i> <span id="requestBtnLabel">Request</span>
           </button>
           <button class="pm-btn" id="autoRulesBtn" hidden onclick="openAutoRules()"><i class="fas fa-robot"></i> Auto-Rules</button>
           <button class="pm-btn" id="recomputeBtn" hidden onclick="recomputeAllStatuses()"><i class="fas fa-sync"></i> Recompute</button>
@@ -823,44 +855,76 @@
       <div class="cp-wrap">
         <div class="cp-main" id="cpForm">
 
-          <!-- 0 · TEMPLATE -->
+          <!-- 0 · START (manual or template, by domain) -->
           <section class="cp-card">
             <div class="cp-card-h">
-              <span class="ic"><i class="fas fa-copy"></i></span>
-              <div><h2>Start from a template</h2><p>Pick a ready-made plan, or start with a blank project.</p></div>
-              <span class="tag">optional</span>
-            </div>
-            <div class="cp-types" id="tplGrid"></div>
-            <div id="tplInfo"></div>
-          </section>
-
-          <!-- 1 · BASICS -->
-          <section class="cp-card">
-            <div class="cp-card-h">
-              <span class="ic"><i class="fas fa-shapes"></i></span>
-              <div><h2>Project basics</h2><p>What kind of project is this?</p></div>
+              <span class="ic"><i class="fas fa-rocket"></i></span>
+              <div><h2>How do you want to start?</h2><p>Pick the kind of project, then build it by hand or from a ready-made plan.</p></div>
             </div>
 
-            <div class="cp-l"><span>Project type <span class="req">*</span></span></div>
+            <div class="cp-l"><span>Project domain <span class="req">*</span></span></div>
             <div class="cp-types" id="segType">
               <button type="button" class="cp-type on" data-v="it" onclick="setSeg('type','it')">
                 <span class="ti"><i class="fas fa-code"></i></span>
                 <span><b>IT / Software</b><small>Sprints, releases, story points</small></span>
                 <i class="fas fa-circle-check chk"></i>
               </button>
-              <button type="button" class="cp-type" data-v="nonit" onclick="setSeg('type','nonit')">
-                <span class="ti"><i class="fas fa-list-check"></i></span>
-                <span><b>Non-IT</b><small>Simple task list &amp; milestones</small></span>
+              <button type="button" class="cp-type" data-v="mkt" onclick="setSeg('type','mkt')">
+                <span class="ti"><i class="fas fa-bullhorn"></i></span>
+                <span><b>Marketing</b><small>Campaigns, launches, events</small></span>
                 <i class="fas fa-circle-check chk"></i>
               </button>
               <button type="button" class="cp-type" data-v="ops" onclick="setSeg('type','ops')">
                 <span class="ti"><i class="fas fa-gears"></i></span>
-                <span><b>Operations</b><small>Checklists &amp; approvals</small></span>
+                <span><b>Operations</b><small>Rollouts, checklists, approvals</small></span>
+                <i class="fas fa-circle-check chk"></i>
+              </button>
+              <button type="button" class="cp-type" data-v="hr" onclick="setSeg('type','hr')">
+                <span class="ti"><i class="fas fa-people-group"></i></span>
+                <span><b>HR &amp; People</b><small>Hiring, onboarding, training</small></span>
+                <i class="fas fa-circle-check chk"></i>
+              </button>
+              <button type="button" class="cp-type" data-v="fin" onclick="setSeg('type','fin')">
+                <span class="ti"><i class="fas fa-indian-rupee-sign"></i></span>
+                <span><b>Finance</b><small>Audits, budgets, compliance</small></span>
+                <i class="fas fa-circle-check chk"></i>
+              </button>
+              <button type="button" class="cp-type" data-v="other" onclick="setSeg('type','other')">
+                <span class="ti"><i class="fas fa-shapes"></i></span>
+                <span><b>Other</b><small>Any other kind of project</small></span>
                 <i class="fas fa-circle-check chk"></i>
               </button>
             </div>
 
-            <div class="cp-row name cp-gap">
+            <div class="cp-l cp-gap"><span>Create it <span class="req">*</span></span></div>
+            <div class="cp-types" id="segMode">
+              <button type="button" class="cp-type on" data-v="manual" onclick="setMode('manual')">
+                <span class="ti"><i class="fas fa-pen-to-square"></i></span>
+                <span><b>Manually</b><small>Start blank and fill in the details yourself</small></span>
+                <i class="fas fa-circle-check chk"></i>
+              </button>
+              <button type="button" class="cp-type" data-v="template" onclick="setMode('template')">
+                <span class="ti"><i class="fas fa-copy"></i></span>
+                <span><b>From a template</b><small>Phases, sprints, milestones and tasks pre-filled</small></span>
+                <i class="fas fa-circle-check chk"></i>
+              </button>
+            </div>
+
+            <div id="tplWrap" class="wiz-hide">
+              <div class="wiz-note" id="tplFilterNote"></div>
+              <div class="cp-types cp-gap" id="tplGrid"></div>
+              <div id="tplInfo"></div>
+            </div>
+          </section>
+
+          <!-- 1 · BASICS -->
+          <section class="cp-card">
+            <div class="cp-card-h">
+              <span class="ic"><i class="fas fa-shapes"></i></span>
+              <div><h2>Project basics</h2><p>Name it, check the code, and add a short description.</p></div>
+            </div>
+
+            <div class="cp-row name">
               <div class="cp-f">
                 <label class="cp-l" for="fldName"><span>Project name <span class="req">*</span></span></label>
                 <input class="cp-in cp-in-xl" id="fldName" placeholder="e.g. HRMS Cloud Migration" autocomplete="off" oninput="onChange('fldName')">
@@ -1034,7 +1098,9 @@
         <span class="note" id="footNote"><i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type</span>
         <div class="sp"></div>
         <button type="button" class="pm-btn cp-btn" onclick="closeCreate()">Cancel</button>
-        <div class="cp-split">
+        <button type="button" class="pm-btn cp-btn wiz-hide" id="wizBack" onclick="wizBack()"><i class="fas fa-arrow-left"></i> Back</button>
+        <button type="button" class="pm-btn pm-btn-primary cp-btn" id="wizNext" onclick="wizNext()">Next <i class="fas fa-arrow-right"></i></button>
+        <div class="cp-split wiz-hide" id="wizSplit">
           <button type="button" class="pm-btn pm-btn-primary cp-btn" id="createBtn" onclick="submitCreate('close')"><i class="fas fa-check"></i> Create Project</button>
           <button type="button" class="pm-btn pm-btn-primary cp-btn" onclick="toggleCreateMenu(event)" aria-label="More create options"><i class="fas fa-chevron-up"></i></button>
           <div class="cp-menu" id="createMenu">
@@ -1494,11 +1560,15 @@
     function renderTemplates() {
       var grid = $('tplGrid'), info = $('tplInfo');
       if (!grid) return;
+      $('tplWrap').classList.toggle('wiz-hide', F.mode !== 'template');
+      var list0 = visibleTemplates();
+      var note = $('tplFilterNote');
+      if (note) note.innerHTML = F.showAllTpl
+        ? 'Showing all templates · <a onclick="toggleAllTpl(false)">Only ' + PM.esc(typeLabel[F.type] || 'this domain') + '</a>'
+        : 'Templates for <b>' + PM.esc(typeLabel[F.type] || 'this domain') + '</b> · <a onclick="toggleAllTpl(true)">Show all templates</a>';
       var icons = { SCRUM: 'fa-arrows-rotate', KANBAN: 'fa-table-columns', WATERFALL: 'fa-layer-group', HYBRID: 'fa-shuffle' };
-      var h = '<button type="button" class="cp-type' + (F.templateId == null ? ' on' : '') + '" onclick="pickTemplate(null)">' +
-        '<span class="ti"><i class="fas fa-file"></i></span><span><b>Blank project</b><small>Start from scratch</small></span>' +
-        '<i class="fas fa-circle-check chk"></i></button>';
-      templates.forEach(function (t) {
+      var h = list0.length ? '' : '<div style="grid-column:1/-1;color:var(--dark-text-secondary);font-size:var(--fs-sm)">No templates for this domain yet. Choose "Show all templates", or create it manually.</div>';
+      list0.forEach(function (t) {
         var bits = [];
         if (t.sprintCount) bits.push(t.sprintCount + ' sprint' + (t.sprintCount > 1 ? 's' : ''));
         if (t.milestoneCount) bits.push(t.milestoneCount + ' milestones');
@@ -1900,10 +1970,11 @@
 
     /* ===== Create project ===== */
     var DRAFT_KEY = 'pm-project-draft-v3';
-    var F = { type: 'it', priority: 'medium', teamIds: [], members: [], templateId: null };
+    var F = { type: 'it', mode: 'manual', showAllTpl: false, priority: 'medium', teamIds: [], members: [], templateId: null };
     var mHl = 0, saveT = null, creating = false;
-    var typeLabel = { it: 'IT / Software', nonit: 'Non-IT', ops: 'Operations' };
-    var typePlaceholder = { it: 'e.g. HRMS Cloud Migration', nonit: 'e.g. Q4 Marketing Campaign', ops: 'e.g. Office Relocation' };
+    var typeLabel = { it: 'IT / Software', mkt: 'Marketing', ops: 'Operations', hr: 'HR & People', fin: 'Finance', other: 'Other', nonit: 'Non-IT' };
+    var CREATE_PAGE = /\/04-projects\/(new|create)\/?$/.test(location.pathname);
+    var typePlaceholder = { it: 'e.g. HRMS Cloud Migration', mkt: 'e.g. Q4 Marketing Campaign', ops: 'e.g. Office Relocation', hr: 'e.g. Campus Hiring Drive 2027', fin: 'e.g. Annual Audit Preparation', other: 'e.g. Name your project', nonit: 'e.g. Q4 Marketing Campaign' };
 
     function $(id) { return document.getElementById(id); }
     function iso(d) { var m = d.getMonth() + 1, dd = d.getDate(); return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd; }
@@ -1935,15 +2006,14 @@
       $('crumb').innerHTML = '<a href="javascript:void(0)" onclick="goPMHome()" title="Home"><i class="fas fa-house"></i></a> / Project Management / ' +
         (creating ? '<a onclick="closeCreate()" style="cursor:pointer">All Projects</a> / <span class="cur">New Project</span>' : '<span class="cur">All Projects</span>');
     }
-    function showList() { $('createView').hidden = true; $('listView').hidden = false; setCrumb(false); window.scrollTo(0, 0); }
+    function showList() { if (CREATE_PAGE) { location.href = '/pm/04-projects'; return; } $('createView').hidden = true; $('listView').hidden = false; setCrumb(false); window.scrollTo(0, 0); }
     function openCreate() {
       resetForm();
       $('listView').hidden = true; $('createView').hidden = false; setCrumb(true); window.scrollTo(0, 0);
       loadFormClients(); renderTeamPills(); renderTemplates(); loadTemplates().then(renderTemplates);
       var d = loadDraft();
-      if (d && (d.fldName || d.fldDesc)) { applyDraft(d); $('draftChip').classList.add('show'); }
+      if (d && (d.fldName || d.fldDesc)) { applyDraft(d); $('draftChip').classList.add('show'); wizShow(1); }
       refresh();
-      setTimeout(function () { $('fldName').focus(); }, 80);
     }
     function closeCreate() {
       if (isDirty()) {
@@ -1953,7 +2023,7 @@
       } else showList();
     }
     function resetForm() {
-      F = { type: 'it', priority: 'medium', teamIds: [], members: [], templateId: null };
+      F = { type: 'it', mode: 'manual', showAllTpl: false, priority: 'medium', teamIds: [], members: [], templateId: null };
       $('fldName').value = ''; $('fldDesc').value = ''; $('fldBudget').value = ''; $('fldClient').value = '';
       $('fldStart').value = iso(new Date()); $('fldEnd').value = addDur($('fldStart').value, '3m');
       codeTouched = false; $('fldCode').value = '';
@@ -1962,15 +2032,16 @@
       document.querySelectorAll('.cp-err').forEach(function (e) { e.classList.remove('show'); });
       $('draftChip').classList.remove('show'); $('advBox').open = false; $('memberSearch').value = '';
       $('footNote').innerHTML = '<i class="fas fa-cloud-arrow-up"></i> Draft auto-saves as you type';
-      paintSegs(); renderMembers(); syncDurChips(); renderTemplates();
+      paintSegs(); renderMembers(); syncDurChips(); renderTemplates(); wizShow(0);
     }
     function isDirty() { return !!($('fldName').value.trim() || $('fldDesc').value.trim()); }
 
-    function setSeg(group, val) { F[group] = val; paintSegs(); refresh(); }
+    function setSeg(group, val) { F[group] = val; if (group === 'type') F.showAllTpl = false; paintSegs(); if (group === 'type') renderTemplates(); refresh(); }
     function paintSegs() {
       document.querySelectorAll('#segType .cp-type').forEach(function (b) { b.classList.toggle('on', b.dataset.v === F.type); });
       document.querySelectorAll('#segPriority button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === F.priority); });
-      $('fldName').placeholder = typePlaceholder[F.type];
+      $('fldName').placeholder = typePlaceholder[F.type] || typePlaceholder.other;
+      document.querySelectorAll('#segMode .cp-type').forEach(function (b) { b.classList.toggle('on', b.dataset.v === F.mode); });
     }
 
     function onStartChange() {
@@ -2012,7 +2083,7 @@
     function validateAll() {
       var first = null;
       ['fldName', 'fldCode', 'fldStart', 'fldEnd', 'fldBudget'].forEach(function (id) { if (!validateField(id) && !first) first = id; });
-      if (first) { var el = $(first); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); PM.toast('Please fix the highlighted field', 'error'); return false; }
+      if (first) { wizShow(FIELD_STEP[first]); var el = $(first); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.focus(); PM.toast('Please fix the highlighted field', 'error'); return false; }
       return true;
     }
     function onChange(id) { if (id) validateField(id); refresh(); }
@@ -2088,7 +2159,7 @@
       $('pvTitle').textContent = name || 'Untitled project';
       $('pvCode').textContent = code || 'PRJ-____';
       $('pvLogo').textContent = (name || '?').split(/\s+/).map(function (w) { return w[0]; }).join('').substring(0, 2).toUpperCase();
-      $('pvType').textContent = typeLabel[F.type];
+      $('pvType').textContent = typeLabel[F.type] || 'Other';
       var pe = $('pvPriority'); pe.textContent = pr.charAt(0).toUpperCase() + pr.slice(1);
       pe.className = 'pm-badge ' + (pr === 'critical' || pr === 'high' ? 'danger' : pr === 'medium' ? 'warning' : 'success');
       $('pvClient').textContent = client;
@@ -2119,7 +2190,7 @@
     }
 
     function collect() {
-      return { fldName: $('fldName').value, fldCode: $('fldCode').value, fldDesc: $('fldDesc').value, fldStart: $('fldStart').value, fldEnd: $('fldEnd').value, fldBudget: $('fldBudget').value, fldClient: $('fldClient').value, type: F.type, priority: F.priority, teamIds: F.teamIds, members: F.members };
+      return { fldName: $('fldName').value, fldCode: $('fldCode').value, fldDesc: $('fldDesc').value, fldStart: $('fldStart').value, fldEnd: $('fldEnd').value, fldBudget: $('fldBudget').value, fldClient: $('fldClient').value, type: F.type, mode: F.mode, priority: F.priority, teamIds: F.teamIds, members: F.members };
     }
     function saveDraft() { try { if (isDirty()) localStorage.setItem(DRAFT_KEY, JSON.stringify(collect())); } catch (e) {} }
     function autoSaveDraft() {
@@ -2130,12 +2201,12 @@
     function loadDraft() { try { return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { return null; } }
     function applyDraft(d) {
       ['fldName', 'fldDesc', 'fldStart', 'fldEnd', 'fldBudget', 'fldClient'].forEach(function (id) { if (d[id] != null) $(id).value = d[id]; });
-      F.type = d.type || 'it'; F.priority = d.priority || 'medium'; F.teamIds = d.teamIds || (d.teamId ? [d.teamId] : []); F.members = d.members || [];
+      F.type = d.type || 'it'; F.mode = d.mode === 'template' ? 'template' : 'manual'; F.priority = d.priority || 'medium'; F.teamIds = d.teamIds || (d.teamId ? [d.teamId] : []); F.members = d.members || [];
       paintSegs(); renderMembers(); renderTeamPills(); refresh();
     }
     function clearDraft() { clearTimeout(saveT); try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
     function discardDraft() { clearDraft(); resetForm(); renderTeamPills(); refresh(); $('fldName').focus(); }
-    function saveAsDraftAndClose() { $('createMenu').classList.remove('open'); saveDraft(); showList(); PM.toast('✓ Draft saved — it will be restored when you start a new project', 'success'); }
+    function saveAsDraftAndClose() { $('createMenu').classList.remove('open'); saveDraft(); if (CREATE_PAGE) flashSet('✓ Draft saved — it will be restored when you start a new project'); showList(); PM.toast('✓ Draft saved — it will be restored when you start a new project', 'success'); }
 
     function buildPayload() {
       var b = $('fldBudget').value, c = $('fldClient').value;
@@ -2175,6 +2246,7 @@
           F.type = keepType; F.priority = keepPri; $('fldClient').value = keepClient;
           paintSegs(); renderTeamPills(); refresh(); window.scrollTo(0, 0); $('fldName').focus();
         } else {
+          if (CREATE_PAGE) { flashSet('✓ Project created: ' + data.name); location.href = (after === 'open') ? '/pm/06-tasks?view=board&projectId=' + data.id : '/pm/04-projects'; return; }
           showList();
           PM.toast('✓ Project created: ' + data.name, 'success');
           if (after === 'open') setTimeout(function () { location.href = '/pm/06-tasks?view=board&projectId=' + data.id; }, 350);
@@ -2218,9 +2290,132 @@
         if ($('memberDd').classList.contains('open')) { $('memberDd').classList.remove('open'); return; }
         if ($('createMenu').classList.contains('open')) { $('createMenu').classList.remove('open'); return; }
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submitCreate(e.shiftKey ? 'another' : 'close'); }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); if (wizStep < STEPS.length - 1) wizNext(); else submitCreate(e.shiftKey ? 'another' : 'close'); }
       else if (e.key === 'Enter' && e.target && (e.target.id === 'fldName')) { e.preventDefault(); $('fldCode').focus(); $('fldCode').select(); }
     });
+
+
+    /* ===== Wizard ===== */
+    var STEPS = [
+      { label: 'Start',    sections: [0] },
+      { label: 'Basics',   sections: [1, 5] },
+      { label: 'Schedule', sections: [2, 3] },
+      { label: 'People',   sections: [4] },
+      { label: 'Review',   sections: [6, 'review'] }
+    ];
+    var FIELD_STEP = { fldName: 1, fldCode: 1, fldStart: 2, fldEnd: 2, fldBudget: 2 };
+    var wizStep = 0, wizReady = false;
+
+    function flashSet(msg) { try { sessionStorage.setItem('pm.flash', msg); } catch (e) {} }
+    function flashShow() {
+      try { var m = sessionStorage.getItem('pm.flash'); if (m) { sessionStorage.removeItem('pm.flash'); setTimeout(function () { PM.toast(m, 'success'); }, 300); } } catch (e) {}
+    }
+
+    /* Domain → which templates to suggest (matched on template type, name and description) */
+    var DOMAIN_RX = {
+      it:  /scrum|kanban|waterfall|software|sprint|agile|devops|release/i,
+      mkt: /market|campaign|brand|event|launch|content/i,
+      ops: /operation|rollout|relocat|process|facilit|support|maintenance/i,
+      hr:  /\bhr\b|recruit|onboard|hiring|training|people/i,
+      fin: /financ|audit|budget|compliance|account/i
+    };
+    function tplMatchesDomain(t, d) {
+      if (!DOMAIN_RX[d]) return true;   // "other" (and old "nonit" drafts) see everything
+      return DOMAIN_RX[d].test((t.name || '') + ' ' + (t.description || '') + ' ' + (t.type || ''));
+    }
+    function visibleTemplates() { return F.showAllTpl ? templates : templates.filter(function (t) { return tplMatchesDomain(t, F.type); }); }
+    function toggleAllTpl(all) { F.showAllTpl = !!all; renderTemplates(); }
+    function setMode(m) {
+      F.mode = m;
+      if (m === 'manual') F.templateId = null;
+      paintSegs(); renderTemplates(); refresh();
+    }
+
+    function wizInit() {
+      if (wizReady) return;
+      var form = $('cpForm'); if (!form) return;
+      var secs = Array.prototype.slice.call(form.querySelectorAll(':scope > section.cp-card'));
+      var rev = document.createElement('section');
+      rev.className = 'cp-card'; rev.id = 'wizReview';
+      rev.innerHTML = '<div class="cp-card-h"><span class="ic"><i class="fas fa-clipboard-check"></i></span><div><h2>Review &amp; create</h2><p>Check everything below, then press Create Project.</p></div></div><dl class="wiz-rev" id="wizReviewBody"></dl>';
+      if (secs[6]) form.insertBefore(rev, secs[6]); else form.appendChild(rev);
+      STEPS.forEach(function (st, i) {
+        st.sections.forEach(function (ix) {
+          var el = ix === 'review' ? rev : secs[ix];
+          if (el) el.setAttribute('data-wiz', i);
+        });
+      });
+      var bar = document.createElement('div'); bar.className = 'wiz-steps'; bar.id = 'wizSteps';
+      bar.innerHTML = STEPS.map(function (st, i) {
+        return '<button type="button" class="wiz-step" data-i="' + i + '" onclick="wizGo(' + i + ')"><span class="n">' + (i + 1) + '</span><span class="t">' + st.label + '</span></button>';
+      }).join('');
+      form.insertBefore(bar, form.firstChild);
+      wizReady = true;
+    }
+
+    function wizShow(n) {
+      if (!wizReady) wizInit();
+      if (!wizReady) return;
+      wizStep = Math.max(0, Math.min(STEPS.length - 1, n));
+      document.querySelectorAll('#cpForm > section.cp-card[data-wiz]').forEach(function (el) {
+        el.classList.toggle('wiz-on', Number(el.getAttribute('data-wiz')) === wizStep);
+      });
+      document.querySelectorAll('#wizSteps .wiz-step').forEach(function (b) {
+        var i = Number(b.dataset.i);
+        b.classList.toggle('on', i === wizStep);
+        b.classList.toggle('done', i < wizStep);
+        b.querySelector('.n').innerHTML = i < wizStep ? '<i class="fas fa-check" style="font-size:.65rem"></i>' : String(i + 1);
+      });
+      var last = wizStep === STEPS.length - 1;
+      $('wizBack').classList.toggle('wiz-hide', wizStep === 0);
+      $('wizNext').classList.toggle('wiz-hide', last);
+      $('wizSplit').classList.toggle('wiz-hide', !last);
+      if (last) renderReview();
+      if (!$('createView').hidden) window.scrollTo(0, 0);
+    }
+
+    function wizValidate(step) {
+      if (step === 0) {
+        if (F.mode === 'template' && F.templateId == null) { PM.toast('Pick a template, or switch to "Manually"', 'error'); return false; }
+        return true;
+      }
+      if (step === 1) { var a = validateField('fldName'), b = validateField('fldCode'); if (!(a && b)) { PM.toast('Please fix the highlighted field', 'error'); return false; } return true; }
+      if (step === 2) {
+        var ok = true;
+        ['fldStart', 'fldEnd', 'fldBudget'].forEach(function (id) { if (!validateField(id)) ok = false; });
+        if (!ok) PM.toast('Please fix the highlighted field', 'error');
+        return ok;
+      }
+      return true;
+    }
+    function wizNext() { if (wizValidate(wizStep)) wizShow(wizStep + 1); }
+    function wizBack() { wizShow(wizStep - 1); }
+    function wizGo(i) {
+      if (i <= wizStep) { wizShow(i); return; }
+      for (var k = wizStep; k < i; k++) { if (!wizValidate(k)) { wizShow(k); return; } }
+      wizShow(i);
+    }
+
+    function renderReview() {
+      var t = currentTemplate(), cs = $('fldClient');
+      var client = cs.selectedOptions[0] ? cs.selectedOptions[0].textContent : 'Internal';
+      var teamNames = F.teamIds.map(function (id) { var x = allTeams.find(function (y) { return y.id === id; }); return x ? x.name : null; }).filter(Boolean);
+      var memberNames = F.members.map(function (id) { var x = employees.find(function (y) { return y.id === id; }); return x ? x.name : null; }).filter(Boolean);
+      var b = $('fldBudget').value, s = $('fldStart').value, e = $('fldEnd').value;
+      var rows = [
+        ['Domain', typeLabel[F.type] || 'Other'],
+        ['Created', t ? 'From template: ' + t.name : 'Manually (blank project)'],
+        ['Name', $('fldName').value.trim() || '—'],
+        ['Code', $('fldCode').value.trim() || '—'],
+        ['Priority', F.priority.charAt(0).toUpperCase() + F.priority.slice(1)],
+        ['Client', client],
+        ['Dates', (s ? PM.fmtDate(s) : '—') + ' → ' + (e ? PM.fmtDate(e) : '—')],
+        ['Budget', b ? '₹' + Number(b).toLocaleString('en-IN') : '—'],
+        ['Teams', teamNames.length ? teamNames.join(', ') : '—'],
+        ['Members', memberNames.length ? memberNames.join(', ') : '—']
+      ];
+      $('wizReviewBody').innerHTML = rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + PM.esc(r[1]) + '</dd>'; }).join('');
+    }
 
     /* ===== Role gating ===== */
     function canDeleteProject(p) { return me.superAdmin === true || (!!p && p.ownerId === me.id); }
@@ -2233,7 +2428,7 @@
       $('newProjectBtn').hidden = !creator;
       $('autoRulesBtn').hidden = !creator;
       $('recomputeBtn').hidden = !creator;
-      $('requestBtnLabel').textContent = (me.admin === true || me.pm === true || me.intakeReviewer === true) ? 'Project requests' : 'Request a project';
+      var rl = $('requestBtnLabel'); if (rl) rl.textContent = (me.admin === true || me.pm === true || me.intakeReviewer === true) ? 'Project requests' : 'Request a project';
       $('requestBtn').className = creator ? 'pm-btn' : 'pm-btn pm-btn-primary';
       document.body.classList.toggle('pm-bulk', me.superAdmin === true);
       var so = document.querySelector('#prSort option[value="budget-desc"]');
@@ -2259,14 +2454,18 @@
       openCreate: openCreate, closeCreate: closeCreate, setSeg: setSeg, onChange: onChange, onStartChange: onStartChange, setDuration: setDuration, setBudget: setBudget, genCode: genCode, onCodeInput: onCodeInput, pickTemplate: pickTemplate,
       pickTeam: pickTeam, renderMemberDd: renderMemberDd, memberKey: memberKey, addMember: addMember, removeMember: removeMember,
       loadReviewSwitch: loadReviewSwitch, setReviewRequired: setReviewRequired,
-      discardDraft: discardDraft, saveAsDraftAndClose: saveAsDraftAndClose, submitCreate: submitCreate, toggleCreateMenu: toggleCreateMenu, exportProjects: exportProjects
+      discardDraft: discardDraft, saveAsDraftAndClose: saveAsDraftAndClose, submitCreate: submitCreate, toggleCreateMenu: toggleCreateMenu, exportProjects: exportProjects,
+      setMode: setMode, toggleAllTpl: toggleAllTpl, wizNext: wizNext, wizBack: wizBack, wizGo: wizGo
     });
 
     /* Boot */
     setCrumb(false);
     applyRoleUi();
+    wizInit();
+    flashShow();
     Promise.all([loadEmployees(), loadTeams()]).then(function () {
       loadProjects();
+      if (CREATE_PAGE) { if (me && me.canCreateProject === true) openCreate(); else location.replace('/pm/04-projects'); return; }
       if (/action=(templates|requests)/.test(location.search || '') || location.hash === '#requests') {
         if (window.PM && PM.openIntake) setTimeout(function () { PM.openIntake(/action=templates/.test(location.search || '') ? 'templates' : 'requests'); }, 150);
       } else if (/action=(create|describe|duplicate)/.test(location.search || '')) {

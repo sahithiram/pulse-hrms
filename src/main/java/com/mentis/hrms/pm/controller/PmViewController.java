@@ -1,6 +1,7 @@
 package com.mentis.hrms.pm.controller;
 
 import com.mentis.hrms.pm.security.CurrentUserId;
+import com.mentis.hrms.pm.security.PmAccessService;
 import com.mentis.hrms.pm.security.PmPageGuard;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class PmViewController {
 
     private final PmPageGuard guard;
+    private final PmAccessService access;
 
     private String denied(Long userId) {
         return guard.isTeamLeadOnly(userId) ? "redirect:/pm/12-team-lead" : "redirect:/pm/01-home";
@@ -31,6 +33,16 @@ public class PmViewController {
 
     @GetMapping("/04-projects")
     public String projects() { return "pm/04-projects"; }
+
+    /**
+     * Dedicated "Create project" wizard. Same page as the list, but opened straight in
+     * create mode so it never depends on ?action=create or on load timing.
+     * People who may not create projects are sent to the list (where they can submit a request).
+     */
+    @GetMapping({"/04-projects/new", "/04-projects/create"})
+    public String projectsNew(@CurrentUserId Long userId) {
+        return access.canCreateProject(userId) ? "pm/04-projects" : "redirect:/pm/04-projects";
+    }
 
     @GetMapping("/05-planning")
     public String planning() { return "pm/05-planning"; }
